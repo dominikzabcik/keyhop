@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.1]
+
+- Checking for updates is now a visible button in the menu footer: it shows the version you have and checks right away. It's still in the "…" menu too.
+
 ## [0.6.0]
 
 - Automatic updates. Switchr checks GitHub once a day and installs a new release in place, only after the download matches the release checksum and never during a switch. With automatic installs off, the menu shows an Update button.

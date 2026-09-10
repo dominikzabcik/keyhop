@@ -534,6 +534,20 @@ private struct MenuFooter: View {
 
             Spacer()
 
+            Button { Task { await updater.check(userInitiated: true) } } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(updater.phase == .checking ? "Checking…" : Updater.currentVersion)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+            }
+            .buttonStyle(QuietStyle())
+            .disabled(updater.phase == .checking || updater.phase == .downloading || updater.phase == .installing)
+            .help("Check for updates")
+            .accessibilityLabel("Check for updates, version \(Updater.currentVersion)")
+
             QuietButton("Insights") { InsightsWindow.show() }
 
             Menu {

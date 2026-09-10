@@ -113,7 +113,7 @@ Open the **…** menu in the footer.
 
 ## Updates
 
-Switchr updates itself from this repository's releases. It downloads `Switchr.zip`, checks its SHA-256 against the release's `SHA256SUMS`, confirms the bundle inside is the expected version, swaps it in place and reopens. A release without a checksum, or with one that doesn't match, is never installed. With automatic installs off, the menu shows an **Update** button instead. **Check for Updates…** in the **…** menu checks right away.
+Switchr updates itself from this repository's releases. It downloads `Switchr.zip`, checks its SHA-256 against the release's `SHA256SUMS`, confirms the bundle inside is the expected version, swaps it in place and reopens. A release without a checksum, or with one that doesn't match, is never installed. With automatic installs off, the menu shows an **Update** button instead. To check right away, click the version number in the menu's footer, or choose **Check for Updates…** in the **…** menu.
 
 ## Privacy
 

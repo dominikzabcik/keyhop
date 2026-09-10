@@ -156,6 +156,7 @@ enum Numbers {
     static func usd(_ amount: Double) -> String {
         if amount >= 1000 {
             let formatter = NumberFormatter()
+            formatter.locale = Locale(identifier: "en_US")
             formatter.numberStyle = .decimal
             formatter.maximumFractionDigits = 0
             return "$" + (formatter.string(from: NSNumber(value: amount)) ?? String(format: "%.0f", amount))

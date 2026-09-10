@@ -4,7 +4,13 @@
 
 <p align="center">
   Move Claude Code, Cursor or Codex onto another account in one click,<br>
-  with every saved account's live limits in view.
+  with every saved account's limits, usage and budget in view.
+</p>
+
+<p align="center">
+  <a href="https://github.com/dominikzabcik/switchr/actions/workflows/ci.yml"><img src="https://github.com/dominikzabcik/switchr/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/dominikzabcik/switchr/releases/latest"><img src="https://img.shields.io/github/v/release/dominikzabcik/switchr?label=release&color=1B3329" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-1B3329" alt="MIT license"></a>
 </p>
 
 <p align="center">
@@ -21,7 +27,7 @@
 curl -fsSL https://raw.githubusercontent.com/dominikzabcik/switchr/main/install.sh | bash
 ```
 
-The installer downloads the latest release, checks its SHA-256, installs Switchr into Applications and opens it. Files downloaded this way aren't flagged by Gatekeeper, so macOS doesn't show a security prompt. [Read the script](install.sh) before piping it into your shell.
+The installer downloads the latest release, checks its SHA-256, installs Switchr into Applications and opens it. Files downloaded this way aren't flagged by Gatekeeper, so macOS shows no security prompt. [Read the script](install.sh) before piping it into your shell.
 
 <details>
 <summary><b>Prefer a disk image?</b></summary>
@@ -43,14 +49,17 @@ On first launch, a welcome window lists the logins Switchr found and turns on Op
 
 | | |
 | --- | --- |
-| **Add an account** | Sign in to the tool as usual. Switchr notices the login and saves it. For another account, click **Add account**. Switchr signs the tool out on this Mac only, leaving the saved token valid, and saves the next login you make. |
-| **Switch** | Pick a tool's tab, then click one of its other accounts. Each shows the room left on its tightest limit, and when the account in use runs low, the one with the most room is marked. Right-click an account to rename or remove it. |
-| **Read the bars** | The account in use shows each limit as a large bar. The tick marks an even pace through the window. A bar turns amber when you're ahead of pace and rust past 90%, and "Runs out" replaces the reset time when the limit won't last until the reset. |
+| **Add an account** | Sign in to the tool as usual and Switchr saves the login. For another account, choose **Add account** in that tool's tab. Switchr signs the tool out on this Mac only, so the saved token stays valid, and saves the next login you make. |
+| **Switch** | Pick a tool's tab, then click one of its other accounts. Each shows the room left on its tightest limit. When the account in use runs low, the one with the most room is marked. Right-click an account to rename or remove it. |
+| **Read the limits** | The account in use shows each limit as a large bar. The tick marks an even pace through the window. A bar turns amber when you're ahead of pace and rust past 90%, and "Runs out" replaces the reset time when the limit won't last until the reset. |
+| **Insights** | Usage over time by account, API value, budgets, models and current limits. Open it from the menu's footer. |
 | **Menu bar icon** | The in-use account's two nearest limits, for the tool you switched last. |
+
+Codex logins made with an API key aren't supported, only ChatGPT sign-ins.
 
 ## Usage tracking
 
-Switchr keeps its own record of what every account uses. Nothing leaves your Mac except the usage requests each provider already answers.
+Switchr keeps its own record of what every account uses.
 
 | Source | What Switchr reads |
 | --- | --- |
@@ -59,10 +68,9 @@ Switchr keeps its own record of what every account uses. Nothing leaves your Mac
 | Cursor | Each saved account's usage export from cursor.com, at most twice an hour |
 
 - **Per account:** each request is credited to the account that was in use at that moment. Switchr records every switch, including logins you change outside it. Usage from before Switchr started goes to the tool's only saved account when there's one.
-- **API value:** requests are priced at each provider's standard API rates, from a table generated from [models.dev](https://models.dev). Subscriptions don't bill per token, so treat API value as a measure of how much use you get, not of what you pay. Cursor's on-demand charges are shown separately as billed.
-- **Budgets:** set one per account or across all accounts, per day, week or month, from the Insights window. Switchr notifies you at 80% and at 100%.
-- **Forecasts:** Switchr samples each limit every few minutes and projects when it runs out at the recent rate. The meter shows `out 14:32` when that comes before the reset. If the account in use gets close, a notification offers a **Switch** button that moves you to the saved account with the most room.
-- **Incremental reads:** logs are read incrementally into `~/Library/Application Support/Switchr/usage.sqlite`. The first read of a large history takes a few seconds, and later refreshes only parse new lines.
+- **API value:** requests are priced at each provider's standard API rates, from a table generated from [models.dev](https://models.dev). Subscriptions don't bill per token, so API value measures how much use you get, not what you pay. Cursor's on-demand charges are shown separately as billed.
+- **Budgets:** set one per account or across all accounts, per day, week or month, in Insights. Switchr notifies you at 80% and at 100%.
+- **Forecasts:** Switchr samples each limit and projects when it runs out at the recent rate. Once a limit is half used and on track to run out before it resets, a notification offers a **Switch** button that moves you to the saved account with the most room.
 
 <p align="center">
   <img src="docs/insights.png" width="820" alt="Switchr's Insights window: tokens and API value for the week, a stacked bar chart by account, account budgets, models and current limits">
@@ -92,47 +100,85 @@ sequenceDiagram
 
 Tools rotate their tokens on their own, so Switchr re-saves the in-use login on every refresh. Limits are fetched with each account's own token. Switchr only refreshes tokens for accounts that aren't in use, so a running session never has its token rotated out from under it.
 
-## Storage and security
+## Settings
 
-- **Saved logins** go in your login Keychain, service `dev.switchr.vault`, one item per account. Keychain calls go through `/usr/bin/security`, so there are no access prompts.
-- **Account names and labels** go in `~/Library/Application Support/Switchr/accounts.json`. This file holds no tokens.
-- **Switching** hands tokens to a tool in one of two ways. Keychain writes pass the credential as an argument to `security`, where other processes running as your user can briefly see it. The Cursor deep link goes through Launch Services and never appears in a process list.
-- **Endpoints** are the private ones the tools call themselves, so a provider update can break Switchr. If that happens, [open an issue](../../issues/new/choose).
+Open the **…** menu in the footer.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| Check usage every 5 minutes | On | Reads limits and logs on a timer. Off, Switchr checks only when you open the menu or press Refresh. |
+| Check for updates automatically | On | Asks GitHub for the latest release once a day. |
+| Install updates automatically | On | Installs a verified release as soon as it's found, never during a switch, then reopens. |
+| Open at login | Set in the welcome window | Starts Switchr when you log in. |
+
+## Updates
+
+Switchr updates itself from this repository's releases. It downloads `Switchr.zip`, checks its SHA-256 against the release's `SHA256SUMS`, confirms the bundle inside is the expected version, swaps it in place and reopens. A release without a checksum, or with one that doesn't match, is never installed. With automatic installs off, the menu shows an **Update** button instead. **Check for Updates…** in the **…** menu checks right away.
+
+## Privacy
+
+There's no analytics and no telemetry. Switchr's network requests are:
+
+- **Limits:** each provider's usage endpoint, called with that account's own token: `api.anthropic.com`, `chatgpt.com` and `cursor.com`.
+- **Token refresh:** for accounts that aren't in use, the providers' own sign-in services: `platform.claude.com` and `auth.openai.com`.
+- **Cursor usage export:** `cursor.com`, per saved Cursor account.
+- **Updates:** `api.github.com` and `github.com`, for release information and downloads.
+
+Everything else stays on your Mac:
+
+- **Saved logins:** your login Keychain, service `dev.switchr.vault`, one item per account.
+- **Account names and labels:** `~/Library/Application Support/Switchr/accounts.json`. This file holds no tokens.
+- **Usage history:** `~/Library/Application Support/Switchr/usage.sqlite`, readable only by you.
+
+## Security notes
+
+- Keychain calls go through `/usr/bin/security`, so there are no access prompts. Writes pass the credential as an argument, where other processes running as your user can briefly see it.
+- The Cursor deep link hands tokens over through Launch Services and never appears in a process list.
+- Releases are signed ad hoc, not notarized. Build from source if you'd rather not run a prebuilt binary.
+- The endpoints are the private ones the tools call themselves, so a provider update can break Switchr. If that happens, [open an issue](../../issues/new/choose). Report vulnerabilities privately, as described in [SECURITY.md](SECURITY.md).
+
+## Uninstall
+
+1. Quit Switchr from the **…** menu.
+2. Remove its saved logins, usage history and preferences:
+   ```bash
+   /Applications/Switchr.app/Contents/MacOS/Switchr --reset
+   ```
+3. Delete `/Applications/Switchr.app`.
+
+Your tools stay signed in with whatever account was last in use.
 
 ## Development
 
 ```bash
-./scripts/build-app.sh --install   # universal build, copied to Applications and opened
-./scripts/build-app.sh --release   # plus build/Switchr.zip, build/Switchr.dmg and SHA256SUMS
-./scripts/render-art.sh            # re-render the icon, disk image background and banner
+swift test                          # unit tests
+./scripts/build-app.sh --install    # universal build, copied to Applications and opened
+./scripts/build-app.sh --release    # plus build/Switchr.zip, build/Switchr.dmg and SHA256SUMS
+python3 scripts/update-pricing.py   # refresh model prices from models.dev
+./scripts/render-art.sh             # re-render the icon, disk image background and banner
 ```
-
-Debug flags on the binary:
 
 | Flag | What it does |
 | --- | --- |
 | `--probe` | Prints each tool's current login and limits without changing anything |
 | `--reapply <claude\|cursor\|codex>` | Switches a tool to the login it already has, which exercises the whole switch path |
-| `--snapshot <prefix>` | Renders the menu and the welcome window with sample data to PNGs |
+| `--usage-report <database>` | Reads local logs into the given database and prints totals |
+| `--preview-menu [tool]`, `--preview-insights`, `--preview-welcome` | Shows real windows with sample data, for screenshots |
+| `--update-now` | Installs the latest release over this copy without reopening it |
+| `--reset` | Removes saved logins, usage history and preferences |
 
-| Path | Contents |
-| --- | --- |
-| `Sources/Switchr/Providers` | One adapter per tool: read the login, apply one, sign out locally, fetch usage |
-| `Sources/Switchr/Core` | Account store, Keychain vault, shell and HTTP helpers |
-| `Sources/Switchr/UI` | Menu, welcome window, meters, brand |
-| `scripts` | Build, art and disk image settings |
-| `install.sh` | The one-line installer |
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the code layout and conventions.
 
 ## Releasing
 
 1. Bump `VERSION` and add a matching section to `CHANGELOG.md`.
-2. Commit, then tag and push: `git tag v0.3.0 && git push origin v0.3.0`.
+2. Commit, then tag and push: `git tag v$(cat VERSION) && git push origin v$(cat VERSION)`.
 
-The [Release workflow](.github/workflows/release.yml) builds the universal app, zip, disk image and checksums, then publishes them with that changelog section as the release notes. [CI](.github/workflows/ci.yml) builds and smoke-tests every push.
+The [Release workflow](.github/workflows/release.yml) runs the tests, builds the universal app, zip, disk image and checksums, and publishes them with that changelog section as the release notes. [CI](.github/workflows/ci.yml) tests and builds every push.
 
 ## Terms and trademarks
 
-Switchr moves between accounts you already have, such as a personal login and a work login. It doesn't give any account more usage than its plan includes. Using several accounts to get around one plan's limits can break a provider's terms, so read the terms for each service you use ([Anthropic](https://www.anthropic.com/legal/consumer-terms), [Cursor](https://cursor.com/terms-of-service), [OpenAI](https://openai.com/policies/row-terms-of-use/)) and use Switchr within them. Only save accounts that are yours: providers such as Anthropic don't allow sharing a login with anyone else.
+Switchr moves between accounts you already have, such as a personal login and a work login. It doesn't give any account more usage than its plan includes. Using several accounts to get around one plan's limits can break a provider's terms, so read the terms for each service you use ([Anthropic](https://www.anthropic.com/legal/consumer-terms), [Cursor](https://cursor.com/terms-of-service), [OpenAI](https://openai.com/policies/row-terms-of-use/)) and use Switchr within them. Only save accounts that are yours: providers such as Anthropic don't allow sharing a login. If you'd rather Switchr make no requests on a timer, turn off **Check usage every 5 minutes**.
 
 Switchr is an independent project. It isn't affiliated with, endorsed by or sponsored by Anthropic, Anysphere or OpenAI. Claude, Claude Code, Cursor, Codex and OpenAI are trademarks of their owners, and their logos appear only to identify each tool.
 

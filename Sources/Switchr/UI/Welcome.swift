@@ -153,19 +153,22 @@ private struct DetectionRow: View {
 }
 
 struct BoneButtonStyle: ButtonStyle {
+    var compact = false
+
     func makeBody(configuration: Configuration) -> some View {
-        BoneButton(configuration: configuration)
+        BoneButton(configuration: configuration, compact: compact)
     }
 
     private struct BoneButton: View {
         let configuration: ButtonStyleConfiguration
+        let compact: Bool
         @State private var hovering = false
 
         var body: some View {
             configuration.label
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: compact ? 12 : 13, weight: .semibold))
                 .foregroundStyle(Brand.enamelBottom)
-                .frame(maxWidth: .infinity, minHeight: 38)
+                .frame(maxWidth: .infinity, minHeight: compact ? 26 : 38)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(Brand.bone.opacity(configuration.isPressed ? 0.78 : hovering ? 0.9 : 1))

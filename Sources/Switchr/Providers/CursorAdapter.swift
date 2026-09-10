@@ -111,7 +111,7 @@ struct CursorAdapter: ProviderAdapter {
         openCursor()
     }
 
-    func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> UsageReport {
+    func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
         guard let token = secret["cursorAuth/accessToken"], let subject = JWT.claims(token)?["sub"] as? String else {
             throw SwitchrError("Saved Cursor login is damaged")
         }
@@ -129,7 +129,7 @@ struct CursorAdapter: ProviderAdapter {
         default: throw SwitchrError("Cursor usage returned \(status)")
         }
         guard let body = JSON.object(data) else { throw SwitchrError("Unreadable Cursor usage response") }
-        return UsageReport(windows: Self.windows(body), plan: (body["membershipType"] as? String).map(Self.planName))
+        return LimitReport(windows: Self.windows(body), plan: (body["membershipType"] as? String).map(Self.planName))
     }
 
     /// Every request in the account's usage export, priced. Cursor keeps no local usage logs,
@@ -145,7 +145,12 @@ struct CursorAdapter: ProviderAdapter {
         ])
         guard status == 200 else { throw SwitchrError("Cursor usage export returned \(status)") }
 
-        let rows = CSV.rows(String(decoding: data, as: UTF8.self))
+        return try Self.usageRecords(csv: String(decoding: data, as: UTF8.self), account: account)
+    }
+
+    /// Parses Cursor's usage export into priced records.
+    static func usageRecords(csv: String, account: UUID) throws -> [UsageRecord] {
+        let rows = CSV.rows(csv)
         guard let header = rows.first else { return [] }
         func column(_ name: String) -> Int? { header.firstIndex(of: name) }
         guard let date = column("Date"), let model = column("Model"),
@@ -178,7 +183,7 @@ struct CursorAdapter: ProviderAdapter {
 
     /// Cursor meters usage per billing cycle. Plans with separate Auto and API pools report a
     /// percentage for each; other plans report one total, or only cents spent against a cap.
-    private static func windows(_ body: [String: Any]) -> [UsageWindow] {
+    static func windows(_ body: [String: Any]) -> [UsageWindow] {
         let cycleEnd = Dates.parse(body["billingCycleEnd"])
         let cycleLength: TimeInterval? = {
             guard let start = Dates.parse(body["billingCycleStart"]), let end = cycleEnd, end > start else { return nil }

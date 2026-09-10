@@ -515,8 +515,8 @@ private struct BudgetCell: View {
                 let spent = tracker.budgetSpend[scope] ?? 0
                 Button { editing = true } label: {
                     HStack(spacing: 10) {
-                        Meter(fraction: spent / budget.amount, pace: budget.period.elapsed(at: Date()), emphasized: true)
-                            .frame(width: 120, height: 10)
+                        LimitTrack(fraction: spent / budget.amount, pace: budget.period.elapsed(at: Date()))
+                            .frame(width: 120, height: 7)
                         Text("\(Numbers.usd(spent)) of \(Numbers.usd(budget.amount)) \(budget.period.title)")
                             .font(.system(size: 12).monospacedDigit())
                     }

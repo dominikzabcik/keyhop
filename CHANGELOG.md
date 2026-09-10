@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0]
+
+- Automatic updates. Switchr checks GitHub once a day and installs a new release in place, only after the download matches the release checksum and never during a switch. With automatic installs off, the menu shows an Update button.
+- Settings in the menu's "…": automatic usage checks, update checks, automatic installs and Open at login.
+- `Switchr --reset` removes every saved login, the usage database and preferences.
+- VoiceOver labels for tabs, limits and account rows.
+- The menu opens on a tool you use, even before your first switch.
+- Limit forecast alerts wait until a limit is at least half used, so early estimates don't cry wolf.
+- Dollar amounts use US formatting in every locale.
+- The usage folder and database are readable only by you.
+- Unit tests for pricing, log parsing, attribution, forecasts, budgets, Cursor's export and the updater. CI and releases run them.
+
 ## [0.5.0]
 
 - Redesigned menu on the Switchr enamel. Tabs switch between Claude Code, Cursor and Codex, each with a live twin-track glyph.

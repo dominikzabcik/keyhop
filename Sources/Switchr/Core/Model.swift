@@ -96,7 +96,7 @@ struct UsageWindow: Equatable, Identifiable {
     }
 }
 
-struct UsageReport {
+struct LimitReport {
     var windows: [UsageWindow]
     var plan: String?
 }

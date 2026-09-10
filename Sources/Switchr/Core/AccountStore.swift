@@ -35,7 +35,12 @@ final class AccountStore: ObservableObject {
         focusProvider = UserDefaults.standard.string(forKey: "focusProvider").flatMap(Provider.init)
 
         timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+            Task { @MainActor in
+                Updater.shared.checkIfDue()
+                // With automatic checks off, usage is only read when the menu opens or on Refresh.
+                guard UserDefaults.standard.bool(forKey: "autoRefresh") else { return }
+                self?.refresh()
+            }
         }
         // The menu is the only window, so becoming key means it just opened.
         NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] _ in

@@ -21,13 +21,21 @@ struct MenuView: View {
                 NoticeLine(text: notice)
             }
 
+            UpdateLine()
+
             MenuFooter()
         }
         .frame(width: 340)
         .background(Enamel())
         .environment(\.colorScheme, .dark)
         .onAppear {
-            if let focus = store.focusProvider { tool = focus }
+            if let focus = store.focusProvider {
+                tool = focus
+            } else if store.accounts(for: tool).isEmpty,
+                      let used = Provider.allCases.first(where: { !store.accounts(for: $0).isEmpty }) {
+                // Open on a tool you actually use.
+                tool = used
+            }
         }
     }
 }
@@ -71,6 +79,8 @@ private struct ToolTabs: View {
                 }
                 .buttonStyle(.plain)
                 .help(provider.name)
+                .accessibilityLabel(provider.name)
+                .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
     }
@@ -227,6 +237,10 @@ private struct LimitCell: View {
                     .lineLimit(1)
             }
             .help(helpText(context.date))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(window.label) limit")
+            .accessibilityValue("\(Int(window.usedPercent.rounded())) percent used, "
+                + (outSoon ? "runs out around \(runsOut!.formatted(date: .omitted, time: .shortened))" : resetCaption(context.date)))
         }
     }
 
@@ -343,6 +357,8 @@ private struct AlternativeRow: View {
         .onHover { hovering = $0 }
         .animation(.easeOut(duration: 0.12), value: hovering)
         .help("Switch \(account.provider.name) to \(account.email)")
+        .accessibilityLabel("Switch to \(account.displayName)")
+        .accessibilityValue(room.map { "\(Int($0.rounded())) percent left" } ?? subtitle(snapshot))
         .contextMenu {
             Button("Rename…") { renaming = account.id }
             Divider()
@@ -491,6 +507,10 @@ private struct NoticeLine: View {
 
 private struct MenuFooter: View {
     @EnvironmentObject private var store: AccountStore
+    @ObservedObject private var updater = Updater.shared
+    @AppStorage("autoRefresh") private var autoRefresh = true
+    @AppStorage("checkForUpdates") private var checkForUpdates = true
+    @AppStorage("autoInstallUpdates") private var autoInstallUpdates = true
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -517,6 +537,13 @@ private struct MenuFooter: View {
             QuietButton("Insights") { InsightsWindow.show() }
 
             Menu {
+                Text("Switchr \(Updater.currentVersion)")
+                Button("Check for Updates…") { Task { await updater.check(userInitiated: true) } }
+                Divider()
+                Toggle("Check usage every 5 minutes", isOn: $autoRefresh)
+                Toggle("Check for updates automatically", isOn: $checkForUpdates)
+                Toggle("Install updates automatically", isOn: $autoInstallUpdates)
+                    .disabled(!checkForUpdates)
                 Toggle("Open at login", isOn: $launchAtLogin)
                 Divider()
                 Button("Quit Switchr") { NSApp.terminate(nil) }

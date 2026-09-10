@@ -9,5 +9,10 @@ let package = Package(
             name: "Switchr",
             path: "Sources/Switchr"
         ),
+        .testTarget(
+            name: "SwitchrTests",
+            dependencies: ["Switchr"],
+            path: "Tests/SwitchrTests"
+        ),
     ]
 )

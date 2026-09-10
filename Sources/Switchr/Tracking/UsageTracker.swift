@@ -26,6 +26,9 @@ final class UsageTracker: ObservableObject {
         sample = nil
         do {
             engine = try TrackerEngine(url: url)
+            // Usage history is personal: only you can read the folder and the database.
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.deletingLastPathComponent().path)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
         } catch {
             engine = nil
             problem = error.localizedDescription
@@ -159,7 +162,8 @@ final class UsageTracker: ObservableObject {
             for window in snapshot.windows {
                 let eta = forecasts[Self.forecastKey(id, window.label)]
                 let nearlyOut = window.usedPercent >= 90
-                guard nearlyOut || eta != nil else { continue }
+                // Early in a window a few samples can project a run-out that never happens.
+                guard nearlyOut || (eta != nil && window.usedPercent >= 50) else { continue }
 
                 let alternative = store.accounts
                     .filter { $0.provider == provider && $0.id != id }

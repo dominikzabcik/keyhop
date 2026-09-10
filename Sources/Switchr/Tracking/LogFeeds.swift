@@ -37,7 +37,8 @@ struct LogFeed {
         tokens.cacheRead = count("cache_read_input_tokens")
         tokens.output = count("output_tokens")
 
-        let id = message["id"] as? String ?? UUID().uuidString
+        // Keys must be stable, so a re-read file can never count a response twice.
+        let id = message["id"] as? String ?? object["uuid"] as? String ?? String(timestamp.timeIntervalSince1970)
         return UsageRecord(
             key: "claude:\(id):\(object["requestId"] as? String ?? "")",
             provider: .claude, account: nil, session: object["sessionId"] as? String,

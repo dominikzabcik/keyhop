@@ -1,44 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// A usage track with a tick at the even-pace point, so "ahead of budget" reads at a glance.
-struct Meter: View {
-    let fraction: Double
-    let pace: Double?
-    let emphasized: Bool
-
-    private let barHeight: CGFloat = 5
-
-    var body: some View {
-        GeometryReader { geo in
-            let width = geo.size.width
-            let value = min(max(fraction, 0), 1)
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Color.primary.opacity(0.1))
-                    .frame(height: barHeight)
-                Capsule()
-                    .fill(tint(value))
-                    .frame(width: value > 0 ? max(barHeight, width * value) : 0, height: barHeight)
-                if let pace {
-                    Capsule()
-                        .fill(Color.primary.opacity(0.5))
-                        .frame(width: 1.5, height: geo.size.height)
-                        .offset(x: min(max(width * pace - 0.75, 0), width - 1.5))
-                }
-            }
-            .frame(width: width, height: geo.size.height)
-            .animation(.smooth(duration: 0.6), value: value)
-        }
-    }
-
-    private func tint(_ value: Double) -> Color {
-        if value >= 0.9 { return Color(red: 0.74, green: 0.42, blue: 0.37) }
-        if let pace, value > pace + 0.08 { return Color(red: 0.76, green: 0.61, blue: 0.38) }
-        return Color.primary.opacity(emphasized ? 0.7 : 0.36)
-    }
-}
-
 /// Menu bar icon: the in-use account's two nearest limits as two short tracks.
 enum MenuBarGlyph {
     /// `sweep` (0...1) replaces the data with the icon's hand-off animation.
@@ -71,7 +33,9 @@ enum MenuBarGlyph {
             return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = "Switchr"
+        image.accessibilityDescription = windows.isEmpty
+            ? "Switchr"
+            : "Switchr, " + windows.prefix(2).map { "\($0.label) \(Int($0.usedPercent.rounded())) percent used" }.joined(separator: ", ")
         return image
     }
 }
@@ -86,5 +50,6 @@ struct ProviderMark: View {
             .resizable()
             .aspectRatio(contentMode: .fit)
             .foregroundStyle(tint.map(AnyShapeStyle.init) ?? AnyShapeStyle(.secondary))
+            .accessibilityHidden(true)
     }
 }

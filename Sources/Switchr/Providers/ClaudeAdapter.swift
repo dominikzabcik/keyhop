@@ -53,7 +53,7 @@ struct ClaudeAdapter: ProviderAdapter {
         try updateConfig { $0.removeValue(forKey: "oauthAccount") }
     }
 
-    func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> UsageReport {
+    func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
         guard var oauth = JSON.object(secret["oauth"]), var token = oauth["accessToken"] as? String else {
             throw SwitchrError("Saved Claude login is damaged")
         }
@@ -102,7 +102,7 @@ struct ClaudeAdapter: ProviderAdapter {
             guard let w = body[slot.key] as? [String: Any], let used = JSON.number(w["utilization"]) else { return nil }
             return UsageWindow(label: slot.label, usedPercent: used, resetsAt: Dates.parse(w["resets_at"]), windowSeconds: slot.seconds)
         }
-        return UsageReport(windows: windows, plan: nil)
+        return LimitReport(windows: windows, plan: nil)
     }
 
     // MARK: Identity

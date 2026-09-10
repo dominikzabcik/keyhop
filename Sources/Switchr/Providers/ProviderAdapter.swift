@@ -16,7 +16,7 @@ protocol ProviderAdapter: Sendable {
     /// Fetches limits for a saved login. Tokens are only refreshed when `allowRefresh` is
     /// set, which the store limits to accounts not in use, so a running tool never has
     /// its refresh token rotated out from under it. Rotated secrets go to `persist` right away.
-    func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> UsageReport
+    func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport
 }
 
 enum Adapters {

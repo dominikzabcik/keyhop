@@ -41,7 +41,7 @@ struct CodexAdapter: ProviderAdapter {
         }
     }
 
-    func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> UsageReport {
+    func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
         guard var root = JSON.object(secret["auth"]),
               var tokens = root["tokens"] as? [String: Any],
               var access = tokens["access_token"] as? String else {
@@ -81,7 +81,7 @@ struct CodexAdapter: ProviderAdapter {
         let windows = [rate["primary_window"], rate["secondary_window"]]
             .compactMap(Self.window)
             .sorted { ($0.windowSeconds ?? .infinity) < ($1.windowSeconds ?? .infinity) }
-        return UsageReport(windows: windows, plan: (body["plan_type"] as? String)?.capitalized)
+        return LimitReport(windows: windows, plan: (body["plan_type"] as? String)?.capitalized)
     }
 
     private static func window(_ any: Any?) -> UsageWindow? {

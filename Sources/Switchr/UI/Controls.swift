@@ -97,5 +97,6 @@ struct TwinTracks: View {
                 }
             }
         }
+        .accessibilityHidden(true)
     }
 }

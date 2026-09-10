@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import ServiceManagement
 import SwiftUI
@@ -216,3 +217,4 @@ enum Relocator {
         }
     }
 }
+#endif

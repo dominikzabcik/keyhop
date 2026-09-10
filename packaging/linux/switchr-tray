@@ -1,0 +1,509 @@
+#!/usr/bin/python3
+"""Switchr's Linux tray: the accounts menu, limit icon and alerts.
+
+Everything it shows comes from `switchr ... --json`, the same contract the Windows tray uses.
+Needs PyGObject with GTK 3, libayatana-appindicator (or libappindicator) and libnotify.
+
+    switchr-tray                  run the tray
+    switchr-tray --print-menu F   print the menu for a saved `switchr status --json` (no GTK needed)
+"""
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+import threading
+import time
+from datetime import datetime, timezone
+
+APP_ID = "dev.switchr.Switchr"
+REFRESH_SECONDS = 5 * 60
+UPDATE_CHECK_SECONDS = 12 * 60 * 60
+BONE = "#EDE7D9"
+INK = "#0A1510"
+
+
+def cli_path():
+    here = os.path.dirname(os.path.realpath(__file__))
+    beside = os.path.join(here, "switchr")
+    if os.access(beside, os.X_OK) and not os.path.isdir(beside):
+        return beside
+    return shutil.which("switchr") or "switchr"
+
+
+def parse_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+# MARK: Menu model (no GTK)
+
+
+def tokens(count):
+    for limit, suffix in ((1e9, "B"), (1e6, "M"), (1e3, "K")):
+        if count >= limit:
+            number = count / limit
+            text = f"{number:.0f}" if number >= 100 else f"{number:.1f}"
+            return (text[:-2] if text.endswith(".0") else text) + suffix
+    return str(count)
+
+
+def usd(amount):
+    return f"${amount:.0f}" if amount >= 100 else f"${amount:.2f}"
+
+
+def relative(moment, now=None):
+    now = now or datetime.now(timezone.utc)
+    seconds = int((now - moment).total_seconds())
+    if seconds < 60:
+        return "just now"
+    if seconds < 3600:
+        return f"{seconds // 60} min ago"
+    if seconds < 86400:
+        return f"{seconds // 3600} h ago"
+    return f"{seconds // 86400} d ago"
+
+
+def account_detail(account):
+    limits = account.get("limits") or []
+    if limits:
+        tightest = max(limits, key=lambda limit: limit["usedPercent"])
+        return f"{round(tightest['usedPercent'])}% of {tightest['label']}"
+    if account.get("error"):
+        return "limits unavailable"
+    return account.get("plan") or ""
+
+
+def build_menu(status, busy=None, update=None, autostart=False):
+    """A list of dicts: {title, command, checked, enabled} or {separator: True}."""
+    items = []
+    if busy:
+        items += [{"title": busy, "enabled": False}, {"separator": True}]
+    if status:
+        for tool in status["tools"]:
+            items.append({"title": tool["name"], "enabled": False})
+            for account in tool["accounts"]:
+                detail = account_detail(account)
+                items.append({
+                    "title": account["name"] + (f"  ·  {detail}" if detail else ""),
+                    "command": None if account["active"] else ("switch", account["id"]),
+                    "checked": account["active"],
+                    "enabled": busy is None or account["active"],
+                })
+            label = "Add account…" if tool["accounts"] else "Save the signed-in account…"
+            items.append({"title": label, "command": ("add", tool["id"]), "enabled": busy is None})
+            items.append({"separator": True})
+        today = status.get("today") or {}
+        if today.get("requests"):
+            items.append({"title": f"Today: {tokens(today['tokens'])} tokens, {usd(today['cost'])} at API prices", "enabled": False})
+        read = parse_date(status.get("refreshedAt"))
+        items.append({"title": f"Limits read {relative(read)}" if read else "Limits not read yet", "enabled": False})
+    else:
+        items.append({"title": "Reading your accounts…", "enabled": False})
+
+    items.append({"title": "Refresh now", "command": ("refresh",), "enabled": busy is None})
+    items.append({"title": "Insights", "command": ("insights",)})
+    items.append({"separator": True})
+    items.append({"title": "Open at login", "command": ("autostart",), "checked": autostart, "toggle": True})
+    if update and update.get("available"):
+        items.append({"title": f"Update to {update['latest']}", "command": ("install-update",), "enabled": busy is None})
+    else:
+        version = (status or {}).get("version") or (update or {}).get("current") or "…"
+        items.append({"title": f"Check for updates ({version})", "command": ("check-update",), "enabled": busy is None})
+    items.append({"title": "Quit Switchr", "command": ("quit",)})
+    return items
+
+
+def glyph_values(status):
+    """The account in use that's closest to a limit: its first two limits, 0 to 1."""
+    best = None
+    for tool in (status or {}).get("tools", []):
+        for account in tool["accounts"]:
+            if account["active"] and account.get("limits"):
+                peak = max(limit["usedPercent"] for limit in account["limits"])
+                if best is None or peak > best[0]:
+                    best = (peak, account)
+    if not best:
+        return []
+    return [limit["usedPercent"] / 100 for limit in best[1]["limits"][:2]]
+
+
+def glyph_svg(values, color):
+    """The two limit tracks from the Mac menu bar icon."""
+    idle = not values
+    parts = ['<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">']
+    for row, y in enumerate((6, 12.5)):
+        parts.append(f'<rect x="2" y="{y}" width="18" height="4" rx="2" fill="{color}" fill-opacity="{0.55 if idle else 0.32}"/>')
+        if row < len(values) and values[row] is not None and values[row] > 0:
+            width = max(4, 18 * min(max(values[row], 0), 1))
+            parts.append(f'<rect x="2" y="{y}" width="{width:.2f}" height="4" rx="2" fill="{color}"/>')
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def tooltip(status):
+    lines = ["Switchr"]
+    for tool in (status or {}).get("tools", []):
+        for account in tool["accounts"]:
+            if account["active"] and account.get("limits"):
+                tightest = max(account["limits"], key=lambda limit: limit["usedPercent"])
+                lines.append(f"{tool['name']}: {round(tightest['usedPercent'])}% of {tightest['label']}")
+    return "\n".join(lines)
+
+
+def print_menu(path):
+    with open(path, encoding="utf-8") as handle:
+        status = json.load(handle)
+    for item in build_menu(status, autostart=True):
+        if item.get("separator"):
+            print("  ----")
+        else:
+            mark = "✓" if item.get("checked") else " "
+            suffix = "" if item.get("enabled", True) else "  (label)"
+            print(f"{mark} {item['title']}{suffix}")
+    print("Tooltip:", tooltip(status).replace("\n", " | "))
+
+
+# MARK: Tray
+
+
+def run_tray():
+    import fcntl
+    import gi
+
+    gi.require_version("Gtk", "3.0")
+    from gi.repository import Gio, GLib, Gtk
+
+    indicator_module = None
+    for name in ("AyatanaAppIndicator3", "AppIndicator3"):
+        try:
+            gi.require_version(name, "0.1")
+            indicator_module = __import__("gi.repository", fromlist=[name]).__dict__[name]
+            break
+        except (ValueError, ImportError, KeyError):
+            continue
+    if indicator_module is None:
+        sys.stderr.write(
+            "switchr-tray needs libayatana-appindicator:\n"
+            "  Fedora: sudo dnf install libayatana-appindicator-gtk3\n"
+            "  Debian/Ubuntu: sudo apt install gir1.2-ayatanaappindicator3-0.1\n"
+            "  Arch: sudo pacman -S libayatana-appindicator\n"
+        )
+        return 1
+
+    try:
+        gi.require_version("Notify", "0.7")
+        from gi.repository import Notify
+    except (ValueError, ImportError):
+        Notify = None
+
+    runtime = os.environ.get("XDG_RUNTIME_DIR") or os.path.join("/tmp", f"switchr-{os.getuid()}")
+    icon_dir = os.path.join(runtime, "switchr")
+    os.makedirs(icon_dir, mode=0o700, exist_ok=True)
+    lock = open(os.path.join(icon_dir, "tray.lock"), "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        if "--after-update" not in sys.argv:
+            print("Switchr's tray is already running.")
+            return 0
+        fcntl.flock(lock, fcntl.LOCK_EX)
+
+    config = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    autostart_file = os.path.join(config, "autostart", f"{APP_ID}.desktop")
+    state_dir = os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"), "switchr")
+
+    class Tray:
+        def __init__(self):
+            self.status = None
+            self.update = None
+            self.busy = None
+            self.icon_path = None
+            self.notifications = []
+            self.cli = cli_path()
+            self.indicator = indicator_module.Indicator.new(APP_ID, "", indicator_module.IndicatorCategory.APPLICATION_STATUS)
+            self.indicator.set_status(indicator_module.IndicatorStatus.ACTIVE)
+            self.indicator.set_title("Switchr")
+            if Notify:
+                Notify.init("Switchr")
+            self.render()
+            self.load(["status", "--json"], then=lambda: self.refresh(claim=True))
+            GLib.timeout_add_seconds(REFRESH_SECONDS, self.on_timer)
+            GLib.timeout_add_seconds(UPDATE_CHECK_SECONDS, self.on_update_timer)
+            self.check_update(announce=False)
+            GLib.timeout_add_seconds(3, self.check_tray_host)
+
+        # Running switchr
+
+        def run(self, arguments, done):
+            def work():
+                try:
+                    result = subprocess.run([self.cli] + arguments, capture_output=True, timeout=900)
+                    outcome = (result.returncode, result.stdout, result.stderr.decode("utf-8", "replace"))
+                except (OSError, subprocess.TimeoutExpired) as error:
+                    outcome = (1, b"", str(error))
+                GLib.idle_add(lambda: done(*outcome) and False)
+
+            threading.Thread(target=work, daemon=True).start()
+
+        @staticmethod
+        def error_text(code, stderr):
+            text = stderr.strip()
+            if text.startswith("switchr: "):
+                text = text[len("switchr: "):]
+            return text[:300] or f"switchr exited with code {code}."
+
+        def load(self, arguments, then=None):
+            def done(code, stdout, stderr):
+                if code == 0:
+                    try:
+                        self.status = json.loads(stdout)
+                    except ValueError:
+                        pass
+                elif self.status is None:
+                    self.notify("Switchr couldn't read your accounts", self.error_text(code, stderr))
+                self.render()
+                if then:
+                    then()
+
+            self.run(arguments, done)
+
+        def refresh(self, claim=False):
+            arguments = ["refresh", "--json"] + (["--claim-alerts"] if claim else [])
+            if self.busy is None:
+                self.busy = "Reading limits…"
+                self.render()
+
+            def after():
+                if self.busy == "Reading limits…":
+                    self.busy = None
+                    self.render()
+                for alert in (self.status or {}).get("alerts", []):
+                    self.notify(alert["title"], alert["body"], switch_to=alert.get("switchTo"))
+
+            self.load(arguments, then=after)
+
+        def check_update(self, announce):
+            def done(code, stdout, stderr):
+                if code != 0:
+                    if announce:
+                        self.notify("Couldn't check for updates", self.error_text(code, stderr))
+                    return
+                try:
+                    self.update = json.loads(stdout)
+                except ValueError:
+                    return
+                self.render()
+                if announce:
+                    if self.update.get("available"):
+                        self.notify("Switchr", f"Switchr {self.update['latest']} is available. Choose Update in the menu.")
+                    else:
+                        self.notify("Switchr", f"Switchr {self.update['current']} is the latest version.")
+
+            self.run(["update", "--check", "--json"], done)
+
+        def on_timer(self):
+            self.refresh(claim=True)
+            return True
+
+        def on_update_timer(self):
+            self.check_update(announce=False)
+            return True
+
+        def check_tray_host(self):
+            """GNOME hides tray icons unless the AppIndicator extension is on; say so once."""
+            try:
+                bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+                reply = bus.call_sync("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameHasOwner",
+                                      GLib.Variant("(s)", ("org.kde.StatusNotifierWatcher",)), None, Gio.DBusCallFlags.NONE, 2000, None)
+                has_host = reply.unpack()[0]
+            except GLib.Error:
+                return False
+            marker = os.path.join(state_dir, "tray-host-hint-shown")
+            if not has_host and not os.path.exists(marker):
+                self.notify("Switchr is running, but your desktop hides tray icons",
+                            "On GNOME, turn on the AppIndicator and KStatusNotifierItem extension, then log out and back in.")
+                os.makedirs(state_dir, exist_ok=True)
+                open(marker, "w").close()
+            return False
+
+        # Notifications
+
+        def notify(self, title, body, switch_to=None):
+            if not Notify:
+                print(f"{title}: {body}")
+                return
+            note = Notify.Notification.new(title, body, APP_ID)
+            note.set_hint("desktop-entry", GLib.Variant("s", APP_ID))
+            if switch_to:
+                note.add_action("switch", "Switch", lambda *_: self.perform(("switch", switch_to)))
+            note.connect("closed", lambda n: self.notifications.remove(n) if n in self.notifications else None)
+            self.notifications.append(note)
+            try:
+                note.show()
+            except GLib.Error:
+                pass
+
+        # Icon and menu
+
+        def render(self):
+            dark_panel = os.environ.get("SWITCHR_TRAY_ICON", "light") != "dark"
+            svg = glyph_svg(glyph_values(self.status), BONE if dark_panel else INK)
+            # A new file name per change: indicator hosts cache icons by path.
+            path = os.path.join(icon_dir, f"glyph-{abs(hash(svg))}.svg")
+            if path != self.icon_path:
+                with open(path, "w", encoding="utf-8") as handle:
+                    handle.write(svg)
+                old = self.icon_path
+                self.icon_path = path
+                self.indicator.set_icon_full(path, tooltip(self.status).replace("\n", ", "))
+                if old and os.path.exists(old):
+                    GLib.timeout_add_seconds(5, lambda: (os.remove(old) if os.path.exists(old) else None) and False)
+            self.indicator.set_menu(self.build())
+
+        def build(self):
+            menu = Gtk.Menu()
+            autostart = os.path.exists(autostart_file)
+            for item in build_menu(self.status, self.busy, self.update, autostart):
+                if item.get("separator"):
+                    menu.append(Gtk.SeparatorMenuItem())
+                    continue
+                if item.get("checked") or item.get("toggle"):
+                    widget = Gtk.CheckMenuItem(label=item["title"])
+                    widget.set_active(bool(item.get("checked")))
+                else:
+                    widget = Gtk.MenuItem(label=item["title"])
+                widget.set_sensitive(item.get("enabled", True) and (item.get("command") is not None or item.get("checked", False)))
+                command = item.get("command")
+                if command:
+                    widget.connect("activate", lambda _w, c=command: self.perform(c))
+                elif item.get("checked"):
+                    # The account in use: keep its check mark when clicked.
+                    widget.connect("toggled", lambda w: w.get_active() or (w.set_active(True)))
+                menu.append(widget)
+            menu.show_all()
+            return menu
+
+        # Actions
+
+        def tool_for_account(self, account_id):
+            for tool in (self.status or {}).get("tools", []):
+                for account in tool["accounts"]:
+                    if account["id"] == account_id:
+                        return tool, account
+            return None, None
+
+        def perform(self, command):
+            kind = command[0]
+            if kind == "switch":
+                tool, account = self.tool_for_account(command[1])
+                if not tool:
+                    return
+                self.busy = f"Switching {tool['name']} to {account['name']}…"
+                self.render()
+
+                def done(code, stdout, stderr):
+                    self.busy = None
+                    if code == 0:
+                        try:
+                            result = json.loads(stdout)
+                            if result.get("note"):
+                                self.notify(result["message"], result["note"])
+                        except ValueError:
+                            pass
+                    else:
+                        self.notify(f"Couldn't switch {tool['name']}", self.error_text(code, stderr))
+                    self.load(["status", "--json"])
+
+                self.run(["switch", command[1], "--json"], done)
+
+            elif kind == "add":
+                tool = next((t for t in (self.status or {}).get("tools", []) if t["id"] == command[1]), None)
+                if not tool:
+                    return
+                self.busy = f"Waiting for a new {tool['name']} login…"
+                self.render()
+                self.notify(f"Sign in to {tool['name']} with the other account", f"{tool['signInHint']} Switchr saves it as soon as it appears.")
+
+                def done(code, stdout, stderr):
+                    self.busy = None
+                    if code == 0:
+                        try:
+                            self.notify(tool["name"], json.loads(stdout)["message"])
+                        except (ValueError, KeyError):
+                            pass
+                    else:
+                        self.notify(f"No new {tool['name']} login saved", self.error_text(code, stderr))
+                    self.load(["status", "--json"])
+
+                self.run(["add", command[1], "--json"], done)
+
+            elif kind == "refresh":
+                self.refresh()
+
+            elif kind == "insights":
+                self.run(["insights"], lambda code, _o, stderr: code == 0 or self.notify("Couldn't open Insights", self.error_text(code, stderr)))
+
+            elif kind == "autostart":
+                if os.path.exists(autostart_file):
+                    os.remove(autostart_file)
+                else:
+                    os.makedirs(os.path.dirname(autostart_file), exist_ok=True)
+                    with open(autostart_file, "w", encoding="utf-8") as handle:
+                        handle.write(
+                            "[Desktop Entry]\nType=Application\nName=Switchr\n"
+                            f"Exec={os.path.realpath(__file__)}\nIcon={APP_ID}\n"
+                            "X-GNOME-Autostart-enabled=true\nNoDisplay=true\n"
+                        )
+                self.render()
+
+            elif kind == "check-update":
+                self.check_update(announce=True)
+
+            elif kind == "install-update":
+                version = (self.update or {}).get("latest", "")
+                self.busy = f"Installing Switchr {version}…"
+                self.render()
+
+                def done(code, _stdout, stderr):
+                    self.busy = None
+                    if code != 0:
+                        self.notify("Switchr didn't update", self.error_text(code, stderr))
+                        self.render()
+                        return
+                    lock.close()
+                    os.execv(os.path.realpath(__file__), [os.path.realpath(__file__), "--after-update"])
+
+                self.run(["update", "--json"], done)
+
+            elif kind == "quit":
+                Gtk.main_quit()
+
+    Tray()
+    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, 2, Gtk.main_quit)
+    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, 15, Gtk.main_quit)
+    Gtk.main()
+    return 0
+
+
+def main(argv):
+    if "--print-menu" in argv:
+        index = argv.index("--print-menu")
+        if index + 1 >= len(argv):
+            sys.stderr.write("Usage: switchr-tray --print-menu status.json\n")
+            return 2
+        print_menu(argv[index + 1])
+        return 0
+    if "--help" in argv or "-h" in argv:
+        print(__doc__.strip())
+        return 0
+    return run_tray()
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

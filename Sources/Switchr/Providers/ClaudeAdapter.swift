@@ -1,21 +1,19 @@
 import Foundation
 
-/// Claude Code keeps its OAuth login in the Keychain item "Claude Code-credentials" (next to
-/// MCP server tokens, which are left untouched) and an account summary in `~/.claude.json`.
+/// Claude Code keeps its OAuth login in the Keychain item "Claude Code-credentials" on macOS, and
+/// in `~/.claude/.credentials.json` (0600) on Linux. MCP server tokens stored next to it are left
+/// untouched. The account summary lives in `~/.claude.json`.
 struct ClaudeAdapter: ProviderAdapter {
     let provider = Provider.claude
-    private static let service = "Claude Code-credentials"
     private static let clientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
     private static let profiles = ProfileCache()
 
-    private var configURL: URL { Files.home.appendingPathComponent(".claude.json") }
-
     func readLive() async throws -> LiveLogin? {
-        guard let root = Self.keychainRoot(),
+        guard let root = Self.readCredentials(),
               let oauth = root["claudeAiOauth"] as? [String: Any],
               let token = oauth["accessToken"] as? String, !token.isEmpty else { return nil }
 
-        let configAccount = readConfig()?["oauthAccount"] as? [String: Any]
+        let configAccount = Self.readConfig()?["oauthAccount"] as? [String: Any]
         let profile = try await identify(token: token, oauth: oauth, configAccount: configAccount)
 
         // Keep Claude Code's own account summary when it describes this login; otherwise
@@ -37,20 +35,20 @@ struct ClaudeAdapter: ProviderAdapter {
         guard let oauth = JSON.object(secret["oauth"]), oauth["accessToken"] is String else {
             throw SwitchrError("Saved Claude login is damaged")
         }
-        var root = Self.keychainRoot() ?? [:]
+        var root = Self.readCredentials() ?? [:]
         root["claudeAiOauth"] = oauth
-        try Keychain.write(service: Self.service, account: Self.keychainAccount, data: JSON.data(root))
+        try Self.writeCredentials(root)
         if let account = JSON.object(secret["account"]) {
-            try updateConfig { $0["oauthAccount"] = account }
+            try Self.updateConfig { $0["oauthAccount"] = account }
         }
     }
 
     func signOutLocally() async throws {
-        if var root = Self.keychainRoot() {
+        if var root = Self.readCredentials() {
             root.removeValue(forKey: "claudeAiOauth")
-            try Keychain.write(service: Self.service, account: Self.keychainAccount, data: JSON.data(root))
+            try Self.writeCredentials(root)
         }
-        try updateConfig { $0.removeValue(forKey: "oauthAccount") }
+        try Self.updateConfig { $0.removeValue(forKey: "oauthAccount") }
     }
 
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
@@ -115,8 +113,8 @@ struct ClaudeAdapter: ProviderAdapter {
         var identity: String { "\(accountUUID)|\(orgUUID ?? "")" }
     }
 
-    /// Asks Anthropic who the token belongs to, because ~/.claude.json can lag behind the
-    /// Keychain. Falls back to that file only when the token itself is expired.
+    /// Asks Anthropic who the token belongs to, because ~/.claude.json can lag behind the stored
+    /// login. Falls back to that file only when the token itself is expired.
     private func identify(token: String, oauth: [String: Any], configAccount: [String: Any]?) async throws -> Profile {
         if let cached = Self.profiles.get(token) { return cached }
         let tokenPlan = Self.planName(type: oauth["subscriptionType"] as? String, tier: oauth["rateLimitTier"] as? String)
@@ -157,24 +155,58 @@ struct ClaudeAdapter: ProviderAdapter {
         ["Authorization": "Bearer \(token)", "anthropic-beta": "oauth-2025-04-20", "Accept": "application/json"]
     }
 
+    // MARK: Where the login lives
+
+    /// Claude Code's config folder: `$CLAUDE_CONFIG_DIR`, or `~/.claude`.
+    private static var configDirectory: URL {
+        if let custom = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"], !custom.isEmpty {
+            return URL(fileURLWithPath: custom, isDirectory: true)
+        }
+        return Files.home.appendingPathComponent(".claude", isDirectory: true)
+    }
+
+    #if os(macOS)
+    private static let service = "Claude Code-credentials"
+
     /// Same account name Claude Code uses: $USER, or a fixed fallback when it has unusual characters.
     private static var keychainAccount: String {
         let user = ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
         return user.range(of: #"^[a-zA-Z0-9._-]+$"#, options: .regularExpression) != nil ? user : "claude-code-user"
     }
 
-    private static func keychainRoot() -> [String: Any]? {
+    private static func readCredentials() -> [String: Any]? {
         (Keychain.read(service: service, account: keychainAccount) ?? Keychain.read(service: service, account: nil))
             .flatMap { JSON.object($0) }
     }
 
-    // MARK: ~/.claude.json
+    private static func writeCredentials(_ root: [String: Any]) throws {
+        try Keychain.write(service: service, account: keychainAccount, data: JSON.data(root))
+    }
 
-    private func readConfig() -> [String: Any]? {
+    private static var configURL: URL { Files.home.appendingPathComponent(".claude.json") }
+    #else
+    static var credentialsFile: URL { configDirectory.appendingPathComponent(".credentials.json") }
+
+    private static func readCredentials() -> [String: Any]? {
+        (try? Data(contentsOf: credentialsFile)).flatMap { JSON.object($0) }
+    }
+
+    private static func writeCredentials(_ root: [String: Any]) throws {
+        try Files.writeAtomically(JSON.data(root), to: credentialsFile)
+    }
+
+    /// With a custom config folder, Claude Code keeps `.claude.json` inside it.
+    private static var configURL: URL {
+        ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"].map { _ in configDirectory.appendingPathComponent(".claude.json") }
+            ?? Files.home.appendingPathComponent(".claude.json")
+    }
+    #endif
+
+    private static func readConfig() -> [String: Any]? {
         (try? Data(contentsOf: configURL)).flatMap { JSON.object($0) }
     }
 
-    private func updateConfig(_ change: (inout [String: Any]) -> Void) throws {
+    private static func updateConfig(_ change: (inout [String: Any]) -> Void) throws {
         guard var config = readConfig() else { return }
         change(&config)
         try Files.writeAtomically(JSON.data(config, pretty: true), to: configURL)
@@ -186,10 +218,14 @@ private final class ProfileCache: @unchecked Sendable {
     private let lock = NSLock()
 
     func get(_ token: String) -> ClaudeAdapter.Profile? {
-        lock.withLock { profiles[token] }
+        lock.lock()
+        defer { lock.unlock() }
+        return profiles[token]
     }
 
     func set(_ token: String, _ profile: ClaudeAdapter.Profile) {
-        lock.withLock { profiles[token] = profile }
+        lock.lock()
+        defer { lock.unlock() }
+        profiles[token] = profile
     }
 }

@@ -1,3 +1,4 @@
+#if os(macOS)
 import Charts
 import SwiftUI
 
@@ -5,7 +6,9 @@ import SwiftUI
 enum InsightsWindow {
     private static var window: NSWindow?
 
-    static func show(store: AccountStore = .shared, tracker: UsageTracker = .shared, height: CGFloat = 780) {
+    static func show(store: AccountStore? = nil, tracker: UsageTracker? = nil, height: CGFloat = 780) {
+        let store = store ?? .shared
+        let tracker = tracker ?? .shared
         if window == nil {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: height),
                                   styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -37,16 +40,6 @@ extension Color {
     init(hex: String) {
         let value = Int(hex.dropFirst(), radix: 16) ?? 0
         self.init(red: Double((value >> 16) & 255) / 255, green: Double((value >> 8) & 255) / 255, blue: Double(value & 255) / 255)
-    }
-}
-
-extension Provider {
-    var shortName: String {
-        switch self {
-        case .claude: "Claude"
-        case .cursor: "Cursor"
-        case .codex: "Codex"
-        }
     }
 }
 
@@ -598,3 +591,4 @@ private struct BudgetEditor: View {
         close()
     }
 }
+#endif

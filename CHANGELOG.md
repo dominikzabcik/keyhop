@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0]
+
+- Linux and Windows. Switchr now runs on every major desktop:
+  - **Linux:** a tray menu with the same accounts, limits, switching, alerts and updates as the Mac app. It ships as an RPM for Fedora, a DEB for Debian and Ubuntu, and a package for Arch Linux. A portable build installs into `~/.local` on any other distribution, on x86_64 and aarch64.
+  - **Windows 10 and 11:** a notification-area app with the same menu, toasts with a Switch button, and Open at sign-in. It installs per user with one PowerShell line, or through Scoop.
+- The `switchr` command, on all three systems: `status`, `refresh`, `switch`, `add`, `rename`, `remove`, `usage`, `insights`, `budget`, `update`, `doctor` and `reset`, each with `--json` output. On macOS the app binary answers the same commands.
+- `switchr insights` writes a self-contained Insights page and opens it in your browser: usage by account over time, API value, models, current limits and budgets, for today, 7 days, this month or 30 days.
+- Saved logins stay in each system's own secret store:
+  - **macOS:** the login Keychain.
+  - **Linux:** the Secret Service (GNOME Keyring or KWallet), or private files when no keyring runs.
+  - **Windows:** Data Protection API encryption for your user.
+- `switchr update` installs a verified release. On Linux it installs through your package manager, or into `~/.local` for the portable build. On Windows it replaces the files in place.
+- The one-line installer detects Linux and installs the matching package, and a Homebrew cask is included for the Mac app.
+- The switching rules are shared by every platform and covered by new tests, as are alerts, the command line, secret storage and the Insights page.
+
 ## [0.6.1]
 
 - Checking for updates is now a visible button in the menu footer: it shows the version you have and checks right away. It's still in the "…" menu too.

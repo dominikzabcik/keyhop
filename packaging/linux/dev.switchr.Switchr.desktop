@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Switchr
+GenericName=AI account switcher
+Comment=Switch Claude Code, Cursor and Codex accounts and track their usage
+Exec=switchr-tray
+Icon=dev.switchr.Switchr
+Terminal=false
+Categories=Development;Utility;
+Keywords=claude;cursor;codex;account;usage;tokens;
+StartupNotify=false

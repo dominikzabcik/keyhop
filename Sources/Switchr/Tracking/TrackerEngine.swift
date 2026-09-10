@@ -207,6 +207,18 @@ actor TrackerEngine {
         return budgets
     }
 
+    /// What each budget has used so far in its current period.
+    func budgetSpend(for budgets: [Budget], now: Date, sole: [Provider: UUID]) throws -> [String: Double] {
+        var spend: [String: Double] = [:]
+        for period in Set(budgets.map(\.period)) {
+            let totals = try accountTotals(in: period.interval(containing: now), sole: sole)
+            for budget in budgets where budget.period == period {
+                spend[budget.scope] = budget.account.map { totals.byAccount[$0]?.cost ?? 0 } ?? totals.all.cost
+            }
+        }
+        return spend
+    }
+
     func setBudget(_ budget: Budget?, scope: String) throws {
         if let budget {
             try db.execute("INSERT OR REPLACE INTO budgets (scope, amount, period) VALUES (?, ?, ?)",

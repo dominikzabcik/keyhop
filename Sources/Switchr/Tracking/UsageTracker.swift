@@ -1,3 +1,4 @@
+#if os(macOS)
 import Foundation
 import SwiftUI
 
@@ -21,8 +22,7 @@ final class UsageTracker: ObservableObject {
     private var cursorExports: [UUID: Date] = [:]
 
     init() {
-        let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Switchr/usage.sqlite")
+        let url = Platform.dataDirectory.appendingPathComponent("usage.sqlite")
         sample = nil
         do {
             engine = try TrackerEngine(url: url)
@@ -48,7 +48,7 @@ final class UsageTracker: ObservableObject {
         lastUpdate = Date().addingTimeInterval(-120)
     }
 
-    static func forecastKey(_ account: UUID, _ label: String) -> String { "\(account.uuidString)|\(label)" }
+    static func forecastKey(_ account: UUID, _ label: String) -> String { AlertRules.forecastKey(account, label) }
 
     func budget(for scope: String) -> Budget? { budgets.first { $0.scope == scope } }
 
@@ -97,31 +97,24 @@ final class UsageTracker: ObservableObject {
 
             budgets = try await engine.budgets()
             today = try await engine.accountTotals(in: BudgetPeriod.day.interval(containing: now), sole: sole).byAccount
-            budgetSpend = try await spend(for: budgets, now: now, sole: sole)
+            budgetSpend = try await engine.budgetSpend(for: budgets, now: now, sole: sole)
             lastUpdate = now
             problem = nil
         } catch {
             problem = error.localizedDescription
         }
         revision += 1
-        raiseAlerts(store: store, now: now)
+
+        let alerts = AlertRules.evaluate(accounts: store.accounts, active: store.active, usage: store.usage, forecasts: forecasts,
+                                         budgets: budgets, budgetSpend: budgetSpend, now: now)
+        for alert in alerts {
+            Alerts.shared.post(key: alert.key, title: alert.title, body: alert.body, switchTo: alert.switchTo)
+        }
     }
 
     private func loadBudgets() async {
         guard let engine else { return }
         budgets = (try? await engine.budgets()) ?? []
-    }
-
-    private func spend(for budgets: [Budget], now: Date, sole: [Provider: UUID]) async throws -> [String: Double] {
-        guard let engine else { return [:] }
-        var spend: [String: Double] = [:]
-        for period in Set(budgets.map(\.period)) {
-            let totals = try await engine.accountTotals(in: period.interval(containing: now), sole: sole)
-            for budget in budgets where budget.period == period {
-                spend[budget.scope] = budget.account.map { totals.byAccount[$0]?.cost ?? 0 } ?? totals.all.cost
-            }
-        }
-        return spend
     }
 
     // MARK: Budgets
@@ -132,7 +125,7 @@ final class UsageTracker: ObservableObject {
         guard let engine else { return }
         Task {
             try? await engine.setBudget(budget, scope: scope)
-            if let spend = try? await spend(for: budgets, now: Date(), sole: AccountStore.shared.soleAccounts) {
+            if let spend = try? await engine.budgetSpend(for: budgets, now: Date(), sole: AccountStore.shared.soleAccounts) {
                 budgetSpend = spend
             }
             revision += 1
@@ -144,95 +137,18 @@ final class UsageTracker: ObservableObject {
     func digest(range: InsightsRange, provider: Provider?, sole: [Provider: UUID]) async -> UsageDigest {
         if let sample { return sample.digest(range: range, provider: provider) }
         guard let engine else { return UsageDigest() }
-        let interval = range.interval(now: Date())
-        let previous = DateInterval(start: interval.start.addingTimeInterval(-interval.duration), duration: interval.duration)
+        let now = Date()
         do {
-            return try await engine.digest(interval: interval, previous: previous, bucket: range.bucket, provider: provider, sole: sole)
+            return try await engine.digest(interval: range.interval(now: now), previous: range.previous(now: now),
+                                           bucket: range.bucket, provider: provider, sole: sole)
         } catch {
             problem = error.localizedDescription
             return UsageDigest()
         }
     }
-
-    // MARK: Alerts
-
-    private func raiseAlerts(store: AccountStore, now: Date) {
-        for (provider, id) in store.active {
-            guard let account = store.accounts.first(where: { $0.id == id }), let snapshot = store.usage[id], snapshot.error == nil else { continue }
-            for window in snapshot.windows {
-                let eta = forecasts[Self.forecastKey(id, window.label)]
-                let nearlyOut = window.usedPercent >= 90
-                // Early in a window a few samples can project a run-out that never happens.
-                guard nearlyOut || (eta != nil && window.usedPercent >= 50) else { continue }
-
-                let alternative = store.accounts
-                    .filter { $0.provider == provider && $0.id != id }
-                    .compactMap { other -> (Account, Double)? in
-                        guard let used = store.usage[other.id]?.windows.first(where: { $0.label == window.label })?.usedPercent, used < 80 else { return nil }
-                        return (other, used)
-                    }
-                    .min { $0.1 < $1.1 }
-
-                let title = nearlyOut
-                    ? "\(provider.name) \(window.label.lowercased()) limit at \(Int(window.usedPercent.rounded()))%"
-                    : "\(provider.name) \(window.label.lowercased()) limit runs out around \(eta!.formatted(date: .omitted, time: .shortened))"
-                let body = alternative.map { "\(account.displayName) is close to its limit. \($0.0.displayName) has \(Int((100 - $0.1).rounded()))% left." }
-                    ?? "\(account.displayName) is close to its limit, and no other saved \(provider.name) account has room."
-                let windowID = window.resetsAt.map { String(Int($0.timeIntervalSince1970 / 3600)) } ?? "open"
-                Alerts.shared.post(key: "limit:\(id.uuidString):\(window.label):\(windowID):\(nearlyOut ? "90" : "pace")",
-                                   title: title, body: body, switchTo: alternative?.0.id)
-            }
-        }
-
-        for budget in budgets where budget.amount > 0 {
-            let spent = budgetSpend[budget.scope] ?? 0
-            let share = spent / budget.amount
-            guard let threshold = [1.0, 0.8].first(where: { share >= $0 }) else { continue }
-            let name = budget.account.flatMap { id in store.accounts.first { $0.id == id }?.displayName } ?? "All accounts"
-            let periodStart = Int(budget.period.interval(containing: now).start.timeIntervalSince1970)
-            Alerts.shared.post(
-                key: "budget:\(budget.scope):\(periodStart):\(Int(threshold * 100))",
-                title: threshold >= 1 ? "\(name) is over its \(budget.period.adjective) budget" : "\(name) used 80% of its \(budget.period.adjective) budget",
-                body: "\(Numbers.usd(spent)) of \(Numbers.usd(budget.amount)) at API prices."
-            )
-        }
-    }
 }
 
-enum InsightsRange: String, CaseIterable, Identifiable {
-    case today, week, month, thirtyDays
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .today: "Today"
-        case .week: "7 days"
-        case .month: "This month"
-        case .thirtyDays: "30 days"
-        }
-    }
-
-    var bucket: Bucket { self == .today ? .hour : .day }
-
-    func interval(now: Date) -> DateInterval {
-        let calendar = Calendar.current
-        let startOfToday = calendar.startOfDay(for: now)
-        let endOfToday = calendar.date(byAdding: .day, value: 1, to: startOfToday)!
-        switch self {
-        case .today:
-            return DateInterval(start: startOfToday, end: endOfToday)
-        case .week:
-            return DateInterval(start: calendar.date(byAdding: .day, value: -6, to: startOfToday)!, end: endOfToday)
-        case .month:
-            return calendar.dateInterval(of: .month, for: now) ?? DateInterval(start: startOfToday, end: endOfToday)
-        case .thirtyDays:
-            return DateInterval(start: calendar.date(byAdding: .day, value: -29, to: startOfToday)!, end: endOfToday)
-        }
-    }
-}
-
-/// Deterministic sample usage for `--snapshot` and `--preview-insights`.
+/// Deterministic sample usage for previews.
 struct SampleUsage {
     let store: AccountStore
     let today: [UUID: Totals]
@@ -262,7 +178,7 @@ struct SampleUsage {
         budgetSpend = spend
         var forecasts: [String: Date] = [:]
         if accounts.count > 1 {
-            forecasts[UsageTracker.forecastKey(accounts[1].id, "5h")] = Date().addingTimeInterval(26 * 60)
+            forecasts[AlertRules.forecastKey(accounts[1].id, "5h")] = Date().addingTimeInterval(26 * 60)
         }
         self.forecasts = forecasts
     }
@@ -304,3 +220,4 @@ struct SampleUsage {
         return digest
     }
 }
+#endif

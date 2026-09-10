@@ -97,16 +97,16 @@ final class ParsingTests: XCTestCase {
 
 final class UpdaterTests: XCTestCase {
     func testVersionsCompareNumerically() {
-        XCTAssertTrue(Updater.isNewer("0.10.0", than: "0.9.1"))
-        XCTAssertTrue(Updater.isNewer("0.6", than: "0.5.9"))
-        XCTAssertFalse(Updater.isNewer("0.6.0", than: "0.6.0"))
-        XCTAssertFalse(Updater.isNewer("1.0.0", than: "1.0.1"))
+        XCTAssertTrue(Releases.isNewer("0.10.0", than: "0.9.1"))
+        XCTAssertTrue(Releases.isNewer("0.6", than: "0.5.9"))
+        XCTAssertFalse(Releases.isNewer("0.6.0", than: "0.6.0"))
+        XCTAssertFalse(Releases.isNewer("1.0.0", than: "1.0.1"))
     }
 
     func testChecksumListing() {
         let listing = "abc123  Switchr.zip\ndef456 *Switchr.dmg\n"
-        XCTAssertEqual(Updater.expectedHash(in: listing, for: "Switchr.zip"), "abc123")
-        XCTAssertEqual(Updater.expectedHash(in: listing, for: "Switchr.dmg"), "def456")
-        XCTAssertNil(Updater.expectedHash(in: listing, for: "Other.zip"))
+        XCTAssertEqual(Releases.expectedHash(in: listing, for: "Switchr.zip"), "abc123")
+        XCTAssertEqual(Releases.expectedHash(in: listing, for: "Switchr.dmg"), "def456")
+        XCTAssertNil(Releases.expectedHash(in: listing, for: "Other.zip"))
     }
 }

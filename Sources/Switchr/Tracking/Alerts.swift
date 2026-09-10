@@ -1,3 +1,4 @@
+#if os(macOS)
 import Foundation
 import UserNotifications
 
@@ -67,3 +68,4 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         completionHandler([.banner, .sound])
     }
 }
+#endif

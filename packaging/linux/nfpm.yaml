@@ -1,0 +1,87 @@
+# RPM, DEB and Arch packages from one description. scripts/package-linux.sh sets the variables
+# and stages the binary, and runs nfpm from the repository root.
+name: switchr
+arch: ${NFPM_ARCH}
+platform: linux
+version: ${SWITCHR_VERSION}
+release: 1
+section: devel
+priority: optional
+maintainer: dominikzabcik <35886301+dominikzabcik@users.noreply.github.com>
+description: |
+  Switch Claude Code, Cursor and Codex accounts in one click and track their usage.
+  Includes the switchr command and a tray menu with limits, alerts and Insights.
+vendor: Switchr
+homepage: https://github.com/dominikzabcik/switchr
+license: MIT
+
+contents:
+  - src: build/linux/package-root/switchr
+    dst: /usr/bin/switchr
+    file_info:
+      mode: 0755
+  - src: packaging/linux/switchr-tray
+    dst: /usr/bin/switchr-tray
+    file_info:
+      mode: 0755
+  - src: packaging/linux/dev.switchr.Switchr.desktop
+    dst: /usr/share/applications/dev.switchr.Switchr.desktop
+  - src: packaging/linux/dev.switchr.Switchr.metainfo.xml
+    dst: /usr/share/metainfo/dev.switchr.Switchr.metainfo.xml
+  - src: packaging/icons/switchr-16.png
+    dst: /usr/share/icons/hicolor/16x16/apps/dev.switchr.Switchr.png
+  - src: packaging/icons/switchr-24.png
+    dst: /usr/share/icons/hicolor/24x24/apps/dev.switchr.Switchr.png
+  - src: packaging/icons/switchr-32.png
+    dst: /usr/share/icons/hicolor/32x32/apps/dev.switchr.Switchr.png
+  - src: packaging/icons/switchr-48.png
+    dst: /usr/share/icons/hicolor/48x48/apps/dev.switchr.Switchr.png
+  - src: packaging/icons/switchr-64.png
+    dst: /usr/share/icons/hicolor/64x64/apps/dev.switchr.Switchr.png
+  - src: packaging/icons/switchr-128.png
+    dst: /usr/share/icons/hicolor/128x128/apps/dev.switchr.Switchr.png
+  - src: packaging/icons/switchr-256.png
+    dst: /usr/share/icons/hicolor/256x256/apps/dev.switchr.Switchr.png
+  - src: packaging/icons/switchr-512.png
+    dst: /usr/share/icons/hicolor/512x512/apps/dev.switchr.Switchr.png
+  - src: LICENSE
+    dst: /usr/share/licenses/switchr/LICENSE
+  - src: README.md
+    dst: /usr/share/doc/switchr/README.md
+
+overrides:
+  rpm:
+    depends:
+      - python3-gobject
+      - gtk3
+      - libayatana-appindicator-gtk3
+      - libnotify
+      - ca-certificates
+    recommends:
+      - libsecret
+      - gnome-shell-extension-appindicator
+  deb:
+    depends:
+      - python3
+      - python3-gi
+      - gir1.2-gtk-3.0
+      - gir1.2-ayatanaappindicator3-0.1
+      - gir1.2-notify-0.7
+      - ca-certificates
+    recommends:
+      - libsecret-tools
+      - gnome-shell-extension-appindicator
+  archlinux:
+    depends:
+      - python-gobject
+      - gtk3
+      - libayatana-appindicator
+      - libnotify
+      - libsecret
+      - ca-certificates
+
+rpm:
+  summary: Switch AI coding accounts and track their usage
+  compression: zstd
+deb:
+  compression: zstd

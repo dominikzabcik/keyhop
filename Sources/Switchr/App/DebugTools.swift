@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import ServiceManagement
 import SwiftUI
@@ -41,11 +42,11 @@ enum DebugTools {
             return true
         }
         if arguments.contains("--reset") {
-            Reset.run()
+            blocking { print(await ResetAll.run()) }
             return true
         }
         if arguments.contains("--update-now") {
-            MainActor.assumeIsolated {
+            _ = MainActor.assumeIsolated {
                 Task { @MainActor in
                     await Updater.shared.check(userInitiated: false, allowAutoInstall: false)
                     guard let release = Updater.shared.available else {
@@ -140,28 +141,6 @@ enum Snapshot {
     }
 }
 
-/// Removes everything Switchr stores. The tools' own current logins stay as they are.
-enum Reset {
-    static func run() {
-        let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Switchr", isDirectory: true)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let accounts = (try? decoder.decode([Account].self, from: Data(contentsOf: folder.appendingPathComponent("accounts.json")))) ?? []
-        for account in accounts {
-            Keychain.delete(service: Vault.service, account: account.id.uuidString)
-        }
-        try? FileManager.default.removeItem(at: folder)
-        if Bundle.main.bundlePath.hasSuffix(".app") {
-            try? SMAppService.mainApp.unregister()
-        }
-        if let domain = Bundle.main.bundleIdentifier {
-            UserDefaults.standard.removePersistentDomain(forName: domain)
-        }
-        print("Removed \(accounts.count) saved logins, Switchr's data folder and its preferences.")
-    }
-}
-
 enum Probe {
     static func run() async {
         for provider in Provider.allCases {
@@ -210,9 +189,8 @@ enum Probe {
             print("Read \(added) new records in \(String(format: "%.1f", Date().timeIntervalSince(started)))s")
             let now = Date()
             for range in [InsightsRange.today, .week, .thirtyDays] {
-                let interval = range.interval(now: now)
-                let previous = DateInterval(start: interval.start.addingTimeInterval(-interval.duration), duration: interval.duration)
-                let digest = try await engine.digest(interval: interval, previous: previous, bucket: range.bucket, provider: nil, sole: [:])
+                let digest = try await engine.digest(interval: range.interval(now: now), previous: range.previous(now: now),
+                                                     bucket: range.bucket, provider: nil, sole: [:])
                 let total = digest.total
                 print("\(range.title): \(Numbers.tokens(total.tokens.total)) tokens, \(Numbers.usd(total.cost)) at API prices, \(total.requests) requests")
                 var byProvider: [Provider: Totals] = [:]
@@ -230,3 +208,4 @@ enum Probe {
         }
     }
 }
+#endif

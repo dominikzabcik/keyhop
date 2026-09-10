@@ -1,0 +1,35 @@
+{
+    "version": "0.7.0",
+    "description": "Switch Claude Code, Cursor and Codex accounts in one click and track their usage.",
+    "homepage": "https://github.com/dominikzabcik/switchr",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/dominikzabcik/switchr/releases/download/v0.7.0/switchr-0.7.0-windows-x86_64.zip",
+            "hash": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+    },
+    "extract_dir": "switchr-0.7.0",
+    "bin": "switchr.exe",
+    "shortcuts": [
+        [
+            "switchr-tray.exe",
+            "Switchr",
+            "",
+            "switchr.ico"
+        ]
+    ],
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/dominikzabcik/switchr/releases/download/v$version/switchr-$version-windows-x86_64.zip"
+            }
+        },
+        "extract_dir": "switchr-$version",
+        "hash": {
+            "url": "https://github.com/dominikzabcik/switchr/releases/download/v$version/SHA256SUMS",
+            "regex": "$sha256\\s+$basename"
+        }
+    }
+}

@@ -1,3 +1,4 @@
+#if os(macOS)
 import ServiceManagement
 import SwiftUI
 
@@ -591,3 +592,4 @@ private struct MenuFooter: View {
         return minutes < 1 ? "Just now" : "\(minutes)m ago"
     }
 }
+#endif

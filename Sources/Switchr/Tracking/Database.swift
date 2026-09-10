@@ -1,5 +1,9 @@
 import Foundation
+#if os(macOS)
 import SQLite3
+#else
+import CSQLite
+#endif
 
 enum SQL {
     case int(Int64)

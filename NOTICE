@@ -6,3 +6,6 @@ endorsed by or sponsored by any of these companies.
 
 Model prices are generated from models.dev (https://models.dev) by
 scripts/update-pricing.py.
+
+Linux and Windows builds include SQLite (https://sqlite.org), which is in the
+public domain, in Sources/CSQLite.

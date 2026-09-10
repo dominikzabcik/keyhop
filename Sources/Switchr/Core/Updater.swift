@@ -1,5 +1,5 @@
+#if os(macOS)
 import AppKit
-import CryptoKit
 import SwiftUI
 
 /// Checks GitHub for a newer release and installs it in place: download, verify the SHA-256
@@ -7,7 +7,6 @@ import SwiftUI
 @MainActor
 final class Updater: ObservableObject {
     static let shared = Updater()
-    nonisolated static let repository = "dominikzabcik/switchr"
 
     struct Release: Equatable {
         let version: String
@@ -24,9 +23,7 @@ final class Updater: ObservableObject {
     @Published private(set) var available: Release?
     @Published private(set) var phase: Phase = .idle
 
-    nonisolated static var currentVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
-    }
+    nonisolated static var currentVersion: String { AppVersion.current }
 
     /// At most once a day, when automatic checks are on and Switchr runs as an app.
     func checkIfDue() {
@@ -45,8 +42,13 @@ final class Updater: ObservableObject {
         phase = .checking
         UserDefaults.standard.set(Date(), forKey: "lastUpdateCheck")
         do {
-            let release = try await Self.latestRelease()
-            available = Self.isNewer(release.version, than: Self.currentVersion) ? release : nil
+            let info = try await Releases.latest()
+            if Releases.isNewer(info.version, than: Self.currentVersion) {
+                guard let archive = info.assets["Switchr.zip"] else { throw SwitchrError("The latest release has no Switchr.zip.") }
+                available = Release(version: info.version, archive: archive, checksums: info.assets["SHA256SUMS"], page: info.page)
+            } else {
+                available = nil
+            }
             phase = .idle
             if userInitiated, available == nil {
                 AccountStore.shared.notice = "Switchr \(Self.currentVersion) is the latest version."
@@ -56,6 +58,18 @@ final class Updater: ObservableObject {
             }
         } catch {
             phase = userInitiated ? .failed("Couldn't check for updates: \(error.localizedDescription)") : .idle
+        }
+    }
+
+    /// Waits until no switch or sign-in is in progress, so an automatic update never interrupts one.
+    private func installWhenIdle() async {
+        for _ in 0..<120 {
+            let store = AccountStore.shared
+            if store.switching == nil, store.addingFor == nil {
+                await install()
+                return
+            }
+            try? await Task.sleep(for: .seconds(30))
         }
     }
 
@@ -78,11 +92,9 @@ final class Updater: ObservableObject {
         defer { try? FileManager.default.removeItem(at: work) }
         do {
             try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
-            let (archive, response) = try await URLSession.shared.data(from: release.archive)
-            guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw SwitchrError("The download failed.") }
-            let (sums, _) = try await URLSession.shared.data(from: checksums)
-            let digest = SHA256.hash(data: archive).map { String(format: "%02x", $0) }.joined()
-            guard Self.expectedHash(in: String(decoding: sums, as: UTF8.self), for: "Switchr.zip") == digest else {
+            let archive = try await Releases.download(release.archive)
+            let sums = try await Releases.download(checksums)
+            guard Releases.expectedHash(in: String(decoding: sums, as: UTF8.self), for: "Switchr.zip") == (try Releases.sha256(archive)) else {
                 throw SwitchrError("The download didn't match the release checksum.")
             }
 
@@ -108,61 +120,6 @@ final class Updater: ObservableObject {
             phase = .failed(error.localizedDescription)
             return false
         }
-    }
-
-    /// Waits until no switch or sign-in is in progress, so an automatic update never interrupts one.
-    private func installWhenIdle() async {
-        for _ in 0..<120 {
-            let store = AccountStore.shared
-            if store.switching == nil, store.addingFor == nil {
-                await install()
-                return
-            }
-            try? await Task.sleep(for: .seconds(30))
-        }
-    }
-
-    nonisolated static func latestRelease() async throws -> Release {
-        var request = URLRequest(url: URL(string: "https://api.github.com/repos/\(repository)/releases/latest")!, timeoutInterval: 20)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200, let body = JSON.object(data),
-              let tag = body["tag_name"] as? String,
-              let page = (body["html_url"] as? String).flatMap(URL.init(string:)) else {
-            throw SwitchrError("GitHub didn't return a release.")
-        }
-        var assets: [String: URL] = [:]
-        for asset in body["assets"] as? [[String: Any]] ?? [] {
-            if let name = asset["name"] as? String, let url = (asset["browser_download_url"] as? String).flatMap(URL.init(string:)) {
-                assets[name] = url
-            }
-        }
-        guard let archive = assets["Switchr.zip"] else { throw SwitchrError("The latest release has no Switchr.zip.") }
-        return Release(version: tag.hasPrefix("v") ? String(tag.dropFirst()) : tag, archive: archive, checksums: assets["SHA256SUMS"], page: page)
-    }
-
-    /// Compares dotted versions numerically, so 0.10.0 is newer than 0.9.1.
-    nonisolated static func isNewer(_ candidate: String, than current: String) -> Bool {
-        let a = candidate.split(separator: ".").map { Int($0) ?? 0 }
-        let b = current.split(separator: ".").map { Int($0) ?? 0 }
-        for i in 0..<max(a.count, b.count) {
-            let x = i < a.count ? a[i] : 0
-            let y = i < b.count ? b[i] : 0
-            if x != y { return x > y }
-        }
-        return false
-    }
-
-    /// Reads a `shasum -a 256` listing.
-    nonisolated static func expectedHash(in checksums: String, for file: String) -> String? {
-        for line in checksums.split(whereSeparator: \.isNewline) {
-            let parts = line.split(separator: " ", omittingEmptySubsequences: true)
-            guard parts.count >= 2, let name = parts.last else { continue }
-            if name.trimmingCharacters(in: CharacterSet(charactersIn: "*")) == file {
-                return parts[0].lowercased()
-            }
-        }
-        return nil
     }
 
     private static func relaunch(_ bundle: URL) {
@@ -224,3 +181,4 @@ struct UpdateLine: View {
         }
     }
 }
+#endif

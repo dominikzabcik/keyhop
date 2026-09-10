@@ -1,6 +1,9 @@
+#if os(macOS)
 import AppKit
 import Foundation
 
+/// The menu's view of accounts: mirrors `AccountService` for SwiftUI and adds what only the app
+/// needs (notices, the add flow's waiting state, the menu bar animation).
 @MainActor
 final class AccountStore: ObservableObject {
     @Published private(set) var accounts: [Account] = []
@@ -17,21 +20,17 @@ final class AccountStore: ObservableObject {
 
     static let shared = AccountStore()
 
-    private let adapters = Adapters.all
-    private let vault = Vault()
-    private let metaURL: URL
+    private let service: AccountService?
     private var refreshTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
     private var previousActive: UUID?
     private var timer: Timer?
 
     init() {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Switchr", isDirectory: true)
-        metaURL = dir.appendingPathComponent("accounts.json")
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        accounts = (try? decoder.decode([Account].self, from: Data(contentsOf: metaURL))) ?? []
+        service = AccountService(onActiveChange: { provider, id in
+            Task { @MainActor in UsageTracker.shared.noteActive(provider, id) }
+        })
+        accounts = AccountService.loadAccounts(from: Platform.dataDirectory)
         focusProvider = UserDefaults.standard.string(forKey: "focusProvider").flatMap(Provider.init)
 
         timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
@@ -49,9 +48,9 @@ final class AccountStore: ObservableObject {
         refresh()
     }
 
-    /// Sample data for `--snapshot` renders. Touches no files, Keychain or network.
+    /// Sample data for previews. Touches no files, Keychain or network.
     init(preview: Void, focus: Provider = .claude) {
-        metaURL = URL(fileURLWithPath: "/dev/null")
+        service = nil
         let now = Date()
         func account(_ provider: Provider, _ email: String, _ label: String?, _ plan: String) -> Account {
             Account(id: UUID(), provider: provider, identity: email, email: email, label: label, plan: plan, addedAt: now)
@@ -81,20 +80,12 @@ final class AccountStore: ObservableObject {
         accounts.filter { $0.provider == provider }
     }
 
-    /// Tools with exactly one saved account. Usage from before Switchr recorded any switch
-    /// can only have come from that account.
     var soleAccounts: [Provider: UUID] {
         Dictionary(grouping: accounts, by: \.provider).compactMapValues { $0.count == 1 ? $0[0].id : nil }
     }
 
     func secret(for id: UUID) async -> Secret? {
-        await vault.read(id)
-    }
-
-    private func setActive(_ provider: Provider, _ id: UUID?) {
-        guard active[provider] != id else { return }
-        active[provider] = id
-        UsageTracker.shared.noteActive(provider, id)
+        await service?.secret(for: id)
     }
 
     /// Usage of the account most recently switched to, for the menu bar glyph.
@@ -111,14 +102,15 @@ final class AccountStore: ObservableObject {
     // MARK: Refresh
 
     func refresh(force: Bool = true) {
-        guard refreshTask == nil, switching == nil else { return }
+        guard let service, refreshTask == nil, switching == nil else { return }
         if !force, let lastRefresh, Date().timeIntervalSince(lastRefresh) < 90 { return }
         isRefreshing = true
         refreshTask = Task {
             for provider in Provider.allCases where provider != addingFor {
-                await syncLive(provider)
+                await report(await service.syncLive(provider), for: provider)
             }
-            await fetchAllUsage()
+            usage = await service.fetchUsage(previous: usage)
+            await mirror()
             lastRefresh = Date()
             isRefreshing = false
             refreshTask = nil
@@ -127,110 +119,38 @@ final class AccountStore: ObservableObject {
         }
     }
 
-    /// Reads the tool's current login, keeps the saved copy of it fresh (the tool rotates
-    /// tokens on its own), and saves logins Switchr hasn't seen yet.
-    @discardableResult
-    private func syncLive(_ provider: Provider) async -> Bool {
-        let adapter = adapters[provider]!
-        let live: LiveLogin?
-        do {
-            live = try await adapter.readLive()
-        } catch {
-            notice = "\(provider.name): \(error.localizedDescription)"
-            return false
-        }
-        guard let live else {
-            setActive(provider, nil)
-            return true
-        }
-
-        if let index = accounts.firstIndex(where: { $0.provider == provider && $0.identity == live.identity }) {
-            guard await vault.write(live.secret, for: accounts[index].id) else {
-                notice = "Couldn't update the saved \(provider.name) login in Keychain."
-                return false
-            }
-            let placeholder = "\(provider.name) account"
-            if !live.email.isEmpty, live.emailTrusted || accounts[index].email == placeholder {
-                accounts[index].email = live.email
-            }
-            if let plan = live.plan { accounts[index].plan = plan }
-            setActive(provider, accounts[index].id)
-        } else {
-            let email = live.email.isEmpty ? "\(provider.name) account" : live.email
-            let account = Account(id: UUID(), provider: provider, identity: live.identity, email: email,
-                                  label: nil, plan: live.plan, addedAt: Date())
-            guard await vault.write(live.secret, for: account.id) else {
-                notice = "Couldn't save the \(provider.name) login to Keychain."
-                return false
-            }
-            accounts.append(account)
-            setActive(provider, account.id)
-            notice = "Saved \(email) to \(provider.name)."
-        }
-        saveMeta()
-        return true
+    private func mirror() async {
+        guard let service else { return }
+        accounts = await service.accounts
+        active = await service.active
     }
 
-    private func fetchAllUsage() async {
-        let targets = accounts.map { ($0, active[$0.provider] == $0.id) }
-        await withTaskGroup(of: Void.self) { group in
-            for (account, isActive) in targets {
-                let adapter = adapters[account.provider]!
-                let vault = vault
-                group.addTask {
-                    var snapshot = await self.usage[account.id] ?? UsageSnapshot()
-                    var plan: String?
-                    if let secret = await vault.read(account.id) {
-                        do {
-                            let report = try await adapter.fetchUsage(secret, allowRefresh: !isActive) { updated in
-                                await vault.write(updated, for: account.id)
-                            }
-                            snapshot = UsageSnapshot(windows: report.windows, error: nil, fetchedAt: Date())
-                            plan = report.plan
-                        } catch {
-                            snapshot.error = error.localizedDescription
-                        }
-                    } else {
-                        snapshot.error = "Saved login is missing from Keychain."
-                    }
-                    await self.apply(snapshot, plan: plan, to: account.id)
-                }
-            }
-        }
-    }
-
-    private func apply(_ snapshot: UsageSnapshot, plan: String?, to id: UUID) {
-        usage[id] = snapshot
-        if let plan, let i = accounts.firstIndex(where: { $0.id == id }), accounts[i].plan != plan {
-            accounts[i].plan = plan
-            saveMeta()
+    private func report(_ outcome: AccountService.SyncOutcome, for provider: Provider) async {
+        switch outcome {
+        case .failed(let message):
+            notice = message
+        case .saved(let id):
+            if let account = await service?.account(id) { notice = "Saved \(account.email) to \(provider.name)." }
+        case .current, .signedOut:
+            break
         }
     }
 
     // MARK: Switching
 
     func switchTo(_ account: Account) {
-        guard switching == nil, addingFor == nil, active[account.provider] != account.id else { return }
+        guard let service, switching == nil, addingFor == nil, active[account.provider] != account.id else { return }
         switching = account.id
         Task {
             await refreshTask?.value
-            defer { switching = nil }
-            let provider = account.provider
-            // Save whatever is signed in right now first, so a switch never loses a login.
-            guard await syncLive(provider) else { return }
-            guard active[provider] != account.id else { return }
-            guard let secret = await vault.read(account.id) else {
-                notice = "The saved login for \(account.email) is missing from Keychain."
-                return
-            }
             do {
-                try await adapters[provider]!.apply(secret)
-                await syncLive(provider)
-                setFocus(provider)
-                notice = provider.switchNote
+                try await service.switchTo(account.id)
+                setFocus(account.provider)
+                notice = account.provider.switchNote
             } catch {
                 notice = "Couldn't switch: \(error.localizedDescription)"
             }
+            await mirror()
             switching = nil
             refresh()
         }
@@ -239,73 +159,75 @@ final class AccountStore: ObservableObject {
     // MARK: Adding
 
     func beginAdd(_ provider: Provider) {
-        guard switching == nil, addingFor == nil else { return }
+        guard let service, switching == nil, addingFor == nil else { return }
         addingFor = provider
         notice = nil
         Task {
             await refreshTask?.value
-            guard await syncLive(provider) else { addingFor = nil; return }
-            previousActive = active[provider]
-            if active[provider] != nil {
-                do {
-                    try await adapters[provider]!.signOutLocally()
-                    setActive(provider, nil)
-                } catch {
-                    notice = "Couldn't sign out of \(provider.name): \(error.localizedDescription)"
-                    addingFor = nil
-                    return
-                }
+            do {
+                previousActive = try await service.signOutForAdding(provider)
+            } catch {
+                notice = "Couldn't sign out of \(provider.name): \(error.localizedDescription)"
+                addingFor = nil
+                await mirror()
+                return
             }
+            await mirror()
             waitForLogin(provider)
         }
     }
 
     func cancelAdd() {
-        guard let provider = addingFor else { return }
+        guard addingFor != nil else { return }
         pollTask?.cancel()
         addingFor = nil
         if let id = previousActive, let account = accounts.first(where: { $0.id == id }) {
             switchTo(account)
         }
-        _ = provider
     }
 
     private func waitForLogin(_ provider: Provider) {
+        guard let service else { return }
         pollTask?.cancel()
         pollTask = Task {
-            let adapter = adapters[provider]!
-            for _ in 0..<300 {
-                try? await Task.sleep(for: .seconds(2))
-                guard !Task.isCancelled, addingFor == provider else { return }
-                if let live = try? await adapter.readLive() {
-                    let known = accounts.contains { $0.provider == provider && $0.identity == live.identity }
-                    await syncLive(provider)
-                    if known { notice = "That account was already saved." }
-                    setFocus(provider)
-                    addingFor = nil
-                    refresh()
-                    return
-                }
-            }
+            let result = await service.waitForLogin(provider)
+            guard !Task.isCancelled, addingFor == provider else { return }
             addingFor = nil
+            guard let result else { return }
+            await mirror()
+            if result.alreadySaved {
+                notice = "That account was already saved."
+            } else if case .saved(let id) = result.outcome, let account = accounts.first(where: { $0.id == id }) {
+                notice = "Saved \(account.email) to \(provider.name)."
+            } else if case .failed(let message) = result.outcome {
+                notice = message
+            }
+            setFocus(provider)
+            refresh()
         }
     }
 
     // MARK: Editing
 
     func rename(_ account: Account, to label: String) {
-        guard let i = accounts.firstIndex(where: { $0.id == account.id }) else { return }
-        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        accounts[i].label = trimmed.isEmpty ? nil : trimmed
-        saveMeta()
+        if let index = accounts.firstIndex(where: { $0.id == account.id }) {
+            let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+            accounts[index].label = trimmed.isEmpty ? nil : trimmed
+        }
+        Task {
+            await service?.rename(account.id, to: label)
+            await mirror()
+        }
     }
 
     func remove(_ account: Account) {
-        guard active[account.provider] != account.id else { return }
+        guard let service, active[account.provider] != account.id else { return }
         accounts.removeAll { $0.id == account.id }
         usage[account.id] = nil
-        saveMeta()
-        Task { await vault.delete(account.id) }
+        Task {
+            try? await service.remove(account.id)
+            await mirror()
+        }
     }
 
     /// Plays the hand-off animation on the menu bar icon for a few seconds.
@@ -328,12 +250,5 @@ final class AccountStore: ObservableObject {
         focusProvider = provider
         UserDefaults.standard.set(provider.rawValue, forKey: "focusProvider")
     }
-
-    private func saveMeta() {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard let data = try? encoder.encode(accounts) else { return }
-        try? Files.writeAtomically(data, to: metaURL)
-    }
 }
+#endif

@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Installs the latest Switchr release into Applications and opens it.
+# Installs the latest Switchr release and opens it.
 #
 #   curl -fsSL https://raw.githubusercontent.com/dominikzabcik/switchr/main/install.sh | bash
 #
-# Files downloaded by curl or the GitHub CLI carry no quarantine flag, so macOS opens
-# Switchr without the unidentified-developer prompt.
+# macOS: into Applications. Files downloaded by curl or the GitHub CLI carry no quarantine
+# flag, so macOS opens Switchr without the unidentified-developer prompt.
+# Linux: the RPM, DEB or Arch package through dnf, apt or pacman, or with SWITCHR_LOCAL=1
+# (or no known package manager) the portable build into ~/.local, without root.
 set -euo pipefail
 
 REPO="dominikzabcik/switchr"
@@ -23,7 +25,8 @@ else
 fi
 
 CELLS=12
-TMP=$(mktemp -d -t switchr)
+OS=$(uname -s)
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/switchr.XXXXXX")
 LOG="$TMP/log"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -116,12 +119,110 @@ install_app() {
   echo "$destination/Switchr.app" >"$TMP/installed"
 }
 
+linux_architecture() {
+  case "$(uname -m)" in
+    x86_64) ARCH=x86_64 DEB_ARCH=amd64 ;;
+    aarch64 | arm64) ARCH=aarch64 DEB_ARCH=arm64 ;;
+    *) fail "Switchr builds for x86_64 and aarch64 Linux, not $(uname -m)." ;;
+  esac
+}
+
+linux_choose_package() {
+  local version=${TAG#v}
+  if [[ -n ${SWITCHR_LOCAL:-} ]]; then
+    KIND=local
+  elif command -v dnf >/dev/null 2>&1; then
+    KIND=rpm
+  elif command -v apt-get >/dev/null 2>&1; then
+    KIND=deb
+  elif command -v pacman >/dev/null 2>&1; then
+    KIND=pacman
+  else
+    KIND=local
+  fi
+  case $KIND in
+    rpm) ASSET="switchr-$version-1.$ARCH.rpm" ;;
+    deb) ASSET="switchr_${version}_$DEB_ARCH.deb" ;;
+    pacman) ASSET="switchr-$version-1-$ARCH.pkg.tar.zst" ;;
+    local) ASSET="switchr-$version-linux-$ARCH.tar.gz" ;;
+  esac
+  SUDO=""
+  if [[ $KIND != local && $EUID -ne 0 ]]; then SUDO=sudo; fi
+}
+
+linux_download() {
+  curl -fsSL "https://github.com/$REPO/releases/download/$TAG/$ASSET" -o "$TMP/$ASSET"
+  curl -fsSL "https://github.com/$REPO/releases/download/$TAG/SHA256SUMS" -o "$TMP/SHA256SUMS"
+}
+
+linux_verify() {
+  (cd "$TMP" && grep " $ASSET\$" SHA256SUMS | sha256sum -c -)
+}
+
+linux_install() {
+  case $KIND in
+    rpm) $SUDO dnf install -y "$TMP/$ASSET" ;;
+    deb) $SUDO apt-get install -y "$TMP/$ASSET" ;;
+    pacman) $SUDO pacman -U --noconfirm "$TMP/$ASSET" ;;
+    local) tar -xzf "$TMP/$ASSET" -C "$TMP" && sh "$TMP/switchr-${TAG#v}/install-local.sh" ;;
+  esac
+}
+
+# Opens the tray at login, as the Mac app's welcome window does, and starts it now.
+linux_start() {
+  local bin=/usr/bin autostart="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
+  [[ $KIND == local ]] && bin="$HOME/.local/bin"
+  mkdir -p "$autostart"
+  if [[ ! -f $autostart/dev.switchr.Switchr.desktop ]]; then
+    printf '[Desktop Entry]\nType=Application\nName=Switchr\nExec=%s\nIcon=dev.switchr.Switchr\nX-GNOME-Autostart-enabled=true\nNoDisplay=true\n' \
+      "$bin/switchr-tray" >"$autostart/dev.switchr.Switchr.desktop"
+  fi
+  if [[ -n ${DISPLAY:-}${WAYLAND_DISPLAY:-} ]]; then
+    pkill -f "$bin/switchr-tray" 2>/dev/null || true
+    nohup "$bin/switchr-tray" >/dev/null 2>&1 &
+    disown
+    TRAY_STARTED=true
+  fi
+}
+
+linux_main() {
+  linux_choose_package
+  if [[ -n $SUDO ]]; then
+    printf '  %sInstalling the %s package needs your password.%s\n' "$DIM" "$KIND" "$RESET"
+    sudo -v || fail "Switchr needs administrator rights for the package. Run with SWITCHR_LOCAL=1 to install into ~/.local instead."
+  fi
+  step "Downloading $ASSET" linux_download
+  step "Verifying checksum" linux_verify
+  step "Installing" linux_install
+  TRAY_STARTED=false
+  linux_start
+
+  if $TRAY_STARTED; then
+    printf '\n  %sSwitchr is in your tray%s %s↗%s\n' "$BOLD" "$RESET" "$AMBER" "$RESET"
+  else
+    printf '\n  %sSwitchr is installed%s\n' "$BOLD" "$RESET"
+  fi
+  printf '  %sRun %sswitchr status%s%s to see your accounts, or %sswitchr help%s%s for everything else.%s\n' \
+    "$DIM" "$BONE" "$RESET" "$DIM" "$BONE" "$RESET" "$DIM" "$RESET"
+  if [[ ${XDG_CURRENT_DESKTOP:-} == *GNOME* ]] && ! gnome-extensions list --enabled 2>/dev/null | grep -qi appindicator; then
+    printf '  %sGNOME hides tray icons until you turn on the AppIndicator extension, then log out and back in.%s\n' "$DIM" "$RESET"
+  fi
+  printf '\n'
+}
+
 # ---
 
 printf '\n  %s   %sSwitchr%s\n' "$(track 0 7 "$BONE")" "$BOLD" "$RESET"
 printf '  %s   %sYour AI accounts, one click apart.%s\n\n' "$(track 5 "$CELLS" "$AMBER")" "$DIM" "$RESET"
 
-step "Checking this Mac" check_mac
+if [[ $OS == Linux ]]; then
+  linux_architecture
+  done_line "Linux on $ARCH"
+elif [[ $OS == Darwin ]]; then
+  step "Checking this Mac" check_mac
+else
+  fail "Switchr runs on macOS, Linux and Windows. On Windows, use install.ps1 from the same repository."
+fi
 
 if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
   SOURCE=gh
@@ -134,6 +235,11 @@ else
 fi
 [[ -n $TAG ]] || fail "Couldn't find a Switchr release."
 done_line "Found Switchr ${TAG#v}"
+
+if [[ $OS == Linux ]]; then
+  linux_main
+  exit 0
+fi
 
 step "Downloading" download
 step "Verifying checksum" verify

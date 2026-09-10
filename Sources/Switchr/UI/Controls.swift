@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// Secondary text action: no chrome, brightens on hover.
@@ -100,3 +101,4 @@ struct TwinTracks: View {
         .accessibilityHidden(true)
     }
 }
+#endif

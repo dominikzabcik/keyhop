@@ -1,13 +1,16 @@
-import AppKit
 import Foundation
+#if os(macOS)
+import AppKit
 import SQLite3
+#else
+import CSQLite
+#endif
 
 /// Cursor keeps its login in `state.vscdb` (the `cursorAuth/*` rows) and mirrors the account
 /// into `~/.cursor/cli-config.json` for cursor-agent. A running Cursor holds the login in
 /// memory, so it gets new tokens through its own login deep link instead of the database.
 struct CursorAdapter: ProviderAdapter {
     let provider = Provider.cursor
-    private static let bundleID = "com.todesktop.230313mzl4w4u92"
     private static let keys = [
         "cursorAuth/accessToken",
         "cursorAuth/refreshToken",
@@ -19,9 +22,15 @@ struct CursorAdapter: ProviderAdapter {
         "cursorAuth/stripeSubscriptionStatus",
     ]
 
-    private var database: ItemTable {
-        ItemTable(url: Files.home.appendingPathComponent("Library/Application Support/Cursor/User/globalStorage/state.vscdb"))
+    static var databaseURL: URL {
+        #if os(macOS)
+        return Files.home.appendingPathComponent("Library/Application Support/Cursor/User/globalStorage/state.vscdb")
+        #else
+        return Platform.configDirectory.appendingPathComponent("Cursor/User/globalStorage/state.vscdb")
+        #endif
     }
+
+    private var database: ItemTable { ItemTable(url: Self.databaseURL) }
     private var cliConfigURL: URL { Files.home.appendingPathComponent(".cursor/cli-config.json") }
 
     func readLive() async throws -> LiveLogin? {
@@ -51,7 +60,7 @@ struct CursorAdapter: ProviderAdapter {
             try updateCLIConfig { $0["authInfo"] = authInfo }
         }
 
-        if isRunning, await handOff(access: access, refresh: refresh) {
+        if CursorApp.isRunning, await handOff(access: access, refresh: refresh) {
             // The login route doesn't touch the cached profile, so fill in the new account's.
             var profile: [String: String?] = [:]
             for key in ["cursorAuth/cachedEmail", "cursorAuth/cachedSignUpType"] where secret[key] != nil {
@@ -62,15 +71,11 @@ struct CursorAdapter: ProviderAdapter {
         }
 
         // Cursor is closed, or it didn't take the hand-off: swap the rows directly.
-        let wasRunning = try await quitCursor()
+        let wasRunning = try await CursorApp.quit()
         var rows: [String: String?] = [:]
         for key in Self.keys { rows[key] = secret[key] }
         try database.write(rows)
-        if wasRunning { openCursor() }
-    }
-
-    private var isRunning: Bool {
-        !NSRunningApplication.runningApplications(withBundleIdentifier: Self.bundleID).isEmpty
+        if wasRunning { CursorApp.open() }
     }
 
     /// Gives the tokens to the running Cursor through its own login deep link, the route its
@@ -86,15 +91,7 @@ struct CursorAdapter: ProviderAdapter {
             URLQueryItem(name: "accessToken", value: access),
             URLQueryItem(name: "refreshToken", value: refresh),
         ]
-        guard let url = components.url,
-              let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.bundleID) else { return false }
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.activates = false
-        do {
-            _ = try await NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: configuration)
-        } catch {
-            return false
-        }
+        guard let url = components.url, await CursorApp.open(url: url) else { return false }
         for _ in 0..<40 {
             try? await Task.sleep(for: .milliseconds(250))
             if (try? database.read(["cursorAuth/accessToken"]))?["cursorAuth/accessToken"] == access { return true }
@@ -103,12 +100,12 @@ struct CursorAdapter: ProviderAdapter {
     }
 
     func signOutLocally() async throws {
-        _ = try await quitCursor()
+        _ = try await CursorApp.quit()
         var rows: [String: String?] = [:]
         for key in Self.keys { rows[key] = .some(nil) }
         try database.write(rows)
         try updateCLIConfig { $0.removeValue(forKey: "authInfo") }
-        openCursor()
+        CursorApp.open()
     }
 
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
@@ -144,7 +141,6 @@ struct CursorAdapter: ProviderAdapter {
             "Referer": "https://www.cursor.com/settings",
         ])
         guard status == 200 else { throw SwitchrError("Cursor usage export returned \(status)") }
-
         return try Self.usageRecords(csv: String(decoding: data, as: UTF8.self), account: account)
     }
 
@@ -222,10 +218,28 @@ struct CursorAdapter: ProviderAdapter {
         return subject
     }
 
-    // MARK: App lifecycle
+    private func updateCLIConfig(_ change: (inout [String: Any]) -> Void) throws {
+        guard let data = try? Data(contentsOf: cliConfigURL), var config = JSON.object(data) else { return }
+        change(&config)
+        try Files.writeAtomically(JSON.data(config, pretty: true), to: cliConfigURL)
+    }
+}
 
-    private func quitCursor() async throws -> Bool {
-        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: Self.bundleID)
+/// Starting and stopping Cursor, and handing it URLs.
+enum CursorApp {
+    #if os(macOS)
+    private static let bundleID = "com.todesktop.230313mzl4w4u92"
+
+    static var isInstalled: Bool {
+        NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) != nil
+    }
+
+    static var isRunning: Bool {
+        !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty
+    }
+
+    static func quit() async throws -> Bool {
+        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
         guard !apps.isEmpty else { return false }
         apps.forEach { $0.terminate() }
         for _ in 0..<100 {
@@ -239,16 +253,110 @@ struct CursorAdapter: ProviderAdapter {
         throw SwitchrError("Cursor didn't quit. Close any open dialog in Cursor and try again.")
     }
 
-    private func openCursor() {
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.bundleID) else { return }
+    static func open() {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
 
-    private func updateCLIConfig(_ change: (inout [String: Any]) -> Void) throws {
-        guard let data = try? Data(contentsOf: cliConfigURL), var config = JSON.object(data) else { return }
-        change(&config)
-        try Files.writeAtomically(JSON.data(config, pretty: true), to: cliConfigURL)
+    /// Opens the URL in Cursor without bringing it to the front.
+    static func open(url: URL) async -> Bool {
+        guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return false }
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = false
+        return (try? await NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: configuration)) != nil
     }
+    #elseif os(Windows)
+    /// Cursor's per-user installer puts it in local AppData; the machine-wide one in Program Files.
+    static var executable: String? {
+        let environment = ProcessInfo.processInfo.environment
+        return [
+            environment["LOCALAPPDATA"].map { $0 + "\\Programs\\cursor\\Cursor.exe" },
+            environment["ProgramFiles"].map { $0 + "\\cursor\\Cursor.exe" },
+        ]
+        .compactMap { $0 }
+        .first { FileManager.default.fileExists(atPath: $0) }
+    }
+
+    static var isInstalled: Bool {
+        executable != nil || FileManager.default.fileExists(atPath: CursorAdapter.databaseURL.path)
+    }
+
+    static var isRunning: Bool {
+        guard let tasklist = Shell.which("tasklist.exe"),
+              let result = try? Shell.run(tasklist, ["/FI", "IMAGENAME eq Cursor.exe", "/FO", "CSV", "/NH"]) else { return false }
+        return String(decoding: result.stdout, as: UTF8.self).localizedCaseInsensitiveContains("\"Cursor.exe\"")
+    }
+
+    /// Asks Cursor's windows to close, as clicking their close buttons would.
+    static func quit() async throws -> Bool {
+        guard isRunning, let taskkill = Shell.which("taskkill.exe") else { return false }
+        _ = try? Shell.run(taskkill, ["/IM", "Cursor.exe"])
+        for _ in 0..<100 {
+            if !isRunning {
+                try? await Task.sleep(for: .milliseconds(500))
+                return true
+            }
+            try? await Task.sleep(for: .milliseconds(150))
+        }
+        throw SwitchrError("Cursor didn't quit. Close any open dialog in Cursor and try again.")
+    }
+
+    static func open() {
+        if let executable { Shell.launchDetached(executable, []) }
+    }
+
+    /// The same arguments Cursor registers for its `cursor://` links, so a running Cursor takes them.
+    static func open(url: URL) async -> Bool {
+        if let executable {
+            Shell.launchDetached(executable, ["--open-url", "--", url.absoluteString])
+            return true
+        }
+        return Desktop.open(url.absoluteString)
+    }
+    #else
+    /// Cursor's RPM, DEB and AppImage all run an Electron binary named `cursor`.
+    static var isInstalled: Bool {
+        Shell.which("cursor") != nil || FileManager.default.fileExists(atPath: CursorAdapter.databaseURL.path)
+    }
+
+    static var isRunning: Bool {
+        guard let pgrep = Shell.which("pgrep"), let result = try? Shell.run(pgrep, ["-x", "cursor"]) else { return false }
+        return result.status == 0
+    }
+
+    static func quit() async throws -> Bool {
+        guard isRunning, let pkill = Shell.which("pkill") else { return false }
+        _ = try? Shell.run(pkill, ["-TERM", "-x", "cursor"])
+        for _ in 0..<100 {
+            if !isRunning {
+                try? await Task.sleep(for: .milliseconds(500))
+                return true
+            }
+            try? await Task.sleep(for: .milliseconds(150))
+        }
+        throw SwitchrError("Cursor didn't quit. Close any open dialog in Cursor and try again.")
+    }
+
+    static func open() {
+        if let cursor = Shell.which("cursor") {
+            Shell.launchDetached(cursor, [])
+        } else if let launcher = Shell.which("gtk-launch") {
+            Shell.launchDetached(launcher, ["cursor"])
+        }
+    }
+
+    /// Hands the URL to the running Cursor: through its own command line when it's on PATH, which
+    /// needs no URL handler registered, and otherwise through the desktop's handler.
+    static func open(url: URL) async -> Bool {
+        if let cursor = Shell.which("cursor") {
+            Shell.launchDetached(cursor, ["--open-url", url.absoluteString])
+            return true
+        }
+        guard let xdgOpen = Shell.which("xdg-open") else { return false }
+        Shell.launchDetached(xdgOpen, [url.absoluteString])
+        return true
+    }
+    #endif
 }
 
 /// Minimal access to VS Code's `ItemTable` key/value store.

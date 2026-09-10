@@ -1,0 +1,10 @@
+* text=auto
+*.sh text eol=lf
+packaging/linux/switchr-tray text eol=lf
+*.ps1 text eol=crlf
+Sources/CSQLite/** linguist-vendored
+Sources/Switchr/Tracking/PricingTable.swift linguist-generated
+*.png binary
+*.ico binary
+*.icns binary
+*.tiff binary

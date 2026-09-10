@@ -2,8 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "ci/**"]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,11 +13,16 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  STATIC_SDK_URL: https://download.swift.org/swift-6.3.3-release/static-sdk/swift-6.3.3-RELEASE/swift-6.3.3-RELEASE_static-linux-0.1.0.artifactbundle.tar.gz
+  STATIC_SDK_CHECKSUM: 87c3eaf908e67c0e13a84367119e12273cec1d2cd3d81f7d74bb36722d6b607b
+  NFPM_VERSION: 2.47.0
+
 jobs:
-  build:
-    name: Build and smoke test
+  macos:
+    name: macOS
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -32,17 +38,151 @@ jobs:
           lipo -archs build/Switchr.app/Contents/MacOS/Switchr | grep -q arm64
           plutil -lint build/Switchr.app/Contents/Info.plist
           codesign --verify build/Switchr.app
+          build/Switchr.app/Contents/MacOS/Switchr version
 
       - name: Render menu snapshots
         run: build/Switchr.app/Contents/MacOS/Switchr --snapshot "$RUNNER_TEMP/switchr"
 
-      - name: Lint installer
+      - name: Lint scripts
         run: |
           brew install shellcheck
-          shellcheck install.sh scripts/*.sh
+          shellcheck install.sh scripts/*.sh packaging/linux/install-local.sh
+          python3 -m py_compile packaging/linux/switchr-tray
 
       - uses: actions/upload-artifact@v7
         with:
           name: snapshots
           path: ${{ runner.temp }}/switchr-*.png
           if-no-files-found: warn
+
+  linux:
+    name: Linux ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            nfpm: x86_64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            nfpm: arm64
+    runs-on: ${{ matrix.runner }}
+    container: swift:6.3.3-noble
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the static Linux SDK and nfpm
+        run: |
+          apt-get update -qq && apt-get install -y -qq curl python3 >/dev/null
+          swift sdk install "$STATIC_SDK_URL" --checksum "$STATIC_SDK_CHECKSUM"
+          curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_${{ matrix.nfpm }}.tar.gz" | tar -xz -C /usr/local/bin nfpm
+
+      - name: Run tests
+        run: swift test
+
+      - name: Build the binary and packages
+        run: scripts/package-linux.sh
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-${{ matrix.arch }}
+          path: build/linux/*
+
+  linux-install:
+    name: Install on ${{ matrix.name }}
+    needs: linux
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Fedora
+            image: fedora:latest
+            install: dnf install -y artifacts/*.rpm
+            tray: true
+          - name: Ubuntu 24.04
+            image: ubuntu:24.04
+            install: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/*.deb
+            tray: true
+          - name: Debian 12
+            image: debian:12
+            install: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/*.deb
+            tray: true
+          - name: Arch Linux
+            image: archlinux:latest
+            install: pacman -Syu --noconfirm && pacman -U --noconfirm artifacts/*.pkg.tar.zst
+            tray: true
+          - name: openSUSE (tarball)
+            image: opensuse/tumbleweed:latest
+            install: zypper --non-interactive install tar gzip python3 && tar -xzf artifacts/*.tar.gz && ./switchr-*/install-local.sh && ln -s "$HOME/.local/bin/switchr" "$HOME/.local/bin/switchr-tray" /usr/local/bin/
+            tray: false
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: linux-x86_64
+          path: artifacts
+
+      - name: Install
+        run: ${{ matrix.install }}
+
+      - name: Run switchr
+        shell: bash
+        env:
+          SWITCHR_SECRET_STORE: file
+        run: |
+          switchr version
+          switchr doctor
+          switchr status --json > status.json
+          switchr-tray --print-menu status.json
+          switchr insights --no-open --no-read --output insights.html
+          # GitHub may rate-limit this runner, but a certificate problem must never happen.
+          out=$(switchr update --check 2>&1) || true
+          echo "$out"
+          if grep -qi certificate <<<"$out"; then exit 1; fi
+
+      - name: Load the tray's libraries
+        if: matrix.tray
+        run: python3 -c 'import gi; gi.require_version("Gtk", "3.0"); gi.require_version("AyatanaAppIndicator3", "0.1"); gi.require_version("Notify", "0.7"); from gi.repository import Gtk, AyatanaAppIndicator3, Notify'
+
+  windows:
+    name: Windows
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: compnerd/gha-setup-swift@v0.4.1
+        with:
+          swift-version: swift-6.3.3-release
+          swift-build: 6.3.3-RELEASE
+
+      - name: Run tests
+        run: swift test
+
+      - name: Build the zip
+        shell: pwsh
+        run: ./scripts/package-windows.ps1
+
+      - name: Run switchr.exe and the tray
+        shell: pwsh
+        run: |
+          $env:SWITCHR_DATA_DIR = Join-Path $env:RUNNER_TEMP 'switchr-data'
+          $unpacked = Join-Path $env:RUNNER_TEMP 'unpacked'
+          Expand-Archive (Get-ChildItem build\windows\*.zip).FullName -DestinationPath $unpacked
+          $dir = (Get-ChildItem $unpacked -Directory | Select-Object -First 1).FullName
+          & "$dir\switchr.exe" version; if ($LASTEXITCODE) { exit 1 }
+          & "$dir\switchr.exe" doctor; if ($LASTEXITCODE) { exit 1 }
+          & "$dir\switchr.exe" insights --no-open --no-read --output "$env:RUNNER_TEMP\insights.html"; if ($LASTEXITCODE) { exit 1 }
+          $tray = Start-Process -FilePath "$dir\switchr-tray.exe" -PassThru
+          Start-Sleep -Seconds 10
+          if ($tray.HasExited) { throw "switchr-tray.exe exited with code $($tray.ExitCode)" }
+          Stop-Process -Id $tray.Id
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-x86_64
+          path: build/windows/*.zip

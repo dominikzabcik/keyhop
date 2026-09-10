@@ -13,6 +13,14 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    var shortName: String {
+        switch self {
+        case .claude: "Claude"
+        case .cursor: "Cursor"
+        case .codex: "Codex"
+        }
+    }
+
     /// Shown while Switchr waits for you to sign in with another account.
     var signInHint: String {
         switch self {
@@ -24,7 +32,11 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
 
     var switchNote: String? {
         switch self {
+        #if os(macOS)
         case .claude: "Claude Code rereads its login every 30 seconds, so open sessions move to this account shortly. If one doesn't, restart it with `claude --continue`."
+        #else
+        case .claude: "New Claude Code sessions use this account. If an open session stays on the old one, restart it with `claude --continue`."
+        #endif
         case .codex: "New Codex sessions use this account. Running ones stay on the old login, so reopen them with `codex resume --last`."
         case .cursor: nil
         }
@@ -59,7 +71,7 @@ struct LiveLogin {
     var emailTrusted = true
 }
 
-struct UsageWindow: Equatable, Identifiable {
+struct UsageWindow: Codable, Equatable, Identifiable {
     var label: String
     var usedPercent: Double
     var resetsAt: Date?
@@ -101,7 +113,7 @@ struct LimitReport {
     var plan: String?
 }
 
-struct UsageSnapshot: Equatable {
+struct UsageSnapshot: Codable, Equatable {
     var windows: [UsageWindow] = []
     var error: String?
     var fetchedAt: Date?

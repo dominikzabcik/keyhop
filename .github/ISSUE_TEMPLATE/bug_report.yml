@@ -1,0 +1,34 @@
+name: Something broke
+description: A switch failed, usage looks wrong, or Switchr misbehaved.
+labels: [bug]
+body:
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Which tool
+      options:
+        - Claude Code
+        - Cursor
+        - Codex
+        - Switchr itself
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you clicked, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: probe
+    attributes:
+      label: Probe output
+      description: |
+        Output of `/Applications/Switchr.app/Contents/MacOS/Switchr --probe`. It lists your account emails, so replace them before posting. Never paste tokens.
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      placeholder: Switchr 0.3.0, macOS 26.1, Cursor 3.19

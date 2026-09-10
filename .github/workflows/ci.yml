@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and smoke test
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build universal app
+        run: ./scripts/build-app.sh
+
+      - name: Check the bundle
+        run: |
+          lipo -archs build/Switchr.app/Contents/MacOS/Switchr | grep -q x86_64
+          lipo -archs build/Switchr.app/Contents/MacOS/Switchr | grep -q arm64
+          plutil -lint build/Switchr.app/Contents/Info.plist
+          codesign --verify build/Switchr.app
+
+      - name: Render menu snapshots
+        run: build/Switchr.app/Contents/MacOS/Switchr --snapshot "$RUNNER_TEMP/switchr"
+
+      - name: Lint installer
+        run: |
+          brew install shellcheck
+          shellcheck install.sh scripts/*.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapshots
+          path: ${{ runner.temp }}/switchr-*.png
+          if-no-files-found: warn

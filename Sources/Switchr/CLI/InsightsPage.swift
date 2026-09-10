@@ -191,7 +191,9 @@ enum InsightsPage {
         let barWidth = max(2, min(slot * 0.62, 36))
 
         func label(_ value: Double) -> String {
-            metric == .tokens ? Numbers.tokens(Int(value.rounded())) : (value < 10 && value > 0 ? String(format: "$%.2f", value) : Numbers.usd(value))
+            if metric == .tokens { return Numbers.tokens(Int(value.rounded())) }
+            if value == 0 { return "$0" }
+            return value < 10 ? String(format: "$%.2f", value) : Numbers.usd(value)
         }
         func y(_ value: Double) -> Double { top + plotHeight - value / ceiling * plotHeight }
 
@@ -268,38 +270,58 @@ enum InsightsPage {
 
     // MARK: Blocks
 
-    private static func accountsBlock(_ digest: UsageDigest, input: Input) -> String {
-        let total = max(Double(digest.total.tokens.total), 1)
-        let rows = digest.byAccount.sorted { $0.value.tokens.total > $1.value.tokens.total }.map { key, totals -> String in
-            let entry = series(for: key, accounts: input.accounts)
-            let account = key.account.flatMap { id in input.accounts.first { $0.id == id } }
-            let share = Double(totals.tokens.total) / total
-            let detail = [key.provider.name, account?.plan, account.flatMap { input.active[key.provider] == $0.id ? "in use" : nil }]
-                .compactMap { $0 }.joined(separator: ", ")
-            return #"""
-            <li>
-              <div class="line"><span class="name">\#(escape(account?.displayName ?? "Earlier or removed"))</span><span class="num"><span data-metric="tokens">\#(Numbers.tokens(totals.tokens.total))</span><span data-metric="cost" hidden>\#(Numbers.usd(totals.cost))</span></span></div>
-              <div class="line meta"><span>\#(escape(detail))</span><span class="num">\#(Int((share * 100).rounded()))%</span></div>
-              <div class="track"><span style="width:\#(fmt(max(share * 100, 1)))%;background:\#(entry.color)"></span></div>
-            </li>
-            """#
+    private static func measure(_ totals: Totals, _ metric: Metric) -> Double {
+        metric == .tokens ? Double(totals.tokens.total) : totals.cost
+    }
+
+    private static func figure(_ totals: Totals, _ metric: Metric) -> String {
+        metric == .tokens ? Numbers.tokens(totals.tokens.total) : Numbers.usd(totals.cost)
+    }
+
+    /// One list per measure, each in its own order, so the API value view ranks by dollars.
+    private static func perMetric(_ build: (Metric) -> String) -> String {
+        Metric.allCases.map { metric in
+            #"<ul class="rows" data-metric="\#(metric.rawValue)"\#(metric == .tokens ? "" : " hidden")>\#(build(metric))</ul>"#
         }.joined()
-        return #"<div class="block"><h2>Accounts</h2><ul class="rows">\#(rows)</ul></div>"#
+    }
+
+    private static func accountsBlock(_ digest: UsageDigest, input: Input) -> String {
+        let lists = perMetric { metric in
+            let total = max(measure(digest.total, metric), 0.000_001)
+            return digest.byAccount.sorted { measure($0.value, metric) > measure($1.value, metric) }.map { key, totals -> String in
+                let entry = series(for: key, accounts: input.accounts)
+                let account = key.account.flatMap { id in input.accounts.first { $0.id == id } }
+                let share = measure(totals, metric) / total
+                let detail = [key.provider.name, account?.plan, account.flatMap { input.active[key.provider] == $0.id ? "in use" : nil }]
+                    .compactMap { $0 }.joined(separator: ", ")
+                return #"""
+                <li>
+                  <div class="line"><span class="name">\#(escape(account?.displayName ?? "Earlier or removed"))</span><span class="num">\#(figure(totals, metric))</span></div>
+                  <div class="line meta"><span>\#(escape(detail))</span><span class="num">\#(Int((share * 100).rounded()))%</span></div>
+                  <div class="track"><span style="width:\#(fmt(max(share * 100, 1)))%;background:\#(entry.color)"></span></div>
+                </li>
+                """#
+            }.joined()
+        }
+        return #"<div class="block"><h2>Accounts</h2>\#(lists)</div>"#
     }
 
     private static func modelsBlock(_ digest: UsageDigest) -> String {
-        let models = digest.byModel.sorted { $0.value.tokens.total > $1.value.tokens.total }
-        let peak = max(Double(models.first?.value.tokens.total ?? 1), 1)
-        let rows = models.prefix(8).map { model, totals -> String in
-            #"""
-            <li>
-              <div class="line"><span class="name mono">\#(escape(model))</span><span class="num"><span data-metric="tokens">\#(Numbers.tokens(totals.tokens.total))</span><span data-metric="cost" hidden>\#(Numbers.usd(totals.cost))</span></span></div>
-              <div class="track quiet"><span style="width:\#(fmt(max(Double(totals.tokens.total) / peak * 100, 1)))%"></span></div>
-            </li>
-            """#
-        }.joined()
-        let more = models.count > 8 ? #"<p class="more">\#(models.count - 8) more models</p>"# : ""
-        return #"<div class="block"><h2>Models</h2><ul class="rows">\#(rows)</ul>\#(more)</div>"#
+        let lists = perMetric { metric in
+            let models = digest.byModel.sorted { measure($0.value, metric) > measure($1.value, metric) }
+            let peak = max(models.first.map { measure($0.value, metric) } ?? 0, 0.000_001)
+            let rows = models.prefix(8).map { model, totals -> String in
+                #"""
+                <li>
+                  <div class="line"><span class="name mono">\#(escape(model))</span><span class="num">\#(figure(totals, metric))</span></div>
+                  <div class="track quiet"><span style="width:\#(fmt(max(measure(totals, metric) / peak * 100, 1)))%"></span></div>
+                </li>
+                """#
+            }.joined()
+            let more = models.count > 8 ? #"<li class="more">\#(models.count - 8) more models</li>"# : ""
+            return rows + more
+        }
+        return #"<div class="block"><h2>Models</h2>\#(lists)</div>"#
     }
 
     private static func limitsBlock(_ input: Input) -> String {
@@ -443,7 +465,7 @@ enum InsightsPage {
     .hero { margin: 26px 0 22px; }
     .figure { margin: 0; font: 600 60px/1.05 var(--display); letter-spacing: -.005em; font-variant-numeric: tabular-nums; }
     .figure small { font: 500 20px/1 var(--display); color: var(--ink-3); letter-spacing: 0; }
-    .sub { margin: 10px 0 0; color: var(--ink-2); font-size: 15px; max-width: 64ch; }
+    .sub { margin: 10px 0 0; color: var(--ink-2); font-size: 15px; max-width: 84ch; }
     .legend { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ink-2); font-size: 12.5px; }
     .legend li { display: flex; align-items: center; gap: 7px; }
     .swatch { width: 14px; height: 4px; border-radius: 2px; }

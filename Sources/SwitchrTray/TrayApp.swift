@@ -49,7 +49,7 @@ final class TrayApp {
     private var update: TrayUpdate?
     private var busy: String?
     private var menuCommands: [UInt32: TrayCommand] = [:]
-    private var balloonTarget: UUID?
+    private var balloonTarget: Foundation.UUID?
     private var pending: [() -> Void] = []
     private let lock = NSLock()
 
@@ -91,7 +91,7 @@ final class TrayApp {
         checkForUpdates(announce: false)
 
         var message = MSG()
-        while GetMessageW(&message, nil, 0, 0).boolValue {
+        while GetMessageW(&message, nil, 0, 0) {
             TranslateMessage(&message)
             DispatchMessageW(&message)
         }
@@ -185,7 +185,7 @@ final class TrayApp {
         Shell_NotifyIconW(DWORD(NIM_DELETE), &data)
     }
 
-    private func notify(_ title: String, _ body: String, switchTo target: UUID? = nil) {
+    private func notify(_ title: String, _ body: String, switchTo target: Foundation.UUID? = nil) {
         balloonTarget = target
         var data = baseIconData()
         data.uFlags = UINT(NIF_INFO)
@@ -403,7 +403,7 @@ final class TrayApp {
     private static func execute(_ executable: String, _ arguments: [String]) -> CLIResult {
         var security = SECURITY_ATTRIBUTES(nLength: DWORD(MemoryLayout<SECURITY_ATTRIBUTES>.size), lpSecurityDescriptor: nil, bInheritHandle: true)
         var outRead: HANDLE?, outWrite: HANDLE?, errRead: HANDLE?, errWrite: HANDLE?
-        guard CreatePipe(&outRead, &outWrite, &security, 0).boolValue, CreatePipe(&errRead, &errWrite, &security, 0).boolValue else {
+        guard CreatePipe(&outRead, &outWrite, &security, 0), CreatePipe(&errRead, &errWrite, &security, 0) else {
             return CLIResult(status: 1, stdout: Data(), stderr: Data("Couldn't start switchr.exe.".utf8))
         }
         SetHandleInformation(outRead, DWORD(HANDLE_FLAG_INHERIT), 0)
@@ -423,7 +423,7 @@ final class TrayApp {
         CloseHandle(outWrite)
         CloseHandle(errWrite)
         CloseHandle(nul)
-        guard started.boolValue else {
+        guard started else {
             CloseHandle(outRead)
             CloseHandle(errRead)
             return CLIResult(status: 1, stdout: Data(), stderr: Data("Couldn't find switchr.exe next to switchr-tray.exe.".utf8))
@@ -455,7 +455,7 @@ final class TrayApp {
         while true {
             var read: DWORD = 0
             let ok = buffer.withUnsafeMutableBytes { ReadFile(handle, $0.baseAddress, DWORD($0.count), &read, nil) }
-            if !ok.boolValue || read == 0 { break }
+            if !ok || read == 0 { break }
             data.append(contentsOf: buffer[0..<Int(read)])
         }
         return data
@@ -485,7 +485,7 @@ final class TrayApp {
         startup.cb = DWORD(MemoryLayout<STARTUPINFOW>.size)
         var process = PROCESS_INFORMATION()
         var commandLine = ([executable] + arguments).map(quote).joined(separator: " ").wide
-        if CreateProcessW(nil, &commandLine, nil, nil, false, DWORD(DETACHED_PROCESS), nil, nil, &startup, &process).boolValue {
+        if CreateProcessW(nil, &commandLine, nil, nil, false, DWORD(DETACHED_PROCESS), nil, nil, &startup, &process) {
             CloseHandle(process.hProcess)
             CloseHandle(process.hThread)
         }

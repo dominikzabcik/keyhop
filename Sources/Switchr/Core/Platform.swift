@@ -151,7 +151,7 @@ struct WindowsSecretStore: SecretStore {
                 let ok = protect
                     ? CryptProtectData(&inBlob, nil, &saltBlob, nil, nil, DWORD(CRYPTPROTECT_UI_FORBIDDEN), &outBlob)
                     : CryptUnprotectData(&inBlob, nil, &saltBlob, nil, nil, DWORD(CRYPTPROTECT_UI_FORBIDDEN), &outBlob)
-                guard ok.boolValue, let bytes = outBlob.pbData else { return nil }
+                guard ok, let bytes = outBlob.pbData else { return nil }
                 defer { LocalFree(bytes) }
                 return Data(bytes: bytes, count: Int(outBlob.cbData))
             }

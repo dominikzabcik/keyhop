@@ -215,7 +215,7 @@ enum Files {
                 MoveFileExW(from, to, DWORD(MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
             }
         }
-        if !moved.boolValue {
+        if !moved {
             try? FileManager.default.removeItem(at: tmp)
             throw SwitchrError("Couldn't write \(target.lastPathComponent)")
         }

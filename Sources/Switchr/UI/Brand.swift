@@ -8,6 +8,7 @@ enum Brand {
     static let enamelBottom = Color(red: 0x0A / 255, green: 0x15 / 255, blue: 0x10 / 255)
     static let bone = Color(red: 0xED / 255, green: 0xE7 / 255, blue: 0xD9 / 255)
     static let amber = Color(red: 0xCF / 255, green: 0x9F / 255, blue: 0x57 / 255)
+    static let rust = Color(red: 0xD2 / 255, green: 0x7A / 255, blue: 0x63 / 255)
 }
 
 enum Grain {

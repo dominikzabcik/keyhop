@@ -78,12 +78,13 @@ enum MenuBarGlyph {
 
 struct ProviderMark: View {
     let provider: Provider
+    var tint: Color?
 
     var body: some View {
         Image(nsImage: Marks.image(for: provider))
             .renderingMode(.template)
             .resizable()
             .aspectRatio(contentMode: .fit)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(tint.map(AnyShapeStyle.init) ?? AnyShapeStyle(.secondary))
     }
 }

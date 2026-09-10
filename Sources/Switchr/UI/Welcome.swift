@@ -152,7 +152,7 @@ private struct DetectionRow: View {
     }
 }
 
-private struct BoneButtonStyle: ButtonStyle {
+struct BoneButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         BoneButton(configuration: configuration)
     }

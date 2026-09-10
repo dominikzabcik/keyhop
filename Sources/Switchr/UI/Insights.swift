@@ -13,6 +13,7 @@ enum InsightsWindow {
             window.title = "Insights"
             window.titlebarAppearsTransparent = true
             window.isReleasedWhenClosed = false
+            window.appearance = NSAppearance(named: .darkAqua)
             window.minSize = NSSize(width: 800, height: 600)
             window.contentView = NSHostingView(rootView: InsightsView().environmentObject(store).environmentObject(tracker))
             window.center()
@@ -91,6 +92,8 @@ struct InsightsView: View {
             .padding(.top, 50)
             .padding(.bottom, 40)
         }
+        .background(Enamel())
+        .environment(\.colorScheme, .dark)
         .task(id: Query(range: range, provider: provider, revision: tracker.revision)) {
             digest = await tracker.digest(range: range, provider: provider, sole: store.soleAccounts)
         }    }
@@ -152,6 +155,7 @@ struct InsightsView: View {
             Text(value)
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .monospacedDigit()
+                .foregroundStyle(Brand.bone)
             Text(caption)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)

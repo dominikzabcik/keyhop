@@ -12,10 +12,7 @@
 </p>
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/menu-dark.png">
-    <img src="docs/menu-light.png" width="348" alt="Switchr's menu: two Claude Code accounts, two Cursor accounts and one Codex account, each with usage bars">
-  </picture>
+  <img src="docs/menu.png" width="340" alt="Switchr's menu on the Claude tab: the account in use with its 5-hour and weekly limits, and another account to switch to">
 </p>
 
 ## Install
@@ -47,8 +44,8 @@ On first launch, a welcome window lists the logins Switchr found and turns on Op
 | | |
 | --- | --- |
 | **Add an account** | Sign in to the tool as usual. Switchr notices the login and saves it. For another account, click **Add account**. Switchr signs the tool out on this Mac only, leaving the saved token valid, and saves the next login you make. |
-| **Switch** | Click an account row. Right-click a row to rename or remove it. |
-| **Read the bars** | Each bar is how much of a limit you've used. The tick marks an even pace through the window. A bar turns amber when you're ahead of pace and red past 90%. |
+| **Switch** | Pick a tool's tab, then click one of its other accounts. Each shows the room left on its tightest limit, and when the account in use runs low, the one with the most room is marked. Right-click an account to rename or remove it. |
+| **Read the bars** | The account in use shows each limit as a large bar. The tick marks an even pace through the window. A bar turns amber when you're ahead of pace and rust past 90%, and "Runs out" replaces the reset time when the limit won't last until the reset. |
 | **Menu bar icon** | The in-use account's two nearest limits, for the tool you switched last. |
 
 ## Usage tracking

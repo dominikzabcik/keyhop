@@ -45,7 +45,7 @@ final class AccountStore: ObservableObject {
     }
 
     /// Sample data for `--snapshot` renders. Touches no files, Keychain or network.
-    init(preview: Void) {
+    init(preview: Void, focus: Provider = .claude) {
         metaURL = URL(fileURLWithPath: "/dev/null")
         let now = Date()
         func account(_ provider: Provider, _ email: String, _ label: String?, _ plan: String) -> Account {
@@ -69,8 +69,7 @@ final class AccountStore: ObservableObject {
             codexMain.id: UsageSnapshot(windows: [window("5h", 100, 16_440, 18000), window("Week", 62, 421_000, 604_800)], fetchedAt: now),
         ]
         lastRefresh = now.addingTimeInterval(-120)
-        focusProvider = .claude
-        notice = Provider.claude.switchNote
+        focusProvider = focus
     }
 
     func accounts(for provider: Provider) -> [Account] {

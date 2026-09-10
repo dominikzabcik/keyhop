@@ -33,6 +33,31 @@ enum Entry {
             done.wait()
             return
         }
+        if let flag = CommandLine.arguments.firstIndex(of: "--preview-menu") {
+            // The real menu with sample data in a plain window, for screenshots. An optional
+            // following argument (claude, cursor, codex) picks the tab.
+            let tab = CommandLine.arguments.dropFirst(flag + 1).first.flatMap(Provider.init(rawValue:)) ?? .claude
+            MainActor.assumeIsolated {
+                NSApplication.shared.setActivationPolicy(.accessory)
+                let store = AccountStore(preview: (), focus: tab)
+                let root = MenuView()
+                    .environmentObject(store)
+                    .environmentObject(UsageTracker(preview: store))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                let host = NSHostingView(rootView: root)
+                let size = host.fittingSize
+                let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
+                window.isOpaque = false
+                window.backgroundColor = .clear
+                window.hasShadow = false
+                window.contentView = host
+                window.center()
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+                NSApplication.shared.run()
+            }
+            return
+        }
         if CommandLine.arguments.contains("--preview-insights") {
             // The real Insights window with sample data, for screenshots.
             MainActor.assumeIsolated {

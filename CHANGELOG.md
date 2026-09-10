@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.0]
+
+- Redesigned menu on the Switchr enamel. Tabs switch between Claude Code, Cursor and Codex, each with a live twin-track glyph.
+- The account in use leads with large limit figures, bars drawn like the icon, and a "Runs out" time when a limit won't last.
+- Other accounts are one-click rows that show the room left, marking the one with the most when you're running low.
+- Adding an account plays the icon's hand-off animation while Switchr waits for the new login.
+- A quieter footer, with Open at login and Quit moved into its menu.
+- The Insights window uses the same enamel surface.
+
 ## [0.4.0]
 
 - Usage tracking. Switchr reads Claude Code and Codex logs on your Mac and each Cursor account's usage export, prices every request at standard API rates, and credits it to the account that was in use at the time.

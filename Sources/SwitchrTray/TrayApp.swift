@@ -2,24 +2,28 @@
 import Foundation
 import WinSDK
 
-// The Windows tray app: a notification-area icon, its menu and notifications. Everything it
-// knows comes from running switchr.exe (installed next to it) with --json, the same contract
+// The Windows tray app: a notification-area icon, its menu, prompts and notifications. Everything
+// it knows comes from running switchr.exe (installed next to it) with --json, the same contract
 // the Linux tray uses.
 
 private let wmNull: UINT = 0x0000
 private let wmDestroy: UINT = 0x0002
+private let wmClose: UINT = 0x0010
 private let wmSettingChange: UINT = 0x001A
+private let wmSetFont: UINT = 0x0030
 private let wmContextMenu: UINT = 0x007B
 private let wmCommand: UINT = 0x0111
 private let wmTimer: UINT = 0x0113
 private let wmTray: UINT = 0x8000 + 1
 private let wmWorkDone: UINT = 0x8000 + 2
+private let wmShowMenu: UINT = 0x8000 + 3
 private let ninSelect: UINT = 0x0400
 private let ninKeySelect: UINT = 0x0401
 private let ninBalloonUserClick: UINT = 0x0405
 
 private let refreshTimer: UINT_PTR = 1
 private let updateTimer: UINT_PTR = 2
+private let dialogTimer: UINT_PTR = 3
 
 private func windowProc(_ hwnd: HWND?, _ message: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
     TrayApp.shared.handle(hwnd, message, wParam, lParam)
@@ -56,12 +60,30 @@ final class TrayApp {
     private let folder: URL = URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent()
     private var cli: String { folder.appendingPathComponent("switchr.exe").path }
     private var trayPath: String { folder.appendingPathComponent("switchr-tray.exe").path }
+    private let arguments = CommandLine.arguments
+
+    /// Scoop keeps apps under scoop\apps and updates them itself.
+    private var updatedBy: String? {
+        let path = folder.path.lowercased()
+        return path.contains("\\scoop\\apps\\") || path.contains("/scoop/apps/") ? "Scoop" : nil
+    }
+
+    private var fixture: String? {
+        arguments.firstIndex(of: "--status-file").flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
+    }
+
+    private var settings: TraySettings {
+        TraySettings(autoRefresh: Settings.bool("AutoRefresh", default: true),
+                     autoInstallUpdates: Settings.bool("AutoInstallUpdates", default: true),
+                     startsAtSignIn: StartAtSignIn.isOn,
+                     canSelfUpdate: updatedBy == nil,
+                     updatedBy: updatedBy)
+    }
 
     func run() {
-        let afterUpdate = CommandLine.arguments.contains("--after-update")
-        let mutexName = "Local\\SwitchrTray".wide
-        var mutex = CreateMutexW(nil, false, mutexName)
-        if GetLastError() == DWORD(ERROR_ALREADY_EXISTS) {
+        let afterUpdate = arguments.contains("--after-update")
+        var mutex = CreateMutexW(nil, false, "Local\\SwitchrTray".wide)
+        if GetLastError() == DWORD(ERROR_ALREADY_EXISTS), fixture == nil {
             // After an update the old tray is still quitting; wait for it, otherwise one is enough.
             guard afterUpdate, let existing = mutex, WaitForSingleObject(existing, 10_000) != DWORD(WAIT_TIMEOUT) else { return }
             mutex = existing
@@ -83,15 +105,27 @@ final class TrayApp {
         }
         window = CreateWindowExW(0, className, "Switchr".wide, 0, 0, 0, 0, 0, nil, nil, instance, nil)
         taskbarCreated = RegisterWindowMessageW("TaskbarCreated".wide)
+        Prompt.register(instance: instance)
 
-        addIcon()
-        load(["status", "--json"]) { [weak self] in self?.refresh(claimAlerts: true) }
-        SetTimer(window, refreshTimer, 5 * 60 * 1000, nil)
-        SetTimer(window, updateTimer, 12 * 60 * 60 * 1000, nil)
-        checkForUpdates(announce: false)
+        if let fixture {
+            status = (try? Data(contentsOf: URL(fileURLWithPath: fixture))).flatMap { try? TrayStatus.decode($0) }
+            addIcon()
+            if arguments.contains("--show-menu") { PostMessageW(window, wmShowMenu, 0, 0) }
+            if arguments.contains("--show-dialog") { SetTimer(window, dialogTimer, 500, nil) }
+        } else {
+            addIcon()
+            load(["status", "--json"]) { [weak self] in
+                guard let self else { return }
+                if self.settings.autoRefresh { self.refresh(claimAlerts: true) }
+            }
+            SetTimer(window, refreshTimer, 5 * 60 * 1000, nil)
+            SetTimer(window, updateTimer, 12 * 60 * 60 * 1000, nil)
+            checkForUpdates(announce: false)
+        }
 
         var message = MSG()
         while GetMessageW(&message, nil, 0, 0) {
+            if Prompt.handles(&message) { continue }
             TranslateMessage(&message)
             DispatchMessageW(&message)
         }
@@ -115,13 +149,22 @@ final class TrayApp {
                 break
             }
             return 0
+        case wmShowMenu:
+            var area = RECT()
+            SystemParametersInfoW(UINT(SPI_GETWORKAREA), 0, &area, 0)
+            showMenu(at: POINT(x: area.right - 24, y: area.bottom - 8))
+            return 0
         case wmCommand:
             let id = UInt32(truncatingIfNeeded: wParam) & 0xFFFF
             if let command = menuCommands[id] { perform(command) }
             return 0
         case wmTimer:
-            if wParam == refreshTimer { refresh(claimAlerts: true) }
+            if wParam == refreshTimer, settings.autoRefresh { refresh(claimAlerts: true) }
             if wParam == updateTimer { checkForUpdates(announce: false) }
+            if wParam == dialogTimer {
+                KillTimer(window, dialogTimer)
+                if let account = status?.tools.flatMap(\.accounts).first { perform(.rename(account.id)) }
+            }
             return 0
         case wmWorkDone:
             lock.lock()
@@ -233,29 +276,38 @@ final class TrayApp {
 
     // MARK: Menu
 
-    private func showMenu() {
+    private func showMenu(at anchor: POINT? = nil) {
         guard let menu = CreatePopupMenu() else { return }
         menuCommands.removeAll()
         var nextID: UInt32 = 100
-        for item in TrayMenu.build(status: status, busy: busy, update: update, startsAtSignIn: StartAtSignIn.isOn) {
-            if item.isSeparator {
-                AppendMenuW(menu, UINT(MF_SEPARATOR), 0, nil)
-                continue
+
+        func append(_ items: [TrayMenuItem], to menu: HMENU) {
+            for item in items {
+                if item.isSeparator {
+                    AppendMenuW(menu, UINT(MF_SEPARATOR), 0, nil)
+                    continue
+                }
+                var flags = UINT(MF_STRING)
+                if item.checked { flags |= UINT(MF_CHECKED) }
+                if !item.enabled || item.isLabel { flags |= UINT(MF_GRAYED) }
+                if !item.children.isEmpty, let submenu = CreatePopupMenu() {
+                    append(item.children, to: submenu)
+                    AppendMenuW(menu, flags | UINT(MF_POPUP), UINT_PTR(UInt(bitPattern: Int(bitPattern: submenu))), item.title.wide)
+                    continue
+                }
+                var id: UInt32 = 0
+                if let command = item.command {
+                    id = nextID
+                    nextID += 1
+                    menuCommands[id] = command
+                }
+                AppendMenuW(menu, flags, UINT_PTR(id), item.title.wide)
             }
-            var flags = UINT(MF_STRING)
-            if item.checked { flags |= UINT(MF_CHECKED) }
-            if !item.enabled || item.command == nil && !item.checked { flags |= UINT(MF_GRAYED) }
-            var id: UInt32 = 0
-            if let command = item.command {
-                id = nextID
-                nextID += 1
-                menuCommands[id] = command
-            }
-            AppendMenuW(menu, flags, UINT_PTR(id), item.title.wide)
         }
+        append(TrayMenu.build(status: status, busy: busy, update: update, settings: settings), to: menu)
 
         var point = POINT()
-        GetCursorPos(&point)
+        if let anchor { point = anchor } else { GetCursorPos(&point) }
         SetForegroundWindow(window)
         TrackPopupMenuEx(menu, UINT(TPM_RIGHTBUTTON | TPM_BOTTOMALIGN | TPM_RIGHTALIGN), point.x, point.y, window, nil)
         PostMessageW(window, wmNull, 0, 0)
@@ -263,10 +315,17 @@ final class TrayApp {
     }
 
     private func perform(_ command: TrayCommand) {
+        if fixture != nil {
+            // Saved data runs nothing; only the prompts open, for screenshots.
+            switch command {
+            case .rename, .remove, .budget: break
+            case .quit: DestroyWindow(window); return
+            default: return
+            }
+        }
         switch command {
         case .switchTo(let id):
-            guard let tool = status?.tools.first(where: { $0.accounts.contains { $0.id == id } }),
-                  let account = tool.accounts.first(where: { $0.id == id }) else { return }
+            guard let (tool, account) = status?.account(id) else { return }
             busy = "Switching \(tool.name) to \(account.name)…"
             runCLI(["switch", id.uuidString, "--json"]) { [weak self] result in
                 guard let self else { return }
@@ -304,6 +363,55 @@ final class TrayApp {
                 if result.status != 0 { self?.notify("Couldn't open Insights", result.errorText) }
             }
 
+        case .rename(let id):
+            guard let (tool, account) = status?.account(id) else { return }
+            guard let name = Prompt.ask(title: "Rename account",
+                                        message: "A name for \(account.email) in \(tool.name). Leave it empty to show the email.",
+                                        initial: account.label ?? "", action: "Save") else { return }
+            guard fixture == nil else { return }
+            let trimmed = name.trimmingCharacters(in: .whitespaces)
+            runCLI(trimmed.isEmpty ? ["rename", id.uuidString, "--clear"] : ["rename", id.uuidString, trimmed]) { [weak self] result in
+                if result.status != 0 { self?.notify("Couldn't rename the account", result.errorText) }
+                self?.load(["status", "--json"])
+            }
+
+        case .remove(let id):
+            guard let (tool, account) = status?.account(id) else { return }
+            let question = "Remove \(account.name) from \(tool.name)?\n\nSwitchr deletes its saved login. The account itself isn't affected, and you can add it again by signing in."
+            guard MessageBoxW(window, question.wide, "Remove account".wide, UINT(MB_OKCANCEL | MB_ICONWARNING | MB_SETFOREGROUND | MB_TOPMOST)) == IDOK else { return }
+            guard fixture == nil else { return }
+            runCLI(["remove", id.uuidString]) { [weak self] result in
+                if result.status != 0 { self?.notify("Couldn't remove the account", result.errorText) }
+                self?.load(["status", "--json"])
+            }
+
+        case .budget:
+            let current = status?.overallBudget
+            var message = "A monthly budget for all accounts, in dollars at API prices. Switchr warns at 80% and 100%. Leave it empty for no budget."
+            var answer = current.map { String(format: "%.0f", $0.amount) } ?? ""
+            while true {
+                guard let typed = Prompt.ask(title: "Budget", message: message, initial: answer, action: "Save") else { return }
+                guard let amount = TrayMenu.budgetAmount(typed) else {
+                    message = "Type an amount in dollars, like 200, or leave it empty for no budget."
+                    answer = typed
+                    continue
+                }
+                guard fixture == nil else { return }
+                let arguments = amount.map { ["budget", "set", "all", String(format: "%.2f", $0), "--period", "month"] } ?? ["budget", "clear", "all"]
+                runCLI(arguments) { [weak self] result in
+                    if result.status != 0 { self?.notify("Couldn't change the budget", result.errorText) }
+                    self?.load(["status", "--json"])
+                }
+                return
+            }
+
+        case .toggleAutoRefresh:
+            Settings.set("AutoRefresh", !settings.autoRefresh)
+
+        case .toggleAutoInstall:
+            Settings.set("AutoInstallUpdates", !settings.autoInstallUpdates)
+            if settings.autoInstallUpdates { installUpdateIfIdle() }
+
         case .toggleStartAtSignIn:
             StartAtSignIn.set(!StartAtSignIn.isOn, command: "\"\(trayPath)\"")
 
@@ -311,18 +419,7 @@ final class TrayApp {
             checkForUpdates(announce: true)
 
         case .installUpdate:
-            guard let update else { return }
-            busy = "Installing Switchr \(update.latest)…"
-            runCLI(["update", "--json"]) { [weak self] result in
-                guard let self else { return }
-                self.busy = nil
-                guard result.status == 0 else {
-                    self.notify("Switchr didn't update", result.errorText)
-                    return
-                }
-                Self.launch(self.trayPath, ["--after-update"])
-                DestroyWindow(self.window)
-            }
+            installUpdate()
 
         case .quit:
             DestroyWindow(window)
@@ -365,9 +462,39 @@ final class TrayApp {
                 return
             }
             self.update = update
-            if announce {
-                self.notify("Switchr", update.available ? "Switchr \(update.latest) is available. Choose Update in the menu." : "Switchr \(update.current) is the latest version.")
+            let settings = self.settings
+            if update.available, settings.canSelfUpdate, settings.autoInstallUpdates {
+                self.installUpdateIfIdle()
+                return
             }
+            if update.available, announce || Settings.string("NotifiedVersion") != update.latest {
+                Settings.set("NotifiedVersion", update.latest)
+                let how = settings.canSelfUpdate ? "Choose Update in the menu." : "Update it with: scoop update switchr"
+                self.notify("Switchr \(update.latest) is available", how)
+            } else if announce {
+                self.notify("Switchr", "Switchr \(update.current) is the latest version.")
+            }
+        }
+    }
+
+    /// Installs a found release unless something is in progress, as the Mac app does.
+    private func installUpdateIfIdle() {
+        guard let update, update.available, busy == nil else { return }
+        installUpdate()
+    }
+
+    private func installUpdate() {
+        guard let update, settings.canSelfUpdate else { return }
+        busy = "Installing Switchr \(update.latest)…"
+        runCLI(["update", "--json"]) { [weak self] result in
+            guard let self else { return }
+            self.busy = nil
+            guard result.status == 0 else {
+                self.notify("Switchr didn't update", result.errorText)
+                return
+            }
+            Self.launch(self.trayPath, ["--after-update"])
+            DestroyWindow(self.window)
         }
     }
 
@@ -388,6 +515,7 @@ final class TrayApp {
     /// Runs switchr.exe on a background thread without a console window, then calls back on the
     /// window thread.
     private func runCLI(_ arguments: [String], completion: @escaping (CLIResult) -> Void) {
+        guard fixture == nil else { return }
         let executable = cli
         let target = window
         DispatchQueue.global().async { [weak self] in
@@ -515,9 +643,164 @@ final class TrayApp {
     }
 }
 
+// MARK: Prompt
+
+/// A small text prompt in the system's message font: a question, a text field, Save and Cancel.
+/// Enter saves and Escape cancels, as in any Windows dialog.
+enum Prompt {
+    private static let className = "SwitchrPrompt".wide
+    private static var instance: HINSTANCE?
+    private static var dialog: HWND?
+    private static var edit: HWND?
+    private static var result: String?
+    private static var finished = false
+    private static var font: HFONT?
+
+    private static let idSave: Int32 = 1
+    private static let idCancel: Int32 = 2
+
+    static func register(instance: HINSTANCE?) {
+        self.instance = instance
+        className.withUnsafeBufferPointer { name in
+            var windowClass = WNDCLASSEXW()
+            windowClass.cbSize = UINT(MemoryLayout<WNDCLASSEXW>.size)
+            windowClass.lpfnWndProc = promptProc
+            windowClass.hInstance = instance
+            windowClass.hbrBackground = GetSysColorBrush(COLOR_WINDOW)
+            windowClass.hCursor = LoadCursorW(nil, UnsafePointer<WCHAR>(bitPattern: 32512))
+            windowClass.lpszClassName = name.baseAddress
+            RegisterClassExW(&windowClass)
+        }
+    }
+
+    /// Lets Tab, Enter and Escape work inside the prompt.
+    static func handles(_ message: inout MSG) -> Bool {
+        guard let dialog else { return false }
+        return IsDialogMessageW(dialog, &message)
+    }
+
+    static func ask(title: String, message: String, initial: String, action: String) -> String? {
+        guard dialog == nil else { return nil }
+        let dpi = Double(GetDpiForSystem())
+        func scaled(_ value: Double) -> Int32 { Int32((value * dpi / 96).rounded()) }
+
+        var metrics = NONCLIENTMETRICSW()
+        metrics.cbSize = UINT(MemoryLayout<NONCLIENTMETRICSW>.size)
+        SystemParametersInfoForDpi(UINT(SPI_GETNONCLIENTMETRICS), metrics.cbSize, &metrics, 0, UINT(dpi))
+        font = CreateFontIndirectW(&metrics.lfMessageFont)
+
+        let width = scaled(440), height = scaled(200)
+        var area = RECT()
+        SystemParametersInfoW(UINT(SPI_GETWORKAREA), 0, &area, 0)
+        let x = area.left + (area.right - area.left - width) / 2
+        let y = area.top + (area.bottom - area.top - height) / 2
+
+        let style = DWORD(WS_CAPTION | WS_SYSMENU) | DWORD(WS_POPUP)
+        dialog = CreateWindowExW(DWORD(WS_EX_DLGMODALFRAME | WS_EX_TOPMOST), className, title.wide, style, x, y, width, height, nil, nil, instance, nil)
+        guard let dialog else { return nil }
+
+        var client = RECT()
+        GetClientRect(dialog, &client)
+        let margin = scaled(16), inner = client.right - margin * 2
+        let child = DWORD(WS_CHILD | WS_VISIBLE)
+
+        let label = CreateWindowExW(0, "STATIC".wide, message.wide, child, margin, margin, inner, scaled(52), dialog, nil, instance, nil)
+        edit = CreateWindowExW(DWORD(WS_EX_CLIENTEDGE), "EDIT".wide, initial.wide, child | DWORD(WS_TABSTOP) | DWORD(ES_AUTOHSCROLL),
+                               margin, margin + scaled(60), inner, scaled(26), dialog, nil, instance, nil)
+        let buttonWidth = scaled(92), buttonHeight = scaled(30), buttonTop = client.bottom - margin - buttonHeight
+        let cancel = CreateWindowExW(0, "BUTTON".wide, "Cancel".wide, child | DWORD(WS_TABSTOP) | DWORD(BS_PUSHBUTTON),
+                                     client.right - margin - buttonWidth, buttonTop, buttonWidth, buttonHeight, dialog, HMENU(bitPattern: Int(idCancel)), instance, nil)
+        let save = CreateWindowExW(0, "BUTTON".wide, action.wide, child | DWORD(WS_TABSTOP) | DWORD(BS_DEFPUSHBUTTON),
+                                   client.right - margin * 3 / 2 - buttonWidth * 2, buttonTop, buttonWidth, buttonHeight, dialog, HMENU(bitPattern: Int(idSave)), instance, nil)
+        for control in [label, edit, cancel, save] {
+            SendMessageW(control, wmSetFont, WPARAM(UInt(bitPattern: Int(bitPattern: font))), 1)
+        }
+        SendMessageW(edit, UINT(EM_SETSEL), 0, -1)
+
+        result = nil
+        finished = false
+        ShowWindow(dialog, SW_SHOW)
+        SetForegroundWindow(dialog)
+        SetFocus(edit)
+
+        var msg = MSG()
+        while !finished, GetMessageW(&msg, nil, 0, 0) {
+            if IsDialogMessageW(dialog, &msg) { continue }
+            TranslateMessage(&msg)
+            DispatchMessageW(&msg)
+        }
+        DestroyWindow(dialog)
+        self.dialog = nil
+        edit = nil
+        if let font { DeleteObject(HGDIOBJ(font)) }
+        font = nil
+        return result
+    }
+
+    fileprivate static func handle(_ hwnd: HWND?, _ message: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
+        switch message {
+        case wmCommand:
+            let id = Int32(truncatingIfNeeded: wParam & 0xFFFF)
+            if id == idSave {
+                let length = GetWindowTextLengthW(edit)
+                var buffer = [WCHAR](repeating: 0, count: Int(length) + 1)
+                GetWindowTextW(edit, &buffer, length + 1)
+                result = String(decoding: buffer.prefix(Int(length)), as: UTF16.self)
+                finished = true
+            } else if id == idCancel {
+                finished = true
+            }
+            return 0
+        case wmClose:
+            finished = true
+            return 0
+        default:
+            return DefWindowProcW(hwnd, message, wParam, lParam)
+        }
+    }
+}
+
+private func promptProc(_ hwnd: HWND?, _ message: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
+    Prompt.handle(hwnd, message, wParam, lParam)
+}
+
+// MARK: Registry
+
 enum Registry {
     /// HKEY_CURRENT_USER, which C defines as a sign-extended constant pointer.
     static let currentUser = HKEY(bitPattern: Int(Int32(bitPattern: 0x8000_0001)))
+}
+
+/// The tray's settings, in HKCU\Software\Switchr. `switchr reset` removes them.
+enum Settings {
+    private static let key = "Software\\Switchr"
+
+    static func bool(_ name: String, default fallback: Bool) -> Bool {
+        var value: DWORD = 0
+        var size = DWORD(MemoryLayout<DWORD>.size)
+        guard RegGetValueW(Registry.currentUser, key.wide, name.wide, DWORD(RRF_RT_REG_DWORD), nil, &value, &size) == 0 else { return fallback }
+        return value != 0
+    }
+
+    static func set(_ name: String, _ on: Bool) {
+        var value: DWORD = on ? 1 : 0
+        _ = RegSetKeyValueW(Registry.currentUser, key.wide, name.wide, DWORD(REG_DWORD), &value, DWORD(MemoryLayout<DWORD>.size))
+    }
+
+    static func string(_ name: String) -> String? {
+        var size: DWORD = 0
+        guard RegGetValueW(Registry.currentUser, key.wide, name.wide, DWORD(RRF_RT_REG_SZ), nil, nil, &size) == 0, size > 0 else { return nil }
+        var buffer = [WCHAR](repeating: 0, count: Int(size) / 2 + 1)
+        guard RegGetValueW(Registry.currentUser, key.wide, name.wide, DWORD(RRF_RT_REG_SZ), nil, &buffer, &size) == 0 else { return nil }
+        return String(decoding: buffer.prefix { $0 != 0 }, as: UTF16.self)
+    }
+
+    static func set(_ name: String, _ text: String) {
+        let value = text.wide
+        value.withUnsafeBytes { bytes in
+            _ = RegSetKeyValueW(Registry.currentUser, key.wide, name.wide, DWORD(REG_SZ), bytes.baseAddress, DWORD(bytes.count))
+        }
+    }
 }
 
 /// The per-user Run key, the same switch Task Manager's Startup apps page flips.

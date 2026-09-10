@@ -3,6 +3,12 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build everything and write the notes and manifests, but publish nothing
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -16,13 +22,22 @@ jobs:
   check:
     name: Check the version
     runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
     steps:
       - uses: actions/checkout@v7
-      - run: |
-          version="${GITHUB_REF_NAME#v}"
-          if [[ "$(cat VERSION)" != "$version" ]]; then
-            echo "VERSION says $(cat VERSION) but the tag is $GITHUB_REF_NAME" >&2
-            exit 1
+      - id: version
+        run: |
+          version="$(cat VERSION)"
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            if [[ "$version" != "${GITHUB_REF_NAME#v}" ]]; then
+              echo "VERSION says $version but the tag is $GITHUB_REF_NAME" >&2
+              exit 1
+            fi
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=${{ inputs.dry_run == false }}" >> "$GITHUB_OUTPUT"
           fi
           if ! grep -q "static let number = \"$version\"" Sources/Switchr/Core/Version.swift; then
             echo "Sources/Switchr/Core/Version.swift doesn't say $version" >&2
@@ -32,6 +47,11 @@ jobs:
             echo "CHANGELOG.md has no section for $version" >&2
             exit 1
           fi
+          if [[ "$GITHUB_REF_TYPE" != tag && "${{ inputs.dry_run }}" == false ]]; then
+            echo "Publishing needs a v$version tag; run without dry_run only from the tag." >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
   macos:
     name: macOS
@@ -53,7 +73,7 @@ jobs:
 
       - name: Build app, zip and disk image
         env:
-          SWITCHR_VERSION: ${{ github.ref_name }}
+          SWITCHR_VERSION: ${{ needs.check.outputs.version }}
         run: ./scripts/build-app.sh --release
 
       - uses: actions/upload-artifact@v7
@@ -92,7 +112,7 @@ jobs:
 
       - name: Build the binary and packages
         env:
-          SWITCHR_VERSION: ${{ github.ref_name }}
+          SWITCHR_VERSION: ${{ needs.check.outputs.version }}
         run: scripts/package-linux.sh
 
       - uses: actions/upload-artifact@v7
@@ -101,9 +121,16 @@ jobs:
           path: build/linux/*
 
   windows:
-    name: Windows
+    name: Windows ${{ matrix.arch }}
     needs: check
-    runs-on: windows-2022
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: windows-2022
+          - arch: arm64
+            runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
@@ -119,20 +146,22 @@ jobs:
       - name: Build the zip
         shell: pwsh
         env:
-          SWITCHR_VERSION: ${{ github.ref_name }}
+          SWITCHR_VERSION: ${{ needs.check.outputs.version }}
         run: ./scripts/package-windows.ps1
 
       - uses: actions/upload-artifact@v7
         with:
-          name: release-windows
+          name: release-windows-${{ matrix.arch }}
           path: build/windows/*.zip
 
   publish:
-    name: Publish
-    needs: [macos, linux, windows]
+    name: ${{ needs.check.outputs.publish == 'true' && 'Publish' || 'Dry run' }}
+    needs: [check, macos, linux, windows]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -152,9 +181,8 @@ jobs:
 
       - name: Write release notes
         run: |
-          version="${GITHUB_REF_NAME#v}"
           {
-            awk -v v="$version" '/^## /{p = index($0, "[" v "]") > 0; next} p' CHANGELOG.md
+            awk -v v="$VERSION" '/^## /{p = index($0, "[" v "]") > 0; next} p' CHANGELOG.md
             cat <<'NOTES'
 
           ### Install
@@ -174,45 +202,48 @@ jobs:
           | System | Download |
           | --- | --- |
           | macOS 14 or later | `Switchr.dmg`, or `brew install --cask switchr` from this repository's tap |
-          | Fedora, RHEL | `switchr-VERSION-1.x86_64.rpm` or `.aarch64.rpm` |
-          | Debian, Ubuntu | `switchr_VERSION_amd64.deb` or `_arm64.deb` |
-          | Arch Linux | `switchr-VERSION-1-x86_64.pkg.tar.zst` or `-aarch64` |
-          | Any Linux | `switchr-VERSION-linux-<arch>.tar.gz`, then `./install-local.sh` |
-          | Windows 10 and 11 | `switchr-VERSION-windows-x86_64.zip`, or `scoop install switchr` from this repository's bucket |
+          | Fedora, RHEL | `switchr-@V@-1.x86_64.rpm` or `.aarch64.rpm` |
+          | Debian, Ubuntu | `switchr_@V@_amd64.deb` or `_arm64.deb` |
+          | Arch Linux | `switchr-@V@-1-x86_64.pkg.tar.zst` or `-aarch64`, or the `switchr-bin` PKGBUILD |
+          | Any Linux | `switchr-@V@-linux-<arch>.tar.gz`, then `./install-local.sh` |
+          | Windows 10 and 11 | `switchr-@V@-windows-x86_64.zip` or `-arm64.zip`, or `scoop install switchr` from this repository's bucket |
 
           Every file is listed with its SHA-256 in `SHA256SUMS`.
           NOTES
-          } | sed 's/^          //' | sed "s/VERSION/$version/g" > "$RUNNER_TEMP/notes.md"
-          cat "$RUNNER_TEMP/notes.md"
+          } | sed 's/^          //' | sed "s/@V@/$VERSION/g" > dist-notes.md
+          cat dist-notes.md
+
+      - name: Render the package manifests
+        run: python3 scripts/render-manifests.py --version "$VERSION" --sums dist/SHA256SUMS
+
+      - name: Keep the dry run's output
+        if: needs.check.outputs.publish != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dry-run
+          path: |
+            dist/SHA256SUMS
+            dist-notes.md
+            bucket/switchr.json
+            packaging/arch/PKGBUILD
+            packaging/winget/
 
       - name: Publish release
+        if: needs.check.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* \
-            --title "Switchr ${GITHUB_REF_NAME#v}" \
-            --notes-file "$RUNNER_TEMP/notes.md" \
+          gh release create "v$VERSION" dist/* packaging/arch/PKGBUILD \
+            --title "Switchr $VERSION" \
+            --notes-file dist-notes.md \
             --verify-tag
 
-      - name: Point the Scoop manifest at this release
+      - name: Commit the manifests for this release
+        if: needs.check.outputs.publish == 'true'
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          zip="switchr-$version-windows-x86_64.zip"
-          hash=$(awk -v f="$zip" '$2 == f {print $1}' dist/SHA256SUMS)
-          python3 - "$version" "$zip" "$hash" <<'PY'
-          import json, sys
-          version, zip_name, digest = sys.argv[1:]
-          path = "bucket/switchr.json"
-          manifest = json.load(open(path))
-          manifest["version"] = version
-          manifest["architecture"]["64bit"]["url"] = f"https://github.com/dominikzabcik/switchr/releases/download/v{version}/{zip_name}"
-          manifest["architecture"]["64bit"]["hash"] = digest
-          manifest["extract_dir"] = f"switchr-{version}"
-          json.dump(manifest, open(path, "w"), indent=4)
-          open(path, "a").write("\n")
-          PY
-          if git diff --quiet; then exit 0; fi
+          git add bucket/switchr.json packaging/arch/PKGBUILD packaging/winget
+          if git diff --cached --quiet; then exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "Scoop: Switchr $version"
+          git commit -m "Package manifests for Switchr $VERSION"
           git push origin HEAD:main

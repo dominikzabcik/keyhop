@@ -15,6 +15,8 @@ cask "switchr" do
   depends_on macos: ">= :sonoma"
 
   app "Switchr.app"
+  # Linked as `switchr`, the app binary answers as the command.
+  binary "#{appdir}/Switchr.app/Contents/MacOS/Switchr", target: "switchr"
 
   zap trash: [
     "~/Library/Application Support/Switchr",

@@ -84,13 +84,38 @@ check_mac() {
   fi
 }
 
+# Copies a release file into $TMP: from SWITCHR_INSTALL_FROM when set (a folder holding the release
+# files and their SHA256SUMS, for testing unpublished builds), otherwise from GitHub.
+fetch() {
+  if [[ -n ${SWITCHR_INSTALL_FROM:-} ]]; then
+    cp "$SWITCHR_INSTALL_FROM/$1" "$TMP/$1"
+  else
+    curl -fsSL "https://github.com/$REPO/releases/download/$TAG/$1" -o "$TMP/$1"
+  fi
+}
+
 download() {
   if [[ $SOURCE == gh ]]; then
     gh release download "$TAG" --repo "$REPO" --pattern Switchr.zip --pattern SHA256SUMS --dir "$TMP"
   else
-    curl -fsSL "https://github.com/$REPO/releases/download/$TAG/Switchr.zip" -o "$TMP/Switchr.zip"
-    curl -fsSL "https://github.com/$REPO/releases/download/$TAG/SHA256SUMS" -o "$TMP/SHA256SUMS" || true
+    fetch Switchr.zip
+    fetch SHA256SUMS || true
   fi
+}
+
+# Links the app binary onto PATH as `switchr`, which makes it answer as the command.
+link_command() {
+  local app=$1 dir
+  for dir in /opt/homebrew/bin /usr/local/bin; do
+    if [[ -d $dir && -w $dir ]]; then
+      ln -sf "$app/Contents/MacOS/Switchr" "$dir/switchr"
+      echo "$dir/switchr" >"$TMP/command"
+      return
+    fi
+  done
+  mkdir -p "$HOME/.local/bin"
+  ln -sf "$app/Contents/MacOS/Switchr" "$HOME/.local/bin/switchr"
+  echo "$HOME/.local/bin/switchr" >"$TMP/command"
 }
 
 verify() {
@@ -151,8 +176,8 @@ linux_choose_package() {
 }
 
 linux_download() {
-  curl -fsSL "https://github.com/$REPO/releases/download/$TAG/$ASSET" -o "$TMP/$ASSET"
-  curl -fsSL "https://github.com/$REPO/releases/download/$TAG/SHA256SUMS" -o "$TMP/SHA256SUMS"
+  fetch "$ASSET"
+  fetch SHA256SUMS
 }
 
 linux_verify() {
@@ -224,7 +249,12 @@ else
   fail "Switchr runs on macOS, Linux and Windows. On Windows, use install.ps1 from the same repository."
 fi
 
-if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
+if [[ -n ${SWITCHR_INSTALL_FROM:-} ]]; then
+  SOURCE=local
+  version=$(find "$SWITCHR_INSTALL_FROM" -maxdepth 1 -name 'switchr-*-linux-*.tar.gz' -exec basename {} \; | sed -n 's/^switchr-\(.*\)-linux-.*\.tar\.gz$/\1/p' | head -n 1)
+  TAG="v${SWITCHR_VERSION:-$version}"
+  [[ $TAG != v ]] || fail "Set SWITCHR_VERSION to the version of the files in $SWITCHR_INSTALL_FROM."
+elif command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
   SOURCE=gh
   TAG=$(gh release view --repo "$REPO" --json tagName -q .tagName 2>"$LOG") || fail "Couldn't read the latest Switchr release."
 elif curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" -o "$TMP/release.json" 2>"$LOG"; then
@@ -246,6 +276,7 @@ step "Verifying checksum" verify
 step "Installing" install_app
 
 APP_PATH=$(cat "$TMP/installed")
+link_command "$APP_PATH"
 open "$APP_PATH"
 
 found=()
@@ -259,4 +290,9 @@ if ((${#found[@]} > 0)); then
   for ((i = 1; i < ${#found[@]}; i++)); do list+=", ${found[i]}"; done
   printf '  %sIt picks up the logins you already have in %s.%s\n' "$DIM" "$list" "$RESET"
 fi
-printf '  %sInstalled at %s%s\n\n' "$DIM" "$APP_PATH" "$RESET"
+printf '  %sInstalled at %s, with the %sswitchr%s%s command at %s%s\n' "$DIM" "$APP_PATH" "$BONE" "$RESET" "$DIM" "$(cat "$TMP/command")" "$RESET"
+case ":$PATH:" in
+  *":$(dirname "$(cat "$TMP/command")"):"*) ;;
+  *) printf '  %sAdd %s to your PATH to run switchr from a terminal.%s\n' "$DIM" "$(dirname "$(cat "$TMP/command")")" "$RESET" ;;
+esac
+printf '\n'

@@ -39,20 +39,28 @@ jobs:
           plutil -lint build/Switchr.app/Contents/Info.plist
           codesign --verify build/Switchr.app
           build/Switchr.app/Contents/MacOS/Switchr version
+          # Linked as `switchr`, the app binary is the command.
+          ln -s "$PWD/build/Switchr.app/Contents/MacOS/Switchr" "$RUNNER_TEMP/switchr"
+          "$RUNNER_TEMP/switchr" status --sample
 
-      - name: Render menu snapshots
-        run: build/Switchr.app/Contents/MacOS/Switchr --snapshot "$RUNNER_TEMP/switchr"
+      - name: Render menu snapshots and the sample Insights page
+        run: |
+          build/Switchr.app/Contents/MacOS/Switchr --snapshot "$RUNNER_TEMP/switchr"
+          build/Switchr.app/Contents/MacOS/Switchr insights --sample --no-open --output "$RUNNER_TEMP/switchr-insights.html"
 
-      - name: Lint scripts
+      - name: Lint scripts and manifests
         run: |
           brew install shellcheck
           shellcheck install.sh scripts/*.sh packaging/linux/install-local.sh
-          python3 -m py_compile packaging/linux/switchr-tray
+          python3 -m py_compile packaging/linux/switchr-tray scripts/render-manifests.py
+          ruby -c Casks/switchr.rb
 
       - uses: actions/upload-artifact@v7
         with:
-          name: snapshots
-          path: ${{ runner.temp }}/switchr-*.png
+          name: macos-screens
+          path: |
+            ${{ runner.temp }}/switchr-*.png
+            ${{ runner.temp }}/switchr-insights.html
           if-no-files-found: warn
 
   linux:
@@ -83,7 +91,9 @@ jobs:
         run: swift test
 
       - name: Build the binary and packages
-        run: scripts/package-linux.sh
+        run: |
+          scripts/package-linux.sh
+          cd build/linux && sha256sum -- * > SHA256SUMS
 
       - uses: actions/upload-artifact@v7
         with:
@@ -91,42 +101,92 @@ jobs:
           path: build/linux/*
 
   linux-install:
-    name: Install on ${{ matrix.name }}
+    name: ${{ matrix.name }}
     needs: linux
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     container: ${{ matrix.image }}
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Fedora
+          - name: Fedora (RPM)
             image: fedora:latest
+            runner: ubuntu-24.04
+            artifact: linux-x86_64
             install: dnf install -y artifacts/*.rpm
             tray: true
-          - name: Ubuntu 24.04
+          - name: Fedora aarch64 (RPM)
+            image: fedora:latest
+            runner: ubuntu-24.04-arm
+            artifact: linux-aarch64
+            install: dnf install -y artifacts/*.rpm
+            tray: true
+          - name: Ubuntu 24.04 (DEB)
             image: ubuntu:24.04
+            runner: ubuntu-24.04
+            artifact: linux-x86_64
             install: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/*.deb
             tray: true
-          - name: Debian 12
+          - name: Ubuntu 24.04 aarch64 (DEB)
+            image: ubuntu:24.04
+            runner: ubuntu-24.04-arm
+            artifact: linux-aarch64
+            install: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/*.deb
+            tray: true
+          - name: Debian 12 (DEB)
             image: debian:12
+            runner: ubuntu-24.04
+            artifact: linux-x86_64
             install: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/*.deb
             tray: true
-          - name: Arch Linux
+          - name: Arch Linux (package)
             image: archlinux:latest
+            runner: ubuntu-24.04
+            artifact: linux-x86_64
             install: pacman -Syu --noconfirm && pacman -U --noconfirm artifacts/*.pkg.tar.zst
             tray: true
-          - name: openSUSE (tarball)
+          - name: Arch Linux (PKGBUILD)
+            image: archlinux:latest
+            runner: ubuntu-24.04
+            artifact: linux-x86_64
+            install: |
+              pacman -Syu --noconfirm --needed base-devel python sudo
+              version=$(ls artifacts/switchr-*-linux-x86_64.tar.gz | sed 's/.*switchr-\(.*\)-linux-.*/\1/')
+              python3 scripts/render-manifests.py --version "$version" --sums artifacts/SHA256SUMS --out "$RUNNER_TEMP/rendered" --local-sources
+              useradd -m builder && mkdir /tmp/pkg && cp "$RUNNER_TEMP/rendered/packaging/arch/PKGBUILD" artifacts/*.tar.gz /tmp/pkg/ && chown -R builder /tmp/pkg
+              echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
+              su builder -c "cd /tmp/pkg && makepkg --syncdeps --noconfirm"
+              pacman -U --noconfirm /tmp/pkg/switchr-bin-*.pkg.tar.zst
+            tray: true
+          - name: Fedora (install.sh)
+            image: fedora:latest
+            runner: ubuntu-24.04
+            artifact: linux-x86_64
+            install: SWITCHR_INSTALL_FROM=artifacts bash install.sh
+            tray: true
+          - name: Ubuntu 24.04 (install.sh)
+            image: ubuntu:24.04
+            runner: ubuntu-24.04
+            artifact: linux-x86_64
+            install: apt-get update -qq && SWITCHR_INSTALL_FROM=artifacts bash install.sh
+            tray: true
+          - name: openSUSE (install.sh, portable)
             image: opensuse/tumbleweed:latest
-            install: zypper --non-interactive install tar gzip python3 curl && tar -xzf artifacts/*.tar.gz && ./switchr-*/install-local.sh && ln -s "$HOME/.local/bin/switchr" "$HOME/.local/bin/switchr-tray" /usr/local/bin/
+            runner: ubuntu-24.04
+            artifact: linux-x86_64
+            install: zypper --non-interactive install tar gzip python3 curl && SWITCHR_INSTALL_FROM=artifacts bash install.sh && ln -s "$HOME/.local/bin/switchr" "$HOME/.local/bin/switchr-tray" /usr/local/bin/
             tray: false
     steps:
+      - uses: actions/checkout@v7
+
       - uses: actions/download-artifact@v8
         with:
-          name: linux-x86_64
+          name: ${{ matrix.artifact }}
           path: artifacts
 
       - name: Install
+        shell: bash
         run: ${{ matrix.install }}
 
       - name: Run switchr
@@ -138,6 +198,8 @@ jobs:
           switchr doctor
           switchr status --json > status.json
           switchr-tray --print-menu status.json
+          switchr status --sample --json > sample.json
+          switchr-tray --print-menu sample.json
           switchr insights --no-open --no-read --output insights.html
           # GitHub may rate-limit this runner, but a certificate problem must never happen.
           out=$(switchr update --check 2>&1) || true
@@ -148,9 +210,53 @@ jobs:
         if: matrix.tray
         run: python3 -c 'import gi; gi.require_version("Gtk", "3.0"); gi.require_version("AyatanaAppIndicator3", "0.1"); gi.require_version("Notify", "0.7"); from gi.repository import Gtk, AyatanaAppIndicator3, Notify'
 
+  linux-screens:
+    name: Linux tray screenshots
+    needs: linux
+    runs-on: ubuntu-24.04
+    container: fedora:latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: linux-x86_64
+          path: artifacts
+
+      - name: Install Switchr and a virtual display
+        run: dnf install -y artifacts/*.rpm xorg-x11-server-Xvfb dbus-daemon ImageMagick adwaita-gtk2-theme google-noto-sans-fonts >/dev/null
+
+      - name: Run the tray and capture its menu and a prompt
+        run: |
+          export XDG_RUNTIME_DIR=/tmp/runtime && mkdir -m 700 -p $XDG_RUNTIME_DIR
+          switchr status --sample --json > sample.json
+          Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &
+          export DISPLAY=:99 && sleep 2
+          dbus-run-session -- sh -c '
+            timeout 20 switchr-tray --status-file sample.json --show-menu & sleep 6
+            import -window root linux-menu.png
+            wait
+            timeout 20 switchr-tray --status-file sample.json --show-dialog & sleep 6
+            import -window root linux-dialog.png
+            wait
+          ' 2>&1 | grep -v "^dbus-daemon" || true
+          ls -l linux-*.png
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-screens
+          path: linux-*.png
+
   windows:
-    name: Windows
-    runs-on: windows-2022
+    name: Windows ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: windows-2022
+          - arch: arm64
+            runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
@@ -165,24 +271,80 @@ jobs:
 
       - name: Build the zip
         shell: pwsh
-        run: ./scripts/package-windows.ps1
+        run: |
+          ./scripts/package-windows.ps1
+          Push-Location build\windows
+          Get-ChildItem *.zip | ForEach-Object { "$((Get-FileHash -Algorithm SHA256 $_).Hash.ToLower())  $($_.Name)" } | Set-Content SHA256SUMS
+          Pop-Location
 
-      - name: Run switchr.exe and the tray
+      - name: Install with install.ps1 and run it
         shell: pwsh
         run: |
           $env:SWITCHR_DATA_DIR = Join-Path $env:RUNNER_TEMP 'switchr-data'
-          $unpacked = Join-Path $env:RUNNER_TEMP 'unpacked'
-          Expand-Archive (Get-ChildItem build\windows\*.zip).FullName -DestinationPath $unpacked
-          $dir = (Get-ChildItem $unpacked -Directory | Select-Object -First 1).FullName
-          & "$dir\switchr.exe" version; if ($LASTEXITCODE) { exit 1 }
-          & "$dir\switchr.exe" doctor; if ($LASTEXITCODE) { exit 1 }
-          & "$dir\switchr.exe" insights --no-open --no-read --output "$env:RUNNER_TEMP\insights.html"; if ($LASTEXITCODE) { exit 1 }
-          $tray = Start-Process -FilePath "$dir\switchr-tray.exe" -PassThru
+          ./install.ps1 -From build\windows -NoStart
+          $installed = Join-Path $env:LOCALAPPDATA 'Programs\Switchr'
+          & "$installed\switchr.exe" version; if ($LASTEXITCODE) { exit 1 }
+          & "$installed\switchr.exe" doctor; if ($LASTEXITCODE) { exit 1 }
+          & "$installed\switchr.exe" insights --no-open --no-read --output "$env:RUNNER_TEMP\insights.html"; if ($LASTEXITCODE) { exit 1 }
+          & "$installed\switchr.exe" status --sample --json | Set-Content "$env:RUNNER_TEMP\sample.json"
+          & "$installed\switchr-tray.exe" --print-menu "$env:RUNNER_TEMP\sample.json" | Out-Host
+          if (-not (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Switchr.lnk'))) { throw 'No Start menu shortcut' }
+          if (-not (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name Switchr -ErrorAction SilentlyContinue)) { throw 'Not set to open at sign-in' }
+          if (([Environment]::GetEnvironmentVariable('Path', 'User') -split ';') -notcontains $installed) { throw 'Not on PATH' }
+
+          $tray = Start-Process -FilePath "$installed\switchr-tray.exe" -PassThru
           Start-Sleep -Seconds 10
           if ($tray.HasExited) { throw "switchr-tray.exe exited with code $($tray.ExitCode)" }
           Stop-Process -Id $tray.Id
 
+      - name: Capture the tray menu and a prompt
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          function Capture([string]$path) {
+            $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+            $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+            $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+            $bitmap.Save($path)
+          }
+          $installed = Join-Path $env:LOCALAPPDATA 'Programs\Switchr'
+          foreach ($shot in @(@('--show-menu', 'windows-menu'), @('--show-dialog', 'windows-dialog'))) {
+            $tray = Start-Process -FilePath "$installed\switchr-tray.exe" -ArgumentList '--status-file', "$env:RUNNER_TEMP\sample.json", $shot[0] -PassThru
+            Start-Sleep -Seconds 5
+            Capture "$env:RUNNER_TEMP\$($shot[1])-${{ matrix.arch }}.png"
+            Stop-Process -Id $tray.Id -ErrorAction SilentlyContinue
+          }
+
+      - name: Uninstall with install.ps1
+        shell: pwsh
+        run: |
+          ./install.ps1 -Uninstall
+          if (Test-Path (Join-Path $env:LOCALAPPDATA 'Programs\Switchr')) { throw 'Files left behind' }
+          if (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name Switchr -ErrorAction SilentlyContinue) { throw 'Still opens at sign-in' }
+
       - uses: actions/upload-artifact@v7
         with:
-          name: windows-x86_64
-          path: build/windows/*.zip
+          name: windows-${{ matrix.arch }}
+          path: |
+            build/windows/*.zip
+            ${{ runner.temp }}/windows-*.png
+
+  manifests:
+    name: Package manifests
+    needs: [linux, windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: "{linux,windows}-*"
+          merge-multiple: true
+          path: dist
+      - name: Render and check them
+        run: |
+          cd dist && sha256sum -- *.zip *.tar.gz *.rpm *.deb *.pkg.tar.zst > SHA256SUMS && cd ..
+          python3 scripts/render-manifests.py --version "$(cat VERSION)" --sums dist/SHA256SUMS --out rendered
+          python3 -m json.tool rendered/bucket/switchr.json >/dev/null
+          bash -n rendered/packaging/arch/PKGBUILD
+          cat rendered/packaging/arch/PKGBUILD rendered/packaging/winget/*/*.yaml

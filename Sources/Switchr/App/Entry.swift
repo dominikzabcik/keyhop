@@ -10,6 +10,11 @@ enum Entry {
         let arguments = Array(CommandLine.arguments.dropFirst())
         #if os(macOS)
         UserDefaults.standard.register(defaults: ["autoRefresh": true, "checkForUpdates": true, "autoInstallUpdates": true])
+        // Linked onto PATH as `switchr` (by the installer or the Homebrew cask), the binary is the
+        // command even with no arguments. The app itself runs as `Switchr`.
+        if URL(fileURLWithPath: CommandLine.arguments.first ?? "").lastPathComponent == "switchr" {
+            SwitchrCLI.runAndExit(arguments)
+        }
         if DebugTools.handle(CommandLine.arguments) { return }
         // The app binary also answers `switchr` commands, so Terminal users on a Mac get them too.
         if let command = arguments.first, SwitchrCLI.handles(command) {

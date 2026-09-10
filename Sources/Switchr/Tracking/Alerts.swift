@@ -1,6 +1,6 @@
 #if os(macOS)
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
 
 /// Budget and limit notifications. A limit alert can carry a Switch button that moves the tool
 /// to the saved account with the most room left.

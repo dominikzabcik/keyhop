@@ -19,6 +19,7 @@ struct TrayStatus: Decodable {
     struct Account: Decodable {
         let id: UUID
         let email: String
+        let label: String?
         let name: String
         let plan: String?
         let active: Bool
@@ -42,15 +43,36 @@ struct TrayStatus: Decodable {
         let switchTo: UUID?
     }
 
+    struct Budget: Decodable {
+        let scope: String
+        let name: String
+        let amount: Double
+        let period: String
+        let spent: Double
+    }
+
     let version: String
     let refreshedAt: Date?
     let today: Spend
     let tools: [Tool]
     let alerts: [Alert]
     let notices: [String]
+    let budgets: [Budget]
 
     static func decode(_ data: Data) throws -> TrayStatus {
         try TrayJSON.decoder.decode(TrayStatus.self, from: data)
+    }
+
+    func account(_ id: UUID) -> (tool: Tool, account: Account)? {
+        for tool in tools {
+            if let account = tool.accounts.first(where: { $0.id == id }) { return (tool, account) }
+        }
+        return nil
+    }
+
+    /// The budget across all accounts, the one the tray lets you set.
+    var overallBudget: Budget? {
+        budgets.first { $0.scope == "all" }
     }
 }
 
@@ -80,10 +102,25 @@ enum TrayCommand: Equatable, Hashable {
     case add(String)
     case refresh
     case insights
+    case rename(UUID)
+    case remove(UUID)
+    case budget
+    case toggleAutoRefresh
+    case toggleAutoInstall
     case toggleStartAtSignIn
     case installUpdate
     case checkForUpdates
     case quit
+}
+
+struct TraySettings: Equatable {
+    var autoRefresh = true
+    var autoInstallUpdates = true
+    var startsAtSignIn = false
+    /// False when a package manager owns the install, such as Scoop.
+    var canSelfUpdate = true
+    /// The package manager to update through when Switchr can't update itself.
+    var updatedBy: String?
 }
 
 struct TrayMenuItem: Equatable {
@@ -92,12 +129,17 @@ struct TrayMenuItem: Equatable {
     var checked = false
     var enabled = true
     var isSeparator = false
+    var children: [TrayMenuItem] = []
 
     static let separator = TrayMenuItem(title: "", isSeparator: true)
+
+    /// Plain text rows (tool names, today's usage) are shown, but can't be chosen.
+    var isLabel: Bool { command == nil && children.isEmpty && !checked }
 }
 
 enum TrayMenu {
-    static func build(status: TrayStatus?, busy: String?, update: TrayUpdate?, startsAtSignIn: Bool, now: Date = Date()) -> [TrayMenuItem] {
+    static func build(status: TrayStatus?, busy: String?, update: TrayUpdate?, settings: TraySettings, now: Date = Date()) -> [TrayMenuItem] {
+        let idle = busy == nil
         var items: [TrayMenuItem] = []
         if let busy {
             items.append(TrayMenuItem(title: busy, enabled: false))
@@ -108,15 +150,16 @@ enum TrayMenu {
             for tool in status.tools {
                 items.append(TrayMenuItem(title: tool.name, enabled: false))
                 for account in tool.accounts {
+                    let detail = self.detail(account)
                     items.append(TrayMenuItem(
-                        title: "\(account.name)\t\(detail(account))",
+                        title: detail.isEmpty ? account.name : "\(account.name)\t\(detail)",
                         command: account.active ? nil : .switchTo(account.id),
                         checked: account.active,
-                        enabled: busy == nil || account.active
+                        enabled: idle || account.active
                     ))
                 }
                 items.append(TrayMenuItem(title: tool.accounts.isEmpty ? "Save the signed-in account…" : "Add account…",
-                                          command: .add(tool.id), enabled: busy == nil))
+                                          command: .add(tool.id), enabled: idle))
                 items.append(.separator)
             }
             if status.today.requests > 0 {
@@ -127,17 +170,44 @@ enum TrayMenu {
             items.append(TrayMenuItem(title: "Reading your accounts…", enabled: false))
         }
 
-        items.append(TrayMenuItem(title: "Refresh now", command: .refresh, enabled: busy == nil))
+        items.append(TrayMenuItem(title: "Refresh now", command: .refresh, enabled: idle))
         items.append(TrayMenuItem(title: "Insights", command: .insights))
+
+        if let status {
+            let saved = status.tools.flatMap { tool in tool.accounts.map { (tool, $0) } }
+            if !saved.isEmpty {
+                items.append(TrayMenuItem(title: "Accounts", children: saved.map { tool, account in
+                    TrayMenuItem(title: "\(tool.name): \(account.name)", children: [
+                        TrayMenuItem(title: "Rename…", command: .rename(account.id), enabled: idle),
+                        TrayMenuItem(title: account.active ? "Remove… (in use)" : "Remove…", command: .remove(account.id), enabled: idle && !account.active),
+                    ])
+                }))
+            }
+            items.append(TrayMenuItem(title: budgetTitle(status), command: .budget, enabled: idle))
+        }
+
         items.append(.separator)
-        items.append(TrayMenuItem(title: "Open at sign-in", command: .toggleStartAtSignIn, checked: startsAtSignIn))
+        items.append(TrayMenuItem(title: "Check usage automatically", command: .toggleAutoRefresh, checked: settings.autoRefresh))
+        if settings.canSelfUpdate {
+            items.append(TrayMenuItem(title: "Install updates automatically", command: .toggleAutoInstall, checked: settings.autoInstallUpdates))
+        }
+        items.append(TrayMenuItem(title: "Open at sign-in", command: .toggleStartAtSignIn, checked: settings.startsAtSignIn))
         if let update, update.available {
-            items.append(TrayMenuItem(title: "Update to \(update.latest)", command: .installUpdate, enabled: busy == nil))
+            if settings.canSelfUpdate {
+                items.append(TrayMenuItem(title: "Update to \(update.latest)", command: .installUpdate, enabled: idle))
+            } else {
+                items.append(TrayMenuItem(title: "Switchr \(update.latest) is available through \(settings.updatedBy ?? "your package manager")", enabled: false))
+            }
         } else {
-            items.append(TrayMenuItem(title: "Check for updates (\(status?.version ?? update?.current ?? "…"))", command: .checkForUpdates, enabled: busy == nil))
+            items.append(TrayMenuItem(title: "Check for updates (\(status?.version ?? update?.current ?? "…"))", command: .checkForUpdates, enabled: idle))
         }
         items.append(TrayMenuItem(title: "Quit Switchr", command: .quit))
         return items
+    }
+
+    static func budgetTitle(_ status: TrayStatus) -> String {
+        guard let budget = status.overallBudget else { return "Set a budget…" }
+        return "Budget: \(usd(budget.spent)) of \(usd(budget.amount)) per \(budget.period)…"
     }
 
     /// The tightest limit, or why there isn't one.
@@ -149,7 +219,7 @@ enum TrayMenu {
         return account.plan ?? ""
     }
 
-    /// Two lines at most; Windows cuts tray tooltips at 127 characters.
+    /// Windows cuts tray tooltips at 127 characters.
     static func tooltip(_ status: TrayStatus?) -> String {
         guard let status else { return "Switchr" }
         var lines = ["Switchr"]
@@ -168,6 +238,14 @@ enum TrayMenu {
             ($0.limits.map(\.usedPercent).max() ?? 0) < ($1.limits.map(\.usedPercent).max() ?? 0)
         }) else { return [] }
         return pressed.limits.prefix(2).map { $0.usedPercent / 100 }
+    }
+
+    /// Parses a dollar amount typed into the budget prompt. Empty means no budget.
+    static func budgetAmount(_ text: String) -> Double?? {
+        let cleaned = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "$", with: "").replacingOccurrences(of: ",", with: "")
+        if cleaned.isEmpty { return .some(nil) }
+        guard let value = Double(cleaned), value > 0, value.isFinite else { return nil }
+        return .some(value)
     }
 
     static func tokens(_ count: Int) -> String {

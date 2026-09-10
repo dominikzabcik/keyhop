@@ -1,11 +1,12 @@
-# Builds the Windows release into build\windows\:
-#   switchr-<v>-windows-x86_64.zip   switchr.exe, switchr-tray.exe, the Swift runtime and the icon
+# Builds the Windows release for this machine's architecture into build\windows\:
+#   switchr-<v>-windows-<x86_64|arm64>.zip   switchr.exe, switchr-tray.exe, the Swift runtime and the icon
 # Run from a shell where `swift` works. SWITCHR_VERSION overrides the version in VERSION.
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
 $version = if ($env:SWITCHR_VERSION) { $env:SWITCHR_VERSION } else { (Get-Content VERSION -Raw).Trim() }
 $version = $version.TrimStart('v')
+$arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x86_64' }
 
 swift build -c release
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
@@ -40,7 +41,7 @@ Copy-Item LICENSE (Join-Path $stage 'LICENSE.txt')
 if ($LASTEXITCODE) { throw 'The packaged switchr.exe did not run.' }
 
 # bsdtar writes forward slashes in entry names, which every unzip tool reads the same way.
-tar.exe -a -c -f (Join-Path $out "switchr-$version-windows-x86_64.zip") -C $out "switchr-$version"
+tar.exe -a -c -f (Join-Path $out "switchr-$version-windows-$arch.zip") -C $out "switchr-$version"
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 Remove-Item -Recurse -Force $stage
 Get-ChildItem $out

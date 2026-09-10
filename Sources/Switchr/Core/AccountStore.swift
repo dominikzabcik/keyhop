@@ -112,11 +112,21 @@ final class AccountStore: ObservableObject {
             usage = await service.fetchUsage(previous: usage)
             await mirror()
             lastRefresh = Date()
+            shareWithCommandLine()
             isRefreshing = false
             refreshTask = nil
             // Reading logs can take a while on first run, so it never holds up a switch.
             Task { await UsageTracker.shared.refresh(store: self) }
         }
+    }
+
+    /// Keeps `switchr status` in Terminal in step with the menu, without another round of requests.
+    private func shareWithCommandLine() {
+        var state = CLIState.load()
+        state.usage = Dictionary(uniqueKeysWithValues: usage.map { ($0.key.uuidString, $0.value) })
+        state.active = Dictionary(uniqueKeysWithValues: active.map { ($0.key.rawValue, $0.value.uuidString) })
+        state.refreshedAt = lastRefresh
+        state.save()
     }
 
     private func mirror() async {

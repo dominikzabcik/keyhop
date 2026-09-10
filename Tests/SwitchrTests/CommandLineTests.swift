@@ -99,6 +99,46 @@ final class AlertRulesTests: XCTestCase {
     }
 }
 
+/// The Linux and Windows trays read these fields from `switchr status --json`.
+final class TrayContractTests: XCTestCase {
+    private func object(_ any: Any?, file: StaticString = #filePath, line: UInt = #line) throws -> [String: Any] {
+        try XCTUnwrap(any as? [String: Any], file: file, line: line)
+    }
+
+    private func first(_ any: Any?, file: StaticString = #filePath, line: UInt = #line) throws -> [String: Any] {
+        try XCTUnwrap((any as? [[String: Any]])?.first, file: file, line: line)
+    }
+
+    func testStatusCarriesEverythingTheTraysRead() throws {
+        let data = try Output.encoder.encode(StatusDocument(SampleData.overview()))
+        let root = try object(JSONSerialization.jsonObject(with: data))
+        for key in ["version", "refreshedAt", "today", "tools", "alerts", "notices", "budgets"] {
+            XCTAssertNotNil(root[key], key)
+        }
+        let today = try object(root["today"])
+        for key in ["tokens", "cost", "requests"] { XCTAssertNotNil(today[key], "today.\(key)") }
+
+        let tool = try first(root["tools"])
+        for key in ["id", "name", "signInHint", "accounts"] { XCTAssertNotNil(tool[key], "tool.\(key)") }
+        let account = try first(tool["accounts"])
+        for key in ["id", "email", "name", "plan", "active", "limits"] { XCTAssertNotNil(account[key], "account.\(key)") }
+        let limit = try first(account["limits"])
+        for key in ["label", "usedPercent", "resetsAt"] { XCTAssertNotNil(limit[key], "limit.\(key)") }
+
+        let budget = try first(root["budgets"])
+        for key in ["scope", "name", "amount", "period", "spent"] { XCTAssertNotNil(budget[key], "budget.\(key)") }
+        let alert = try first(root["alerts"])
+        for key in ["key", "title", "body"] { XCTAssertNotNil(alert[key], "alert.\(key)") }
+    }
+
+    func testSampleDataFillsEveryRangeWithoutRealLogins() {
+        let ranges = SampleData.ranges()
+        XCTAssertEqual(ranges.count, InsightsRange.allCases.count)
+        for range in ranges { XCTAssertGreaterThan(range.digest.total.requests, 0, range.range.title) }
+        XCTAssertTrue(SampleData.accounts().allSatisfy { $0.email.hasSuffix(".dev") })
+    }
+}
+
 final class DigestAndPageTests: XCTestCase {
     func testBuiltInSHA256MatchesKnownDigests() {
         XCTAssertEqual(SHA256Digest.hex(Data()), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")

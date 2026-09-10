@@ -7,8 +7,9 @@
 #   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/dominikzabcik/switchr/main/install.ps1))) -Uninstall
 #
 # No administrator rights: Switchr goes in %LOCALAPPDATA%\Programs\Switchr, on your PATH,
-# in the Start menu, and opens at sign-in.
-param([switch]$Uninstall)
+# in the Start menu, and opens at sign-in. -From installs from a folder holding a release zip and
+# its SHA256SUMS instead of GitHub, for testing unpublished builds.
+param([switch]$Uninstall, [string]$From, [switch]$NoStart)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -18,6 +19,7 @@ $repo = 'dominikzabcik/switchr'
 $target = Join-Path $env:LOCALAPPDATA 'Programs\Switchr'
 $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Switchr.lnk'
 $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+$arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x86_64' }
 
 $vt = $Host.UI.SupportsVirtualTerminal
 function Paint([string]$text, [int[]]$rgb) {
@@ -52,6 +54,14 @@ function Set-UserPath([bool]$add) {
   [Environment]::SetEnvironmentVariable('Path', ($parts -join ';'), 'User')
 }
 
+# The file for this computer: arm64 when the release has one, otherwise x86_64, which Windows on
+# Arm runs too.
+function Select-Zip($names) {
+  $native = $names | Where-Object { $_ -like "switchr-*-windows-$arch.zip" } | Select-Object -First 1
+  if ($native) { return $native }
+  return $names | Where-Object { $_ -like 'switchr-*-windows-x86_64.zip' } | Select-Object -First 1
+}
+
 Write-Host ''
 Write-Host ('  ' + (Paint 'Switchr' $bone) + '  ' + (Paint 'Your AI accounts, one click apart.' $dim))
 Write-Host ''
@@ -77,29 +87,45 @@ if (-not [Environment]::Is64BitOperatingSystem) {
 $work = Join-Path ([IO.Path]::GetTempPath()) ("switchr-" + [Guid]::NewGuid())
 New-Item -ItemType Directory $work | Out-Null
 try {
-  $release = $null
-  $zip = $null
-  Step 'Finding the latest release' {
-    $script:release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -Headers @{ 'User-Agent' = 'switchr-installer' }
-    $script:zip = $script:release.assets | Where-Object { $_.name -like 'switchr-*-windows-x86_64.zip' } | Select-Object -First 1
-    if (-not $script:zip) { throw "Release $($script:release.tag_name) has no Windows download." }
-  }
+  $script:zipName = $null
+  $script:version = $null
+  $archive = $null
 
-  $archive = Join-Path $work $zip.name
-  Step "Downloading Switchr $($release.tag_name.TrimStart('v'))" {
-    Invoke-WebRequest -Uri $zip.browser_download_url -OutFile $archive -UseBasicParsing
-    $sums = $release.assets | Where-Object { $_.name -eq 'SHA256SUMS' } | Select-Object -First 1
-    if (-not $sums) { throw 'The release has no checksum file.' }
-    $listing = (Invoke-WebRequest -Uri $sums.browser_download_url -UseBasicParsing).Content
-    if ($listing -is [byte[]]) { $listing = [Text.Encoding]::UTF8.GetString($listing) }
-    $line = ($listing -split "`n") | Where-Object { $_ -match [Regex]::Escape($zip.name) + '\s*$' } | Select-Object -First 1
-    if (-not $line) { throw "$($zip.name) is not in the release checksums." }
+  if ($From) {
+    Step 'Reading the local release' {
+      $folder = (Resolve-Path $From).Path
+      $script:zipName = Select-Zip (Get-ChildItem $folder -Filter 'switchr-*-windows-*.zip').Name
+      if (-not $script:zipName) { throw "No Windows zip in $folder." }
+      Copy-Item (Join-Path $folder $script:zipName) $work
+      Copy-Item (Join-Path $folder 'SHA256SUMS') $work
+    }
+  } else {
+    Step 'Finding the latest release' {
+      $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -Headers @{ 'User-Agent' = 'switchr-installer' }
+      $script:zipName = Select-Zip $release.assets.name
+      if (-not $script:zipName) { throw "Release $($release.tag_name) has no Windows download." }
+      $script:assets = $release.assets
+    }
+    Step "Downloading $script:zipName" {
+      foreach ($name in $script:zipName, 'SHA256SUMS') {
+        $asset = $script:assets | Where-Object { $_.name -eq $name } | Select-Object -First 1
+        if (-not $asset) { throw "The release has no $name." }
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile (Join-Path $work $name) -UseBasicParsing
+      }
+    }
+  }
+  $archive = Join-Path $work $script:zipName
+  $script:version = ($script:zipName -replace '^switchr-', '') -replace '-windows-.*$', ''
+
+  Step 'Verifying checksum' {
+    $line = Get-Content (Join-Path $work 'SHA256SUMS') | Where-Object { $_ -match ('\s\*?' + [Regex]::Escape($script:zipName) + '\s*$') } | Select-Object -First 1
+    if (-not $line) { throw "$script:zipName is not in the release checksums." }
     $expected = ($line -split '\s+')[0].ToLower()
     $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLower()
     if ($expected -ne $actual) { throw 'The download does not match the release checksum.' }
   }
 
-  Step 'Installing' {
+  Step "Installing Switchr $script:version" {
     Stop-Tray
     Expand-Archive -Path $archive -DestinationPath $work -Force
     $source = Get-ChildItem $work -Directory | Where-Object { $_.Name -like 'switchr-*' } | Select-Object -First 1
@@ -119,8 +145,10 @@ try {
     Set-ItemProperty -Path $runKey -Name 'Switchr' -Value ('"' + (Join-Path $target 'switchr-tray.exe') + '"')
   }
 
-  Step 'Starting the tray' {
-    Start-Process -FilePath (Join-Path $target 'switchr-tray.exe') -WorkingDirectory $target
+  if (-not $NoStart) {
+    Step 'Starting the tray' {
+      Start-Process -FilePath (Join-Path $target 'switchr-tray.exe') -WorkingDirectory $target
+    }
   }
 } finally {
   Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue

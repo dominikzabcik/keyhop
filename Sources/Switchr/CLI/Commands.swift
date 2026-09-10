@@ -79,9 +79,14 @@ enum Commands {
     static func status(_ args: inout Arguments) async throws {
         let json = args.flag("--json")
         let refresh = args.flag("--refresh")
+        let sample = args.flag("--sample")
         try args.finish()
+        if sample {
+            return try emit(SampleData.overview(), json: json)
+        }
         var workspace = try Workspace.open()
-        let overview = refresh
+        // Nothing has been read on this computer yet, so the first status reads everything once.
+        let overview = refresh || workspace.state.refreshedAt == nil
             ? try await performRefresh(&workspace, claimAlerts: false)
             : try await currentOverview(workspace)
         try emit(overview, json: json)
@@ -384,6 +389,9 @@ enum Commands {
         print("Switchr \(release.version) is available. The menu bar app installs it automatically, or click the version number in its menu.")
         #else
         #if os(Windows)
+        if let path = Bundle.main.executableURL?.path.lowercased(), path.contains("\\scoop\\apps\\") || path.contains("/scoop/apps/") {
+            throw SwitchrError("Switchr was installed with Scoop, so update it there: scoop update switchr")
+        }
         let how = try await WindowsInstaller.install(release, quiet: json)
         #else
         let how = try await LinuxInstaller.install(release, quiet: json)
@@ -399,12 +407,28 @@ enum Commands {
     static func insights(_ args: inout Arguments) async throws {
         let noOpen = args.flag("--no-open")
         let skipLogs = args.flag("--no-read")
+        let sample = args.flag("--sample")
         let output = try args.option("--output")
         let word = try args.option("--range") ?? "week"
         guard let initial = InsightsRange(argument: word) else {
             throw UsageError("Unknown range '\(word)'. Use today, week, month or 30d.")
         }
         try args.finish()
+
+        if sample {
+            let now = Date()
+            let overview = SampleData.overview(now: now)
+            let page = InsightsPage.render(InsightsPage.Input(
+                generatedAt: now, accounts: overview.accounts, active: overview.active, usage: overview.usage,
+                ranges: SampleData.ranges(now: now), budgets: overview.budgets, budgetSpend: overview.budgetSpend, initial: initial
+            ))
+            let file = output.map { URL(fileURLWithPath: $0) }
+                ?? FileManager.default.temporaryDirectory.appendingPathComponent("switchr-insights-sample.html")
+            try Files.writeAtomically(Data(page.utf8), to: file)
+            print(file.path)
+            if !noOpen { _ = Desktop.open(file.absoluteString) }
+            return
+        }
 
         let workspace = try Workspace.open()
         if !skipLogs { try await workspace.tracker.ingestLocalLogs() }
@@ -597,6 +621,7 @@ enum ResetAll {
         #elseif os(Windows)
         if let reg = Shell.which("reg.exe") {
             _ = try? Shell.run(reg, ["delete", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", "/v", "Switchr", "/f"])
+            _ = try? Shell.run(reg, ["delete", "HKCU\\Software\\Switchr", "/f"])
         }
         #else
         try? FileManager.default.removeItem(at: Platform.configDirectory.appendingPathComponent("switchr"))

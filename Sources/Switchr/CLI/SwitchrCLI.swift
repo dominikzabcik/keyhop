@@ -13,9 +13,6 @@ enum SwitchrCLI {
     }
 
     static func runAndExit(_ arguments: [String]) -> Never {
-        #if os(Linux)
-        SystemCertificates.configure()
-        #endif
         final class Outcome: @unchecked Sendable { var code: Int32 = 0 }
         let outcome = Outcome()
         let done = DispatchSemaphore(value: 0)
@@ -91,29 +88,6 @@ enum SwitchrCLI {
     <tool> is claude, cursor or codex.
     """
 }
-
-#if os(Linux)
-/// The static Linux build carries its own TLS stack, which only knows a few places to look for CA
-/// certificates (openSUSE's isn't one). It reads SSL_CERT_FILE, so point that at whichever bundle
-/// this distribution installs.
-enum SystemCertificates {
-    static let bundles = [
-        "/etc/ssl/certs/ca-certificates.crt", // Debian, Ubuntu, Arch, Gentoo
-        "/etc/pki/tls/certs/ca-bundle.crt", // Fedora, RHEL
-        "/etc/ssl/ca-bundle.pem", // openSUSE
-        "/etc/ssl/cert.pem", // Alpine
-        "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
-    ]
-
-    static func configure() {
-        let fm = FileManager.default
-        if let current = getenv("SSL_CERT_FILE").map({ String(cString: $0) }), fm.fileExists(atPath: current) { return }
-        if let bundle = bundles.first(where: { fm.fileExists(atPath: $0) }) {
-            setenv("SSL_CERT_FILE", bundle, 1)
-        }
-    }
-}
-#endif
 
 enum Output {
     static var encoder: JSONEncoder {

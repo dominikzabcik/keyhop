@@ -118,7 +118,7 @@ jobs:
             tray: true
           - name: openSUSE (tarball)
             image: opensuse/tumbleweed:latest
-            install: zypper --non-interactive install tar gzip python3 && tar -xzf artifacts/*.tar.gz && ./switchr-*/install-local.sh && ln -s "$HOME/.local/bin/switchr" "$HOME/.local/bin/switchr-tray" /usr/local/bin/
+            install: zypper --non-interactive install tar gzip python3 curl && tar -xzf artifacts/*.tar.gz && ./switchr-*/install-local.sh && ln -s "$HOME/.local/bin/switchr" "$HOME/.local/bin/switchr-tray" /usr/local/bin/
             tray: false
     steps:
       - uses: actions/download-artifact@v8

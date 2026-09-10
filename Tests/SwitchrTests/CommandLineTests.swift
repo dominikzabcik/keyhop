@@ -1,4 +1,7 @@
 import XCTest
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 @testable import Switchr
 
 final class ArgumentsTests: XCTestCase {
@@ -137,6 +140,23 @@ final class DigestAndPageTests: XCTestCase {
         XCTAssertFalse(html.contains("—"))
     }
 }
+
+#if os(Linux)
+final class SystemCurlTests: XCTestCase {
+    func testConfigQuotesHeadersAndBodies() throws {
+        var request = URLRequest(url: try XCTUnwrap(URL(string: "https://example.com/token?a=1&b=2")), timeoutInterval: 20)
+        request.httpMethod = "POST"
+        request.setValue("Bearer abc\"def", forHTTPHeaderField: "Authorization")
+        request.httpBody = Data(#"{"refresh_token":"x\y"}"#.utf8)
+        let config = SystemCurl.config(for: request)
+        XCTAssertTrue(config.contains(#"url = "https://example.com/token?a=1&b=2""#))
+        XCTAssertTrue(config.contains(#"request = "POST""#))
+        XCTAssertTrue(config.contains(#"header = "Authorization: Bearer abc\"def""#))
+        XCTAssertTrue(config.contains(#"data-binary = "{\"refresh_token\":\"x\\y\"}""#))
+        XCTAssertTrue(config.contains(#"write-out = "\n%{http_code}""#))
+    }
+}
+#endif
 
 final class StorageTests: XCTestCase {
     func testFileSecretsAreReadableOnlyByTheUser() throws {

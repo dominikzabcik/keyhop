@@ -247,7 +247,12 @@ enum HTTP {
 
     /// Built on the completion-handler API, which every Foundation (Apple's, Linux's, Windows') has.
     static func send(_ request: URLRequest) async throws -> (Data, Int) {
-        try await withCheckedThrowingContinuation { continuation in
+        #if os(Linux)
+        if let curl = SystemCurl.fallback {
+            return try await SystemCurl.send(request, curl: curl)
+        }
+        #endif
+        return try await withCheckedThrowingContinuation { continuation in
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error {
                     continuation.resume(throwing: error)
@@ -258,6 +263,81 @@ enum HTTP {
         }
     }
 }
+
+#if os(Linux)
+/// The static Linux build's TLS stack (curl with BoringSSL) only trusts certificate bundles at the
+/// paths it was built with, and reads no setting that points elsewhere. openSUSE keeps its bundle
+/// somewhere else, so there, and on any system like it, requests go through the system's curl.
+/// Headers and bodies reach curl as a config file on stdin, so tokens never appear in a process list.
+enum SystemCurl {
+    static let builtInBundles = [
+        "/etc/ssl/certs/ca-certificates.crt",
+        "/etc/pki/tls/certs/ca-bundle.crt",
+        "/usr/share/ssl/certs/ca-bundle.crt",
+        "/etc/ssl/cert.pem",
+    ]
+
+    static let fallback: String? = {
+        guard !builtInBundles.contains(where: { FileManager.default.fileExists(atPath: $0) }) else { return nil }
+        return Shell.which("curl")
+    }()
+
+    static func send(_ request: URLRequest, curl: String) async throws -> (Data, Int) {
+        let config = self.config(for: request)
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global().async {
+                do {
+                    let result = try Shell.run(curl, ["--config", "-"], stdin: Data(config.utf8))
+                    guard result.status == 0 else {
+                        let message = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+                        throw SwitchrError(message.isEmpty ? "curl failed with exit code \(result.status)" : message)
+                    }
+                    var body = result.stdout
+                    guard let newline = body.lastIndex(of: 0x0A) else { throw SwitchrError("curl returned no status") }
+                    let status = Int(String(decoding: body[body.index(after: newline)...], as: UTF8.self)) ?? 0
+                    body = Data(body[body.startIndex..<newline])
+                    continuation.resume(returning: (body, status))
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    static func config(for request: URLRequest) -> String {
+        var lines = [
+            "silent",
+            "show-error",
+            "location",
+            "max-time = \(Int(request.timeoutInterval))",
+            "url = \(quote(request.url?.absoluteString ?? ""))",
+            "write-out = \"\\n%{http_code}\"",
+        ]
+        if let method = request.httpMethod, method != "GET" { lines.append("request = \(quote(method))") }
+        for (name, value) in (request.allHTTPHeaderFields ?? [:]).sorted(by: { $0.key < $1.key }) {
+            lines.append("header = \(quote("\(name): \(value)"))")
+        }
+        if let body = request.httpBody { lines.append("data-binary = \(quote(String(decoding: body, as: UTF8.self)))") }
+        return lines.joined(separator: "\n") + "\n"
+    }
+
+    /// curl's config quoting: backslash escapes inside double quotes.
+    static func quote(_ value: String) -> String {
+        var result = "\""
+        for character in value {
+            switch character {
+            case "\\": result += "\\\\"
+            case "\"": result += "\\\""
+            case "\n": result += "\\n"
+            case "\r": result += "\\r"
+            case "\t": result += "\\t"
+            default: result.append(character)
+            }
+        }
+        return result + "\""
+    }
+}
+#endif
 
 enum Dates {
     static func parse(_ any: Any?) -> Date? {

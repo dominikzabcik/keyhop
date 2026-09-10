@@ -36,7 +36,8 @@ final class Updater: ObservableObject {
         Task { await check(userInitiated: false) }
     }
 
-    func check(userInitiated: Bool) async {
+    /// `allowAutoInstall: false` only looks, even when automatic installs are on.
+    func check(userInitiated: Bool, allowAutoInstall: Bool = true) async {
         switch phase {
         case .checking, .downloading, .installing: return
         default: break
@@ -50,7 +51,7 @@ final class Updater: ObservableObject {
             if userInitiated, available == nil {
                 AccountStore.shared.notice = "Switchr \(Self.currentVersion) is the latest version."
             }
-            if !userInitiated, available != nil, UserDefaults.standard.bool(forKey: "autoInstallUpdates") {
+            if allowAutoInstall, !userInitiated, available != nil, UserDefaults.standard.bool(forKey: "autoInstallUpdates") {
                 await installWhenIdle()
             }
         } catch {

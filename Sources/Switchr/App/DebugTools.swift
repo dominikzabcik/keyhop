@@ -47,7 +47,7 @@ enum DebugTools {
         if arguments.contains("--update-now") {
             MainActor.assumeIsolated {
                 Task { @MainActor in
-                    await Updater.shared.check(userInitiated: false)
+                    await Updater.shared.check(userInitiated: false, allowAutoInstall: false)
                     guard let release = Updater.shared.available else {
                         print("Switchr \(Updater.currentVersion) is already the latest release.")
                         exit(0)

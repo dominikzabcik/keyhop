@@ -1,0 +1,21 @@
+{
+  "name": "switchr-cloud",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler d1 migrations apply switchr --local && wrangler dev",
+    "deploy": "wrangler d1 migrations apply switchr --remote && wrangler deploy",
+    "test": "vitest run",
+    "types": "wrangler types",
+    "typecheck": "wrangler types && tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.13.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "typescript": "^5.9.3",
+    "vitest": "~4.1.0",
+    "wrangler": "^4.131.0"
+  }
+}

@@ -137,6 +137,14 @@ final class TrayContractTests: XCTestCase {
         for range in ranges { XCTAssertGreaterThan(range.digest.total.requests, 0, range.range.title) }
         XCTAssertTrue(SampleData.accounts().allSatisfy { $0.email.hasSuffix(".dev") })
     }
+
+    func testSampleDataIsNeverEmptyEarlyInTheDay() {
+        let justAfterMidnight = Calendar.current.startOfDay(for: Date()).addingTimeInterval(5 * 60)
+        for range in InsightsRange.allCases {
+            let digest = SampleData.digest(range: range, accounts: SampleData.accounts(), now: justAfterMidnight)
+            XCTAssertGreaterThan(digest.total.requests, 0, range.title)
+        }
+    }
 }
 
 final class DigestAndPageTests: XCTestCase {

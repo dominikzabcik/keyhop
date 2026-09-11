@@ -75,10 +75,13 @@ enum SampleData {
         let models = ["claude-opus-5", "gpt-5.6-sol", "composer-2", "claude-sonnet-5", "claude-haiku-4-5"]
         var start = interval.start
         var index = 0.0
-        while start < min(interval.end, now) {
+        // At least one bucket, so even just after midnight there's something to show.
+        let end = min(interval.end, max(now, calendar.date(byAdding: component, value: 1, to: interval.start) ?? now))
+        while start < end {
             for (i, account) in accounts.enumerated() {
                 let hour = Double(calendar.component(.hour, from: start))
-                let daily = range.bucket == .hour ? max(0, sin((hour - 7) / 14 * .pi)) : 1
+                // A working-day curve with a quiet floor, so night hours aren't empty.
+                let daily = range.bucket == .hour ? max(0.08, sin((hour - 7) / 14 * .pi)) : 1
                 let wave = 0.55 + 0.45 * sin(index * 0.9 + Double(i) * 1.7)
                 let base = Double([2_600_000, 1_300_000, 1_900_000, 600_000, 2_200_000][i % 5])
                 let tokens = Int(base * wave * daily * (range.bucket == .hour ? 0.12 : 1))

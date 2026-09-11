@@ -105,11 +105,11 @@ button, input, select { font: inherit; color: inherit; }
 .content { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 /* The Field: dots behind the content, fading out over a long eased run so nothing reads as a band.
    Grain sits on the same layer, under every card and word. */
-.backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: linear-gradient(to bottom, var(--field-wash, transparent), transparent 760px); }
 .backdrop .field-canvas {
   position: absolute; inset: 0;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 200px, rgba(0,0,0,.9) 250px, rgba(0,0,0,.76) 300px, rgba(0,0,0,.6) 350px, rgba(0,0,0,.44) 400px, rgba(0,0,0,.3) 450px, rgba(0,0,0,.18) 500px, rgba(0,0,0,.1) 550px, rgba(0,0,0,.04) 600px, rgba(0,0,0,.01) 650px, transparent 700px);
-  mask-image: linear-gradient(to bottom, #000 0, #000 200px, rgba(0,0,0,.9) 250px, rgba(0,0,0,.76) 300px, rgba(0,0,0,.6) 350px, rgba(0,0,0,.44) 400px, rgba(0,0,0,.3) 450px, rgba(0,0,0,.18) 500px, rgba(0,0,0,.1) 550px, rgba(0,0,0,.04) 600px, rgba(0,0,0,.01) 650px, transparent 700px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 360px, rgba(0,0,0,.92) 410px, rgba(0,0,0,.8) 460px, rgba(0,0,0,.65) 510px, rgba(0,0,0,.5) 560px, rgba(0,0,0,.36) 610px, rgba(0,0,0,.24) 660px, rgba(0,0,0,.14) 710px, rgba(0,0,0,.07) 760px, rgba(0,0,0,.03) 810px, transparent 860px);
+  mask-image: linear-gradient(to bottom, #000 0, #000 360px, rgba(0,0,0,.92) 410px, rgba(0,0,0,.8) 460px, rgba(0,0,0,.65) 510px, rgba(0,0,0,.5) 560px, rgba(0,0,0,.36) 610px, rgba(0,0,0,.24) 660px, rgba(0,0,0,.14) 710px, rgba(0,0,0,.07) 760px, rgba(0,0,0,.03) 810px, transparent 860px);
 }
 .backdrop::after {
   content: ""; position: absolute; inset: 0; opacity: .045;
@@ -129,7 +129,7 @@ button, input, select { font: inherit; color: inherit; }
 .has-field .card { background: hsl(0 0% 10.6% / .8); -webkit-backdrop-filter: blur(18px) saturate(1.05); backdrop-filter: blur(18px) saturate(1.05); }
 .range { width: 180px; accent-color: hsl(0 0% 92%); }
 /* Overview opens on today's figure, set large over the Field. */
-.hero { padding: 36px 4px 26px; display: grid; gap: 10px; }
+.hero { padding: 52px 4px 40px; display: grid; gap: 10px; }
 .hero-figure { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 0; font-weight: 400; }
 .hero-figure .num { font-size: 60px; font-weight: 640; letter-spacing: -.005em; line-height: 1; font-variant-numeric: tabular-nums; }
 .hero-figure .unit { font-size: 19px; color: var(--muted); font-weight: 520; }
@@ -997,7 +997,7 @@ select.field option { background: var(--raised); }
   async function applyField() {
     const host = $("#backdrop");
     if (!host || !window.SwitchrField) return;
-    const look = data.state?.appearance || { scene: "horizon", tint: "mono", intensity: 0.6, image: false };
+    const look = data.state?.appearance || { scene: "planet", tint: "ultraviolet", intensity: 0.6, image: false };
     let scene = look.scene;
     if (scene === "image") {
       if (!look.image || isStatic) scene = "horizon";
@@ -1007,7 +1007,7 @@ select.field option { background: var(--raised); }
       }
     }
     document.documentElement.classList.toggle("has-field", scene !== "off");
-    const options = { scene, tint: look.tint, intensity: look.intensity, image: scene === "image" ? fieldImage : null, series: fieldSeries(), band: 340 };
+    const options = { scene, tint: look.tint, intensity: look.intensity, image: scene === "image" ? fieldImage : null, series: fieldSeries(), band: 360, depth: 860 };
     if (field) field.update(options);
     else field = window.SwitchrField.mount(host, options);
   }
@@ -1057,6 +1057,8 @@ select.field option { background: var(--raised); }
       return `<button data-action="appearance" data-key="${key}" data-value="${value}" aria-pressed="${value === current}"${locked ? ` disabled title="Choose a picture first"` : ""}>${label}</button>`;
     }).join("")}</div>`;
     const about = {
+      planet: "A ringed planet, lit across its shoulder.",
+      nebula: "Slow clouds of light with lanes of dust.",
       horizon: "A planet's lit edge, drifting slowly.",
       signal: "Your last 26 weeks of usage as a range of ridges.",
       image: "Your picture, drawn in dots.",
@@ -1064,8 +1066,8 @@ select.field option { background: var(--raised); }
     }[look.scene];
     return `<section class="card"><div class="card-head"><h2>Appearance</h2><span class="hint">The field behind this window</span></div>
       <div class="list">
-        <div class="row setting-row"><div><b>Scene</b><p>${about}</p></div>${pick("scene", [["horizon", "Horizon"], ["signal", "Signal"], ["image", "Picture"], ["off", "Off"]], look.scene)}</div>
-        <div class="row setting-row"><div><b>Tint</b><p>Mono matches the rest of Switchr.</p></div>${pick("tint", [["mono", "Mono"], ["ember", "Ember"], ["moss", "Moss"]], look.tint)}</div>
+        <div class="row setting-row"><div><b>Scene</b><p>${about}</p></div>${pick("scene", [["planet", "Planet"], ["nebula", "Nebula"], ["horizon", "Horizon"], ["signal", "Signal"], ["image", "Picture"], ["off", "Off"]], look.scene)}</div>
+        <div class="row setting-row"><div><b>Tint</b><p>The colors of the dots.</p></div>${pick("tint", [["ultraviolet", "Ultraviolet"], ["mono", "Mono"], ["ember", "Ember"], ["moss", "Moss"]], look.tint)}</div>
         <div class="row setting-row"><div><b>Intensity</b><p>How bright the dots are.</p></div>
           <input class="range" type="range" min="20" max="100" step="5" value="${Math.round(look.intensity * 100)}" data-appearance="intensity" aria-label="Intensity"${look.scene === "off" ? " disabled" : ""}></div>
         <div class="row setting-row"><div><b>Picture</b><p>${look.image ? "Saved in Switchr's data folder." : "Photos and artwork with strong light and shadow work best."}</p></div>

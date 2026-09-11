@@ -195,11 +195,11 @@ struct DashboardState: Encodable {
 
 /// How the Field behind Switchr's window looks, saved next to Switchr's other data.
 struct DashboardAppearance: Codable, Equatable {
-    static let scenes = ["horizon", "signal", "image", "off"]
-    static let tints = ["mono", "ember", "moss"]
+    static let scenes = ["planet", "nebula", "horizon", "signal", "image", "off"]
+    static let tints = ["ultraviolet", "mono", "ember", "moss"]
 
-    var scene = "horizon"
-    var tint = "mono"
+    var scene = "planet"
+    var tint = "ultraviolet"
     var intensity = 0.6
     /// Whether a picture for the image scene is saved.
     var image = false

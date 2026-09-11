@@ -9,13 +9,22 @@ enum Field {
   "use strict";
   if (window.SwitchrField) return;
 
-  // A scene drawn as dots behind the page. Nothing on the page depends on it: without it, a page
-  // is simply its plain dark surface.
+  // A scene drawn as a halftone of dots behind the page. Nothing on the page depends on it: without
+  // it, a page is simply its plain dark surface.
   var PITCH = 6;
-  var DOT = 4.5;
   var FRAME_MS = 42;
+  var SIZES = [0, 1.7, 2.7, 3.7, 4.7];
+  var ALPHAS = [0, 0.55, 0.7, 0.86, 1];
   var BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-  var TINTS = { mono: [235, 235, 235], ember: [236, 186, 120], moss: [160, 208, 170] };
+
+  // Each palette runs from the faintest dot to the brightest, with a tint for the empty grid and a
+  // faint wash of light behind the top of the page.
+  var PALETTES = {
+    mono: { grid: [255, 255, 255], wash: [255, 255, 255], levels: [[118, 118, 118], [162, 162, 162], [208, 208, 208], [244, 244, 244]] },
+    ultraviolet: { grid: [150, 140, 255], wash: [92, 76, 255], levels: [[64, 52, 206], [98, 84, 236], [156, 144, 255], [224, 218, 255]] },
+    ember: { grid: [255, 196, 130], wash: [255, 140, 60], levels: [[116, 66, 32], [172, 106, 50], [224, 164, 90], [250, 224, 170]] },
+    moss: { grid: [176, 232, 186], wash: [96, 196, 132], levels: [[44, 88, 60], [74, 134, 92], [136, 194, 146], [216, 242, 212]] },
+  };
 
   function hash(x, y) {
     var h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263)) | 0;
@@ -34,15 +43,72 @@ enum Field {
     return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
   }
 
-  function stars(x, y, t) {
-    var s = hash(x * 3 + 17, y * 5 + 11);
-    if (s < 0.9972) return 0;
-    return (0.4 + 0.6 * hash(y, x)) * (0.6 + 0.4 * Math.sin(t * (0.8 + s * 2.4) + x * 0.7));
+  function fbm(x, y) {
+    return (noise(x, y) * 0.5 + noise(x * 2.03, y * 2.03) * 0.25 + noise(x * 4.1, y * 4.1) * 0.125 + noise(x * 8.3, y * 8.3) * 0.0625) / 0.9375;
   }
 
-  // A planet's lit edge sweeping across the top of the page, its atmosphere catching light from
-  // the right, drifting dunes and a few stars. band is the height of the composed area, in rows.
-  function horizon(cols, rows, band) {
+  function stars(x, y, t) {
+    var s = hash(x * 3 + 17, y * 5 + 11);
+    if (s < 0.9968) return 0;
+    return (0.45 + 0.55 * hash(y, x)) * (0.6 + 0.4 * Math.sin(t * (0.8 + s * 2.4) + x * 0.7));
+  }
+
+  // A ringed planet on the right, whole in the frame and lit mostly from the front, so its banded
+  // surface reads, with the ring passing in front of it and behind it.
+  function planet(cols, band) {
+    var radius = Math.max(14, band * 0.5);
+    var cx = Math.min(cols * 0.74, cols - radius * 1.25), cy = band * 0.56;
+    var lx = 0.55, ly = -0.45, lz = 0.7;
+    var length = Math.sqrt(lx * lx + ly * ly + lz * lz);
+    lx /= length;
+    ly /= length;
+    lz /= length;
+    var ca = Math.cos(-0.34), sa = Math.sin(-0.34);
+    return function (x, y, t) {
+      var dx = (x - cx) / radius, dy = (y - cy) / radius;
+      var d2 = dx * dx + dy * dy;
+      var rx = dx * ca + dy * sa, ry = dy * ca - dx * sa;
+      var ellipse = Math.sqrt((rx / 1.8) * (rx / 1.8) + (ry / 0.36) * (ry / 0.36));
+      var ring = Math.exp(-Math.pow((ellipse - 1) / 0.05, 2)) * 0.75 + Math.exp(-Math.pow((ellipse - 0.84) / 0.03, 2)) * 0.45;
+      ring *= Math.min(1, Math.max(0.3, 0.65 + rx * 0.3));
+      if (d2 < 1) {
+        var nz = Math.sqrt(1 - d2);
+        var light = Math.max(0, dx * lx + dy * ly + nz * lz);
+        var u = Math.atan2(dx, nz) + t * 0.015, v = dy;
+        var storms = fbm(u * 4 + 11, v * 7);
+        var bands = 0.55 + 0.45 * Math.sin(v * 17 + storms * 4.5);
+        var surface = 0.35 + 0.65 * (bands * 0.7 + storms * 0.3);
+        var limb = Math.pow(1 - nz, 3) * light * 0.8;
+        var body = Math.pow(light, 0.9) * surface + limb;
+        // The near half of the ring crosses in front of the planet; the far half hides behind it.
+        return Math.min(1, ry > 0 ? Math.max(body, ring) : body);
+      }
+      var dist = Math.sqrt(d2) - 1;
+      var facing = Math.max(0, (dx * lx + dy * ly) / Math.sqrt(d2));
+      var glow = Math.exp(-dist / 0.035) * (0.3 + 0.7 * facing) * 0.8 + Math.exp(-dist / 0.2) * 0.12 * facing;
+      return Math.min(1, glow + ring + stars(x, y, t) * 0.55);
+    };
+  }
+
+  // Clouds of light on the right with bright filaments and dark lanes of dust, turning slowly.
+  function nebula(cols, band) {
+    var fx = cols * 0.7, fy = band * 0.45;
+    return function (x, y, t) {
+      var sx = x * 0.018, sy = y * 0.026;
+      var q = fbm(sx + t * 0.006, sy + 1.7);
+      var r = fbm(sx + q * 2.2 + t * 0.004, sy + q * 1.6);
+      var dx = (x - fx) / (cols * 0.42), dy = (y - fy) / (band * 0.75);
+      var core = Math.exp(-(dx * dx + dy * dy) * 1.6);
+      var density = ease(Math.min(1, Math.max(0, (r - 0.42) / 0.3)));
+      var lanes = ease(Math.min(1, Math.abs(noise(sx * 3 + r * 3, sy * 3) - 0.5) * 3));
+      var cloud = density * (0.25 + 0.75 * core) * (0.35 + 0.65 * lanes);
+      var filament = Math.exp(-Math.abs(r - 0.6) * 30) * 0.5 * core;
+      return Math.min(1, cloud * 1.2 + filament + core * 0.08 + stars(x, y, t) * 0.55);
+    };
+  }
+
+  // A planet's lit edge sweeping across the top of the page, drifting dunes and a few stars.
+  function horizon(cols, band) {
     var apex = band * 0.6;
     var r = Math.max(cols * 0.9, band * 2.2);
     var cx = cols * 0.68, cy = apex + r;
@@ -60,7 +126,7 @@ enum Field {
       }
       var glow = Math.exp(-edge / 3.2) * light * breathe;
       var haze = Math.exp(-edge / (band * 0.4)) * 0.22 * light * light;
-      return glow + haze + stars(x, y, t) * 0.85;
+      return glow + haze + stars(x, y, t) * 0.55;
     };
   }
 
@@ -79,7 +145,7 @@ enum Field {
 
   // Usage as a range of ridges: the front ridge follows the days closely, and the smoother ridges
   // behind it drift slowly.
-  function signal(cols, rows, series, band) {
+  function signal(cols, series, band) {
     function at(values, position) {
       if (!values.length) return 0;
       var p = ((position % 1) + 1) % 1;
@@ -90,7 +156,6 @@ enum Field {
     function looped(values) {
       return values.concat(values.slice().reverse());
     }
-    var height = band;
     var layers = [
       { values: smoothed(series, 2), floor: 0.04, amp: 0.42, bright: 1, drift: 0 },
       { values: looped(smoothed(series, 7)), floor: 0.16, amp: 0.36, bright: 0.5, drift: 0.004 },
@@ -101,14 +166,14 @@ enum Field {
       for (var i = 0; i < layers.length; i++) {
         var layer = layers[i];
         var position = layer.drift ? u * 0.5 + t * layer.drift : u;
-        var ridge = height * (1 - (layer.floor + layer.amp * at(layer.values, position)));
+        var ridge = band * (1 - (layer.floor + layer.amp * at(layer.values, position)));
         if (y >= ridge) {
           var below = y - ridge;
-          var body = 0.07 * Math.max(0, 1 - below / (height * 0.5));
-          return (Math.exp(-below / 2.2) * 0.85 + body) * layer.bright;
+          var body = 0.07 * Math.max(0, 1 - below / (band * 0.5));
+          return Math.min(1, (Math.exp(-below / 2.4) * 1.1 + body * 1.4) * layer.bright);
         }
       }
-      return stars(x, y, t) * 0.7;
+      return stars(x, y, t) * 0.5;
     };
   }
 
@@ -164,26 +229,69 @@ enum Field {
     var context = canvas.getContext("2d");
     var reduced = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
     var settings = {}, scene = null, source = null, sourceUrl = null;
-    var cols = 0, rows = 0, width = 0, height = 0;
+    var cols = 0, rows = 0, live = 0, width = 0, height = 0, dpr = 1;
+    var values = null, cursor = 0, grid = null;
     var pointer = null, ripples = [], frame = 0, last = 0, visible = true, started = performance.now();
+
+    function palette() {
+      return PALETTES[settings.tint] || PALETTES.mono;
+    }
+
+    function intensity() {
+      return Math.min(1, Math.max(0.2, settings.intensity == null ? 0.6 : +settings.intensity));
+    }
+
+    function makeGrid() {
+      var tile = document.createElement("canvas");
+      var side = Math.max(1, Math.round(PITCH * dpr));
+      tile.width = side;
+      tile.height = side;
+      var paint = tile.getContext("2d");
+      paint.fillStyle = "rgb(" + palette().grid.join(",") + ")";
+      var dot = Math.max(1, Math.round(1.2 * dpr));
+      paint.fillRect(Math.round((side - dot) / 2), Math.round((side - dot) / 2), dot, dot);
+      grid = context.createPattern(tile, "repeat");
+      if (grid && grid.setTransform && window.DOMMatrix) grid.setTransform(new DOMMatrix().scale(1 / dpr));
+    }
 
     function build() {
       scene = null;
       if (!cols || !rows) return;
-      // The composed part of a scene is a fixed height in pixels, so it sits in the same place in
-      // any window, above the fade.
+      // The composed part of a scene is a fixed height in pixels, so it sits in the same place in any
+      // window, above the fade.
       var band = Math.max(8, (settings.band || 320) / PITCH);
       var kind = settings.scene;
-      if (kind === "signal") scene = signal(cols, rows, normalize(settings.series), band);
+      if (kind === "signal") scene = signal(cols, normalize(settings.series), band);
+      else if (kind === "nebula") scene = nebula(cols, band);
+      else if (kind === "horizon") scene = horizon(cols, band);
       else if (kind === "image" && source) scene = picture(cols, rows, source);
-      else if (kind === "horizon" || kind === "image") scene = horizon(cols, rows, band);
+      else if (kind === "planet" || kind === "image") scene = planet(cols, band);
+      refresh(performance.now(), true);
+    }
+
+    // Scenes change slowly, so each frame recomputes only a slice of the rows. The pointer and the
+    // ripples still move every frame.
+    function refresh(now, all) {
+      if (!scene || !cols || !live) return;
+      if (!values || values.length !== cols * live) {
+        values = new Float32Array(cols * live);
+        all = true;
+      }
+      var t = (now - started) / 1000;
+      var count = all ? live : Math.max(1, Math.ceil(live / 6));
+      for (var i = 0; i < count; i++) {
+        var y = all ? i : (cursor + i) % live;
+        var offset = y * cols;
+        for (var x = 0; x < cols; x++) values[offset + x] = scene(x, y, t);
+      }
+      if (!all) cursor = (cursor + count) % live;
     }
 
     function resize() {
       var rect = host.getBoundingClientRect();
       width = rect.width;
       height = rect.height;
-      var dpr = Math.min(2, window.devicePixelRatio || 1);
+      dpr = Math.min(2, window.devicePixelRatio || 1);
       canvas.width = Math.max(1, Math.round(width * dpr));
       canvas.height = Math.max(1, Math.round(height * dpr));
       canvas.style.width = width + "px";
@@ -191,6 +299,8 @@ enum Field {
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
       cols = Math.ceil(width / PITCH);
       rows = Math.ceil(height / PITCH);
+      live = Math.min(rows, Math.ceil((settings.depth || 900) / PITCH));
+      makeGrid();
       build();
       paint(performance.now());
       wake();
@@ -198,11 +308,15 @@ enum Field {
 
     function paint(now) {
       context.clearRect(0, 0, width, height);
-      if (!scene) return;
-      var t = (now - started) / 1000;
-      var tint = TINTS[settings.tint] || TINTS.mono;
-      var intensity = Math.min(1, Math.max(0.2, settings.intensity == null ? 0.6 : +settings.intensity));
-      var peak = 0.18 + 0.62 * intensity;
+      if (!scene || !values) return;
+      var colors = palette();
+      var peak = 0.35 + 0.65 * intensity();
+      if (grid) {
+        context.globalAlpha = 0.05 + 0.05 * intensity();
+        context.fillStyle = grid;
+        context.fillRect(0, 0, width, Math.min(height, live * PITCH));
+        context.globalAlpha = 1;
+      }
       var paths = [null, new Path2D(), new Path2D(), new Path2D(), new Path2D()];
       var px = pointer ? pointer.x / PITCH : -1e4, py = pointer ? pointer.y / PITCH : -1e4, reach = 15;
       var waves = [];
@@ -211,9 +325,10 @@ enum Field {
         if (age > 1.6) { ripples.splice(k, 1); continue; }
         waves.push({ x: ripples[k].x / PITCH, y: ripples[k].y / PITCH, radius: age * 48, strength: 0.7 * (1 - age / 1.6) });
       }
-      for (var y = 0; y < rows; y++) {
+      for (var y = 0; y < live; y++) {
+        var offset = y * cols;
         for (var x = 0; x < cols; x++) {
-          var v = scene(x, y, t);
+          var v = values[offset + x];
           var dx = x - px, dy = y - py, d2 = dx * dx + dy * dy;
           if (d2 < reach * reach) {
             var lens = 1 - Math.sqrt(d2) / reach;
@@ -224,17 +339,19 @@ enum Field {
             var ring = Math.abs(Math.sqrt(wx * wx + wy * wy) - waves[w].radius);
             if (ring < 2.5) v += (1 - ring / 2.5) * waves[w].strength;
           }
-          // Near-empty cells stay empty, so dark areas read as clean instead of speckled.
+          // Near-empty cells show only the grid, so dark areas read as clean instead of speckled.
           if (v < 0.06) continue;
           v = Math.pow(Math.min(1, v), 0.85);
           var level = Math.floor(v * 4 + BAYER[((y & 3) << 2) | (x & 3)] / 16);
           if (level < 1) continue;
           if (level > 4) level = 4;
-          paths[level].rect(x * PITCH + 0.75, y * PITCH + 0.75, DOT, DOT);
+          var size = SIZES[level], half = size / 2;
+          paths[level].rect(x * PITCH + 3 - half, y * PITCH + 3 - half, size, size);
         }
       }
       for (var l = 1; l <= 4; l++) {
-        context.fillStyle = "rgba(" + tint[0] + "," + tint[1] + "," + tint[2] + "," + (peak * l / 4).toFixed(3) + ")";
+        var color = colors.levels[l - 1];
+        context.fillStyle = "rgba(" + color[0] + "," + color[1] + "," + color[2] + "," + (ALPHAS[l] * peak).toFixed(3) + ")";
         context.fill(paths[l]);
       }
     }
@@ -244,6 +361,7 @@ enum Field {
       if (!visible || document.hidden || !scene) return;
       if (now - last >= FRAME_MS) {
         last = now;
+        refresh(now, false);
         paint(now);
       }
       frame = requestAnimationFrame(tick);
@@ -285,8 +403,13 @@ enum Field {
     document.addEventListener("visibilitychange", function () { if (!document.hidden) wake(); });
 
     function update(next) {
+      var tint = settings.tint;
       settings = Object.assign({}, settings, next || {});
       host.hidden = settings.scene === "off";
+      var wash = palette().wash;
+      host.style.setProperty("--field-wash", "rgba(" + wash[0] + "," + wash[1] + "," + wash[2] + "," + (0.03 + 0.05 * intensity()).toFixed(3) + ")");
+      if (settings.tint !== tint && cols) makeGrid();
+      if (rows) live = Math.min(rows, Math.ceil((settings.depth || 900) / PITCH));
       if (settings.scene === "image" && settings.image && settings.image !== sourceUrl) {
         sourceUrl = settings.image;
         source = null;

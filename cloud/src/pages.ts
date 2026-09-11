@@ -30,7 +30,7 @@ function render(
   c: C,
   title: string,
   body: Html,
-  options: { description?: string; active?: "leaderboard" | "teams"; status?: 200 | 404; field?: { scene: "horizon" | "signal"; series?: number[] } } = {},
+  options: { description?: string; active?: "leaderboard" | "teams"; status?: 200 | 404; field?: { scene: "planet" | "signal"; series?: number[] } } = {},
 ) {
   const url = new URL(c.req.url);
   return c.html(

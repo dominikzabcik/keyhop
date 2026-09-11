@@ -46,11 +46,11 @@ button, input { font: inherit; color: inherit; }
 
 /* The Field behind the top of every page: dots that fade out over a long eased run, grain under
    everything. It scrolls away with the page. */
-.backdrop { position: absolute; top: 0; left: 0; right: 0; height: 880px; z-index: 0; overflow: hidden; pointer-events: none; }
+.backdrop { position: absolute; top: 0; left: 0; right: 0; height: 900px; z-index: 0; overflow: hidden; pointer-events: none; background: linear-gradient(to bottom, var(--field-wash, transparent), transparent 760px); }
 .backdrop .field-canvas {
   position: absolute; inset: 0;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 20%, rgba(0,0,0,.93) 27%, rgba(0,0,0,.82) 34%, rgba(0,0,0,.67) 41%, rgba(0,0,0,.5) 48%, rgba(0,0,0,.34) 55%, rgba(0,0,0,.2) 62%, rgba(0,0,0,.1) 69%, rgba(0,0,0,.04) 76%, rgba(0,0,0,.01) 83%, transparent 90%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 20%, rgba(0,0,0,.93) 27%, rgba(0,0,0,.82) 34%, rgba(0,0,0,.67) 41%, rgba(0,0,0,.5) 48%, rgba(0,0,0,.34) 55%, rgba(0,0,0,.2) 62%, rgba(0,0,0,.1) 69%, rgba(0,0,0,.04) 76%, rgba(0,0,0,.01) 83%, transparent 90%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 360px, rgba(0,0,0,.92) 410px, rgba(0,0,0,.8) 460px, rgba(0,0,0,.65) 510px, rgba(0,0,0,.5) 560px, rgba(0,0,0,.36) 610px, rgba(0,0,0,.24) 660px, rgba(0,0,0,.14) 710px, rgba(0,0,0,.07) 760px, rgba(0,0,0,.03) 810px, transparent 860px);
+  mask-image: linear-gradient(to bottom, #000 0, #000 360px, rgba(0,0,0,.92) 410px, rgba(0,0,0,.8) 460px, rgba(0,0,0,.65) 510px, rgba(0,0,0,.5) 560px, rgba(0,0,0,.36) 610px, rgba(0,0,0,.24) 660px, rgba(0,0,0,.14) 710px, rgba(0,0,0,.07) 760px, rgba(0,0,0,.03) 810px, transparent 860px);
 }
 .backdrop::after {
   content: ""; position: absolute; inset: 0; opacity: .045;
@@ -201,10 +201,10 @@ export function layout(options: {
   active?: "leaderboard" | "teams";
   body: Html;
   nonce: string;
-  /** The backdrop: the horizon by default, or someone's own usage as ridges. */
-  field?: { scene: "horizon" | "signal"; series?: number[] };
+  /** The backdrop: the planet by default, or someone's own usage as ridges. */
+  field?: { scene: "planet" | "signal"; series?: number[] };
 }): Html {
-  const field = options.field ?? { scene: "horizon" };
+  const field = options.field ?? { scene: "planet" };
   const description = options.description ?? "Switchr leaderboards: who uses the most Claude Code, Cursor and Codex.";
   const current = (name: string) => (options.active === name ? raw('aria-current="page"') : "");
   const user = options.user;
@@ -251,7 +251,7 @@ export function layout(options: {
   if (!host || !window.SwitchrField) return;
   var series = [];
   try { series = JSON.parse(host.getAttribute("data-series") || "[]"); } catch (error) {}
-  window.SwitchrField.mount(host, { scene: host.getAttribute("data-scene"), series: series, tint: "mono", intensity: 0.6, band: 240 });
+  window.SwitchrField.mount(host, { scene: host.getAttribute("data-scene"), series: series, tint: "ultraviolet", intensity: 0.6, band: 330, depth: 860 });
 })();
 </script>
 </body>

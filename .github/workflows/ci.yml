@@ -126,19 +126,22 @@ jobs:
             image: ubuntu:24.04
             runner: ubuntu-24.04
             artifact: linux-x86_64
-            install: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/*.deb
+            # Required dependencies only: optional extras like the WebKit window would pull a whole desktop into CI.
+            install: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ./artifacts/*.deb
             tray: true
           - name: Ubuntu 24.04 aarch64 (DEB)
             image: ubuntu:24.04
             runner: ubuntu-24.04-arm
             artifact: linux-aarch64
-            install: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/*.deb
+            # Required dependencies only: optional extras like the WebKit window would pull a whole desktop into CI.
+            install: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ./artifacts/*.deb
             tray: true
           - name: Debian 12 (DEB)
             image: debian:12
             runner: ubuntu-24.04
             artifact: linux-x86_64
-            install: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/*.deb
+            # Required dependencies only: optional extras like the WebKit window would pull a whole desktop into CI.
+            install: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ./artifacts/*.deb
             tray: true
           - name: Arch Linux (package)
             image: archlinux:latest
@@ -169,7 +172,7 @@ jobs:
             image: ubuntu:24.04
             runner: ubuntu-24.04
             artifact: linux-x86_64
-            install: apt-get update -qq && SWITCHR_INSTALL_FROM=artifacts bash install.sh
+            install: apt-get update -qq && echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/99switchr-ci && SWITCHR_INSTALL_FROM=artifacts bash install.sh
             tray: true
           - name: openSUSE (install.sh, portable)
             image: opensuse/tumbleweed:latest
@@ -235,7 +238,8 @@ jobs:
           Xvfb :99 -screen 0 1440x900x24 >/dev/null 2>&1 &
           export DISPLAY=:99 && sleep 2
 
-          switchr dashboard --sample --no-open --json > dashboard.json &
+          switchr dashboard --sample --no-open --json > dashboard.json 2> dashboard.log &
+          server=$!
           sleep 3
           url=$(sed -n 's/.*"url":"\([^"]*\)".*/\1/p' dashboard.json)
           cat > window.py <<'PY'
@@ -255,9 +259,12 @@ jobs:
           Gtk.main()
           PY
           timeout 40 dbus-run-session -- python3 window.py "$url" > webkit.log 2>&1 &
+          window=$!
           sleep 15
           import -window root linux-dashboard.png
-          wait || true
+          # Wait only for the window: the server and the display keep running until they're stopped.
+          wait "$window" || true
+          kill "$server" 2>/dev/null || true
           grep -iE "error|traceback" webkit.log || true
 
           # Output goes to a file: accessibility helpers GTK starts outlive the session and would hold a pipe open.
@@ -270,6 +277,7 @@ jobs:
             wait
           ' > tray.log 2>&1 || true
           grep -iE "error|traceback" tray.log || true
+          pkill Xvfb || true
           ls -l linux-*.png
 
       - uses: actions/upload-artifact@v7

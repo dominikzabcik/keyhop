@@ -136,7 +136,7 @@ Link Switchr with your GitHub account to compare usage with friends and teams: i
 - **Profiles:** a page at `/u/<login>` with a year of activity, streaks, tools and your weekly rank, ready to share.
 - **What's sent:** tokens, API value and requests per tool per day. Never prompts, emails, account names or models. `switchr cloud logout` unlinks a computer, and deleting your account on the website removes everything it holds.
 
-The service lives in [`cloud/`](cloud/README.md).
+See the leaderboard at [switchr.qwezdi.workers.dev](https://switchr.qwezdi.workers.dev/leaderboard). The service lives in [`cloud/`](cloud/README.md).
 
 ## What a switch does
 

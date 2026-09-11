@@ -9,7 +9,7 @@ import FoundationNetworking
 enum Cloud {
     /// The deployed service. `SWITCHR_CLOUD_URL` points Switchr at another one, like a local
     /// `npm run dev` in cloud/.
-    static let defaultServer: String? = nil
+    static let defaultServer: String? = "https://switchr.qwezdi.workers.dev"
 
     static var server: String? {
         if let override = ProcessInfo.processInfo.environment["SWITCHR_CLOUD_URL"], !override.isEmpty { return override }

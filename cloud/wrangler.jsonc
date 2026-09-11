@@ -3,13 +3,16 @@
   "name": "switchr",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-01",
+  // Served at https://switchr.qwezdi.workers.dev. Per-version preview URLs stay off.
+  "workers_dev": true,
+  "preview_urls": false,
   "observability": { "enabled": true },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "switchr",
-      // Replace with the id `npx wrangler d1 create switchr` prints. Local development ignores it.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // From `npx wrangler d1 create switchr`. Local development ignores it.
+      "database_id": "6e491730-0672-40e6-a04b-3ffe14ff4c95",
       "migrations_dir": "migrations"
     }
   ]

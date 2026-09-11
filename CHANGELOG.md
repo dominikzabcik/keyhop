@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.8.0]
 
-- Leaderboards. Link Switchr with GitHub (Settings in Switchr's window, or `switchr cloud login`) to join a global leaderboard, create teams with invite links, and get a public profile with a year of activity and streaks. Switchr sends daily totals per tool, about once an hour, and nothing else. The Leaderboard section in Switchr's window shows your rank and who's just ahead of you.
+- Leaderboards at [switchr.qwezdi.workers.dev](https://switchr.qwezdi.workers.dev/leaderboard). Link Switchr with GitHub (Settings in Switchr's window, or `switchr cloud login`) to join a global leaderboard, create teams with invite links, and get a public profile with a year of activity and streaks. Switchr sends daily totals per tool, about once an hour, and nothing else. The Leaderboard section in Switchr's window shows your rank and who's just ahead of you.
 - `switchr cloud login`, `status`, `sync`, `open` and `logout`.
 
 ## [0.7.1]

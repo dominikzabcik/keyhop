@@ -32,7 +32,7 @@ struct HTTPResponse {
         HTTPResponse(status: 200, headers: [
             "Content-Type": "text/html; charset=utf-8",
             // Everything the page needs is inline; it may only talk back to this server.
-            "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+            "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
         ], body: Data(page.utf8))
     }
 

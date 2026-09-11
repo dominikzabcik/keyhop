@@ -190,6 +190,44 @@ struct DashboardState: Encodable {
     let refreshing: Bool
     let messages: [String]
     let cloud: DashboardCloud
+    let appearance: DashboardAppearance
+}
+
+/// How the Field behind Switchr's window looks, saved next to Switchr's other data.
+struct DashboardAppearance: Codable, Equatable {
+    static let scenes = ["horizon", "signal", "image", "off"]
+    static let tints = ["mono", "ember", "moss"]
+
+    var scene = "horizon"
+    var tint = "mono"
+    var intensity = 0.6
+    /// Whether a picture for the image scene is saved.
+    var image = false
+
+    static var url: URL { Platform.dataDirectory.appendingPathComponent("appearance.json") }
+    static var imageURL: URL { Platform.dataDirectory.appendingPathComponent("background.jpg") }
+
+    static func load() -> DashboardAppearance {
+        var appearance = (try? Data(contentsOf: url)).flatMap { try? DashboardJSON.decoder.decode(DashboardAppearance.self, from: $0) }
+            ?? DashboardAppearance()
+        appearance.image = FileManager.default.fileExists(atPath: imageURL.path)
+        return appearance
+    }
+
+    func save() throws {
+        try FileManager.default.createDirectory(at: Platform.dataDirectory, withIntermediateDirectories: true)
+        try Files.writeAtomically(DashboardJSON.encoder.encode(self), to: Self.url)
+    }
+}
+
+struct DashboardAppearanceAction: Encodable {
+    let message: String
+    let note: String?
+    let appearance: DashboardAppearance
+}
+
+struct DashboardAppearanceImage: Encodable {
+    let dataUrl: String
 }
 
 /// Switchr cloud as the dashboard shows it.
@@ -537,6 +575,10 @@ actor DashboardSession {
                 return .json(try await remove(try Self.decode(IDBody.self, request).id))
             case ("POST", "/api/budget"):
                 return .json(try await budget(try Self.decode(BudgetBody.self, request)))
+            case ("POST", "/api/appearance"):
+                return .json(try setAppearance(try Self.decode(AppearanceBody.self, request)))
+            case ("GET", "/api/appearance/image"):
+                return .json(try appearanceImage())
             case ("POST", "/api/cloud/link"):
                 return .json(try await cloudLink())
             case ("POST", "/api/cloud/sync"):
@@ -587,7 +629,7 @@ actor DashboardSession {
         return DashboardState(mode: sample ? "sample" : "live", version: AppVersion.current, platform: Platform.name,
                               dataDirectory: Platform.dataDirectory.path, savedAt: Date(), status: StatusDocument(overview),
                               adding: adding.keys.map(\.rawValue).sorted(), refreshing: refreshing, messages: pending,
-                              cloud: cloudStatus())
+                              cloud: cloudStatus(), appearance: currentAppearance())
     }
 
     func usage(range: InsightsRange, tool: Provider?, readLogs: Bool) async throws -> DashboardUsage {
@@ -749,6 +791,75 @@ actor DashboardSession {
         guard let period = BudgetPeriod(rawValue: body.period ?? "month") else { throw UsageError("Choose day, week or month.") }
         try await workspace.tracker.setBudget(Budget(scope: scope, amount: amount, period: period), scope: scope)
         return DashboardAction(message: "Budget for \(name): \(Numbers.usd(amount)) \(period.title) at API prices.", note: nil)
+    }
+
+    // MARK: Appearance
+
+    private var sampleAppearance = DashboardAppearance()
+    private var sampleImage: String?
+
+    private struct AppearanceBody: Decodable {
+        let scene: String?
+        let tint: String?
+        let intensity: Double?
+        /// A JPEG data URL for the image scene, or an empty string to remove the saved picture.
+        let image: String?
+    }
+
+    func currentAppearance() -> DashboardAppearance {
+        sample ? sampleAppearance : DashboardAppearance.load()
+    }
+
+    /// Sample mode keeps its appearance in memory, so trying scenes never touches your data folder.
+    private func setAppearance(_ body: AppearanceBody) throws -> DashboardAppearanceAction {
+        var appearance = currentAppearance()
+        if let scene = body.scene {
+            guard DashboardAppearance.scenes.contains(scene) else { throw UsageError("Unknown scene.") }
+            appearance.scene = scene
+        }
+        if let tint = body.tint {
+            guard DashboardAppearance.tints.contains(tint) else { throw UsageError("Unknown tint.") }
+            appearance.tint = tint
+        }
+        if let intensity = body.intensity {
+            guard intensity.isFinite else { throw UsageError("Intensity must be a number.") }
+            appearance.intensity = min(1, max(0.2, intensity))
+        }
+        var message = "Saved."
+        if let image = body.image {
+            if image.isEmpty {
+                if sample { sampleImage = nil } else { try? FileManager.default.removeItem(at: DashboardAppearance.imageURL) }
+                appearance.image = false
+                if appearance.scene == "image" { appearance.scene = "horizon" }
+                message = "Removed the picture."
+            } else {
+                let prefix = "data:image/jpeg;base64,"
+                guard image.hasPrefix(prefix), let data = Data(base64Encoded: String(image.dropFirst(prefix.count))), data.count <= 800_000 else {
+                    throw UsageError("That picture couldn't be read. Try another JPEG or PNG.")
+                }
+                if sample {
+                    sampleImage = image
+                } else {
+                    try FileManager.default.createDirectory(at: Platform.dataDirectory, withIntermediateDirectories: true)
+                    try data.write(to: DashboardAppearance.imageURL, options: .atomic)
+                }
+                appearance.image = true
+                appearance.scene = "image"
+                message = "Your picture is now the backdrop."
+            }
+        }
+        if appearance.scene == "image" && !appearance.image { throw UsageError("Choose a picture first.") }
+        if sample { sampleAppearance = appearance } else { try appearance.save() }
+        return DashboardAppearanceAction(message: message, note: nil, appearance: appearance)
+    }
+
+    private func appearanceImage() throws -> DashboardAppearanceImage {
+        if sample {
+            guard let sampleImage else { throw SwitchrError("No picture is saved.") }
+            return DashboardAppearanceImage(dataUrl: sampleImage)
+        }
+        guard let data = try? Data(contentsOf: DashboardAppearance.imageURL) else { throw SwitchrError("No picture is saved.") }
+        return DashboardAppearanceImage(dataUrl: "data:image/jpeg;base64," + data.base64EncodedString())
     }
 
     // MARK: Cloud

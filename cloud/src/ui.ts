@@ -1,6 +1,7 @@
 import { html, raw } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
 import { type Tool, TOOLS, TOOL_NAMES, type User, addDays } from "./env";
+import { FIELD_SCRIPT } from "./field";
 import type { Metric, Totals } from "./stats";
 
 export type Html = HtmlEscapedString | Promise<HtmlEscapedString>;
@@ -43,7 +44,19 @@ button, input { font: inherit; color: inherit; }
 .mono { font-family: var(--mono); font-size: 12.5px; }
 .muted { color: var(--muted); } .subtle { color: var(--subtle); }
 
-.top { border-bottom: 1px solid var(--border); background: var(--bg); }
+/* The Field behind the top of every page: dots that fade out over a long eased run, grain under
+   everything. It scrolls away with the page. */
+.backdrop { position: absolute; top: 0; left: 0; right: 0; height: 880px; z-index: 0; overflow: hidden; pointer-events: none; }
+.backdrop .field-canvas {
+  position: absolute; inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 20%, rgba(0,0,0,.93) 27%, rgba(0,0,0,.82) 34%, rgba(0,0,0,.67) 41%, rgba(0,0,0,.5) 48%, rgba(0,0,0,.34) 55%, rgba(0,0,0,.2) 62%, rgba(0,0,0,.1) 69%, rgba(0,0,0,.04) 76%, rgba(0,0,0,.01) 83%, transparent 90%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 20%, rgba(0,0,0,.93) 27%, rgba(0,0,0,.82) 34%, rgba(0,0,0,.67) 41%, rgba(0,0,0,.5) 48%, rgba(0,0,0,.34) 55%, rgba(0,0,0,.2) 62%, rgba(0,0,0,.1) 69%, rgba(0,0,0,.04) 76%, rgba(0,0,0,.01) 83%, transparent 90%);
+}
+.backdrop::after {
+  content: ""; position: absolute; inset: 0; opacity: .045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.top { position: relative; z-index: 1; border-bottom: 1px solid hsl(0 0% 100% / .05); background: transparent; }
 .top-inner { max-width: 1080px; margin: 0 auto; height: 56px; padding: 0 24px; display: flex; align-items: center; gap: 20px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 650; }
 .pixel { width: 22px; height: 12px; flex: none; }
@@ -53,13 +66,16 @@ button, input { font: inherit; color: inherit; }
 .nav a[aria-current="page"] { background: hsl(0 0% 100% / .08); color: var(--text); }
 .who { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 
-main { max-width: 1080px; margin: 0 auto; padding: 32px 24px 56px; display: grid; gap: 20px; }
+body { position: relative; }
+main { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 32px 24px 56px; display: grid; gap: 20px; }
 .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 h1 { margin: 0; font-size: 22px; font-weight: 640; letter-spacing: -.01em; line-height: 1.25; }
+/* A soft shadow right behind the words keeps them clear of bright dots, without a band behind them. */
+.head h1, .head .lede { text-shadow: 0 1px 18px hsl(0 0% 9% / .95), 0 0 2px hsl(0 0% 9% / .8); }
 .lede { margin: 4px 0 0; color: var(--muted); }
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; min-width: 0; }
+.card { background: hsl(0 0% 10.6% / .8); -webkit-backdrop-filter: blur(18px) saturate(1.05); backdrop-filter: blur(18px) saturate(1.05); border: 1px solid var(--border); border-radius: 10px; min-width: 0; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
 .card-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
 .card-head .hint { color: var(--subtle); font-size: 12.5px; }
@@ -163,7 +179,7 @@ a.place-card:hover { border-color: var(--border-strong); }
 .center-card .form { width: 100%; text-align: left; }
 .code { font-family: var(--mono); font-size: 22px; letter-spacing: .12em; text-align: center; height: 48px; }
 
-.site-foot { max-width: 1080px; margin: 0 auto; padding: 20px 24px 40px; color: var(--subtle); font-size: 12.5px; display: flex; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--border); }
+.site-foot { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 20px 24px 40px; color: var(--subtle); font-size: 12.5px; display: flex; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--border); }
 .site-foot a { color: var(--muted); text-decoration: none; } .site-foot a:hover { color: var(--text); }
 
 @media (max-width: 860px) {
@@ -184,7 +200,11 @@ export function layout(options: {
   user: User | null;
   active?: "leaderboard" | "teams";
   body: Html;
+  nonce: string;
+  /** The backdrop: the horizon by default, or someone's own usage as ridges. */
+  field?: { scene: "horizon" | "signal"; series?: number[] };
 }): Html {
+  const field = options.field ?? { scene: "horizon" };
   const description = options.description ?? "Switchr leaderboards: who uses the most Claude Code, Cursor and Codex.";
   const current = (name: string) => (options.active === name ? raw('aria-current="page"') : "");
   const user = options.user;
@@ -205,6 +225,7 @@ export function layout(options: {
 <style>${raw(CSS)}</style>
 </head>
 <body>
+<div class="backdrop" aria-hidden="true" data-scene="${field.scene}" data-series="${JSON.stringify(field.series ?? [])}"></div>
 <header class="top"><div class="top-inner">
   <a class="brand" href="/leaderboard">${raw(PIXEL_MARK)}Switchr</a>
   <nav class="nav" aria-label="Main">
@@ -224,6 +245,15 @@ export function layout(options: {
   <span>Totals are sent by the Switchr app: tokens, API value and requests per day. Nothing else.</span>
   <a href="https://github.com/dominikzabcik/switchr">GitHub</a>
 </footer>
+<script nonce="${options.nonce}">${raw(FIELD_SCRIPT)}
+(function () {
+  var host = document.querySelector(".backdrop");
+  if (!host || !window.SwitchrField) return;
+  var series = [];
+  try { series = JSON.parse(host.getAttribute("data-series") || "[]"); } catch (error) {}
+  window.SwitchrField.mount(host, { scene: host.getAttribute("data-scene"), series: series, tint: "mono", intensity: 0.6, band: 240 });
+})();
+</script>
 </body>
 </html>`;
 }

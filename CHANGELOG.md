@@ -4,6 +4,8 @@
 
 - Leaderboards at [switchr.qwezdi.workers.dev](https://switchr.qwezdi.workers.dev/leaderboard). Link Switchr with GitHub (Settings in Switchr's window, or `switchr cloud login`) to join a global leaderboard, create teams with invite links, and get a public profile with a year of activity and streaks. Switchr sends daily totals per tool, about once an hour, and nothing else. The Leaderboard section in Switchr's window shows your rank and who's just ahead of you.
 - `switchr cloud login`, `status`, `sync`, `open` and `logout`.
+- The Field: a live backdrop of dots behind Switchr's window and the website. Horizon draws a planet's lit edge, Signal turns your last 26 weeks of usage into a range of ridges, and Picture draws any image you choose in dots. It follows the pointer, ripples where you click on open background, pauses when hidden, and holds still with reduced motion. Change the scene, tint and intensity in **Settings › Appearance**. Every public profile on the website shows its owner's year of usage as ridges.
+- Overview opens on today's tokens, set large, and the stat cards gain your streak.
 
 ## [0.7.1]
 

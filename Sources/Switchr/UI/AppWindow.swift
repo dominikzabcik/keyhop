@@ -1,5 +1,6 @@
 #if os(macOS)
 import AppKit
+import UniformTypeIdentifiers
 import WebKit
 
 /// Switchr's window on the Mac: the dashboard, served by the app itself on 127.0.0.1 and shown in a
@@ -198,6 +199,19 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
                  for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if let url = navigationAction.request.url { Self.openOutside(url) }
         return nil
+    }
+
+    /// A file input on the page, like Appearance's picture, opens the system's open panel.
+    func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping @MainActor @Sendable ([URL]?) -> Void) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = parameters.allowsMultipleSelection
+        panel.allowedContentTypes = [.image]
+        panel.beginSheetModal(for: window) { response in
+            completionHandler(response == .OK ? panel.urls : nil)
+        }
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

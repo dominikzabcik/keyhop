@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { account } from "./account";
 import { auth, sameOrigin, session } from "./auth";
+import { randomToken } from "./crypto";
 import type { AppEnv } from "./env";
 import { notFound, pages } from "./pages";
 import { teams } from "./teams";
@@ -9,13 +10,15 @@ import { usage } from "./usage";
 const app = new Hono<AppEnv>();
 
 app.use("*", async (c, next) => {
+  const nonce = randomToken(16);
+  c.set("nonce", nonce);
   await next();
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
-  // Pages ship no JavaScript at all.
+  // The only script is the backdrop, and only with this response's nonce. Every page works without it.
   c.header(
     "Content-Security-Policy",
-    "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+    `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`,
   );
 });
 app.use("*", session);

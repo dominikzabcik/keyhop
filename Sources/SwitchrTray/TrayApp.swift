@@ -138,7 +138,10 @@ final class TrayApp {
         case wmTray:
             let event = UINT(UInt32(truncatingIfNeeded: lParam) & 0xFFFF)
             switch event {
-            case wmContextMenu, ninSelect, ninKeySelect:
+            case ninSelect, ninKeySelect:
+                // A click opens Switchr's window; the menu stays a right-click away.
+                if fixture == nil { perform(.openDashboard) } else { showMenu() }
+            case wmContextMenu:
                 showMenu()
             case ninBalloonUserClick:
                 if let target = balloonTarget {
@@ -358,10 +361,9 @@ final class TrayApp {
         case .refresh:
             refresh(claimAlerts: false)
 
-        case .insights:
-            runCLI(["insights"]) { [weak self] result in
-                if result.status != 0 { self?.notify("Couldn't open Insights", result.errorText) }
-            }
+        case .openDashboard:
+            // switchr.exe serves Switchr's window, opens it in Edge's app mode, and stops once it's closed.
+            Self.launch(cli, ["dashboard"])
 
         case .rename(let id):
             guard let (tool, account) = status?.account(id) else { return }
@@ -754,6 +756,9 @@ enum Prompt {
         case wmClose:
             finished = true
             return 0
+        case 0x0138: // WM_CTLCOLORSTATIC: the message sits on the window's own background, not a grey block.
+            SetBkMode(HDC(bitPattern: UInt(wParam)), TRANSPARENT)
+            return LRESULT(Int(bitPattern: GetSysColorBrush(COLOR_WINDOW)))
         default:
             return DefWindowProcW(hwnd, message, wParam, lParam)
         }

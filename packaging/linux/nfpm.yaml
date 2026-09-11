@@ -60,6 +60,7 @@ overrides:
     recommends:
       - libsecret
       - gnome-shell-extension-appindicator
+      - webkit2gtk4.1
   deb:
     depends:
       - python3
@@ -71,6 +72,7 @@ overrides:
     recommends:
       - libsecret-tools
       - gnome-shell-extension-appindicator
+      - gir1.2-webkit2-4.1
   archlinux:
     depends:
       - python-gobject

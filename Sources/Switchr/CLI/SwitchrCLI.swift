@@ -4,7 +4,7 @@ import Foundation
 /// for data; on macOS the app binary answers the same commands.
 enum SwitchrCLI {
     static let commands: Set<String> = [
-        "status", "refresh", "switch", "add", "rename", "remove", "usage", "insights", "budget",
+        "status", "refresh", "switch", "add", "rename", "remove", "usage", "dashboard", "insights", "budget",
         "update", "doctor", "reset", "version", "help", "--help", "-h", "--version",
     ]
 
@@ -32,6 +32,7 @@ enum SwitchrCLI {
         #endif
         do {
             switch command {
+            case "dashboard": try await Commands.dashboard(&args)
             case "insights": try await Commands.insights(&args)
             case "status": try await Commands.status(&args)
             case "refresh": try await Commands.refresh(&args)
@@ -73,7 +74,8 @@ enum SwitchrCLI {
 
     Usage and budgets
       usage [--range today|week|month|30d] [--tool <tool>] [--json]
-      insights [--range <range>] [--no-open]  Write the Insights page and open it in a browser
+      dashboard [--section <name>] [--sample]  Open Switchr's window: accounts, usage, budgets, settings
+      insights [--output <file>] [--sample]    Open Usage in the dashboard, or save the dashboard as one file
       budget list [--json]
       budget set <account|all> <dollars> [--period day|week|month]
       budget clear <account|all>

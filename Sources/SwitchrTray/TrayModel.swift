@@ -101,7 +101,7 @@ enum TrayCommand: Equatable, Hashable {
     case switchTo(UUID)
     case add(String)
     case refresh
-    case insights
+    case openDashboard
     case rename(UUID)
     case remove(UUID)
     case budget
@@ -140,7 +140,7 @@ struct TrayMenuItem: Equatable {
 enum TrayMenu {
     static func build(status: TrayStatus?, busy: String?, update: TrayUpdate?, settings: TraySettings, now: Date = Date()) -> [TrayMenuItem] {
         let idle = busy == nil
-        var items: [TrayMenuItem] = []
+        var items: [TrayMenuItem] = [TrayMenuItem(title: "Open Switchr", command: .openDashboard), .separator]
         if let busy {
             items.append(TrayMenuItem(title: busy, enabled: false))
             items.append(.separator)
@@ -171,7 +171,6 @@ enum TrayMenu {
         }
 
         items.append(TrayMenuItem(title: "Refresh now", command: .refresh, enabled: idle))
-        items.append(TrayMenuItem(title: "Insights", command: .insights))
 
         if let status {
             let saved = status.tools.flatMap { tool in tool.accounts.map { (tool, $0) } }

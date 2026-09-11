@@ -31,7 +31,7 @@ The tray menus can be checked on any system from sample data, which holds no rea
 switchr status --sample --json > sample.json
 python3 packaging/linux/switchr-tray --print-menu sample.json   # the Linux menu
 .build/debug/SwitchrTray --print-menu sample.json               # the Windows menu
-switchr insights --sample                                       # the Insights page
+switchr dashboard --sample                                      # the dashboard, with made-up accounts
 ```
 
 With `--status-file sample.json`, the real trays show that data without running `switchr`, and `--show-menu` or `--show-dialog` open the menu or a prompt for screenshots. CI captures both trays this way.
@@ -43,7 +43,8 @@ With `--status-file sample.json`, the real trays show that data without running 
 | `Sources/Switchr/Providers` | One adapter per tool: read the login, apply one, sign out locally, fetch limits |
 | `Sources/Switchr/Core` | `AccountService` (the switching rules every platform shares), secret stores, releases, platform paths, shell and HTTP helpers, and the Mac account store and updater |
 | `Sources/Switchr/Tracking` | Log readers, pricing, the usage database, budgets, forecasts and alert rules |
-| `Sources/Switchr/CLI` | The `switchr` command, its JSON documents and the Insights page |
+| `Sources/Switchr/CLI` | The `switchr` command, its JSON documents and sample data |
+| `Sources/Switchr/Dashboard` | The local dashboard: a small loopback HTTP server, its JSON API and access checks, and the page itself |
 | `Sources/Switchr/UI` | The Mac menu, Insights window, welcome window, brand and controls |
 | `Sources/SwitchrTray` | The Windows tray app; its menu model builds and runs everywhere |
 | `Sources/CSQLite` | The SQLite amalgamation, used on Linux and Windows |

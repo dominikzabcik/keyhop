@@ -85,6 +85,7 @@ def pkgbuild(version, sums, local):
         url="https://github.com/{REPO}"
         license=('MIT')
         depends=('python-gobject' 'gtk3' 'libayatana-appindicator' 'libnotify' 'libsecret' 'ca-certificates')
+        optdepends=('webkit2gtk-4.1: Switchr window inside the tray instead of a browser window')
         provides=('switchr')
         conflicts=('switchr')
         options=('!strip' '!debug')

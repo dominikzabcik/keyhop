@@ -18,9 +18,11 @@
 </p>
 
 <p align="center">
-  <img src="docs/menu.png" width="340" alt="Switchr's menu on the Claude tab: the account in use with its 5-hour and weekly limits, and another account to switch to">
-  &nbsp;
-  <img src="docs/linux-tray.png" width="300" alt="Switchr's Linux tray menu with sample accounts: each tool's accounts with their tightest limit, Accounts, budget and settings">
+  <img src="docs/dashboard.png" width="860" alt="The Switchr dashboard with sample accounts: today's tokens and API value, each tool's account in use with its limits, today by hour and the last 7 days">
+</p>
+
+<p align="center">
+  <img src="docs/menu.png" width="300" alt="Switchr's Mac menu on the Claude tab: the account in use with its 5-hour and weekly limits, and another account to switch to">
 </p>
 
 ## Install
@@ -68,6 +70,8 @@ On first launch, a welcome window lists the logins Switchr found and turns on Op
 <summary><b>Linux: GNOME and the tray</b></summary>
 <br>
 
+With WebKitGTK for Python installed (the packages recommend it), **Open Switchr** shows the dashboard in its own window; otherwise it opens in a Chromium-based browser's app window or your default browser.
+
 GNOME hides tray icons unless the **AppIndicator and KStatusNotifierItem Support** extension is on. Fedora and Ubuntu ship it (`gnome-shell-extension-appindicator`), and the packages recommend it. Turn it on in Extensions, then log out and back in. KDE Plasma, Cinnamon, Xfce, MATE and Budgie show the tray without it. `switchr doctor` tells you whether your desktop has a tray host.
 
 </details>
@@ -80,7 +84,7 @@ GNOME hides tray icons unless the **AppIndicator and KStatusNotifierItem Support
 | **Switch** | Click one of a tool's other accounts. Each shows how much of its tightest limit is used. On macOS, when the account in use runs low, the one with the most room is marked, and you can right-click an account to rename or remove it. |
 | **Read the limits** | macOS shows the account in use with a large bar per limit, where a tick marks an even pace. On Linux and Windows, the menu shows each account's tightest limit and the icon shows the busiest account's two nearest limits. |
 | **Rename, remove and budgets** | On macOS, right-click an account, and set budgets in Insights. On Linux and Windows, use the tray's **Accounts** submenu to rename or remove an account, and **Set a budget** for a monthly budget across all accounts. |
-| **Insights** | Usage over time by account, API value, models, current limits and budgets. On macOS it's a window; on Linux and Windows it opens in your browser. |
+| **Dashboard** | Switchr's window: Overview, Accounts, Usage (charts, activity, token mix, models), Budgets and Settings. Click the tray icon on Windows, choose **Open Switchr** in the Linux tray, or run `switchr dashboard` anywhere. The Mac app also has its own Insights window. |
 | **Alerts** | A notification when a limit or budget is nearly used, with a **Switch** button that moves you to the saved account with the most room. |
 
 Codex logins made with an API key aren't supported, only ChatGPT sign-ins.
@@ -95,13 +99,14 @@ switchr switch work@studio.dev          move a tool to a saved account (email, n
 switchr add cursor                      sign Cursor out here and save the next login
 switchr rename work@studio.dev Work     give an account a name
 switchr usage --range 30d --tool claude tokens and API value by account and model
-switchr insights                        write the Insights page and open it
+switchr dashboard                       open Switchr's window: accounts, usage, budgets, settings
+switchr insights --output usage.html    save the dashboard as one file you can share or keep
 switchr budget set all 200 --period month
 switchr update                          install the latest verified release
 switchr doctor                          paths, secret storage and what Switchr can see
 ```
 
-Add `--json` to any of them for scripts. `switchr status --sample` and `switchr insights --sample` show made-up accounts, for trying Switchr out or taking screenshots. `switchr help` lists everything.
+Add `--json` to any of them for scripts. `switchr status --sample` and `switchr dashboard --sample` show made-up accounts, for trying Switchr out or taking screenshots. `switchr help` lists everything.
 
 ## Usage tracking
 
@@ -119,7 +124,7 @@ Switchr keeps its own record of what every account uses.
 - **Forecasts:** Switchr samples each limit and projects when it runs out at the recent rate. Once a limit is half used and on track to run out before it resets, the alert offers the switch.
 
 <p align="center">
-  <img src="docs/insights.png" width="820" alt="Switchr's Insights window: tokens and API value for the week, a stacked bar chart by account, account budgets, models and current limits">
+  <img src="docs/dashboard-usage.png" width="860" alt="The dashboard's Usage section with sample data: tokens, API value, requests and cache share, a stacked chart by account, 26 weeks of activity, token mix, models and accounts">
 </p>
 
 ## What a switch does
@@ -186,6 +191,7 @@ The account list holds no tokens, and the data folder is readable only by you. `
 ## Security notes
 
 - On macOS, Keychain calls go through `/usr/bin/security`, so there are no access prompts. Writes pass the credential as an argument, where other processes running as your user can briefly see it. On Linux, logins reach `secret-tool` over stdin instead.
+- The dashboard is served by `switchr` on 127.0.0.1 only. Its window gets a random session key, every request must carry it, and requests from other websites or host names are refused. It stops 15 minutes after its last window closes.
 - On macOS, the Cursor login link travels through Launch Services and never appears in a process list. On Linux and Windows it's passed to Cursor's own executable as an argument, where other processes running as your user can briefly see it.
 - Releases aren't notarized or code-signed with a certificate. Every download is listed with its SHA-256 in the release's `SHA256SUMS`. Build from source if you'd rather not run a prebuilt binary.
 - The endpoints are the private ones the tools call themselves, so a provider update can break Switchr. If that happens, [open an issue](../../issues/new/choose). Report vulnerabilities privately, as described in [SECURITY.md](SECURITY.md).

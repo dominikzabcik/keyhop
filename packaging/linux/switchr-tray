@@ -16,6 +16,8 @@ import shutil
 import subprocess
 import sys
 import threading
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 
 APP_ID = "dev.switchr.Switchr"
@@ -137,7 +139,7 @@ def build_menu(status, busy=None, update=None, settings=None):
     """A list of dicts: {title, command, checked, enabled, children} or {separator: True}."""
     settings = settings or {"autoRefresh": True, "autoInstallUpdates": True, "autostart": False, "canSelfUpdate": True}
     idle = busy is None
-    items = []
+    items = [{"title": "Open Switchr", "command": ("dashboard",)}, {"separator": True}]
     if busy:
         items += [{"title": busy, "enabled": False}, {"separator": True}]
     if status:
@@ -163,7 +165,6 @@ def build_menu(status, busy=None, update=None, settings=None):
         items.append({"title": "Reading your accounts…", "enabled": False})
 
     items.append({"title": "Refresh now", "command": ("refresh",), "enabled": idle})
-    items.append({"title": "Insights", "command": ("insights",)})
     if status:
         manage = []
         for tool in status["tools"]:
@@ -286,6 +287,16 @@ def run_tray(argv):
     except (ValueError, ImportError):
         Notify = None
 
+    def load_webkit():
+        for version in ("4.1", "4.0"):
+            try:
+                gi.require_version("WebKit2", version)
+                from gi.repository import WebKit2
+                return WebKit2
+            except (ValueError, ImportError):
+                continue
+        return None
+
     fixture = argv[argv.index("--status-file") + 1] if "--status-file" in argv and argv.index("--status-file") + 1 < len(argv) else None
 
     runtime = os.environ.get("XDG_RUNTIME_DIR") or os.path.join("/tmp", f"switchr-{os.getuid()}")
@@ -343,6 +354,7 @@ def run_tray(argv):
             self.update = None
             self.busy = None
             self.icon_path = None
+            self.window = None
             self.notifications = []
             self.settings = Settings()
             self.cli = cli_path()
@@ -400,6 +412,56 @@ def run_tray(argv):
                 GLib.idle_add(lambda: done(*outcome) and False)
 
             threading.Thread(target=work, daemon=True).start()
+
+        # Switchr's window
+
+        def open_dashboard(self):
+            """Shows the dashboard in a WebKit window when WebKitGTK is installed, otherwise lets
+            switchr open it in a browser app window."""
+            if self.window is not None:
+                self.window.present()
+                return
+            webkit = load_webkit()
+            if webkit is None:
+                subprocess.Popen([self.cli, "dashboard"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL, start_new_session=True)
+                return
+
+            def start():
+                try:
+                    server = subprocess.Popen([self.cli, "dashboard", "--no-open", "--json"], stdin=subprocess.DEVNULL,
+                                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
+                    url = json.loads(server.stdout.readline())["url"]
+                except (OSError, ValueError, KeyError) as error:
+                    GLib.idle_add(lambda: self.notify("Couldn't open Switchr", str(error)) and False)
+                    return
+                GLib.idle_add(lambda: self.show_window(webkit, url) and False)
+
+            threading.Thread(target=start, daemon=True).start()
+
+        def show_window(self, webkit, url):
+            window = Gtk.Window(title="Switchr")
+            window.set_default_size(1360, 900)
+            window.set_icon_name(APP_ID)
+            view = webkit.WebView()
+            view.set_background_color(Gdk.RGBA(0.03, 0.07, 0.05, 1))
+            view.load_uri(url)
+            window.add(view)
+            window.connect("destroy", lambda _window: self.close_dashboard(url))
+            window.show_all()
+            self.window = window
+
+        def close_dashboard(self, url):
+            """Stops the dashboard's server when its window closes."""
+            self.window = None
+            parts = urllib.parse.urlsplit(url)
+            token = urllib.parse.parse_qs(parts.fragment).get("k", [""])[0]
+            request = urllib.request.Request(f"http://{parts.netloc}/api/close", data=b"{}", method="POST",
+                                             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+            try:
+                urllib.request.urlopen(request, timeout=2).close()
+            except OSError:
+                pass
 
         def after_edit(self, failure):
             """Reloads the accounts after a rename, removal or budget change, and reports a failure."""
@@ -641,8 +703,8 @@ def run_tray(argv):
             elif kind == "refresh":
                 self.refresh()
 
-            elif kind == "insights":
-                self.run(["insights"], lambda code, _o, stderr: code == 0 or self.notify("Couldn't open Insights", self.error_text(code, stderr)))
+            elif kind == "dashboard":
+                self.open_dashboard()
 
             elif kind == "rename":
                 tool, account = find_account(self.status, command[1])

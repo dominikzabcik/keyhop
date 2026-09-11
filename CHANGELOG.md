@@ -5,8 +5,8 @@
 - Linux and Windows. Switchr now runs on every major desktop:
   - **Linux:** a tray menu with the same accounts, limits, switching, alerts and updates as the Mac app. It ships as an RPM for Fedora, a DEB for Debian and Ubuntu, and a package for Arch Linux. A portable build installs into `~/.local` on any other distribution, on x86_64 and aarch64.
   - **Windows 10 and 11:** a notification-area app with the same menu, toasts with a Switch button, and Open at sign-in. It installs per user with one PowerShell line, or through Scoop.
-- The `switchr` command, on all three systems: `status`, `refresh`, `switch`, `add`, `rename`, `remove`, `usage`, `insights`, `budget`, `update`, `doctor` and `reset`, each with `--json` output. On macOS the app binary answers the same commands.
-- `switchr insights` writes a self-contained Insights page and opens it in your browser: usage by account over time, API value, models, current limits and budgets, for today, 7 days, this month or 30 days.
+- The `switchr` command, on all three systems: `status`, `refresh`, `switch`, `add`, `rename`, `remove`, `usage`, `dashboard`, `insights`, `budget`, `update`, `doctor` and `reset`, each with `--json` output. On macOS the app binary answers the same commands.
+- The Switchr dashboard, a clean app window with Overview, Accounts, Usage, Budgets and Settings: switch, add, rename and remove accounts, usage charts, a 26-week activity grid with streaks, token mix, models, budgets with their monthly pace, update checks and the tools Switchr found. `switchr dashboard` serves it on 127.0.0.1 only, behind a random session key. The Windows tray opens it on a click and the Linux tray from its menu. `switchr insights --output` saves it as one file.
 - Saved logins stay in each system's own secret store:
   - **macOS:** the login Keychain.
   - **Linux:** the Secret Service (GNOME Keyring or KWallet), or private files when no keyring runs.
@@ -15,8 +15,8 @@
 - The Linux and Windows trays rename and remove accounts, set a monthly budget, and have switches for automatic usage checks, automatic updates and opening at sign-in. They tell you once when a new version is out.
 - Arch Linux users can build the `switchr-bin` PKGBUILD, and each release carries winget manifests. Windows on Arm runs the x86_64 build.
 - The one-line installer detects Linux and installs the matching package. On macOS it links the `switchr` command onto your PATH, as the new Homebrew cask does.
-- `switchr status --sample` and `switchr insights --sample` show made-up accounts, for trying Switchr out and for screenshots.
-- The switching rules are shared by every platform and covered by new tests, as are alerts, the command line, secret storage and the Insights page.
+- `switchr status --sample` and `switchr dashboard --sample` show made-up accounts, for trying Switchr out and for screenshots.
+- The switching rules are shared by every platform and covered by new tests, as are alerts, the command line, secret storage and the dashboard's server and access checks.
 
 ## [0.6.1]
 

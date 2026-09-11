@@ -404,59 +404,33 @@ enum Commands {
         #endif
     }
 
+    static func dashboard(_ args: inout Arguments) async throws {
+        let sample = args.flag("--sample")
+        let noOpen = args.flag("--no-open")
+        let json = args.flag("--json")
+        let section = try args.option("--section") ?? "overview"
+        guard Dashboard.sections.contains(section) else {
+            throw UsageError("Unknown section '\(section)'. Use \(Dashboard.sections.joined(separator: ", ")).")
+        }
+        try args.finish()
+        try await Dashboard.run(sample: sample, section: section, open: !noOpen, json: json)
+    }
+
+    /// Insights is the dashboard's Usage section; `--output` saves the dashboard as one file instead.
     static func insights(_ args: inout Arguments) async throws {
         let noOpen = args.flag("--no-open")
         let skipLogs = args.flag("--no-read")
         let sample = args.flag("--sample")
         let output = try args.option("--output")
-        let word = try args.option("--range") ?? "week"
-        guard let initial = InsightsRange(argument: word) else {
-            throw UsageError("Unknown range '\(word)'. Use today, week, month or 30d.")
-        }
         try args.finish()
 
-        if sample {
-            let now = Date()
-            let overview = SampleData.overview(now: now)
-            let page = InsightsPage.render(InsightsPage.Input(
-                generatedAt: now, accounts: overview.accounts, active: overview.active, usage: overview.usage,
-                ranges: SampleData.ranges(now: now), budgets: overview.budgets, budgetSpend: overview.budgetSpend, initial: initial
-            ))
-            let file = output.map { URL(fileURLWithPath: $0) }
-                ?? FileManager.default.temporaryDirectory.appendingPathComponent("switchr-insights-sample.html")
-            try Files.writeAtomically(Data(page.utf8), to: file)
-            print(file.path)
-            if !noOpen { _ = Desktop.open(file.absoluteString) }
+        guard let output else {
+            try await Dashboard.run(sample: sample, section: "usage", open: !noOpen, json: false)
             return
         }
-
-        let workspace = try Workspace.open()
-        if !skipLogs { try await workspace.tracker.ingestLocalLogs() }
-        let now = Date()
-        let service = workspace.service
-        let sole = await service.soleAccounts
-        var ranges: [InsightsPage.RangeData] = []
-        for range in InsightsRange.allCases {
-            let digest = try await workspace.tracker.digest(interval: range.interval(now: now), previous: range.previous(now: now),
-                                                            bucket: range.bucket, provider: nil, sole: sole)
-            ranges.append(InsightsPage.RangeData(range: range, interval: range.interval(now: now), digest: digest))
-        }
-        let accounts = await service.accounts
-        let saved = Set(accounts.map(\.id))
-        let budgets = try await workspace.tracker.budgets()
-        let page = InsightsPage.render(InsightsPage.Input(
-            generatedAt: workspace.state.refreshedAt.map { max($0, now) } ?? now,
-            accounts: accounts,
-            active: workspace.state.activeByTool.filter { saved.contains($0.value) },
-            usage: workspace.state.usageByID,
-            ranges: ranges,
-            budgets: budgets,
-            budgetSpend: try await workspace.tracker.budgetSpend(for: budgets, now: now, sole: sole),
-            initial: initial
-        ))
-
-        let file = output.map { URL(fileURLWithPath: $0) } ?? Platform.dataDirectory.appendingPathComponent("insights.html")
-        // It lists account emails, so it gets the same private permissions as everything else here.
+        let page = try await Dashboard.staticPage(sample: sample, readLogs: !skipLogs)
+        let file = URL(fileURLWithPath: output)
+        // It lists account emails, so it gets the same private permissions as everything else Switchr writes.
         try Files.writeAtomically(Data(page.utf8), to: file)
         print(file.path)
         if !noOpen, !Desktop.open(file.absoluteString) {
@@ -467,30 +441,39 @@ enum Commands {
     static func doctor(_ args: inout Arguments) async throws {
         let json = args.flag("--json")
         try args.finish()
+        let document = await doctorDocument(sample: false)
+        if json { try Output.json(document) } else { print(Reports.doctor(document)) }
+    }
+
+    /// What Switchr can see on this computer. Sample data reads no logins.
+    static func doctorDocument(sample: Bool) async -> DoctorDocument {
         var tools: [DoctorDocument.Tool] = []
+        let sampleEmails: [Provider: String] = [.claude: "me@personal.dev", .cursor: "me@personal.dev", .codex: "me@personal.dev"]
         for provider in Provider.allCases {
-            guard let adapter = Adapters.all[provider] else { continue }
             var email: String?
             var problem: String?
-            do {
-                email = try await adapter.readLive()?.email
-            } catch {
-                problem = error.localizedDescription
+            if sample {
+                email = sampleEmails[provider]
+            } else if let adapter = Adapters.all[provider] {
+                do {
+                    email = try await adapter.readLive()?.email
+                } catch {
+                    problem = error.localizedDescription
+                }
             }
-            tools.append(DoctorDocument.Tool(id: provider.rawValue, name: provider.name, installed: ToolDetection.installed(provider),
+            tools.append(DoctorDocument.Tool(id: provider.rawValue, name: provider.name, installed: sample || ToolDetection.installed(provider),
                                              signedInAs: email, problem: problem, loginLocation: ToolDetection.loginLocation(provider)))
         }
-        let document = DoctorDocument(
+        return DoctorDocument(
             version: AppVersion.current,
             platform: Platform.name,
             dataDirectory: Platform.dataDirectory.path,
-            secretStore: Vault().storeName,
-            savedAccounts: AccountService.loadAccounts(from: Platform.dataDirectory).count,
+            secretStore: sample ? "sample data" : Vault().storeName,
+            savedAccounts: sample ? SampleData.accounts().count : AccountService.loadAccounts(from: Platform.dataDirectory).count,
             tools: tools,
             trayInstalled: ToolDetection.trayInstalled,
             statusNotifierHost: ToolDetection.statusNotifierHost
         )
-        if json { try Output.json(document) } else { print(Reports.doctor(document)) }
     }
 
     static func reset(_ args: inout Arguments) async throws {

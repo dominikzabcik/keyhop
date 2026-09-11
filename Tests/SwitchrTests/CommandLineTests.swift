@@ -132,9 +132,10 @@ final class TrayContractTests: XCTestCase {
     }
 
     func testSampleDataFillsEveryRangeWithoutRealLogins() {
-        let ranges = SampleData.ranges()
-        XCTAssertEqual(ranges.count, InsightsRange.allCases.count)
-        for range in ranges { XCTAssertGreaterThan(range.digest.total.requests, 0, range.range.title) }
+        let now = Date()
+        for range in InsightsRange.allCases {
+            XCTAssertGreaterThan(SampleData.digest(range: range, accounts: SampleData.accounts(now: now), now: now).total.requests, 0, range.title)
+        }
         XCTAssertTrue(SampleData.accounts().allSatisfy { $0.email.hasSuffix(".dev") })
     }
 
@@ -157,35 +158,76 @@ final class DigestAndPageTests: XCTestCase {
         XCTAssertEqual(SHA256Digest.hex(million), "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0")
     }
 
-    func testChartScaleRoundsUpToReadableSteps() {
-        XCTAssertEqual(InsightsPage.niceCeiling(0), 1)
-        XCTAssertEqual(InsightsPage.niceCeiling(830), 1000)
-        XCTAssertEqual(InsightsPage.niceCeiling(2_100_000), 2_500_000)
-        XCTAssertEqual(InsightsPage.niceCeiling(4.2), 5)
+}
+
+final class DashboardTests: XCTestCase {
+    private func request(_ method: String, _ headers: [String: String]) -> HTTPRequest {
+        HTTPRequest(method: method, path: "/api/state", query: [:], headers: headers, body: Data())
     }
 
-    func testPageEscapesAccountNamesAndKeepsEveryRangeReadable() {
+    func testRequestHeadsParseAndJunkIsRejected() throws {
+        let head = try XCTUnwrap(LoopbackServer.parseHead(Data("POST /api/usage?range=30d&tool=claude HTTP/1.1\r\nHost: 127.0.0.1:8123\r\nContent-Type: application/json".utf8)))
+        XCTAssertEqual(head.method, "POST")
+        XCTAssertEqual(head.path, "/api/usage")
+        XCTAssertEqual(head.query["range"], "30d")
+        XCTAssertEqual(head.headers["host"], "127.0.0.1:8123")
+        XCTAssertNil(LoopbackServer.parseHead(Data("GARBAGE".utf8)))
+        XCTAssertNil(LoopbackServer.parseHead(Data("GET http://elsewhere.test/ HTTP/1.1".utf8)))
+        XCTAssertNil(LoopbackServer.parseHead(Data("GET / HTTP/1.1\r\nno colon here".utf8)))
+    }
+
+    func testTheAPINeedsTheTokenTheLoopbackHostAndJSON() {
+        let token = "0123abcd", port: UInt16 = 8123
+        let good = ["host": "127.0.0.1:8123", "authorization": "Bearer 0123abcd"]
+        XCTAssertNil(DashboardAccess.problem(with: request("GET", good), token: token, port: port))
+        XCTAssertNotNil(DashboardAccess.problem(with: request("GET", good.merging(["authorization": "Bearer nope"]) { $1 }), token: token, port: port))
+        XCTAssertNotNil(DashboardAccess.problem(with: request("GET", ["host": "127.0.0.1:8123"]), token: token, port: port))
+        XCTAssertNotNil(DashboardAccess.problem(with: request("GET", good.merging(["host": "rebound.test:8123"]) { $1 }), token: token, port: port))
+        XCTAssertNotNil(DashboardAccess.problem(with: request("GET", good.merging(["origin": "https://elsewhere.test"]) { $1 }), token: token, port: port))
+        XCTAssertNotNil(DashboardAccess.problem(with: request("POST", good.merging(["content-type": "text/plain"]) { $1 }), token: token, port: port))
+        XCTAssertNil(DashboardAccess.problem(with: request("POST", good.merging(["content-type": "application/json", "origin": "http://127.0.0.1:8123"]) { $1 }), token: token, port: port))
+    }
+
+    func testUsageDocumentFillsBucketsTheHeatmapAndStreaks() {
         let now = Date()
-        let account = Account(id: UUID(), provider: .claude, identity: "x", email: "a@x.dev", label: "<script>alert(1)</script>", plan: "Max", addedAt: now)
-        var digest = UsageDigest()
-        var totals = Totals()
-        totals.tokens.input = 1200
-        totals.cost = 0.4
-        totals.requests = 3
-        let key = AccountKey(provider: .claude, account: account.id)
-        digest.byAccount[key] = totals
-        digest.byModel["claude-opus-5"] = totals
-        digest.total = totals
-        digest.points = [UsageDigest.Point(start: Calendar.current.startOfDay(for: now), key: key, totals: totals)]
-        let ranges = InsightsRange.allCases.map { InsightsPage.RangeData(range: $0, interval: $0.interval(now: now), digest: digest) }
-        let html = InsightsPage.render(InsightsPage.Input(generatedAt: now, accounts: [account], active: [.claude: account.id],
-                                                          usage: [:], ranges: ranges, budgets: [], budgetSpend: [:], initial: .week))
-        XCTAssertFalse(html.contains("<script>alert"))
-        XCTAssertTrue(html.contains("&lt;script&gt;alert(1)&lt;/script&gt;"))
-        XCTAssertEqual(html.components(separatedBy: "<section class=\"range\"").count - 1, 4)
-        XCTAssertTrue(html.contains("data-range=\"week\">"), "The chosen range is visible without JavaScript")
-        XCTAssertTrue(html.contains("#C9821A"))
-        XCTAssertFalse(html.contains("—"))
+        let accounts = SampleData.accounts(now: now)
+        let daily = SampleData.digest(interval: DashboardUsage.heatmapInterval(now: now), bucket: .day, accounts: accounts, now: now)
+        let usage = DashboardUsage(range: .week, tool: nil, now: now, digest: SampleData.digest(range: .week, accounts: accounts, now: now),
+                                   daily: daily, accounts: accounts, active: [:])
+        XCTAssertEqual(usage.buckets.count, 7)
+        XCTAssertEqual(usage.series.first?.color, "#C9821A")
+        XCTAssertGreaterThanOrEqual(usage.heatmap.count, 176)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        XCTAssertEqual(usage.heatmap.last?.day, formatter.string(from: now))
+        XCTAssertLessThanOrEqual(usage.streak.current, usage.streak.longest)
+        XCTAssertGreaterThan(usage.streak.activeDays, 0)
+    }
+
+    func testStreaksCountBackFromTodayOrAQuietToday() {
+        func day(_ name: String, _ requests: Int) -> DashboardUsage.Day { DashboardUsage.Day(day: name, tokens: requests * 10, cost: 0, requests: requests) }
+        let days = [day("d1", 3), day("d2", 0), day("d3", 2), day("d4", 5), day("d5", 1), day("today", 0)]
+        XCTAssertEqual(DashboardUsage.streak(days: days, today: "today"), DashboardUsage.Streak(current: 3, longest: 3, activeDays: 4))
+        let broken = [day("d1", 2), day("d2", 0), day("today", 0)]
+        XCTAssertEqual(DashboardUsage.streak(days: broken, today: "today").current, 0)
+    }
+
+    func testThePageEmbedsDataSafelyAndCarriesTheMarks() {
+        let page = DashboardPage.render(boot: #"{"mode":"static","name":"</script><script>alert(1)</script>"}"#)
+        XCTAssertFalse(page.contains("</script><script>alert(1)"))
+        XCTAssertTrue(page.contains(#"</script>"#))
+        XCTAssertFalse(page.contains("{{mark-"))
+        XCTAssertFalse(page.contains("{{boot}}"))
+        XCTAssertFalse(page.contains("—"))
+    }
+
+    func testStaticSampleExportHasEveryRange() async throws {
+        let page = try await Dashboard.staticPage(sample: true, readLogs: false)
+        for range in InsightsRange.allCases {
+            XCTAssertTrue(page.contains(#""range":"\#(range.argument)""#), range.argument)
+        }
+        XCTAssertTrue(page.contains(#""mode":"static""#))
     }
 }
 

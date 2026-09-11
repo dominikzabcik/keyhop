@@ -223,22 +223,53 @@ jobs:
           path: artifacts
 
       - name: Install Switchr and a virtual display
-        run: dnf install -y artifacts/*.rpm xorg-x11-server-Xvfb dbus-daemon ImageMagick google-noto-sans-fonts >/dev/null
+        run: dnf install -y artifacts/*.rpm xorg-x11-server-Xvfb dbus-daemon ImageMagick google-noto-sans-fonts webkit2gtk4.1 >/dev/null
 
-      - name: Run the tray and capture its menu and a prompt
+      - name: Capture the tray's menu, a prompt and the dashboard
+        env:
+          # WebKit's own sandbox can't start inside an unprivileged CI container.
+          WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS: "1"
         run: |
           export XDG_RUNTIME_DIR=/tmp/runtime && mkdir -m 700 -p $XDG_RUNTIME_DIR
           switchr status --sample --json > sample.json
-          Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &
+          Xvfb :99 -screen 0 1440x900x24 >/dev/null 2>&1 &
           export DISPLAY=:99 && sleep 2
-          dbus-run-session -- sh -c '
+
+          switchr dashboard --sample --no-open --json > dashboard.json &
+          sleep 3
+          url=$(sed -n 's/.*"url":"\([^"]*\)".*/\1/p' dashboard.json)
+          cat > window.py <<'PY'
+          import sys
+          import gi
+          gi.require_version("Gtk", "3.0")
+          gi.require_version("WebKit2", "4.1")
+          from gi.repository import Gtk, WebKit2
+          window = Gtk.Window(title="Switchr")
+          window.set_decorated(False)
+          window.set_default_size(1440, 900)
+          window.move(0, 0)
+          view = WebKit2.WebView()
+          view.load_uri(sys.argv[1])
+          window.add(view)
+          window.show_all()
+          Gtk.main()
+          PY
+          timeout 40 dbus-run-session -- python3 window.py "$url" > webkit.log 2>&1 &
+          sleep 15
+          import -window root linux-dashboard.png
+          wait || true
+          grep -iE "error|traceback" webkit.log || true
+
+          # Output goes to a file: accessibility helpers GTK starts outlive the session and would hold a pipe open.
+          timeout 120 dbus-run-session -- sh -c '
             timeout 20 switchr-tray --status-file sample.json --show-menu & sleep 6
             import -window root linux-menu.png
             wait
             timeout 20 switchr-tray --status-file sample.json --show-dialog & sleep 6
             import -window root linux-dialog.png
             wait
-          ' 2>&1 | grep -v "^dbus-daemon" || true
+          ' > tray.log 2>&1 || true
+          grep -iE "error|traceback" tray.log || true
           ls -l linux-*.png
 
       - uses: actions/upload-artifact@v7
@@ -338,12 +369,12 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
-          pattern: "{linux,windows}-*"
-          merge-multiple: true
-          path: dist
+          path: artifacts
       - name: Render and check them
         run: |
-          cd dist && sha256sum -- *.zip *.tar.gz *.rpm *.deb *.pkg.tar.zst > SHA256SUMS && cd ..
+          mkdir dist
+          find artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.rpm' -o -name '*.deb' -o -name '*.pkg.tar.zst' \) -exec cp {} dist/ \;
+          (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
           python3 scripts/render-manifests.py --version "$(cat VERSION)" --sums dist/SHA256SUMS --out rendered
           python3 -m json.tool rendered/bucket/switchr.json >/dev/null
           bash -n rendered/packaging/arch/PKGBUILD

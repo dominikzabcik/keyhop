@@ -44,11 +44,14 @@ enum SampleData {
             todayAll += totals
         }
 
+        // Budget spend comes from the same sample usage the charts show, so the numbers agree.
+        let monthCost = digest(range: .month, accounts: accounts, now: now).total.cost
+        let personalWeek = digest(range: .week, accounts: [accounts[0]], now: now).total.cost
         let budgets = [
-            Budget(scope: Budget.everything, amount: 600, period: .month),
-            Budget(scope: Budget.scope(for: accounts[0].id), amount: 50, period: .week),
+            Budget(scope: Budget.everything, amount: 250, period: .month),
+            Budget(scope: Budget.scope(for: accounts[0].id), amount: 60, period: .week),
         ]
-        let spend = [Budget.everything: 412.6, Budget.scope(for: accounts[0].id): 21.4]
+        let spend = [Budget.everything: monthCost, Budget.scope(for: accounts[0].id): personalWeek]
         let forecasts = [AlertRules.forecastKey(accounts[4].id, "5h"): now.addingTimeInterval(26 * 60)]
         return Overview(
             accounts: accounts, active: active, usage: usage, today: today, todayAll: todayAll,
@@ -59,19 +62,16 @@ enum SampleData {
         )
     }
 
-    static func ranges(now: Date = Date()) -> [InsightsPage.RangeData] {
-        let accounts = accounts(now: now)
-        return InsightsRange.allCases.map { range in
-            InsightsPage.RangeData(range: range, interval: range.interval(now: now), digest: digest(range: range, accounts: accounts, now: now))
-        }
+    static func digest(range: InsightsRange, accounts: [Account], now: Date) -> UsageDigest {
+        digest(interval: range.interval(now: now), bucket: range.bucket, accounts: accounts, now: now)
     }
 
-    /// Smooth, repeatable usage: a daily rhythm for today, a weekly wave for longer ranges.
-    static func digest(range: InsightsRange, accounts: [Account], now: Date) -> UsageDigest {
+    /// Smooth, repeatable usage: a working-day rhythm by the hour, and by the day a weekly wave with
+    /// quieter weekends and the odd day off.
+    static func digest(interval: DateInterval, bucket: Bucket, accounts: [Account], now: Date) -> UsageDigest {
         var digest = UsageDigest()
-        let interval = range.interval(now: now)
         let calendar = Calendar.current
-        let component: Calendar.Component = range.bucket == .hour ? .hour : .day
+        let component: Calendar.Component = bucket == .hour ? .hour : .day
         let models = ["claude-opus-5", "gpt-5.6-sol", "composer-2", "claude-sonnet-5", "claude-haiku-4-5"]
         var start = interval.start
         var index = 0.0
@@ -80,11 +80,17 @@ enum SampleData {
         while start < end {
             for (i, account) in accounts.enumerated() {
                 let hour = Double(calendar.component(.hour, from: start))
-                // A working-day curve with a quiet floor, so night hours aren't empty.
-                let daily = range.bucket == .hour ? max(0.08, sin((hour - 7) / 14 * .pi)) : 1
+                let daily: Double
+                if bucket == .hour {
+                    // A working-day curve with a quiet floor, so night hours aren't empty.
+                    daily = max(0.08, sin((hour - 7) / 14 * .pi))
+                } else {
+                    let weekday = calendar.component(.weekday, from: start)
+                    daily = Int(index) % 13 == 5 ? 0 : weekday == 1 ? 0.25 : weekday == 7 ? 0.45 : 1
+                }
                 let wave = 0.55 + 0.45 * sin(index * 0.9 + Double(i) * 1.7)
                 let base = Double([2_600_000, 1_300_000, 1_900_000, 600_000, 2_200_000][i % 5])
-                let tokens = Int(base * wave * daily * (range.bucket == .hour ? 0.12 : 1))
+                let tokens = Int(base * wave * daily * (bucket == .hour ? 0.12 : 1))
                 guard tokens > 0 else { continue }
                 let cost = Double(tokens) / 1_000_000 * [2.9, 2.2, 1.1, 0.8, 1.5][i % 5]
                 let totals = Totals(tokens: TokenCounts(input: tokens / 20, cacheRead: tokens * 3 / 4, output: tokens / 5), cost: cost,

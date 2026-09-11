@@ -17,6 +17,10 @@ Never include real tokens, Keychain or keyring contents, `.credentials.json` or 
 - **Account names and labels:** `accounts.json` in Switchr's data folder. This file holds no tokens.
 - Nothing is sent anywhere except the providers' own usage and token-refresh endpoints, called with each account's own token, and GitHub for updates.
 
+## The dashboard
+
+`switchr dashboard` serves Switchr's window on 127.0.0.1, never on a network interface. The address it opens carries a random 256-bit session key. Every API request must send that key, with a loopback Host header (so a website can't reach it through DNS rebinding), and changes must be JSON requests from the same origin. The server stops 15 minutes after its last window closes. The key is visible to your own user in that window's address and, while the window opens, in a process list.
+
 ## Known trade-offs
 
 - On macOS, Keychain writes pass the credential to `/usr/bin/security` as an argument, where other processes running as your user can briefly see it. `security -i` would avoid that, but it splits long input.

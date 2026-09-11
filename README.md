@@ -9,12 +9,12 @@
 
 <p align="center">
   <a href="https://github.com/dominikzabcik/switchr/actions/workflows/ci.yml"><img src="https://github.com/dominikzabcik/switchr/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/dominikzabcik/switchr/releases/latest"><img src="https://img.shields.io/github/v/release/dominikzabcik/switchr?label=release&color=1B3329" alt="Latest release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-1B3329" alt="MIT license"></a>
+  <a href="https://github.com/dominikzabcik/switchr/releases/latest"><img src="https://img.shields.io/github/v/release/dominikzabcik/switchr?label=release&color=171717" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-171717" alt="MIT license"></a>
 </p>
 
 <p align="center">
-  <sub>macOS 14+ menu bar · Linux tray on x86_64 and aarch64 · Windows 10 and 11 notification area</sub>
+  <sub>macOS 14+ app and menu bar · Linux tray on x86_64 and aarch64 · Windows 10 and 11 notification area</sub>
 </p>
 
 <p align="center">
@@ -58,7 +58,7 @@ Every Linux download runs on x86_64 and aarch64. The `switchr` binary is fully s
 
 Switchr isn't notarized, so macOS blocks the first launch from the disk image. Open **System Settings › Privacy & Security** and choose **Open Anyway**. If you launch Switchr straight from the disk image or from Downloads, it offers to move itself into Applications.
 
-On first launch, a welcome window lists the logins Switchr found and turns on Open at login.
+On first launch, a welcome window lists the logins Switchr found and turns on Open at login, then Switchr's window opens. Opening Switchr again from Applications, Spotlight or the Dock brings the window back; at login it starts quietly in the menu bar.
 
 <p align="center">
   <img src="docs/welcome.png" width="420" alt="Switchr's welcome window listing the Claude Code, Cursor and Codex logins it found">
@@ -83,8 +83,8 @@ GNOME hides tray icons unless the **AppIndicator and KStatusNotifierItem Support
 | **Add an account** | Sign in to the tool as usual and Switchr saves the login. For another account, choose **Add account**: Switchr signs the tool out on this computer only, so the saved token stays valid, and saves the next login you make. |
 | **Switch** | Click one of a tool's other accounts. Each shows how much of its tightest limit is used. On macOS, when the account in use runs low, the one with the most room is marked, and you can right-click an account to rename or remove it. |
 | **Read the limits** | macOS shows the account in use with a large bar per limit, where a tick marks an even pace. On Linux and Windows, the menu shows each account's tightest limit and the icon shows the busiest account's two nearest limits. |
-| **Rename, remove and budgets** | On macOS, right-click an account, and set budgets in Insights. On Linux and Windows, use the tray's **Accounts** submenu to rename or remove an account, and **Set a budget** for a monthly budget across all accounts. |
-| **Dashboard** | Switchr's window: Overview, Accounts, Usage (charts, activity, token mix, models), Budgets and Settings. Click the tray icon on Windows, choose **Open Switchr** in the Linux tray, or run `switchr dashboard` anywhere. The Mac app also has its own Insights window. |
+| **Rename, remove and budgets** | On macOS, right-click an account in the menu, or use Switchr's window, which also sets budgets. On Linux and Windows, use the tray's **Accounts** submenu to rename or remove an account, and **Set a budget** for a monthly budget across all accounts. |
+| **Dashboard** | Switchr's window: Overview, Accounts, Usage (charts, activity, token mix, models), Budgets and Settings. On macOS, open Switchr from Applications or choose **Open Switchr** in the menu. Click the tray icon on Windows, choose **Open Switchr** in the Linux tray, or run `switchr dashboard` anywhere. |
 | **Alerts** | A notification when a limit or budget is nearly used, with a **Switch** button that moves you to the saved account with the most room. |
 
 Codex logins made with an API key aren't supported, only ChatGPT sign-ins.
@@ -120,7 +120,7 @@ Switchr keeps its own record of what every account uses.
 
 - **Per account:** each request is credited to the account that was in use at that moment. Switchr records every switch, including logins you change outside it. Usage from before Switchr started goes to the tool's only saved account when there's one.
 - **API value:** requests are priced at each provider's standard API rates, from a table generated from [models.dev](https://models.dev). Subscriptions don't bill per token, so API value measures how much use you get, not what you pay. Cursor's on-demand charges are shown separately as billed.
-- **Budgets:** set one per account or across all accounts, per day, week or month, in Insights on macOS or with `switchr budget` anywhere. The Linux and Windows trays set a monthly budget across all accounts. Switchr notifies you at 80% and at 100%.
+- **Budgets:** set one per account or across all accounts, per day, week or month, in the Budgets section of Switchr's window or with `switchr budget` anywhere. The Linux and Windows trays set a monthly budget across all accounts. Switchr notifies you at 80% and at 100%.
 - **Forecasts:** Switchr samples each limit and projects when it runs out at the recent rate. Once a limit is half used and on track to run out before it resets, the alert offers the switch.
 
 <p align="center">
@@ -184,14 +184,14 @@ Everything else stays on your computer:
 | | macOS | Linux | Windows |
 | --- | --- | --- | --- |
 | Saved logins | Login Keychain, service `dev.switchr.vault` | Secret Service (GNOME Keyring or KWallet) through `secret-tool`, or `0600` files in `~/.local/share/switchr/vault` when no keyring runs | Files encrypted with the Data Protection API for your user, in `%LOCALAPPDATA%\Switchr\vault` |
-| Accounts, usage history, Insights page | `~/Library/Application Support/Switchr` | `~/.local/share/switchr` | `%LOCALAPPDATA%\Switchr` |
+| Accounts and usage history | `~/Library/Application Support/Switchr` | `~/.local/share/switchr` | `%LOCALAPPDATA%\Switchr` |
 
 The account list holds no tokens, and the data folder is readable only by you. `SWITCHR_DATA_DIR` moves it, and `SWITCHR_SECRET_STORE=file` uses private files instead of a keyring.
 
 ## Security notes
 
 - On macOS, Keychain calls go through `/usr/bin/security`, so there are no access prompts. Writes pass the credential as an argument, where other processes running as your user can briefly see it. On Linux, logins reach `secret-tool` over stdin instead.
-- The dashboard is served by `switchr` on 127.0.0.1 only. Its window gets a random session key, every request must carry it, and requests from other websites or host names are refused. It stops 15 minutes after its last window closes.
+- The dashboard is served on 127.0.0.1 only, by the Mac app for its own window and by `switchr` elsewhere. Its window gets a random session key, every request must carry it, and requests from other websites or host names are refused. The `switchr` server stops 15 minutes after its last window closes.
 - On macOS, the Cursor login link travels through Launch Services and never appears in a process list. On Linux and Windows it's passed to Cursor's own executable as an argument, where other processes running as your user can briefly see it.
 - Releases aren't notarized or code-signed with a certificate. Every download is listed with its SHA-256 in the release's `SHA256SUMS`. Build from source if you'd rather not run a prebuilt binary.
 - The endpoints are the private ones the tools call themselves, so a provider update can break Switchr. If that happens, [open an issue](../../issues/new/choose). Report vulnerabilities privately, as described in [SECURITY.md](SECURITY.md).
@@ -221,7 +221,7 @@ swift test                            # unit tests, on macOS, Linux and Windows
 ./scripts/package-windows.ps1         # Windows: switchr.exe, switchr-tray.exe and the runtime in a zip
 python3 scripts/render-manifests.py   # Scoop, AUR and winget manifests from a release's SHA256SUMS
 python3 scripts/update-pricing.py     # refresh model prices from models.dev
-./scripts/render-art.sh               # re-render the icon, disk image background and banner
+./scripts/render-art.sh               # re-render the icons for every system, the disk image background and the banner
 ```
 
 The Linux build needs Swift 6.3.3 with the matching [static Linux SDK](https://www.swift.org/documentation/articles/static-linux-getting-started.html) and [nfpm](https://nfpm.goreleaser.com). The Windows build needs the Swift toolchain for Windows. See [CONTRIBUTING.md](CONTRIBUTING.md) for the code layout, the macOS debug flags and conventions.

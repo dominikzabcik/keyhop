@@ -274,19 +274,20 @@ enum TrayMenu {
     }
 }
 
-/// The menu bar glyph from the Mac app, drawn as pixels: the account's two nearest limits as two
-/// short tracks. Four samples per axis keep the rounded ends smooth at 16 px.
+/// Switchr's pixel mark from the dashboard and the Mac menu bar, drawn as pixels: two rows of four
+/// squares, each row lit as far as one of the account's two nearest limits is used. Four samples
+/// per axis keep the corners smooth at 16 px.
 enum TrayGlyph {
     /// Top-down, premultiplied BGRA.
     static func pixels(size: Int, values: [Double?], darkTaskbar: Bool) -> [UInt8] {
-        let ink: (Double, Double, Double) = darkTaskbar ? (237, 231, 217) : (10, 21, 16)
+        let ink: (Double, Double, Double) = darkTaskbar ? (235, 235, 235) : (23, 23, 23)
         let s = Double(size)
-        let trackWidth = (s * 0.875).rounded()
-        let trackHeight = max(3, (s * 0.22).rounded())
-        let gap = max(2, (s * 0.19).rounded())
-        let left = ((s - trackWidth) / 2).rounded()
-        let firstTop = ((s - trackHeight * 2 - gap) / 2).rounded()
-        let idle = values.isEmpty
+        let gap = max(1, (s / 16).rounded())
+        let square = ((s - gap * 3) / 4).rounded(.down)
+        let left = ((s - square * 4 - gap * 3) / 2).rounded(.down)
+        let top = ((s - square * 3) / 2).rounded(.down)
+        let radius = square * 0.25
+        let lit = levels(values)
 
         var buffer = [UInt8](repeating: 0, count: size * size * 4)
         for py in 0..<size {
@@ -298,14 +299,11 @@ enum TrayGlyph {
                         let y = Double(py) + (Double(sy) + 0.5) / 4
                         var sample = 0.0
                         for row in 0..<2 {
-                            let top = firstTop + Double(row) * (trackHeight + gap)
-                            guard inCapsule(x, y, left: left, top: top, width: trackWidth, height: trackHeight) else { continue }
-                            let raw = row < values.count ? values[row] : nil
-                            let filled = raw.map { max(trackHeight, trackWidth * min(max($0, 0), 1)) } ?? 0
-                            if let raw, raw > 0, inCapsule(x, y, left: left, top: top, width: filled, height: trackHeight) {
-                                sample = 1
-                            } else {
-                                sample = idle ? 0.6 : 0.34
+                            for column in 0..<4 {
+                                let squareLeft = left + Double(column) * (square + gap)
+                                let squareTop = top + Double(row) * square * 2
+                                guard inSquare(x, y, left: squareLeft, top: squareTop, side: square, radius: radius) else { continue }
+                                sample = 0.3 + 0.7 * min(max(lit[row] - Double(column), 0), 1)
                             }
                         }
                         alpha += sample / 16
@@ -321,10 +319,19 @@ enum TrayGlyph {
         return buffer
     }
 
-    private static func inCapsule(_ x: Double, _ y: Double, left: Double, top: Double, width: Double, height: Double) -> Bool {
-        let radius = height / 2
-        let cy = top + radius
-        let cx = min(max(x, left + radius), left + width - radius)
+    /// Lit squares per row, 0...4. With no limits read it's the logo: three on top, one below.
+    static func levels(_ values: [Double?]) -> [Double] {
+        guard !values.isEmpty else { return [3, 1] }
+        return (0..<2).map { row in
+            guard row < values.count, let value = values[row] else { return 0 }
+            return min(max(value, 0), 1) * 4
+        }
+    }
+
+    private static func inSquare(_ x: Double, _ y: Double, left: Double, top: Double, side: Double, radius: Double) -> Bool {
+        guard x >= left, x <= left + side, y >= top, y <= top + side else { return false }
+        let cx = min(max(x, left + radius), left + side - radius)
+        let cy = min(max(y, top + radius), top + side - radius)
         let dx = x - cx, dy = y - cy
         return dx * dx + dy * dy <= radius * radius
     }

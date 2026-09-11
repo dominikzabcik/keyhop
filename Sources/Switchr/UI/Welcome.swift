@@ -8,10 +8,13 @@ enum WelcomeWindow {
     private static var window: NSWindow?
     private static let seenKey = "welcomeSeen"
 
-    /// Shown on first launch, and whenever Switchr runs from outside Applications.
-    static func showIfNeeded(_ store: AccountStore) {
-        guard Relocator.canMove || !UserDefaults.standard.bool(forKey: seenKey) else { return }
+    /// Shown on first launch, and whenever Switchr runs from outside Applications. Returns whether
+    /// it showed.
+    @discardableResult
+    static func showIfNeeded(_ store: AccountStore) -> Bool {
+        guard Relocator.canMove || !UserDefaults.standard.bool(forKey: seenKey) else { return false }
         show(store)
+        return true
     }
 
     /// `markSeen: false` and `canMove: false` let `--preview-welcome` show the finished state
@@ -19,13 +22,14 @@ enum WelcomeWindow {
     static func show(_ store: AccountStore, canMove: Bool = Relocator.canMove, markSeen: Bool = true) {
         if window == nil {
             let root = WelcomeView(canMove: canMove) { dismiss(store, markSeen: markSeen) }.environmentObject(store)
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 580),
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 500),
                                   styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
             window.isMovableByWindowBackground = true
             window.isReleasedWhenClosed = false
             window.appearance = NSAppearance(named: .darkAqua)
+            window.backgroundColor = Brand.backgroundColor
             window.contentView = NSHostingView(rootView: root)
             window.center()
             self.window = window
@@ -41,6 +45,8 @@ enum WelcomeWindow {
         window?.close()
         window = nil
         store.pointAtMenuBar()
+        // A real first run goes on into Switchr's window; the preview just closes.
+        if markSeen { AppWindow.show() }
     }
 }
 
@@ -54,58 +60,62 @@ struct WelcomeView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HandoffMark()
-                .frame(width: 124, height: 124)
-                .padding(.top, 56)
+            PixelMark(animated: true)
+                .frame(width: 66, height: 36)
+                .padding(.top, 58)
 
             Text("Switchr")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundStyle(Brand.bone)
-                .padding(.top, 26)
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(Brand.text)
+                .padding(.top, 24)
             Text("Your AI accounts, one click apart.")
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-                .padding(.top, 6)
+                .font(.system(size: 13.5))
+                .foregroundStyle(Brand.muted)
+                .padding(.top, 4)
 
-            VStack(spacing: 15) {
-                ForEach(Provider.allCases) { DetectionRow(provider: $0) }
+            VStack(spacing: 0) {
+                ForEach(Array(Provider.allCases.enumerated()), id: \.offset) { index, provider in
+                    if index > 0 { RowDivider() }
+                    DetectionRow(provider: provider)
+                }
             }
-            .padding(.top, 38)
-            .padding(.horizontal, 50)
+            .card()
+            .padding(.top, 32)
+            .padding(.horizontal, 32)
 
-            Spacer(minLength: 24)
+            Spacer(minLength: 20)
 
             if !canMove {
                 Toggle("Open Switchr at login", isOn: $openAtLogin)
-                    .toggleStyle(.checkbox)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, 16)
+                    .toggleStyle(CheckboxStyle())
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Brand.muted)
+                    .padding(.bottom, 14)
             }
 
             Button(action: primaryAction) {
-                Text(canMove ? "Move to Applications" : "Done")
+                Text(canMove ? "Move to Applications" : "Open Switchr")
             }
-            .buttonStyle(BoneButtonStyle())
+            .buttonStyle(AppButtonStyle(kind: .primary, size: .large, fullWidth: true))
             .keyboardShortcut(.defaultAction)
-            .padding(.horizontal, 50)
+            .padding(.horizontal, 32)
 
             Text(problem ?? footnote)
-                .font(.system(size: 11))
-                .foregroundStyle(problem == nil ? .tertiary : .secondary)
+                .font(.system(size: 11.5))
+                .foregroundStyle(problem == nil ? Brand.subtle : Brand.bad)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 50)
+                .padding(.horizontal, 32)
                 .padding(.top, 12)
         }
         .padding(.bottom, 26)
-        .frame(width: 420, height: 580)
-        .background(Enamel())
+        .frame(width: 420, height: 500)
+        .background(Brand.background)
         .environment(\.colorScheme, .dark)
     }
 
     private var footnote: String {
-        canMove ? "Switchr copies itself there and reopens." : "Switchr keeps running in the menu bar."
+        canMove ? "Switchr copies itself there and reopens." : "Switchr also stays in the menu bar."
     }
 
     private func primaryAction() {
@@ -128,18 +138,20 @@ private struct DetectionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ProviderMark(provider: provider)
-                .frame(width: 15, height: 15)
+            ProviderMark(provider: provider, tint: Brand.text)
+                .frame(width: 16, height: 16)
             Text(provider.name)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Brand.bone)
+                .foregroundStyle(Brand.text)
             Spacer(minLength: 16)
             Text(status)
                 .font(.system(size: 12))
-                .foregroundStyle(saved.isEmpty ? .tertiary : .secondary)
+                .foregroundStyle(saved.isEmpty ? Brand.subtle : Brand.muted)
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
 
     private var saved: [Account] { store.accounts(for: provider) }
@@ -150,34 +162,6 @@ private struct DetectionRow: View {
         }
         if !saved.isEmpty { return saved.count == 1 ? "1 account saved" : "\(saved.count) accounts saved" }
         return store.lastRefresh == nil ? "Looking…" : "Not signed in"
-    }
-}
-
-struct BoneButtonStyle: ButtonStyle {
-    var compact = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        BoneButton(configuration: configuration, compact: compact)
-    }
-
-    private struct BoneButton: View {
-        let configuration: ButtonStyleConfiguration
-        let compact: Bool
-        @State private var hovering = false
-
-        var body: some View {
-            configuration.label
-                .font(.system(size: compact ? 12 : 13, weight: .semibold))
-                .foregroundStyle(Brand.enamelBottom)
-                .frame(maxWidth: .infinity, minHeight: compact ? 26 : 38)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Brand.bone.opacity(configuration.isPressed ? 0.78 : hovering ? 0.9 : 1))
-                )
-                .contentShape(Rectangle())
-                .onHover { hovering = $0 }
-                .animation(.easeOut(duration: 0.12), value: hovering)
-        }
     }
 }
 

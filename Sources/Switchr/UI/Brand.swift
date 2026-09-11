@@ -2,104 +2,165 @@
 import AppKit
 import SwiftUI
 
-/// Colors from the app icon. The menu itself stays on system materials; these carry the
-/// welcome window and the art.
+/// The dashboard's design tokens, so the menu, the welcome window and Switchr's window read as one
+/// app: near-black neutral surfaces, white at low opacity for edges and hover, and three colors
+/// that only ever mean a state.
 enum Brand {
-    static let enamelTop = Color(red: 0x1B / 255, green: 0x33 / 255, blue: 0x29 / 255)
-    static let enamelBottom = Color(red: 0x0A / 255, green: 0x15 / 255, blue: 0x10 / 255)
-    static let bone = Color(red: 0xED / 255, green: 0xE7 / 255, blue: 0xD9 / 255)
-    static let amber = Color(red: 0xCF / 255, green: 0x9F / 255, blue: 0x57 / 255)
-    static let rust = Color(red: 0xD2 / 255, green: 0x7A / 255, blue: 0x63 / 255)
-}
+    static let background = Color(white: 0.09)
+    static let sidebar = Color(white: 0.072)
+    static let panel = Color(white: 0.106)
+    static let raised = Color(white: 0.135)
+    static let raisedHover = Color(white: 0.16)
+    static let hover = Color.white.opacity(0.05)
+    static let selected = Color.white.opacity(0.1)
+    static let border = Color.white.opacity(0.08)
+    static let borderStrong = Color.white.opacity(0.14)
+    static let faint = Color.white.opacity(0.08)
+    static let text = Color(white: 0.92)
+    static let muted = Color(white: 0.63)
+    static let subtle = Color(white: 0.46)
+    static let primary = Color(white: 0.95)
+    static let onPrimary = Color(white: 0.09)
+    static let good = Color(hex: "#5CC98A")
+    static let warn = Color(hex: "#E3A64F")
+    static let bad = Color(hex: "#EE7A69")
 
-enum Grain {
-    static let image: NSImage = {
-        let size = 160
-        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: size, pixelsHigh: size, bitsPerSample: 8,
-                                   samplesPerPixel: 1, hasAlpha: false, isPlanar: false, colorSpaceName: .deviceWhite,
-                                   bytesPerRow: size, bitsPerPixel: 8)!
-        for i in 0..<(size * size) { rep.bitmapData![i] = UInt8.random(in: 0...255) }
-        let image = NSImage(size: NSSize(width: size / 2, height: size / 2))
-        image.addRepresentation(rep)
-        return image
-    }()
-}
+    static let backgroundColor = NSColor(srgbRed: 0.09, green: 0.09, blue: 0.09, alpha: 1)
 
-/// The icon's green-black enamel as a full-bleed surface.
-struct Enamel: View {
-    var body: some View {
-        ZStack {
-            LinearGradient(colors: [Brand.enamelTop, Brand.enamelBottom], startPoint: .top, endPoint: .bottom)
-            LinearGradient(colors: [.white.opacity(0.07), .clear], startPoint: .topLeading, endPoint: .center)
-            Image(nsImage: Grain.image)
-                .resizable(resizingMode: .tile)
-                .opacity(0.07)
-                .blendMode(.overlay)
-        }
-        .ignoresSafeArea()
+    static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight, design: .monospaced)
     }
 }
 
-/// The app icon drawn live: the two tracks trade usage back and forth, the way a switch hands
-/// work from one account to the other.
-struct HandoffMark: View {
+extension Color {
+    init(hex: String) {
+        let value = Int(hex.dropFirst(), radix: 16) ?? 0
+        self.init(red: Double((value >> 16) & 255) / 255, green: Double((value >> 8) & 255) / 255, blue: Double(value & 255) / 255)
+    }
+}
+
+extension View {
+    /// The dashboard's card: a panel one step above the background with a faint edge.
+    func card(radius: CGFloat = 10) -> some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        return background(shape.fill(Brand.panel))
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(Brand.border))
+    }
+}
+
+/// The line between rows of a list.
+struct RowDivider: View {
     var body: some View {
-        TimelineView(.animation) { context in
-            let progress = Self.handoff(at: context.date.timeIntervalSinceReferenceDate)
-            GeometryReader { geo in
-                let s = geo.size.width
-                ZStack {
-                    RoundedRectangle(cornerRadius: s * 0.225, style: .continuous)
-                        .fill(LinearGradient(colors: [Color(red: 0.13, green: 0.23, blue: 0.19), Brand.enamelBottom],
-                                             startPoint: .top, endPoint: .bottom))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: s * 0.225, style: .continuous)
-                                .strokeBorder(LinearGradient(colors: [.white.opacity(0.16), .clear], startPoint: .top, endPoint: .center), lineWidth: 1)
-                        )
-                        .shadow(color: Color.black.opacity(0.4), radius: s * 0.03, y: s * 0.025)
-                    VStack(spacing: s * 0.068) {
-                        MarkTrack(from: 0, to: 0.62 - 0.3 * progress, color: Brand.bone)
-                            .frame(height: s * 0.15)
-                        MarkTrack(from: 0.38 - 0.3 * progress, to: 1, color: Brand.amber)
-                            .frame(height: s * 0.15)
+        Rectangle().fill(Brand.border).frame(height: 1)
+    }
+}
+
+/// A small status label, as in the dashboard. `live` adds the green dot.
+struct Badge: View {
+    let text: String
+    var live = false
+
+    init(_ text: String, live: Bool = false) {
+        self.text = text
+        self.live = live
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            if live {
+                Circle().fill(Brand.good).frame(width: 6, height: 6)
+            }
+            Text(text.uppercased())
+                .font(.system(size: 10.5, weight: .semibold))
+                .tracking(0.3)
+        }
+        .foregroundStyle(Brand.muted)
+        .padding(.horizontal, 7)
+        .frame(height: 20)
+        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.white.opacity(0.07)))
+    }
+}
+
+/// Switchr's mark: two rows of four squares, as in the dashboard's sidebar. Animated, the lit
+/// squares hand over from one row to the other, the way a switch moves work between accounts.
+struct PixelMark: View {
+    var animated = false
+    var tint = Brand.text
+
+    static let logo = lit(top: 3, bottom: 1)
+
+    static func lit(top: Int, bottom: Int) -> [Bool] {
+        (0..<4).map { $0 < top } + (0..<4).map { $0 < bottom }
+    }
+
+    /// Holds at each end, then steps across.
+    static func handoff(step: Int) -> [Bool] {
+        let tops = [3, 3, 3, 2, 1, 1, 1, 2]
+        let top = tops[((step % tops.count) + tops.count) % tops.count]
+        return lit(top: top, bottom: 4 - top)
+    }
+
+    var body: some View {
+        if animated {
+            TimelineView(.periodic(from: .now, by: 0.3)) { context in
+                grid(Self.handoff(step: Int(context.date.timeIntervalSinceReferenceDate / 0.3)))
+            }
+        } else {
+            grid(Self.logo)
+        }
+    }
+
+    private func grid(_ lit: [Bool]) -> some View {
+        GeometryReader { geo in
+            let unit = min(geo.size.width / 22, geo.size.height / 12)
+            VStack(spacing: unit * 4) {
+                ForEach(0..<2, id: \.self) { row in
+                    HStack(spacing: unit * 2) {
+                        ForEach(0..<4, id: \.self) { column in
+                            RoundedRectangle(cornerRadius: unit, style: .continuous)
+                                .fill(tint)
+                                .opacity(lit[row * 4 + column] ? 1 : 0.22)
+                                .frame(width: unit * 4, height: unit * 4)
+                        }
                     }
-                    .frame(width: s * 0.728)
                 }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .animation(.easeOut(duration: 0.2), value: lit)
         }
-        .accessibilityLabel("Switchr")
-    }
-
-    /// Holds at each end of a five-second loop and eases across in between.
-    static func handoff(at time: TimeInterval) -> Double {
-        let t = (time / 5).truncatingRemainder(dividingBy: 1)
-        func ease(_ x: Double) -> Double { x * x * (3 - 2 * x) }
-        switch t {
-        case ..<0.35: return 0
-        case ..<0.5: return ease((t - 0.35) / 0.15)
-        case ..<0.85: return 1
-        default: return 1 - ease((t - 0.85) / 0.15)
-        }
+        .accessibilityHidden(true)
     }
 }
 
-private struct MarkTrack: View {
-    let from: Double
-    let to: Double
-    let color: Color
+/// One of the dashboard's line icons.
+struct Icon: View {
+    let name: String
+    var size: CGFloat = 14
+
+    init(_ name: String, size: CGFloat = 14) {
+        self.name = name
+        self.size = size
+    }
 
     var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.black.opacity(0.34))
-                Capsule()
-                    .fill(color)
-                    .frame(width: max(geo.size.height, w * (to - from)))
-                    .offset(x: w * from)
-            }
-            .clipShape(Capsule())
-        }
+        Image(nsImage: IconImages.image(name))
+            .renderingMode(.template)
+            .resizable()
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+    }
+}
+
+enum IconImages {
+    private static var cache: [String: NSImage] = [:]
+
+    static func image(_ name: String) -> NSImage {
+        if let cached = cache[name] { return cached }
+        let image = NSImage(data: Data(InterfaceIcons.svg(name).utf8)) ?? NSImage()
+        image.isTemplate = true
+        cache[name] = image
+        return image
     }
 }
 #endif

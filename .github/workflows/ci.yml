@@ -38,12 +38,14 @@ jobs:
           lipo -archs build/Switchr.app/Contents/MacOS/Switchr | grep -q arm64
           plutil -lint build/Switchr.app/Contents/Info.plist
           codesign --verify build/Switchr.app
+          # switchr:// opens the app's window.
+          plutil -extract CFBundleURLTypes.0.CFBundleURLSchemes.0 raw build/Switchr.app/Contents/Info.plist | grep -qx switchr
           build/Switchr.app/Contents/MacOS/Switchr version
           # Linked as `switchr`, the app binary is the command.
           ln -s "$PWD/build/Switchr.app/Contents/MacOS/Switchr" "$RUNNER_TEMP/switchr"
           "$RUNNER_TEMP/switchr" status --sample
 
-      - name: Render menu snapshots and the sample Insights page
+      - name: Render menu snapshots and the sample dashboard page
         run: |
           build/Switchr.app/Contents/MacOS/Switchr --snapshot "$RUNNER_TEMP/switchr"
           build/Switchr.app/Contents/MacOS/Switchr insights --sample --no-open --output "$RUNNER_TEMP/switchr-insights.html"

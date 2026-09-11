@@ -50,11 +50,34 @@ struct SwitchrApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Started at login, or relaunched after an automatic update: stay in the menu bar. Opened
+        // any other way (Finder, Launchpad, Spotlight, the Dock), open Switchr's window.
+        let quiet = Self.launchedAtLogin || CommandLine.arguments.contains(Updater.relaunchFlag)
         Task { @MainActor in
             Alerts.shared.configure()
-            WelcomeWindow.showIfNeeded(AccountStore.shared)
+            let welcomed = WelcomeWindow.showIfNeeded(AccountStore.shared)
+            if !welcomed, !quiet { AppWindow.show() }
             Updater.shared.checkIfDue()
         }
+    }
+
+    /// Opening Switchr again while it runs brings up its window.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        MainActor.assumeIsolated { AppWindow.show() }
+        return false
+    }
+
+    /// `switchr://open?section=usage`, which `switchr dashboard` sends.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.scheme == AppWindow.urlScheme {
+            MainActor.assumeIsolated { AppWindow.show(section: AppWindow.section(from: url)) }
+        }
+    }
+
+    private static var launchedAtLogin: Bool {
+        guard let event = NSAppleEventManager.shared().currentAppleEvent else { return false }
+        return event.eventID == kAEOpenApplication
+            && event.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
     }
 }
 #endif

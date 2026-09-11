@@ -1,22 +1,22 @@
-// Renders Switchr's art: the app icon set, the disk image background, and the README banner.
-// Run through scripts/render-art.sh, which turns the output into Assets/ and docs/.
+// Renders Switchr's art in the dashboard's design: the app icon at every size (the macOS icon set,
+// Linux PNGs and a Windows .ico), the disk image background and the README banner.
+// Run through scripts/render-art.sh, which puts the output into Assets/, docs/ and packaging/.
 import AppKit
 import CoreGraphics
 import CoreText
 
 let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
 
-func hex(_ h: Int, _ a: CGFloat = 1) -> CGColor {
-    CGColor(red: CGFloat((h >> 16) & 255) / 255, green: CGFloat((h >> 8) & 255) / 255, blue: CGFloat(h & 255) / 255, alpha: a)
+func gray(_ value: CGFloat, _ alpha: CGFloat = 1) -> CGColor {
+    CGColor(colorSpace: sRGB, components: [value, value, value, alpha])!
 }
 
+/// The dashboard's neutrals.
 enum Brand {
-    static let top = hex(0x1B3329)
-    static let bottom = hex(0x0A1510)
-    static let bone = hex(0xEDE7D9)
-    static let amber = hex(0xCF9F57)
-    static let dim = hex(0x93A59B)
-    static let groove = hex(0x000000, 0.34)
+    static let surfaceTop = gray(0.125)
+    static let surfaceBottom = gray(0.075)
+    static let ink = gray(0.92)
+    static let unlit = gray(1, 0.2)
 }
 
 func canvas(_ width: Int, _ height: Int) -> CGContext {
@@ -65,11 +65,6 @@ func continuousRect(_ rect: CGRect, radius r: CGFloat) -> CGPath {
     return path
 }
 
-func capsule(_ r: CGRect) -> CGPath {
-    let radius = min(r.width, r.height) / 2
-    return CGPath(roundedRect: r, cornerWidth: radius, cornerHeight: radius, transform: nil)
-}
-
 func fill(_ ctx: CGContext, _ path: CGPath, _ color: CGColor) {
     ctx.addPath(path)
     ctx.setFillColor(color)
@@ -88,70 +83,78 @@ let noise: CGImage = {
     return ctx.makeImage()!
 }()
 
-/// The Switchr surface: green-black enamel, a raking light from the upper left, fine grain.
-func enamel(_ ctx: CGContext, clip: CGPath, bounds: CGRect, grainScale: CGFloat,
-            top: CGColor = Brand.top, bottom: CGColor = Brand.bottom) {
+/// Near-black with a faint light from the top. Fine grain keeps the gradient from banding.
+func surface(_ ctx: CGContext, clip: CGPath, bounds: CGRect, grainScale: CGFloat, grain: Bool = true,
+             top: CGColor = Brand.surfaceTop, bottom: CGColor = Brand.surfaceBottom) {
     let extend: CGGradientDrawingOptions = [.drawsBeforeStartLocation, .drawsAfterEndLocation]
     ctx.saveGState()
     ctx.addPath(clip)
     ctx.clip()
     ctx.drawLinearGradient(gradient(top, bottom),
                            start: CGPoint(x: bounds.midX, y: bounds.maxY), end: CGPoint(x: bounds.midX, y: bounds.minY), options: extend)
-    ctx.drawLinearGradient(gradient(hex(0xFFFFFF, 0.09), hex(0xFFFFFF, 0)),
-                           start: CGPoint(x: bounds.minX + bounds.width * 0.2, y: bounds.maxY),
-                           end: CGPoint(x: bounds.midX, y: bounds.minY + bounds.height * 0.45), options: extend)
-    ctx.setBlendMode(.overlay)
-    ctx.setAlpha(0.10)
-    ctx.draw(noise, in: CGRect(x: 0, y: 0, width: 256 * grainScale, height: 256 * grainScale), byTiling: true)
+    if grain {
+        ctx.setBlendMode(.overlay)
+        ctx.setAlpha(0.07)
+        ctx.draw(noise, in: CGRect(x: 0, y: 0, width: 256 * grainScale, height: 256 * grainScale), byTiling: true)
+    }
     ctx.restoreGState()
 }
 
-/// A usage track: recessed groove with a fill segment, clipped so the caps stay round.
-func track(_ ctx: CGContext, _ rect: CGRect, from: CGFloat, to: CGFloat, color: CGColor) {
-    fill(ctx, capsule(rect), Brand.groove)
-    ctx.saveGState()
-    ctx.addPath(capsule(rect))
-    ctx.clip()
-    fill(ctx, capsule(CGRect(x: rect.minX + rect.width * from, y: rect.minY, width: rect.width * (to - from), height: rect.height)), color)
-    ctx.restoreGState()
+/// Switchr's mark, as in the dashboard's sidebar and the menu bar: two rows of four squares on a
+/// 22 x 12 grid, three lit on top and one below.
+func pixelMark(_ ctx: CGContext, center: CGPoint, width: CGFloat, levels: [CGFloat] = [3, 1]) {
+    let unit = width / 22
+    for row in 0..<2 {
+        for column in 0..<4 {
+            let rect = CGRect(x: center.x - 11 * unit + CGFloat(column) * 6 * unit,
+                              y: center.y + 2 * unit - CGFloat(row) * 8 * unit,
+                              width: 4 * unit, height: 4 * unit)
+            let square = CGPath(roundedRect: rect, cornerWidth: unit, cornerHeight: unit, transform: nil)
+            let lit = min(max(levels[row] - CGFloat(column), 0), 1)
+            fill(ctx, square, Brand.unlit)
+            if lit > 0 { fill(ctx, square, Brand.ink.copy(alpha: lit)!) }
+        }
+    }
 }
 
-func text(_ ctx: CGContext, _ string: String, size: CGFloat, weight: NSFont.Weight, color: CGColor, center: CGPoint, kern: CGFloat = 0) {
-    let base = NSFont.systemFont(ofSize: size, weight: weight)
-    let font = base.fontDescriptor.withDesign(.rounded).flatMap { NSFont(descriptor: $0, size: size) } ?? base
+func line(_ string: String, size: CGFloat, weight: NSFont.Weight, color: CGColor) -> CTLine {
     let attributes: [NSAttributedString.Key: Any] = [
-        .font: font,
+        .font: NSFont.systemFont(ofSize: size, weight: weight),
         NSAttributedString.Key(kCTForegroundColorAttributeName as String): color,
-        .kern: kern,
     ]
-    let line = CTLineCreateWithAttributedString(NSAttributedString(string: string, attributes: attributes))
+    return CTLineCreateWithAttributedString(NSAttributedString(string: string, attributes: attributes))
+}
+
+/// Draws a line of text centered on its glyphs, not its line box.
+func draw(_ ctx: CGContext, _ line: CTLine, center: CGPoint) {
     let bounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
     ctx.textPosition = CGPoint(x: center.x - bounds.width / 2 - bounds.minX, y: center.y - bounds.height / 2 - bounds.minY)
     CTLineDraw(line, ctx)
 }
 
+func png(_ image: CGImage) -> Data {
+    NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])!
+}
+
 func writePNG(_ image: CGImage, _ path: String) {
-    let data = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])!
-    try! data.write(to: URL(fileURLWithPath: path))
+    try! png(image).write(to: URL(fileURLWithPath: path))
 }
 
 // MARK: Icon
 
-func icon() -> CGImage {
-    let ctx = canvas(1024, 1024)
+func icon(pixels n: Int) -> CGImage {
+    if n <= 32 { return smallIcon(pixels: n) }
+    let ctx = canvas(n, n)
+    ctx.scaleBy(x: CGFloat(n) / 1024, y: CGFloat(n) / 1024)
     let bounds = CGRect(x: 100, y: 100, width: 824, height: 824)
-    let body = continuousRect(bounds, radius: 185)
+    let body = continuousRect(bounds, radius: bounds.width * 0.2245)
 
     ctx.saveGState()
-    ctx.setShadow(offset: CGSize(width: 0, height: -8), blur: 18, color: hex(0x000000, 0.32))
-    fill(ctx, body, Brand.bottom)
+    ctx.setShadow(offset: CGSize(width: 0, height: -8), blur: 18, color: gray(0, 0.32))
+    fill(ctx, body, Brand.surfaceBottom)
     ctx.restoreGState()
-    enamel(ctx, clip: body, bounds: bounds, grainScale: 1)
-
-    // Two accounts handing usage across: one fills from the left, the other from the right.
-    let width: CGFloat = 600, height: CGFloat = 124, x = 512 - width / 2
-    track(ctx, CGRect(x: x, y: 540, width: width, height: height), from: 0, to: 0.62, color: Brand.bone)
-    track(ctx, CGRect(x: x, y: 360, width: width, height: height), from: 0.38, to: 1, color: Brand.amber)
+    surface(ctx, clip: body, bounds: bounds, grainScale: 1024 / CGFloat(n), grain: n >= 128)
+    pixelMark(ctx, center: CGPoint(x: 512, y: 512), width: 540)
 
     // Light catching the upper lip.
     ctx.saveGState()
@@ -159,36 +162,82 @@ func icon() -> CGImage {
     ctx.clip()
     ctx.clip(to: CGRect(x: 0, y: 640, width: 1024, height: 384))
     ctx.addPath(body)
-    ctx.setStrokeColor(hex(0xFFFFFF, 0.13))
+    ctx.setStrokeColor(gray(1, 0.1))
     ctx.setLineWidth(4)
     ctx.strokePath()
     ctx.restoreGState()
     return ctx.makeImage()!
 }
 
+/// List, toolbar and tray sizes, drawn on whole pixels so the squares stay crisp: the shape fills
+/// the square and the mark fills more of the shape.
+func smallIcon(pixels n: Int) -> CGImage {
+    let ctx = canvas(n, n)
+    let size = CGFloat(n)
+    let inset: CGFloat = n >= 24 ? 1 : 0
+    let bounds = CGRect(x: 0, y: 0, width: size, height: size)
+    let body = continuousRect(bounds.insetBy(dx: inset, dy: inset), radius: size * 0.22)
+    surface(ctx, clip: body, bounds: bounds, grainScale: 1, grain: false)
+
+    let side = n <= 16 ? 2 : n <= 24 ? 3 : 4
+    let gap = n <= 16 ? 1 : 2
+    let left = (n - (side * 4 + gap * 3)) / 2
+    let top = (n - side * 3) / 2
+    let radius = CGFloat(side) * 0.25
+    for row in 0..<2 {
+        for column in 0..<4 {
+            let lit = column < (row == 0 ? 3 : 1)
+            let rect = CGRect(x: left + column * (side + gap), y: n - top - side - row * side * 2, width: side, height: side)
+            fill(ctx, CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil), lit ? Brand.ink : gray(1, 0.26))
+        }
+    }
+    return ctx.makeImage()!
+}
+
+/// A Windows icon file holding PNG images, which Windows reads since Vista.
+func writeICO(sizes: [Int], _ path: String) {
+    var data = Data()
+    func u16(_ v: Int) { data.append(contentsOf: [UInt8(v & 0xFF), UInt8((v >> 8) & 0xFF)]) }
+    func u32(_ v: Int) { u16(v & 0xFFFF); u16((v >> 16) & 0xFFFF) }
+    let images = sizes.map { ($0, png(icon(pixels: $0))) }
+    u16(0); u16(1); u16(images.count)
+    var offset = 6 + 16 * images.count
+    for (size, image) in images {
+        data.append(contentsOf: [UInt8(size >= 256 ? 0 : size), UInt8(size >= 256 ? 0 : size), 0, 0])
+        u16(1); u16(32); u32(image.count); u32(offset)
+        offset += image.count
+    }
+    for (_, image) in images { data.append(image) }
+    try! data.write(to: URL(fileURLWithPath: path))
+}
+
 // MARK: Disk image background (660 x 480 pt)
 
 /// Finder colors icon labels black in light mode and white in dark mode, and a background image
-/// can't tell which. This sage sits at about 18% luminance, where both reach roughly 4.5:1.
-/// Finder on macOS 26 also keeps its toolbar and status bar, so everything sits in the top
-/// 400 pt; on older systems the rest is just more surface.
+/// can't tell which. This gray sits near 18% luminance, where both read. Finder on macOS 26 also
+/// keeps its toolbar and status bar, so everything sits in the top 400 pt; on older systems the
+/// rest is just more surface.
 func dmgBackground(scale k: CGFloat) -> CGImage {
     let size = CGSize(width: 660, height: 480)
     let ctx = canvas(Int(size.width * k), Int(size.height * k))
     ctx.scaleBy(x: k, y: k)
     let bounds = CGRect(origin: .zero, size: size)
-    enamel(ctx, clip: CGPath(rect: bounds, transform: nil), bounds: bounds, grainScale: 1 / k,
-           top: hex(0x6A8679), bottom: hex(0x58715F))
+    surface(ctx, clip: CGPath(rect: bounds, transform: nil), bounds: bounds, grainScale: 1 / k, top: gray(0.47), bottom: gray(0.43))
 
     // Finder y (from the top) -> Core Graphics y (from the bottom).
     func y(_ fromTop: CGFloat) -> CGFloat { size.height - fromTop }
 
-    // Icons sit at 175 pt from the top; the track leads from Switchr to Applications.
-    track(ctx, CGRect(x: 266, y: y(175) - 6, width: 128, height: 12), from: 0, to: 0.78, color: Brand.bone)
+    // Icons sit at 175 pt from the top; between them the mark's squares light up toward Applications.
+    let side: CGFloat = 12, gap: CGFloat = 8
+    let rowWidth = side * 4 + gap * 3
+    for (i, alpha) in [0.25, 0.45, 0.7, 1.0].enumerated() {
+        let rect = CGRect(x: 330 - rowWidth / 2 + CGFloat(i) * (side + gap), y: y(175) - side / 2, width: side, height: side)
+        fill(ctx, CGPath(roundedRect: rect, cornerWidth: 3, cornerHeight: 3, transform: nil), gray(0.08, alpha))
+    }
 
-    text(ctx, "Drag Switchr into Applications", size: 16, weight: .semibold, color: Brand.bottom, center: CGPoint(x: 330, y: y(312)))
-    text(ctx, "If macOS blocks the first launch: System Settings › Privacy & Security › Open Anyway",
-         size: 11.5, weight: .regular, color: Brand.bottom, center: CGPoint(x: 330, y: y(338)))
+    draw(ctx, line("Drag Switchr into Applications", size: 16, weight: .semibold, color: gray(0.06)), center: CGPoint(x: 330, y: y(312)))
+    draw(ctx, line("If macOS blocks the first launch: System Settings › Privacy & Security › Open Anyway",
+                   size: 11.5, weight: .regular, color: gray(0.06)), center: CGPoint(x: 330, y: y(338)))
     return ctx.makeImage()!
 }
 
@@ -199,13 +248,15 @@ func banner(scale k: CGFloat) -> CGImage {
     let ctx = canvas(Int(size.width * k), Int(size.height * k))
     ctx.scaleBy(x: k, y: k)
     let bounds = CGRect(origin: .zero, size: size)
-    enamel(ctx, clip: CGPath(rect: bounds, transform: nil), bounds: bounds, grainScale: 1 / k)
+    surface(ctx, clip: CGPath(rect: bounds, transform: nil), bounds: bounds, grainScale: 1 / k, top: gray(0.105), bottom: gray(0.07))
 
-    // The icon's two tracks at full width, bleeding off both edges, with the name set between them.
-    let span = CGRect(x: -60, y: 0, width: size.width + 120, height: 44)
-    track(ctx, span.offsetBy(dx: 0, dy: 300), from: 0, to: 0.62, color: Brand.bone)
-    track(ctx, span.offsetBy(dx: 0, dy: 76), from: 0.38, to: 1, color: Brand.amber)
-    text(ctx, "Switchr", size: 104, weight: .bold, color: Brand.bone, center: CGPoint(x: 640, y: 210), kern: 1)
+    // The mark and the name as one group, centered on the banner.
+    let name = line("Switchr", size: 96, weight: .semibold, color: Brand.ink)
+    let nameWidth = CTLineGetBoundsWithOptions(name, .useGlyphPathBounds).width
+    let markWidth: CGFloat = 176, gap: CGFloat = 44
+    let left = size.width / 2 - (markWidth + gap + nameWidth) / 2
+    pixelMark(ctx, center: CGPoint(x: left + markWidth / 2, y: size.height / 2), width: markWidth)
+    draw(ctx, name, center: CGPoint(x: left + markWidth + gap + nameWidth / 2, y: size.height / 2))
     return ctx.makeImage()!
 }
 
@@ -213,19 +264,22 @@ func banner(scale k: CGFloat) -> CGImage {
 
 let out = CommandLine.arguments[1]
 let iconset = "\(out)/AppIcon.iconset"
-try! FileManager.default.createDirectory(atPath: iconset, withIntermediateDirectories: true)
+let icons = "\(out)/icons"
+for folder in [iconset, icons] {
+    try! FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
+}
 
-let master = icon()
 for (points, scales) in [(16, [1, 2]), (32, [1, 2]), (128, [1, 2]), (256, [1, 2]), (512, [1, 2])] {
     for scale in scales {
-        let pixels = points * scale
-        let ctx = canvas(pixels, pixels)
-        ctx.draw(master, in: CGRect(x: 0, y: 0, width: pixels, height: pixels))
         let suffix = scale == 2 ? "@2x" : ""
-        writePNG(ctx.makeImage()!, "\(iconset)/icon_\(points)x\(points)\(suffix).png")
+        writePNG(icon(pixels: points * scale), "\(iconset)/icon_\(points)x\(points)\(suffix).png")
     }
 }
-writePNG(master, "\(out)/icon-1024.png")
+writePNG(icon(pixels: 1024), "\(out)/icon-1024.png")
+for size in [16, 24, 32, 48, 64, 128, 256, 512] {
+    writePNG(icon(pixels: size), "\(icons)/switchr-\(size).png")
+}
+writeICO(sizes: [16, 24, 32, 48, 64, 128, 256], "\(out)/switchr.ico")
 writePNG(dmgBackground(scale: 1), "\(out)/dmg-background.png")
 writePNG(dmgBackground(scale: 2), "\(out)/dmg-background@2x.png")
 writePNG(banner(scale: 2), "\(out)/banner.png")

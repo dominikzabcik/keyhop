@@ -1,49 +1,143 @@
 #if os(macOS)
 import SwiftUI
 
-/// Secondary text action: no chrome, brightens on hover.
-struct QuietButton: View {
-    let title: String
-    let action: () -> Void
+/// The dashboard's buttons: primary is near-white, secondary sits on a raised surface, ghost has no
+/// chrome until hovered. None of them move.
+struct AppButtonStyle: ButtonStyle {
+    enum Kind { case primary, secondary, ghost }
+    enum Size { case small, regular, large }
 
-    init(_ title: String, action: @escaping () -> Void) {
-        self.title = title
-        self.action = action
-    }
+    var kind: Kind = .primary
+    var size: Size = .regular
+    var fullWidth = false
 
-    var body: some View {
-        Button(title, action: action)
-            .buttonStyle(QuietStyle())
-            .font(.system(size: 11.5, weight: .medium))
-    }
-}
-
-struct QuietStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        QuietLabel(configuration: configuration)
+        ButtonBody(configuration: configuration, style: self)
     }
 
-    private struct QuietLabel: View {
+    private struct ButtonBody: View {
         let configuration: ButtonStyleConfiguration
+        let style: AppButtonStyle
         @Environment(\.isEnabled) private var isEnabled
         @State private var hovering = false
 
         var body: some View {
+            let shape = RoundedRectangle(cornerRadius: 7, style: .continuous)
+            let hot = hovering && isEnabled
             configuration.label
-                .foregroundStyle(hovering && isEnabled ? AnyShapeStyle(Brand.bone) : AnyShapeStyle(.secondary))
-                .opacity(isEnabled ? (configuration.isPressed ? 0.6 : 1) : 0.45)
-                .contentShape(Rectangle())
+                .font(.system(size: style.size == .small ? 12.5 : 13, weight: .medium))
+                .lineLimit(1)
+                .foregroundStyle(foreground(hot))
+                .padding(.horizontal, style.size == .small ? 10 : 14)
+                .frame(maxWidth: style.fullWidth ? .infinity : nil)
+                .frame(height: height)
+                .background(shape.fill(fill(hot)))
+                .overlay(shape.strokeBorder(stroke(hot)))
+                .opacity(isEnabled ? (configuration.isPressed ? 0.78 : 1) : 0.45)
+                .contentShape(shape)
+                .onHover { hovering = $0 }
+                .animation(.easeOut(duration: 0.12), value: hovering)
+        }
+
+        private var height: CGFloat {
+            switch style.size {
+            case .small: 28
+            case .regular: 32
+            case .large: 36
+            }
+        }
+
+        private func foreground(_ hot: Bool) -> Color {
+            switch style.kind {
+            case .primary: Brand.onPrimary
+            case .secondary: Brand.text
+            case .ghost: hot ? Brand.text : Brand.muted
+            }
+        }
+
+        private func fill(_ hot: Bool) -> Color {
+            switch style.kind {
+            case .primary: hot ? .white : Brand.primary
+            case .secondary: hot ? Brand.raisedHover : Brand.raised
+            case .ghost: hot ? Brand.hover : .clear
+            }
+        }
+
+        private func stroke(_ hot: Bool) -> Color {
+            style.kind == .secondary ? (hot ? Brand.borderStrong : Brand.border) : .clear
+        }
+    }
+}
+
+/// The dashboard's checkbox: an outlined square that fills near-white with a check when on.
+struct CheckboxStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button { configuration.isOn.toggle() } label: {
+            HStack(spacing: 8) {
+                let shape = RoundedRectangle(cornerRadius: 4, style: .continuous)
+                ZStack {
+                    shape.fill(configuration.isOn ? Brand.primary : .clear)
+                    shape.strokeBorder(configuration.isOn ? Brand.primary : Brand.borderStrong)
+                    if configuration.isOn {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 8.5, weight: .bold))
+                            .foregroundStyle(Brand.onPrimary)
+                    }
+                }
+                .frame(width: 14, height: 14)
+                configuration.label
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(configuration.isOn ? .isSelected : [])
+    }
+}
+
+/// True while a view renders offscreen for `--snapshot`, where native menus can't draw.
+private struct StaticSnapshotKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var staticSnapshot: Bool {
+        get { self[StaticSnapshotKey.self] }
+        set { self[StaticSnapshotKey.self] = newValue }
+    }
+}
+
+/// A whole list row as a button: it lights up under the pointer. `quiet` rows (like Add) stay
+/// muted until then.
+struct RowButtonStyle: ButtonStyle {
+    var quiet = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        RowBody(configuration: configuration, quiet: quiet)
+    }
+
+    private struct RowBody: View {
+        let configuration: ButtonStyleConfiguration
+        let quiet: Bool
+        @Environment(\.isEnabled) private var isEnabled
+        @State private var hovering = false
+
+        var body: some View {
+            let hot = hovering && isEnabled
+            configuration.label
+                .foregroundStyle(quiet && !hot ? Brand.muted : Brand.text)
+                .background(Rectangle().fill(configuration.isPressed ? Brand.selected : hot ? Brand.hover : .clear))
+                .opacity(isEnabled ? 1 : 0.5)
                 .onHover { hovering = $0 }
                 .animation(.easeOut(duration: 0.12), value: hovering)
         }
     }
 }
 
-/// A limit as the icon draws it: a recessed groove with a bone fill, a tick at the even-pace point,
-/// amber when usage runs ahead of pace, rust past 90%.
-struct LimitTrack: View {
+/// A limit as the dashboard draws it: a thin track, the used part in ink, amber when usage runs
+/// ahead of an even pace, red past 90%, and a tick where an even pace would be now.
+struct LimitBar: View {
     let fraction: Double
-    let pace: Double?
+    var pace: Double?
 
     var body: some View {
         GeometryReader { geo in
@@ -51,54 +145,27 @@ struct LimitTrack: View {
             let height = geo.size.height
             let value = min(max(fraction, 0), 1)
             ZStack(alignment: .leading) {
-                Capsule().fill(Color.black.opacity(0.36))
-                if value > 0 {
-                    Capsule()
-                        .fill(Self.tint(value, pace: pace))
-                        .frame(width: max(height, width * value))
-                }
+                Capsule().fill(Brand.faint)
+                Capsule()
+                    .fill(Self.tint(value, pace: pace))
+                    .frame(width: value > 0 ? max(height, width * value) : 0)
                 if let pace {
-                    // Dark where it crosses the fill, light over the empty groove, so it always reads.
-                    Capsule()
-                        .fill(pace <= value ? Color.black.opacity(0.6) : Brand.bone.opacity(0.75))
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(Color.white.opacity(0.45))
                         .frame(width: 2, height: height + 6)
                         .offset(x: min(max(width * pace - 1, 0), width - 2))
                 }
             }
             .frame(width: width, height: height)
-            .animation(.smooth(duration: 0.6), value: value)
+            .animation(.smooth(duration: 0.5), value: value)
         }
+        .frame(height: 6)
     }
 
     static func tint(_ value: Double, pace: Double?) -> Color {
-        if value >= 0.9 { return Brand.rust }
-        if let pace, value > pace + 0.08 { return Brand.amber }
-        return Brand.bone
-    }
-}
-
-/// The menu bar glyph at small size: two limits stacked.
-struct TwinTracks: View {
-    let values: [Double?]
-
-    var body: some View {
-        GeometryReader { geo in
-            let rowHeight = (geo.size.height - 3) / 2
-            VStack(spacing: 3) {
-                ForEach(0..<2, id: \.self) { row in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.black.opacity(0.38))
-                        if row < values.count, let value = values[row], value > 0 {
-                            Capsule()
-                                .fill(value >= 0.9 ? Brand.rust : Brand.bone)
-                                .frame(width: max(rowHeight, geo.size.width * min(value, 1)))
-                        }
-                    }
-                    .frame(height: rowHeight)
-                }
-            }
-        }
-        .accessibilityHidden(true)
+        if value >= 0.9 { return Brand.bad }
+        if let pace, value > pace + 0.08 { return Brand.warn }
+        return Brand.text
     }
 }
 #endif

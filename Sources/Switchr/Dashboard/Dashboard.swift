@@ -2,6 +2,9 @@ import Foundation
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
+#if os(macOS)
+import AppKit
+#endif
 
 /// `switchr dashboard`: one app page and a small JSON API, served to this computer only. The Linux
 /// and Windows trays open it as Switchr's window, and `switchr insights --output` saves it as one
@@ -27,6 +30,13 @@ enum Dashboard {
     /// Opens the dashboard, starting its server unless one is already running, and returns once the
     /// server stops: 15 minutes after its last window closed, or when a tray closes it.
     static func run(sample: Bool, section: String, open: Bool, json: Bool) async throws {
+        #if os(macOS)
+        // With Switchr.app installed, its own window is Switchr's window.
+        if !sample, open, !json, MacApp.openWindow(section: section) {
+            print("Opened Switchr.")
+            return
+        }
+        #endif
         if !sample, let running = await reachable() {
             announce(address(port: running.port, token: running.token, section: section), open: open, json: json, started: false)
             return
@@ -154,6 +164,17 @@ enum DashboardWindow {
         _ = Desktop.open(address)
     }
 }
+
+#if os(macOS)
+/// The installed Mac app, which opens `switchr://` links in its own window.
+enum MacApp {
+    static func openWindow(section: String) -> Bool {
+        guard let url = URL(string: "switchr://open?section=\(section)"),
+              NSWorkspace.shared.urlForApplication(toOpen: url) != nil else { return false }
+        return NSWorkspace.shared.open(url)
+    }
+}
+#endif
 
 // MARK: Documents
 
@@ -414,10 +435,22 @@ actor DashboardSession {
     private var adding: [Provider: Task<Void, Never>] = [:]
     private var messages: [String] = []
     private var lastIngest: Date?
+    private let openWorkspace: @Sendable () throws -> Workspace
+    private let changed: @Sendable () -> Void
+    private let installUpdateHook: (@Sendable () async -> DashboardAction)?
 
-    init(sample: Bool) throws {
+    /// The Mac app's window passes `workspace` to share the menu's AccountService, `changed` to
+    /// hear about changes, and `installUpdate` to update the app its own way.
+    init(sample: Bool,
+         workspace: (@Sendable () throws -> Workspace)? = nil,
+         changed: @escaping @Sendable () -> Void = {},
+         installUpdate: (@Sendable () async -> DashboardAction)? = nil) throws {
+        let open = workspace ?? { try Workspace.open() }
         self.sample = sample
-        if !sample { _ = try Workspace.open() }
+        openWorkspace = open
+        self.changed = changed
+        installUpdateHook = installUpdate
+        if !sample { _ = try open() }
     }
 
     func waitUntilDone(idleLimit: TimeInterval) async {
@@ -437,6 +470,12 @@ actor DashboardSession {
             return .json(DashboardError(error: problem), status: 403)
         }
         lastSeen = Date()
+        let response = await route(request)
+        if request.method == "POST" { changed() }
+        return response
+    }
+
+    private func route(_ request: HTTPRequest) async -> HTTPResponse {
         do {
             switch (request.method, request.path) {
             case ("GET", "/api/ping"):
@@ -488,7 +527,7 @@ actor DashboardSession {
         if sample {
             overview = SampleData.overview()
         } else {
-            let workspace = try Workspace.open()
+            let workspace = try openWorkspace()
             if allowRefresh, workspace.state.refreshedAt == nil, !refreshing {
                 Task { try? await self.refresh() }
             }
@@ -512,7 +551,7 @@ actor DashboardSession {
                                   daily: SampleData.digest(interval: heat, bucket: .day, accounts: accounts, now: now),
                                   accounts: everyone, active: SampleData.overview(now: now).active)
         }
-        let workspace = try Workspace.open()
+        let workspace = try openWorkspace()
         if readLogs, lastIngest.map({ now.timeIntervalSince($0) > 120 }) ?? true {
             _ = try await workspace.tracker.ingestLocalLogs()
             lastIngest = now
@@ -565,14 +604,14 @@ actor DashboardSession {
         guard !sample, !refreshing else { return }
         refreshing = true
         defer { refreshing = false }
-        var workspace = try Workspace.open()
+        var workspace = try openWorkspace()
         _ = try await Commands.performRefresh(&workspace, claimAlerts: false)
         lastIngest = Date()
     }
 
     private func switchAccount(_ id: UUID) async throws -> DashboardAction {
         try refuseInSample()
-        var workspace = try Workspace.open()
+        var workspace = try openWorkspace()
         let account = try await workspace.service.switchTo(id)
         let inUse = await workspace.service.active[account.provider]
         try await workspace.tracker.noteActive(account.provider, account: inUse, at: Date())
@@ -587,7 +626,7 @@ actor DashboardSession {
         guard adding[provider] == nil else {
             return DashboardAction(message: "Already waiting for a new \(provider.name) login.", note: nil)
         }
-        let workspace = try Workspace.open()
+        let workspace = try openWorkspace()
         _ = try await workspace.service.signOutForAdding(provider)
         var state = CLIState.load()
         state.active[provider.rawValue] = nil
@@ -601,6 +640,7 @@ actor DashboardSession {
 
     private func finishAdding(_ provider: Provider, result: (outcome: AccountService.SyncOutcome, alreadySaved: Bool)?, workspace: Workspace) async {
         adding[provider] = nil
+        defer { changed() }
         guard let result else {
             messages.append("No new \(provider.name) login arrived. Sign in, then add it again.")
             return
@@ -622,7 +662,7 @@ actor DashboardSession {
 
     private func rename(_ id: UUID, to name: String) async throws -> DashboardAction {
         try refuseInSample()
-        let workspace = try Workspace.open()
+        let workspace = try openWorkspace()
         guard let account = await workspace.service.account(id) else { throw SwitchrError("That account isn't saved.") }
         await workspace.service.rename(id, to: name)
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -631,7 +671,7 @@ actor DashboardSession {
 
     private func remove(_ id: UUID) async throws -> DashboardAction {
         try refuseInSample()
-        let workspace = try Workspace.open()
+        let workspace = try openWorkspace()
         guard let account = await workspace.service.account(id) else { throw SwitchrError("That account isn't saved.") }
         try await workspace.service.remove(id)
         return DashboardAction(message: "Removed \(account.displayName) from \(account.provider.name) and deleted its saved login.", note: nil)
@@ -639,7 +679,7 @@ actor DashboardSession {
 
     private func budget(_ body: BudgetBody) async throws -> DashboardAction {
         try refuseInSample()
-        let workspace = try Workspace.open()
+        let workspace = try openWorkspace()
         let scope: String
         let name: String
         if body.scope == Budget.everything {
@@ -674,6 +714,7 @@ actor DashboardSession {
             return DashboardAction(message: "Switchr \(AppVersion.current) is the latest version.", note: nil)
         }
         #if os(macOS)
+        if let installUpdateHook { return await installUpdateHook() }
         return DashboardAction(message: "The Mac app installs Switchr \(release.version) itself. Click the version number in its menu to check now.", note: nil)
         #else
         #if os(Windows)

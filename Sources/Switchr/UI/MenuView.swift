@@ -2,6 +2,8 @@
 import ServiceManagement
 import SwiftUI
 
+/// The menu bar menu, in the dashboard's design: tool tabs, the account in use as a card, the
+/// others as a list, and a footer that opens Switchr's window.
 struct MenuView: View {
     @EnvironmentObject private var store: AccountStore
     @AppStorage("menuTool") private var tool: Provider = .claude
@@ -11,11 +13,10 @@ struct MenuView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ToolTabs(selection: $tool, namespace: tabs)
-                .padding(.horizontal, 10)
-                .padding(.top, 10)
+                .padding(12)
 
             ToolPanel(provider: tool, renaming: $renaming)
-                .padding(.top, 8)
+                .padding(.horizontal, 12)
                 .padding(.bottom, 12)
 
             if let notice = store.notice {
@@ -27,7 +28,7 @@ struct MenuView: View {
             MenuFooter()
         }
         .frame(width: 340)
-        .background(Enamel())
+        .background(Brand.background)
         .environment(\.colorScheme, .dark)
         .onAppear {
             if let focus = store.focusProvider {
@@ -44,51 +45,58 @@ struct MenuView: View {
 // MARK: Tabs
 
 private struct ToolTabs: View {
-    @EnvironmentObject private var store: AccountStore
     @Binding var selection: Provider
     let namespace: Namespace.ID
 
     var body: some View {
-        HStack(spacing: 4) {
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        HStack(spacing: 2) {
             ForEach(Provider.allCases) { provider in
-                let selected = provider == selection
-                Button {
-                    withAnimation(.snappy(duration: 0.28)) { selection = provider }
-                } label: {
-                    VStack(spacing: 7) {
-                        HStack(spacing: 6) {
-                            ProviderMark(provider: provider, tint: selected ? Brand.bone : nil)
-                                .frame(width: 13, height: 13)
-                            Text(provider.shortName)
-                                .font(.system(size: 12, weight: .semibold))
-                        }
-                        TwinTracks(values: inUseLimits(provider))
-                            .frame(width: 30, height: 8)
-                            .opacity(selected ? 1 : 0.7)
-                    }
-                    .foregroundStyle(selected ? AnyShapeStyle(Brand.bone) : AnyShapeStyle(.secondary))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
-                    .background {
-                        if selected {
-                            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                                .fill(Color.white.opacity(0.075))
-                                .matchedGeometryEffect(id: "tab", in: namespace)
-                        }
-                    }
-                    .contentShape(Rectangle())
+                ToolTab(provider: provider, selected: provider == selection, namespace: namespace) {
+                    withAnimation(.snappy(duration: 0.24)) { selection = provider }
                 }
-                .buttonStyle(.plain)
-                .help(provider.name)
-                .accessibilityLabel(provider.name)
-                .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
+        .padding(3)
+        .background(shape.fill(Brand.raised))
+        .overlay(shape.strokeBorder(Brand.border))
     }
+}
 
-    private func inUseLimits(_ provider: Provider) -> [Double?] {
-        guard let id = store.active[provider], let windows = store.usage[id]?.windows else { return [] }
-        return windows.prefix(2).map { $0.usedPercent / 100 }
+private struct ToolTab: View {
+    let provider: Provider
+    let selected: Bool
+    let namespace: Namespace.ID
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        let lit = selected || hovering
+        Button(action: action) {
+            HStack(spacing: 6) {
+                ProviderMark(provider: provider, tint: lit ? Brand.text : Brand.muted)
+                    .frame(width: 12, height: 12)
+                Text(provider.shortName)
+                    .font(.system(size: 12.5, weight: .medium))
+            }
+            .foregroundStyle(lit ? Brand.text : Brand.muted)
+            .frame(maxWidth: .infinity)
+            .frame(height: 26)
+            .background {
+                if selected {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(Brand.selected)
+                        .matchedGeometryEffect(id: "tab", in: namespace)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovering)
+        .help(provider.name)
+        .accessibilityLabel(provider.name)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -112,25 +120,25 @@ private struct ToolPanel: View {
             return candidate.id
         }()
 
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(spacing: 10) {
             if store.addingFor == provider {
                 AddingPanel(provider: provider)
             } else if accounts.isEmpty {
                 EmptyPanel(provider: provider)
             } else {
                 if let inUse {
-                    InUseHero(account: inUse, renaming: $renaming)
+                    InUseCard(account: inUse, renaming: $renaming)
                 } else {
-                    SignedOutHero(provider: provider)
+                    SignedOutCard(provider: provider)
                 }
-                VStack(spacing: 2) {
+                VStack(spacing: 0) {
                     ForEach(others) { account in
                         AlternativeRow(account: account, best: account.id == best, renaming: $renaming)
+                        RowDivider()
                     }
                     AddRow(provider: provider)
                 }
-                .padding(.horizontal, 8)
-                .padding(.top, 12)
+                .card()
             }
         }
     }
@@ -141,7 +149,7 @@ private struct ToolPanel: View {
     }
 }
 
-private struct InUseHero: View {
+private struct InUseCard: View {
     @EnvironmentObject private var store: AccountStore
     @EnvironmentObject private var tracker: UsageTracker
     let account: Account
@@ -149,62 +157,66 @@ private struct InUseHero: View {
 
     var body: some View {
         let snapshot = store.usage[account.id]
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    EditableName(account: account, font: .system(size: 19, weight: .semibold, design: .rounded), renaming: $renaming)
-                        .foregroundStyle(Brand.bone)
-                    if let plan = account.plan {
-                        Text(plan)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .layoutPriority(-1)
-                    }
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    EditableName(account: account, font: .system(size: 14, weight: .semibold), renaming: $renaming)
+                        .foregroundStyle(Brand.text)
                     Spacer(minLength: 8)
-                    Text("In use")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    Badge("In use", live: true)
                 }
-                if account.label != nil {
-                    Text(account.email)
-                        .font(.system(size: 11.5))
-                        .foregroundStyle(.secondary)
+                if let detail {
+                    Text(detail)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Brand.subtle)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
             }
+            .padding(14)
 
-            if let snapshot, !snapshot.windows.isEmpty {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 22), GridItem(.flexible())], alignment: .leading, spacing: 18) {
-                    ForEach(snapshot.windows) { window in
-                        LimitCell(window: window, runsOut: tracker.forecasts[UsageTracker.forecastKey(account.id, window.label)])
+            RowDivider()
+
+            VStack(alignment: .leading, spacing: 12) {
+                if let snapshot, !snapshot.windows.isEmpty {
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 18), GridItem(.flexible())], alignment: .leading, spacing: 14) {
+                        ForEach(snapshot.windows) { window in
+                            LimitCell(window: window, runsOut: tracker.forecasts[UsageTracker.forecastKey(account.id, window.label)])
+                        }
                     }
-                }
-                if let error = snapshot.error {
-                    Text("\(error) Showing the last reading.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                    if let error = snapshot.error {
+                        Text("\(error) Showing the last reading.")
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(Brand.subtle)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    Text(snapshot?.error ?? (snapshot?.fetchedAt == nil ? "Reading limits…" : "This plan reports no limits."))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Brand.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-            } else {
-                Text(snapshot?.error ?? (snapshot?.fetchedAt == nil ? "Reading limits…" : "This plan reports no limits."))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(14)
 
             if let spend = tracker.today[account.id], spend.requests > 0 {
+                RowDivider()
                 SpendLine(account: account, spend: spend)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
+        .card()
         .contentShape(Rectangle())
         .contextMenu {
             Button("Rename…") { renaming = account.id }
             Button("Refresh usage") { store.refresh() }
         }
+    }
+
+    private var detail: String? {
+        let parts = [account.label != nil ? account.email : nil, account.plan].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
 
@@ -215,27 +227,23 @@ private struct LimitCell: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let outSoon = runsOut.map { $0 > context.date } ?? false
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .lastTextBaseline, spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(window.label)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    Spacer(minLength: 6)
-                    Text("\(Int(window.usedPercent.rounded()))")
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(Brand.bone)
-                    Text("%")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .padding(.leading, 1)
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(Brand.muted)
+                    Spacer(minLength: 4)
+                    Text("\(Int(window.usedPercent.rounded()))%")
+                        .font(Brand.mono(12, weight: .medium))
+                        .foregroundStyle(Brand.text)
                 }
-                LimitTrack(fraction: window.usedPercent / 100, pace: window.pace(at: context.date))
-                    .frame(height: 8)
+                .padding(.bottom, 7)
+                LimitBar(fraction: window.usedPercent / 100, pace: window.pace(at: context.date))
                 Text(outSoon ? "Runs out \(runsOut!.formatted(date: .omitted, time: .shortened))" : resetCaption(context.date))
-                    .font(.system(size: 11, weight: outSoon ? .semibold : .regular).monospacedDigit())
-                    .foregroundStyle(outSoon ? AnyShapeStyle(Brand.amber) : AnyShapeStyle(.secondary))
+                    .font(.system(size: 11.5).monospacedDigit())
+                    .foregroundStyle(outSoon ? Brand.warn : Brand.subtle)
                     .lineLimit(1)
+                    .padding(.top, 6)
             }
             .help(helpText(context.date))
             .accessibilityElement(children: .ignore)
@@ -263,41 +271,40 @@ private struct SpendLine: View {
     let spend: Totals
 
     var body: some View {
-        HStack(spacing: 0) {
-            Text("Today ")
-                .foregroundStyle(.secondary)
-            Text(Numbers.tokens(spend.tokens.total))
-                .foregroundStyle(Brand.bone)
-            Text(" tokens, ")
-                .foregroundStyle(.secondary)
-            Text(Numbers.usd(spend.cost))
-                .foregroundStyle(Brand.bone)
-            Spacer(minLength: 8)
+        VStack(alignment: .leading, spacing: 3) {
+            (Text("Today  ").foregroundStyle(Brand.muted)
+                + Text(Numbers.tokens(spend.tokens.total)).font(Brand.mono(11.5)).foregroundStyle(Brand.text)
+                + Text(" tokens · ").foregroundStyle(Brand.muted)
+                + Text(Numbers.usd(spend.cost)).font(Brand.mono(11.5)).foregroundStyle(Brand.text)
+                + Text(" at API prices").foregroundStyle(Brand.subtle))
+                .lineLimit(1)
             if let budget = tracker.budget(for: Budget.scope(for: account.id)), budget.amount > 0 {
                 let share = (tracker.budgetSpend[budget.scope] ?? 0) / budget.amount
-                Text("\(Int((share * 100).rounded()))% of \(budget.period.adjective) budget")
-                    .foregroundStyle(share >= 0.8 ? AnyShapeStyle(Brand.amber) : AnyShapeStyle(.secondary))
+                Text("\(Int((share * 100).rounded()))% of the \(budget.period.adjective) budget of \(Numbers.usd(budget.amount))")
+                    .foregroundStyle(share >= 0.8 ? Brand.warn : Brand.subtle)
+                    .lineLimit(1)
             }
         }
-        .font(.system(size: 11.5).monospacedDigit())
-        .lineLimit(1)
+        .font(.system(size: 11.5))
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-private struct SignedOutHero: View {
+private struct SignedOutCard: View {
     let provider: Provider
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 3) {
             Text("Signed out of \(provider.name)")
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                .foregroundStyle(Brand.bone)
-            Text("Pick an account to sign back in.")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Brand.text)
+            Text("Pick an account below to sign back in.")
                 .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Brand.muted)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .card()
     }
 }
 
@@ -306,12 +313,12 @@ private struct AlternativeRow: View {
     let account: Account
     let best: Bool
     @Binding var renaming: UUID?
-    @State private var hovering = false
 
     var body: some View {
         let snapshot = store.usage[account.id]
         let limits = snapshot?.windows ?? []
         let room = limits.map { 100 - $0.usedPercent }.min()
+        let problem = snapshot?.error != nil && limits.isEmpty
 
         Button {
             if renaming != account.id { store.switchTo(account) }
@@ -319,11 +326,10 @@ private struct AlternativeRow: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     EditableName(account: account, font: .system(size: 13, weight: .medium), renaming: $renaming)
-                        .foregroundStyle(Brand.bone.opacity(0.92))
-                    Text(subtitle(snapshot))
-                        .font(.system(size: 11))
-                        .foregroundStyle(best ? AnyShapeStyle(Brand.amber) : AnyShapeStyle(.secondary))
-                        .lineLimit(snapshot?.error != nil && (snapshot?.windows.isEmpty ?? true) ? 2 : 1)
+                        .foregroundStyle(Brand.text)
+                    subtitle(snapshot)
+                        .font(.system(size: 12))
+                        .lineLimit(problem ? 2 : 1)
                         .truncationMode(.tail)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -331,35 +337,25 @@ private struct AlternativeRow: View {
                 if store.switching == account.id {
                     ProgressView().controlSize(.small)
                 } else if let room, snapshot?.error == nil {
-                    TwinTracks(values: limits.prefix(2).map { $0.usedPercent / 100 })
-                        .frame(width: 34, height: 8)
-                    HStack(alignment: .lastTextBaseline, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("\(Int(room.rounded()))%")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundStyle(Brand.bone)
+                            .font(Brand.mono(13, weight: .medium))
+                            .foregroundStyle(Brand.text)
                         Text("left")
-                            .font(.system(size: 10.5))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(Brand.subtle)
                     }
-                    .frame(minWidth: 62, alignment: .trailing)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.white.opacity(hovering ? 0.065 : 0))
-            )
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowButtonStyle())
         .disabled(store.switching != nil && store.switching != account.id)
-        .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.12), value: hovering)
         .help("Switch \(account.provider.name) to \(account.email)")
         .accessibilityLabel("Switch to \(account.displayName)")
-        .accessibilityValue(room.map { "\(Int($0.rounded())) percent left" } ?? subtitle(snapshot))
+        .accessibilityValue(room.map { "\(Int($0.rounded())) percent left" } ?? subtitleWords(snapshot))
         .contextMenu {
             Button("Rename…") { renaming = account.id }
             Divider()
@@ -367,12 +363,25 @@ private struct AlternativeRow: View {
         }
     }
 
-    private func subtitle(_ snapshot: UsageSnapshot?) -> String {
+    private func detailWords() -> String? {
+        if account.label != nil { return account.email }
+        return account.plan
+    }
+
+    private func subtitle(_ snapshot: UsageSnapshot?) -> Text {
+        if let error = snapshot?.error, snapshot?.windows.isEmpty ?? true {
+            return Text(error).foregroundStyle(Brand.bad)
+        }
+        let detail = detailWords()
+        guard best else { return Text(detail ?? "Switch").foregroundStyle(Brand.subtle) }
+        let lead = Text("Most room").foregroundStyle(Brand.good)
+        guard let detail else { return lead }
+        return lead + Text(" · \(detail)").foregroundStyle(Brand.subtle)
+    }
+
+    private func subtitleWords(_ snapshot: UsageSnapshot?) -> String {
         if let error = snapshot?.error, snapshot?.windows.isEmpty ?? true { return error }
-        var parts: [String] = []
-        if best { parts.append("Most room") }
-        if account.label != nil { parts.append(account.email) } else if let plan = account.plan { parts.append(plan) }
-        return parts.isEmpty ? "Switch" : parts.joined(separator: " · ")
+        return [best ? "Most room" : nil, detailWords()].compactMap { $0 }.joined(separator: ", ")
     }
 }
 
@@ -383,17 +392,16 @@ private struct AddRow: View {
     var body: some View {
         Button { store.beginAdd(provider) } label: {
             HStack(spacing: 8) {
-                Image(systemName: "plus")
-                    .font(.system(size: 10, weight: .bold))
+                Icon("plus", size: 13)
                 Text("Add \(provider.shortName) account")
                 Spacer()
             }
-            .font(.system(size: 12, weight: .medium))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .font(.system(size: 12.5, weight: .medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
             .contentShape(Rectangle())
         }
-        .buttonStyle(QuietStyle())
+        .buttonStyle(RowButtonStyle(quiet: true))
         .disabled(store.addingFor != nil || store.switching != nil)
     }
 }
@@ -403,22 +411,26 @@ private struct AddingPanel: View {
     let provider: Provider
 
     var body: some View {
-        VStack(spacing: 14) {
-            HandoffMark()
-                .frame(width: 58, height: 58)
+        VStack(spacing: 10) {
+            PixelMark(animated: true)
+                .frame(width: 44, height: 24)
+                .padding(.bottom, 4)
             Text("Waiting for a new \(provider.name) login")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(Brand.bone)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Brand.text)
             Text(LocalizedStringKey(provider.signInHint))
                 .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Brand.muted)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            QuietButton("Cancel") { store.cancelAdd() }
+            Button("Cancel") { store.cancelAdd() }
+                .buttonStyle(AppButtonStyle(kind: .secondary, size: .small))
+                .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 30)
-        .padding(.vertical, 18)
+        .padding(.horizontal, 22)
+        .padding(.vertical, 20)
+        .card()
     }
 }
 
@@ -428,24 +440,25 @@ private struct EmptyPanel: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            ProviderMark(provider: provider)
-                .frame(width: 26, height: 26)
+            ProviderMark(provider: provider, tint: Brand.text)
+                .frame(width: 22, height: 22)
+                .padding(.bottom, 2)
             Text("No \(provider.name) account yet")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(Brand.bone)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Brand.text)
             Text("Sign in to \(provider.name) as usual and Switchr saves the login. Add more accounts to switch between them.")
                 .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Brand.muted)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             Button("Add account") { store.beginAdd(provider) }
-                .buttonStyle(BoneButtonStyle())
-                .frame(width: 150)
-                .padding(.top, 6)
+                .buttonStyle(AppButtonStyle(kind: .primary, size: .small))
+                .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 28)
-        .padding(.vertical, 18)
+        .padding(.horizontal, 22)
+        .padding(.vertical, 20)
+        .card()
     }
 }
 
@@ -490,12 +503,17 @@ private struct NoticeLine: View {
     let text: String
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         Text(LocalizedStringKey(text))
-            .font(.system(size: 11.5))
-            .foregroundStyle(.secondary)
+            .font(.system(size: 12))
+            .foregroundStyle(Brand.text)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(shape.fill(Brand.raised))
+            .overlay(shape.strokeBorder(Brand.borderStrong))
+            .padding(.horizontal, 12)
             .padding(.bottom, 12)
             .contentShape(Rectangle())
             .onTapGesture { store.notice = nil }
@@ -513,46 +531,69 @@ private struct MenuFooter: View {
     @AppStorage("checkForUpdates") private var checkForUpdates = true
     @AppStorage("autoInstallUpdates") private var autoInstallUpdates = true
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    @Environment(\.staticSnapshot) private var staticSnapshot
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 4) {
+            Button("Open Switchr") { AppWindow.show() }
+                .buttonStyle(AppButtonStyle(kind: .primary, size: .small))
+                .help("Open Switchr's window")
+
+            Spacer(minLength: 8)
+
             Button { store.refresh() } label: {
                 HStack(spacing: 6) {
                     TimelineView(.animation(paused: !store.isRefreshing)) { context in
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 10, weight: .semibold))
+                        Icon("refresh", size: 13)
                             .rotationEffect(.degrees(store.isRefreshing ? context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360 : 0))
                     }
                     TimelineView(.periodic(from: .now, by: 30)) { context in
                         Text(updatedText(context.date))
-                            .lineLimit(1)
                             .fixedSize()
                     }
                 }
             }
-            .buttonStyle(QuietStyle())
+            .buttonStyle(AppButtonStyle(kind: .ghost, size: .small))
             .help("Refresh usage")
 
-            Spacer()
-
             Button { Task { await updater.check(userInitiated: true) } } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "arrow.down.circle")
-                        .font(.system(size: 11, weight: .semibold))
+                HStack(spacing: 6) {
+                    Icon("update", size: 13)
                     Text(updater.phase == .checking ? "Checking…" : Updater.currentVersion)
-                        .lineLimit(1)
                         .fixedSize()
                 }
             }
-            .buttonStyle(QuietStyle())
+            .buttonStyle(AppButtonStyle(kind: .ghost, size: .small))
             .disabled(updater.phase == .checking || updater.phase == .downloading || updater.phase == .installing)
             .help("Check for updates")
             .accessibilityLabel("Check for updates, version \(Updater.currentVersion)")
 
-            QuietButton("Insights") { InsightsWindow.show() }
+            if staticSnapshot {
+                Icon("more", size: 14)
+                    .foregroundStyle(Brand.muted)
+                    .frame(width: 28, height: 28)
+            } else {
+                moreMenu
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Brand.sidebar)
+        .overlay(alignment: .top) { RowDivider() }
+        .onChange(of: launchAtLogin) { _, enabled in
+            do {
+                if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            } catch {
+                store.notice = "Open at login needs Switchr in Applications."
+                launchAtLogin = SMAppService.mainApp.status == .enabled
+            }
+        }
+    }
 
+    private var moreMenu: some View {
             Menu {
                 Text("Switchr \(Updater.currentVersion)")
+                Button("Open Switchr") { AppWindow.show() }
                 Button("Check for Updates…") { Task { await updater.check(userInitiated: true) } }
                 Divider()
                 Toggle("Check usage every 5 minutes", isOn: $autoRefresh)
@@ -563,26 +604,14 @@ private struct MenuFooter: View {
                 Divider()
                 Button("Quit Switchr") { NSApp.terminate(nil) }
             } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 13, weight: .semibold))
+                Icon("more", size: 14)
+                    .foregroundStyle(Brand.muted)
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
-            .fixedSize()
+            .frame(width: 28, height: 28)
             .help("More")
-        }
-        .font(.system(size: 11.5, weight: .medium))
-        .padding(.horizontal, 20)
-        .padding(.vertical, 11)
-        .background(Color.black.opacity(0.18))
-        .onChange(of: launchAtLogin) { _, enabled in
-            do {
-                if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-            } catch {
-                store.notice = "Open at login needs Switchr in Applications."
-                launchAtLogin = SMAppService.mainApp.status == .enabled
-            }
-        }
+            .accessibilityLabel("More")
     }
 
     private func updatedText(_ now: Date) -> String {

@@ -21,6 +21,8 @@ final class AccountStore: ObservableObject {
     static let shared = AccountStore()
 
     private let service: AccountService?
+    /// Shared with Switchr's window, so both change the same saved accounts. Nil in previews.
+    var accountService: AccountService? { service }
     private var refreshTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
     private var previousActive: UUID?
@@ -41,7 +43,7 @@ final class AccountStore: ObservableObject {
                 self?.refresh()
             }
         }
-        // The menu is the only window, so becoming key means it just opened.
+        // The menu or Switchr's window just came forward; reads at most every 90 seconds.
         NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.refresh(force: false) }
         }
@@ -97,6 +99,20 @@ final class AccountStore: ObservableObject {
             }
         }
         return []
+    }
+
+    /// Picks up what Switchr's window changed. It shares this store's AccountService, so accounts
+    /// are current already; limits it read and budgets it set come from disk.
+    func adoptChanges() {
+        Task {
+            await mirror()
+            let state = CLIState.load()
+            if let refreshed = state.refreshedAt, refreshed > (lastRefresh ?? .distantPast) {
+                usage = state.usageByID
+                lastRefresh = refreshed
+            }
+            await UsageTracker.shared.refresh(store: self)
+        }
     }
 
     // MARK: Refresh

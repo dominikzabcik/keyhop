@@ -19,7 +19,7 @@ To try the Mac UI without your own accounts, use the preview flags. They show re
 
 ```bash
 .build/debug/Switchr --preview-menu cursor
-.build/debug/Switchr --preview-insights
+.build/debug/Switchr --preview-window usage
 .build/debug/Switchr --preview-welcome
 ```
 
@@ -45,7 +45,7 @@ With `--status-file sample.json`, the real trays show that data without running 
 | `Sources/Switchr/Tracking` | Log readers, pricing, the usage database, budgets, forecasts and alert rules |
 | `Sources/Switchr/CLI` | The `switchr` command, its JSON documents and sample data |
 | `Sources/Switchr/Dashboard` | The local dashboard: a small loopback HTTP server, its JSON API and access checks, and the page itself |
-| `Sources/Switchr/UI` | The Mac menu, Insights window, welcome window, brand and controls |
+| `Sources/Switchr/UI` | The Mac menu, the window that hosts the dashboard, the welcome window, design tokens and controls |
 | `Sources/SwitchrTray` | The Windows tray app; its menu model builds and runs everywhere |
 | `Sources/CSQLite` | The SQLite amalgamation, used on Linux and Windows |
 | `packaging/linux` | The Linux tray, desktop entry, AppStream metadata, nfpm description and `~/.local` installer |

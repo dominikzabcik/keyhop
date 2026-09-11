@@ -23,8 +23,9 @@ from datetime import datetime, timezone
 APP_ID = "dev.switchr.Switchr"
 REFRESH_SECONDS = 5 * 60
 UPDATE_CHECK_SECONDS = 12 * 60 * 60
-BONE = "#EDE7D9"
-INK = "#0A1510"
+# The dashboard's text and background, for the icon on dark and light panels.
+LIGHT_INK = "#EBEBEB"
+DARK_INK = "#171717"
 READING = "Reading limits…"
 
 
@@ -209,15 +210,26 @@ def glyph_values(status):
     return [limit["usedPercent"] / 100 for limit in best[1]["limits"][:2]]
 
 
+def glyph_levels(values):
+    """Lit squares per row, 0 to 4. With no limits read it's the logo: three on top, one below."""
+    if not values:
+        return [3, 1]
+    levels = []
+    for row in range(2):
+        value = values[row] if row < len(values) else None
+        levels.append(0 if value is None else min(max(value, 0), 1) * 4)
+    return levels
+
+
 def glyph_svg(values, color):
-    """The two limit tracks from the Mac menu bar icon."""
-    idle = not values
+    """Switchr's pixel mark, as in the dashboard and the Mac menu bar: two rows of four squares,
+    each row lit as far as one of the two nearest limits is used."""
+    levels = glyph_levels(values)
     parts = ['<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">']
-    for row, y in enumerate((6, 12.5)):
-        parts.append(f'<rect x="2" y="{y}" width="18" height="4" rx="2" fill="{color}" fill-opacity="{0.55 if idle else 0.32}"/>')
-        if row < len(values) and values[row] is not None and values[row] > 0:
-            width = max(4, 18 * min(max(values[row], 0), 1))
-            parts.append(f'<rect x="2" y="{y}" width="{width:.2f}" height="4" rx="2" fill="{color}"/>')
+    for row, y in enumerate((5, 13)):
+        for column in range(4):
+            lit = min(max(levels[row] - column, 0), 1)
+            parts.append(f'<rect x="{column * 6}" y="{y}" width="4" height="4" rx="1" fill="{color}" fill-opacity="{0.3 + 0.7 * lit:.3f}"/>')
     parts.append("</svg>")
     return "".join(parts)
 
@@ -593,7 +605,7 @@ def run_tray(argv):
 
         def render(self):
             dark_panel = os.environ.get("SWITCHR_TRAY_ICON", "light") != "dark"
-            svg = glyph_svg(glyph_values(self.status), BONE if dark_panel else INK)
+            svg = glyph_svg(glyph_values(self.status), LIGHT_INK if dark_panel else DARK_INK)
             # A new file name per change: indicator hosts cache icons by path.
             path = os.path.join(icon_dir, f"glyph-{abs(hash(svg))}.svg")
             if path != self.icon_path:

@@ -44,7 +44,16 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>${VERSION}</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <!-- Lives in the menu bar; takes a Dock icon only while its window is open. -->
   <key>LSUIElement</key><true/>
+  <!-- switchr://open?section=usage, sent by the switchr command to open the app's window. -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key><string>dev.switchr.app</string>
+      <key>CFBundleURLSchemes</key><array><string>switchr</string></array>
+    </dict>
+  </array>
 </dict>
 </plist>
 PLIST

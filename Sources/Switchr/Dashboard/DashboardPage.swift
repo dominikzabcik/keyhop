@@ -4,7 +4,7 @@ import Foundation
 /// `switchr dashboard`, or saved with its data inside by `switchr insights --output`.
 enum DashboardPage {
     static func render(boot: String?) -> String {
-        var page = template
+        var page = template.replacingOccurrences(of: "{{icons}}", with: InterfaceIcons.symbols)
         for provider in Provider.allCases {
             page = page.replacingOccurrences(of: "{{mark-\(provider.rawValue)}}", with: ProviderMarks.path(for: provider))
         }
@@ -94,6 +94,11 @@ button, input, select { font: inherit; color: inherit; }
 .foot-row small { font-size: 12px; color: var(--subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .foot-row.spin .icon { animation: turn 1s linear infinite; }
 @keyframes turn { to { transform: rotate(360deg); } }
+/* In the Mac app's window the title bar buttons sit in the sidebar's top row, and that row and the
+   top bar move the window. */
+.mac-window .shell { grid-template-columns: 256px minmax(0, 1fr); }
+.mac-window .brand { padding-left: 90px; }
+.mac-window .brand, .mac-window .topbar { -webkit-user-select: none; user-select: none; cursor: default; }
 
 .content { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 52px; padding: 0 24px; border-bottom: 1px solid var(--border); flex: none; }
@@ -309,15 +314,7 @@ select.field option { background: var(--raised); }
   <symbol id="mark-claude" viewBox="0 0 24 24"><path d="{{mark-claude}}"/></symbol>
   <symbol id="mark-cursor" viewBox="0 0 24 24"><path d="{{mark-cursor}}"/></symbol>
   <symbol id="mark-codex" viewBox="0 0 24 24"><path d="{{mark-codex}}"/></symbol>
-  <symbol id="i-overview" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></symbol>
-  <symbol id="i-accounts" viewBox="0 0 16 16"><circle cx="6" cy="5.5" r="2.5"/><path d="M1.8 13.5c.5-2.3 2.2-3.5 4.2-3.5s3.7 1.2 4.2 3.5"/><path d="M10.5 3.2a2.4 2.4 0 0 1 0 4.6"/><path d="M12.2 10.3c1.1.5 1.8 1.6 2 3.2"/></symbol>
-  <symbol id="i-usage" viewBox="0 0 16 16"><path d="M2 13.5h12"/><path d="M4 11V7"/><path d="M8 11V3.5"/><path d="M12 11V5.5"/></symbol>
-  <symbol id="i-budgets" viewBox="0 0 16 16"><rect x="1.8" y="3.5" width="12.4" height="9" rx="1.8"/><path d="M1.8 6.5h12.4"/><path d="M10.5 9.8h1.5"/></symbol>
-  <symbol id="i-settings" viewBox="0 0 16 16"><path d="M2 4.5h6"/><path d="M11 4.5h3"/><circle cx="9.5" cy="4.5" r="1.5"/><path d="M2 11.5h2"/><path d="M7 11.5h7"/><circle cx="5.5" cy="11.5" r="1.5"/></symbol>
-  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13.5 8a5.5 5.5 0 0 1-9.6 3.6"/><path d="M2.5 8a5.5 5.5 0 0 1 9.6-3.6"/><path d="M12.3 1.8v2.8H9.5"/><path d="M3.7 14.2v-2.8h2.8"/></symbol>
-  <symbol id="i-update" viewBox="0 0 16 16"><path d="M8 2.5v7.5"/><path d="M5 7l3 3 3-3"/><path d="M3 13.5h10"/></symbol>
-  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.2 14.3 13H1.7z"/><path d="M8 6.5v3"/><path d="M8 11.4v.1"/></symbol>
-  <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3.5v9M3.5 8h9"/></symbol>
+  {{icons}}
 </svg>
 
 <div class="shell">
@@ -362,6 +359,7 @@ select.field option { background: var(--raised); }
   const boot = JSON.parse($("#boot").textContent || "null");
   const isStatic = !!boot;
   const params = new URLSearchParams(location.hash.slice(1));
+  if (params.get("w") === "mac") document.documentElement.classList.add("mac-window");
   let token = params.get("k") || store.get("switchr-token");
   if (params.get("k")) store.set("switchr-token", token);
   const wanted = params.get("s") || location.hash.slice(1);
@@ -1101,6 +1099,13 @@ select.field option { background: var(--raised); }
         if (!editing()) render();
       }
     }, 20000);
+  }
+  if (document.documentElement.classList.contains("mac-window")) {
+    addEventListener("mousedown", (event) => {
+      if (event.button !== 0 || !event.target.closest(".brand, .topbar")) return;
+      if (event.target.closest("button, a, input, select, textarea, label")) return;
+      window.webkit?.messageHandlers?.switchrWindow?.postMessage(event.detail === 2 ? "zoom" : "drag");
+    });
   }
   start();
 })();

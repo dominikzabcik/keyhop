@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.1]
+
+- Switchr opens as an app on macOS. Launching it from Applications, Launchpad, Spotlight or the Dock opens Switchr's window: Overview, Accounts, Usage, Budgets and Settings, served by the app itself. It has a Dock icon while the window is open and goes back to the menu bar when it closes. Started at login or relaunched by an automatic update, it stays in the menu bar.
+- The menu's footer has **Open Switchr**, and `switchr dashboard` on a Mac opens the app's window instead of a browser.
+- One design everywhere. The menu, the welcome window, the app icon, the menu bar icon and the Linux and Windows tray icons now use the dashboard's neutral look and its pixel mark. In the menu bar and the trays, the mark's two rows fill as your two nearest limits do.
+- The window and the menu share one account list, so a rename or removal in one is never undone by the other.
+- The separate Insights window is gone; its charts are in the window's Usage section. `switchr insights` opens Usage, and `--output` still saves the page as one file.
+
 ## [0.7.0]
 
 - Linux and Windows. Switchr now runs on every major desktop:

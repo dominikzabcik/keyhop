@@ -114,7 +114,7 @@ final class Updater: ObservableObject {
 
             available = nil
             phase = .idle
-            if relaunch { Self.relaunch(bundle) }
+            if relaunch { Self.relaunch(bundle, quietly: !AppWindow.isOpen) }
             return true
         } catch {
             phase = .failed(error.localizedDescription)
@@ -122,10 +122,16 @@ final class Updater: ObservableObject {
         }
     }
 
-    private static func relaunch(_ bundle: URL) {
+    /// Passed when Switchr relaunches after an update it installed on its own, so it comes back in
+    /// the menu bar without opening its window.
+    static let relaunchFlag = "--after-update"
+
+    /// `quietly` brings Switchr back in the menu bar only; otherwise its window opens again too.
+    private static func relaunch(_ bundle: URL, quietly: Bool) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = ["-c", "sleep 1; /usr/bin/open \"$0\"", bundle.path]
+        let open = quietly ? "/usr/bin/open \"$0\" --args \(relaunchFlag)" : "/usr/bin/open \"$0\""
+        process.arguments = ["-c", "sleep 1; \(open)", bundle.path]
         try? process.run()
         NSApp.terminate(nil)
     }
@@ -137,38 +143,46 @@ struct UpdateLine: View {
 
     var body: some View {
         if let release = updater.available {
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Switchr \(release.version) is out")
-                        .font(.system(size: 12.5, weight: .semibold))
-                        .foregroundStyle(Brand.bone)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Brand.text)
                     Text(caption)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Brand.muted)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 8)
+                Spacer(minLength: 4)
                 switch updater.phase {
                 case .downloading, .installing:
                     ProgressView().controlSize(.small)
                 default:
-                    QuietButton("Notes") { NSWorkspace.shared.open(release.page) }
+                    Button("Notes") { NSWorkspace.shared.open(release.page) }
+                        .buttonStyle(AppButtonStyle(kind: .ghost, size: .small))
                     Button("Update") { Task { await updater.install() } }
-                        .buttonStyle(BoneButtonStyle(compact: true))
-                        .frame(width: 76)
+                        .buttonStyle(AppButtonStyle(kind: .primary, size: .small))
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(12)
+            .card()
+            .padding(.horizontal, 12)
             .padding(.bottom, 12)
         } else if case .failed(let message) = updater.phase {
-            Text(message)
-                .font(.system(size: 11.5))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
+            HStack(alignment: .top, spacing: 8) {
+                Icon("alert", size: 14)
+                    .foregroundStyle(Brand.warn)
+                Text(message)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Brand.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .card()
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
         }
     }
 

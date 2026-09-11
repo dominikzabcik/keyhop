@@ -11,7 +11,7 @@ import SwiftUI
 ///     --reset                     remove saved logins, Switchr's data folder and preferences
 ///     --update-now                install the latest release over this copy, without relaunching
 ///     --preview-menu [tool]       show the menu with sample data in a window
-///     --preview-insights          show Insights with sample data
+///     --preview-window [section]  show Switchr's window with sample data
 ///     --preview-welcome           show the welcome window with sample data
 ///     --snapshot <prefix>         render the menu and welcome window with sample data to PNGs
 enum DebugTools {
@@ -67,10 +67,11 @@ enum DebugTools {
             MainActor.assumeIsolated { Previews.menu(tab: tab) }
             return true
         }
-        if arguments.contains("--preview-insights") {
+        if arguments.contains("--preview-window") {
+            let section = value(after: "--preview-window")
             MainActor.assumeIsolated {
-                let store = AccountStore(preview: ())
-                Previews.run { InsightsWindow.show(store: store, tracker: UsageTracker(preview: store), height: 1260) }
+                AppWindow.sample = true
+                Previews.run { AppWindow.show(section: section) }
             }
             return true
         }
@@ -127,8 +128,10 @@ enum Snapshot {
     static func render(prefix: String) {
         let store = AccountStore(preview: ())
         let tracker = UsageTracker(preview: store)
-        write(MenuView().environmentObject(store).environmentObject(tracker), to: "\(prefix)-menu.png")
-        write(WelcomeView(canMove: false, dismiss: {}).environmentObject(store), to: "\(prefix)-welcome.png")
+        let corners = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        write(MenuView().environmentObject(store).environmentObject(tracker).environment(\.staticSnapshot, true).clipShape(corners),
+              to: "\(prefix)-menu.png")
+        write(WelcomeView(canMove: false, dismiss: {}).environmentObject(store).clipShape(corners), to: "\(prefix)-welcome.png")
     }
 
     private static func write(_ view: some View, to path: String) {

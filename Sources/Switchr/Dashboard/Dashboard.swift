@@ -204,6 +204,10 @@ struct DashboardAppearance: Codable, Equatable {
     var scope = "all"
     /// Whether a picture for the image scene is saved.
     var image = false
+    /// How solid Switchr's Mac window is. Below 1 the desktop shows through it, blurred.
+    var glass = 0.85
+
+    enum CodingKeys: String, CodingKey { case scene, opacity, scope, image, glass }
 
     static var url: URL { Platform.dataDirectory.appendingPathComponent("appearance.json") }
     static var imageURL: URL { Platform.dataDirectory.appendingPathComponent("background.jpg") }
@@ -218,6 +222,18 @@ struct DashboardAppearance: Codable, Equatable {
     func save() throws {
         try FileManager.default.createDirectory(at: Platform.dataDirectory, withIntermediateDirectories: true)
         try Files.writeAtomically(DashboardJSON.encoder.encode(self), to: Self.url)
+    }
+}
+
+extension DashboardAppearance {
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        scene = try values.decode(String.self, forKey: .scene)
+        opacity = try values.decode(Double.self, forKey: .opacity)
+        scope = try values.decode(String.self, forKey: .scope)
+        image = try values.decode(Bool.self, forKey: .image)
+        // Saved before the window could be see-through.
+        glass = try values.decodeIfPresent(Double.self, forKey: .glass) ?? DashboardAppearance().glass
     }
 }
 
@@ -803,6 +819,7 @@ actor DashboardSession {
         let scene: String?
         let opacity: Double?
         let scope: String?
+        let glass: Double?
         /// A JPEG data URL for the image scene, or an empty string to remove the saved picture.
         let image: String?
     }
@@ -826,12 +843,16 @@ actor DashboardSession {
             guard opacity.isFinite else { throw UsageError("Opacity must be a number.") }
             appearance.opacity = min(1, max(0.1, opacity))
         }
+        if let glass = body.glass {
+            guard glass.isFinite else { throw UsageError("Window opacity must be a number.") }
+            appearance.glass = min(1, max(0.4, glass))
+        }
         var message = "Saved."
         if let image = body.image {
             if image.isEmpty {
                 if sample { sampleImage = nil } else { try? FileManager.default.removeItem(at: DashboardAppearance.imageURL) }
                 appearance.image = false
-                if appearance.scene == "image" { appearance.scene = "horizon" }
+                if appearance.scene == "image" { appearance.scene = "leaves" }
                 message = "Removed the picture."
             } else {
                 let prefix = "data:image/jpeg;base64,"

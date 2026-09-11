@@ -114,9 +114,10 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
         super.init()
 
         webView.configuration.userContentController.add(ScriptBridge(self), name: Self.messageName)
-        // The page paints its own near-black; this keeps a white flash out of loads and resizes.
+        // The web view is clear, so the page's tinted surfaces sit on the blur below, and no white
+        // flashes through on loads and resizes.
         webView.setValue(false, forKey: "drawsBackground")
-        webView.underPageBackgroundColor = Brand.backgroundColor
+        webView.underPageBackgroundColor = .clear
         webView.navigationDelegate = self
         webView.uiDelegate = self
 
@@ -130,11 +131,20 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
         window.toolbar = toolbar
         window.toolbarStyle = .unified
         window.appearance = NSAppearance(named: .darkAqua)
-        window.backgroundColor = Brand.backgroundColor
+        window.isOpaque = false
+        window.backgroundColor = .clear
         window.minSize = NSSize(width: 960, height: 620)
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed
-        window.contentView = webView
+        // The desktop behind the window, blurred. At full window opacity the page covers it.
+        let glass = NSVisualEffectView(frame: frame)
+        glass.material = .underWindowBackground
+        glass.blendingMode = .behindWindow
+        glass.state = .active
+        webView.frame = glass.bounds
+        webView.autoresizingMask = [.width, .height]
+        glass.addSubview(webView)
+        window.contentView = glass
         window.delegate = self
         let restored = window.setFrameUsingName(Self.frameName)
         window.setFrameAutosaveName(Self.frameName)

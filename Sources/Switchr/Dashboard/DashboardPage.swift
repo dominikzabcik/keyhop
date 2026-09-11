@@ -119,7 +119,14 @@ button, input, select { font: inherit; color: inherit; }
 /* Components */
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; min-width: 0; }
 /* Over a scene, panels are tinted sheets: the scene reads through them, softened just enough to keep text crisp. */
-.has-backdrop .card { background: hsl(0 0% 9.5% / .64); border-color: hsl(0 0% 100% / .07); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }.range { width: 180px; accent-color: hsl(0 0% 92%); }
+.has-backdrop .card { background: hsl(0 0% 9.5% / .64); border-color: hsl(0 0% 100% / .07); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+/* In the Mac app the window itself can be see-through: the desktop shows through a native blur, and
+   the sidebar and content are tinted over it at the chosen window opacity. Scenes drop their own
+   ground so only their artwork sits on the glass. */
+.has-glass body { background: transparent; }
+.has-glass .sidebar { background: hsl(0 0% 7.2% / var(--glass, .85)); }
+.has-glass .content { background: hsl(0 0% 9% / var(--glass, .85)); }
+.has-glass .bd-scene:not(.bd-picture) { background: none; }.range { width: 180px; accent-color: hsl(0 0% 92%); }
 /* Overview opens on today's figure, set large over the Field. */
 .hero { position: relative; container-type: inline-size; padding: 52px 4px 40px; display: grid; gap: 10px; }
 /* While a refresh runs, a pixel runner hops along the bottom of the hero. */
@@ -989,7 +996,8 @@ select.field option { background: var(--raised); }
   async function applyBackdrop() {
     const host = $("#backdrop");
     if (!host || !window.SwitchrBackdrop) return;
-    const look = data.state?.appearance || { scene: "leaves", opacity: 0.8, scope: "all", image: false };
+    const look = data.state?.appearance || { scene: "leaves", opacity: 0.8, scope: "all", image: false, glass: 1 };
+    applyGlass(look.glass ?? 1);
     let scene = look.scene;
     if (scene === "image") {
       if (!look.image || isStatic) scene = "leaves";
@@ -1003,6 +1011,13 @@ select.field option { background: var(--raised); }
     const options = { scene, opacity: look.opacity, image: scene === "image" ? backdropImage : null };
     if (backdrop) backdrop.update(options);
     else backdrop = window.SwitchrBackdrop.mount(host, options);
+  }
+
+  // Below full window opacity, the Mac app's window is see-through.
+  function applyGlass(glass) {
+    const root = document.documentElement;
+    root.classList.toggle("has-glass", root.classList.contains("mac-window") && glass < 1);
+    root.style.setProperty("--glass", String(glass));
   }
 
   async function setAppearance(change) {
@@ -1053,7 +1068,7 @@ select.field option { background: var(--raised); }
       leaves: "Dark leaves swaying on their stems, a few drifting down.",
       dunes: "A desert world's horizon, turning slowly under the stars.",
       orbit: "A ringed planet floating in the dark.",
-      arcade: "Pixel runners racing across a dot grid.",
+      arcade: "Pixel runners racing along a ridge of pixel hills.",
       image: "Your picture, softly behind everything.",
       off: "A plain surface.",
     }[look.scene];
@@ -1063,6 +1078,8 @@ select.field option { background: var(--raised); }
         <div class="row setting-row"><div><b>Show on</b><p>${look.scope === "overview" ? "Only behind Overview." : "Behind every section."}</p></div>${pick("scope", [["all", "Everywhere"], ["overview", "Overview only"]], look.scope)}</div>
         <div class="row setting-row"><div><b>Opacity</b><p>How strongly the scene shows through.</p></div>
           <input class="range" type="range" min="10" max="100" step="5" value="${Math.round(look.opacity * 100)}" data-appearance="opacity" aria-label="Opacity"${look.scene === "off" ? " disabled" : ""}></div>
+        ${document.documentElement.classList.contains("mac-window") ? `<div class="row setting-row"><div><b>Window opacity</b><p>${look.glass >= 1 ? "A solid window." : "Your desktop shows through, blurred."}</p></div>
+          <input class="range" type="range" min="40" max="100" step="5" value="${Math.round(look.glass * 100)}" data-appearance="glass" aria-label="Window opacity"></div>` : ""}
         <div class="row setting-row"><div><b>Picture</b><p>${look.image ? "Saved in Switchr's data folder." : "Any photo or artwork. It sits behind a soft veil, so text stays readable."}</p></div>
           <div class="row-actions"><label class="btn sm secondary">${look.image ? "Replace picture" : "Choose picture"}<input type="file" accept="image/*" data-appearance="image" hidden></label>
           ${look.image ? `<button class="btn sm ghost" data-action="appearance-clear">Remove</button>` : ""}</div></div>
@@ -1286,10 +1303,17 @@ select.field option { background: var(--raised); }
     }
   });
 
+  // Window opacity follows the slider while it moves, and saves when it's let go.
+  document.addEventListener("input", (event) => {
+    const glass = event.target.closest('[data-appearance="glass"]');
+    if (glass) applyGlass(Number(glass.value) / 100);
+  });
+
   document.addEventListener("change", async (event) => {
     const look = event.target.closest("[data-appearance]");
     if (look) {
       if (look.dataset.appearance === "opacity") { setAppearance({ opacity: Number(look.value) / 100 }); return; }
+      if (look.dataset.appearance === "glass") { setAppearance({ glass: Number(look.value) / 100 }); return; }
       const file = look.files && look.files[0];
       look.value = "";
       if (!file) return;

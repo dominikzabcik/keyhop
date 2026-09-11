@@ -23,4 +23,11 @@ final class BackdropTests: XCTestCase {
         XCTAssertNil(try? DashboardJSON.decoder.decode(DashboardAppearance.self, from: Data(old.utf8)))
         XCTAssertEqual(DashboardAppearance().scene, "leaves")
     }
+
+    func testAnAppearanceSavedBeforeWindowOpacityGetsTheDefault() throws {
+        let saved = #"{"image":false,"opacity":0.6,"scene":"orbit","scope":"all"}"#
+        let appearance = try DashboardJSON.decoder.decode(DashboardAppearance.self, from: Data(saved.utf8))
+        XCTAssertEqual(appearance.scene, "orbit")
+        XCTAssertEqual(appearance.glass, 0.85)
+    }
 }

@@ -5,7 +5,7 @@
 - Leaderboards at [switchr.qwezdi.workers.dev](https://switchr.qwezdi.workers.dev/leaderboard). Link Switchr with GitHub (Settings in Switchr's window, or `switchr cloud login`) to join a global leaderboard, create teams with invite links, and get a public profile with a year of activity and streaks. Switchr sends daily totals per tool, about once an hour, and nothing else. The Leaderboard section in Switchr's window shows your rank and who's just ahead of you.
 - `switchr cloud login`, `status`, `sync`, `open` and `logout`.
 - Backdrops: illustrated scenes behind Switchr's window and the website. Leaves sway on their stems with a few drifting down, Dunes turns a desert world's horizon under the stars, Orbit floats a ringed planet, Arcade races pixel runners across a dot grid, and Picture shows any image you choose. Every motion is GPU-friendly, so they stay smooth, and they hold still with reduced motion. Pick a scene, its opacity and where it shows in **Settings › Appearance**.
-- On a Mac, Switchr's window is see-through: your desktop shows through it, blurred, under the scene. **Window opacity** in Settings › Appearance sets how much, up to a solid window.
+- On a Mac, the whole of Switchr's window is glass: it sits on a blurred view of your desktop, and every panel, tab and button is a light tint over it. **Window opacity** and **Blur** in Settings › Appearance set how much, up to a solid window.
 - Overview opens on today's tokens, set large, with a pixel runner hopping along it while a refresh runs. The stat cards gain your streak.
 
 ## [0.7.1]

@@ -132,19 +132,25 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
         window.toolbarStyle = .unified
         window.appearance = NSAppearance(named: .darkAqua)
         window.isOpaque = false
-        window.backgroundColor = .clear
+        // Fully clear with a shadow leaves a notch at the rounded corners; a trace of alpha keeps them clean.
+        window.backgroundColor = NSColor.black.withAlphaComponent(0.01)
+        window.hasShadow = true
         window.minSize = NSSize(width: 960, height: 620)
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed
-        // The desktop behind the window, blurred. At full window opacity the page covers it.
-        let glass = NSVisualEffectView(frame: frame)
-        glass.material = .underWindowBackground
-        glass.blendingMode = .behindWindow
-        glass.state = .active
-        webView.frame = glass.bounds
-        webView.autoresizingMask = [.width, .height]
-        glass.addSubview(webView)
-        window.contentView = glass
+        // The whole app is glass: the page tints itself over the desktop, blurred behind the window.
+        if DesktopBlur.isAvailable {
+            window.contentView = webView
+        } else {
+            let vibrancy = NSVisualEffectView(frame: frame)
+            vibrancy.material = .underWindowBackground
+            vibrancy.blendingMode = .behindWindow
+            vibrancy.state = .active
+            webView.frame = vibrancy.bounds
+            webView.autoresizingMask = [.width, .height]
+            vibrancy.addSubview(webView)
+            window.contentView = vibrancy
+        }
         window.delegate = self
         let restored = window.setFrameUsingName(Self.frameName)
         window.setFrameAutosaveName(Self.frameName)
@@ -157,6 +163,10 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+        // The saved blur, until the page reports its own.
+        let appearance = DashboardAppearance.load()
+        DesktopBlur.set(window, radius: appearance.glass < 1 ? appearance.blur : 0)
+        window.invalidateShadow()
     }
 
     func go(to section: String) {
@@ -174,9 +184,14 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
         AppWindow.closed()
     }
 
-    /// The page's top row stands in for a title bar: it asks to move or zoom the window.
+    /// The page's top row stands in for a title bar: it asks to move or zoom the window. Appearance
+    /// sends "blur:24" as its Blur setting changes.
     func received(_ message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, message.frameInfo.securityOrigin.host == "127.0.0.1" else { return }
+        if let body = message.body as? String, body.hasPrefix("blur:"), let radius = Int(body.dropFirst(5)) {
+            DesktopBlur.set(window, radius: radius)
+            return
+        }
         switch message.body as? String {
         case "drag":
             let current = NSApp.currentEvent.flatMap { $0.type == .leftMouseDown || $0.type == .leftMouseDragged ? $0 : nil }
@@ -232,6 +247,28 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
     private static func openOutside(_ url: URL) {
         guard url.scheme == "https" || url.scheme == "http" else { return }
         NSWorkspace.shared.open(url)
+    }
+}
+
+/// Blurs whatever is behind a window, the way terminals blur their backgrounds. It's a private
+/// WindowServer call, looked up at run time; if a macOS release drops it, the window uses the standard
+/// vibrancy view instead.
+enum DesktopBlur {
+    private typealias MainConnection = @convention(c) () -> Int32
+    private typealias SetRadius = @convention(c) (Int32, UInt32, Int32) -> Int32
+
+    private static let functions: (connection: MainConnection, setRadius: SetRadius)? = {
+        guard let handle = dlopen(nil, RTLD_NOW),
+              let connection = dlsym(handle, "CGSMainConnectionID"),
+              let setRadius = dlsym(handle, "CGSSetWindowBackgroundBlurRadius") else { return nil }
+        return (unsafeBitCast(connection, to: MainConnection.self), unsafeBitCast(setRadius, to: SetRadius.self))
+    }()
+
+    static var isAvailable: Bool { functions != nil }
+
+    static func set(_ window: NSWindow, radius: Int) {
+        guard let functions, window.windowNumber > 0 else { return }
+        _ = functions.setRadius(functions.connection(), UInt32(window.windowNumber), Int32(min(64, max(0, radius))))
     }
 }
 

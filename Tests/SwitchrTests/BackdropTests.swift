@@ -29,5 +29,6 @@ final class BackdropTests: XCTestCase {
         let appearance = try DashboardJSON.decoder.decode(DashboardAppearance.self, from: Data(saved.utf8))
         XCTAssertEqual(appearance.scene, "orbit")
         XCTAssertEqual(appearance.glass, 0.85)
+        XCTAssertEqual(appearance.blur, 24)
     }
 }

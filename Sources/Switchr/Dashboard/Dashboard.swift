@@ -204,10 +204,12 @@ struct DashboardAppearance: Codable, Equatable {
     var scope = "all"
     /// Whether a picture for the image scene is saved.
     var image = false
-    /// How solid Switchr's Mac window is. Below 1 the desktop shows through it, blurred.
+    /// How solid Switchr's Mac window is. Below 1 the whole app is glass over the desktop.
     var glass = 0.85
+    /// How much the desktop behind that glass is blurred, in points.
+    var blur = 24
 
-    enum CodingKeys: String, CodingKey { case scene, opacity, scope, image, glass }
+    enum CodingKeys: String, CodingKey { case scene, opacity, scope, image, glass, blur }
 
     static var url: URL { Platform.dataDirectory.appendingPathComponent("appearance.json") }
     static var imageURL: URL { Platform.dataDirectory.appendingPathComponent("background.jpg") }
@@ -234,6 +236,7 @@ extension DashboardAppearance {
         image = try values.decode(Bool.self, forKey: .image)
         // Saved before the window could be see-through.
         glass = try values.decodeIfPresent(Double.self, forKey: .glass) ?? DashboardAppearance().glass
+        blur = try values.decodeIfPresent(Int.self, forKey: .blur) ?? DashboardAppearance().blur
     }
 }
 
@@ -820,6 +823,7 @@ actor DashboardSession {
         let opacity: Double?
         let scope: String?
         let glass: Double?
+        let blur: Int?
         /// A JPEG data URL for the image scene, or an empty string to remove the saved picture.
         let image: String?
     }
@@ -845,7 +849,10 @@ actor DashboardSession {
         }
         if let glass = body.glass {
             guard glass.isFinite else { throw UsageError("Window opacity must be a number.") }
-            appearance.glass = min(1, max(0.4, glass))
+            appearance.glass = min(1, max(0.15, glass))
+        }
+        if let blur = body.blur {
+            appearance.blur = min(64, max(1, blur))
         }
         var message = "Saved."
         if let image = body.image {

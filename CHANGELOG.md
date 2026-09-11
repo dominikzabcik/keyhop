@@ -12,7 +12,10 @@
   - **Linux:** the Secret Service (GNOME Keyring or KWallet), or private files when no keyring runs.
   - **Windows:** Data Protection API encryption for your user.
 - `switchr update` installs a verified release. On Linux it installs through your package manager, or into `~/.local` for the portable build. On Windows it replaces the files in place.
-- The one-line installer detects Linux and installs the matching package, and a Homebrew cask is included for the Mac app.
+- The Linux and Windows trays rename and remove accounts, set a monthly budget, and have switches for automatic usage checks, automatic updates and opening at sign-in. They tell you once when a new version is out.
+- Arch Linux users can build the `switchr-bin` PKGBUILD, and each release carries winget manifests. Windows on Arm runs the x86_64 build.
+- The one-line installer detects Linux and installs the matching package. On macOS it links the `switchr` command onto your PATH, as the new Homebrew cask does.
+- `switchr status --sample` and `switchr insights --sample` show made-up accounts, for trying Switchr out and for screenshots.
 - The switching rules are shared by every platform and covered by new tests, as are alerts, the command line, secret storage and the Insights page.
 
 ## [0.6.1]

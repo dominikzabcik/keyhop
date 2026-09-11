@@ -30,10 +30,12 @@ $amber = 207, 159, 87
 $dim = 140, 158, 148
 $rust = 214, 124, 108
 
-function Step([string]$label, [scriptblock]$work) {
+# The block runs in this function's scope, so its parameter must not share a name with anything
+# the steps use, such as $work.
+function Step([string]$label, [scriptblock]$action) {
   Write-Host ('  ' + (Paint '━━━━━━━━━━━━' $dim) + '  ' + (Paint $label $dim)) -NoNewline
   try {
-    & $work
+    & $action
   } catch {
     Write-Host ''
     Write-Host ('  ' + (Paint "$label failed: $($_.Exception.Message)" $rust))

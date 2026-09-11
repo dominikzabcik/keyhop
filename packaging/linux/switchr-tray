@@ -260,7 +260,8 @@ def run_tray(argv):
     import gi
 
     gi.require_version("Gtk", "3.0")
-    from gi.repository import Gio, GLib, Gtk
+    gi.require_version("Gdk", "3.0")
+    from gi.repository import Gdk, Gio, GLib, Gtk
 
     indicator_module = None
     for name in ("AyatanaAppIndicator3", "AppIndicator3"):
@@ -571,14 +572,20 @@ def run_tray(argv):
             return menu
 
         def show_menu_for_screenshot(self):
-            anchor = Gtk.Window(type=Gtk.WindowType.POPUP)
-            anchor.move(980, 24)
-            anchor.resize(1, 1)
-            anchor.show()
-            self.anchor = anchor
+            """Opens the menu below a tiny window, once that window is on screen."""
+            anchor = Gtk.Window(title="Switchr")
+            anchor.set_decorated(False)
+            anchor.set_default_size(1, 1)
+            anchor.move(980, 16)
             menu = self.build(build_menu(self.status, self.busy, self.update, self.menu_settings()))
-            self.screenshot_menu = menu
-            menu.popup_at_widget(anchor, Gtk.Gravity.SOUTH_WEST, Gtk.Gravity.NORTH_WEST, None)
+            self.anchor, self.screenshot_menu = anchor, menu
+
+            def popup():
+                menu.popup_at_widget(anchor, Gdk.Gravity.SOUTH_WEST, Gdk.Gravity.NORTH_WEST, None)
+                return False
+
+            anchor.connect("map-event", lambda *_: GLib.timeout_add(300, popup) and False)
+            anchor.show_all()
             return False
 
         # Actions

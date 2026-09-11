@@ -25,13 +25,16 @@ To try the Mac UI without your own accounts, use the preview flags. They show re
 
 The rest of the Mac debug tools are listed at the top of `Sources/Switchr/App/DebugTools.swift`.
 
-The tray menus can be checked on any system from a saved status:
+The tray menus can be checked on any system from sample data, which holds no real logins:
 
 ```bash
-switchr status --json > status.json
-python3 packaging/linux/switchr-tray --print-menu status.json   # the Linux menu
-.build/debug/SwitchrTray --print-menu status.json               # the Windows menu
+switchr status --sample --json > sample.json
+python3 packaging/linux/switchr-tray --print-menu sample.json   # the Linux menu
+.build/debug/SwitchrTray --print-menu sample.json               # the Windows menu
+switchr insights --sample                                       # the Insights page
 ```
+
+With `--status-file sample.json`, the real trays show that data without running `switchr`, and `--show-menu` or `--show-dialog` open the menu or a prompt for screenshots. CI captures both trays this way.
 
 ## Layout
 
@@ -62,4 +65,4 @@ The Linux and Windows trays only talk to `switchr ... --json`. When you change a
 
 ## Releases
 
-Bump `VERSION` and `AppVersion.number`, add a section to `CHANGELOG.md`, commit, then push a `v<version>` tag. The Release workflow checks the three agree, tests and builds on every system, and publishes all downloads with one `SHA256SUMS`. Every updater installs a release only when its checksum matches.
+Bump `VERSION` and `AppVersion.number`, add a section to `CHANGELOG.md`, and commit. Run the Release workflow by hand for a dry run, then push a `v<version>` tag. The workflow checks the three agree, tests and builds on every system, publishes all downloads with one `SHA256SUMS`, and commits the Scoop, AUR and winget manifests that `scripts/render-manifests.py` writes. Every updater installs a release only when its checksum matches.

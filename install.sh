@@ -251,7 +251,12 @@ fi
 
 if [[ -n ${SWITCHR_INSTALL_FROM:-} ]]; then
   SOURCE=local
-  version=$(find "$SWITCHR_INSTALL_FROM" -maxdepth 1 -name 'switchr-*-linux-*.tar.gz' -exec basename {} \; | sed -n 's/^switchr-\(.*\)-linux-.*\.tar\.gz$/\1/p' | head -n 1)
+  version=""
+  for archive in "$SWITCHR_INSTALL_FROM"/switchr-*-linux-*.tar.gz; do
+    [[ -e $archive ]] || continue
+    version=$(basename "$archive" | sed -n 's/^switchr-\(.*\)-linux-.*\.tar\.gz$/\1/p')
+    break
+  done
   TAG="v${SWITCHR_VERSION:-$version}"
   [[ $TAG != v ]] || fail "Set SWITCHR_VERSION to the version of the files in $SWITCHR_INSTALL_FROM."
 elif command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then

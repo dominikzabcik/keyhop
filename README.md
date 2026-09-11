@@ -19,6 +19,8 @@
 
 <p align="center">
   <img src="docs/menu.png" width="340" alt="Switchr's menu on the Claude tab: the account in use with its 5-hour and weekly limits, and another account to switch to">
+  &nbsp;
+  <img src="docs/linux-tray.png" width="300" alt="Switchr's Linux tray menu with sample accounts: each tool's accounts with their tightest limit, Accounts, budget and settings">
 </p>
 
 ## Install
@@ -39,12 +41,12 @@ Both installers download the latest release and check its SHA-256 before install
 
 | System | What the installer does | Or install it yourself |
 | --- | --- | --- |
-| macOS 14 or later | Installs Switchr into Applications and opens it. Files downloaded this way aren't flagged by Gatekeeper, so there's no security prompt. | `Switchr.dmg` from the [latest release](../../releases/latest), or `brew tap dominikzabcik/switchr https://github.com/dominikzabcik/switchr && brew install --cask switchr` |
+| macOS 14 or later | Installs Switchr into Applications, links the `switchr` command onto your PATH, and opens it. Files downloaded this way aren't flagged by Gatekeeper, so there's no security prompt. | `Switchr.dmg` from the [latest release](../../releases/latest), or `brew tap dominikzabcik/switchr https://github.com/dominikzabcik/switchr && brew install --cask switchr` |
 | Fedora, RHEL | Installs the RPM with `dnf` | `sudo dnf install ./switchr-<version>-1.x86_64.rpm` |
 | Debian, Ubuntu | Installs the DEB with `apt` | `sudo apt install ./switchr_<version>_amd64.deb` |
-| Arch Linux | Installs the package with `pacman` | `sudo pacman -U switchr-<version>-1-x86_64.pkg.tar.zst` |
+| Arch Linux | Installs the package with `pacman` | `sudo pacman -U switchr-<version>-1-x86_64.pkg.tar.zst`, or build the release's `switchr-bin` PKGBUILD with `makepkg -si` |
 | Any other Linux | Installs the portable build into `~/.local`, without root. Set `SWITCHR_LOCAL=1` to choose this anywhere. | Unpack `switchr-<version>-linux-<arch>.tar.gz` and run `./install-local.sh` |
-| Windows 10 and 11 | Installs into `%LOCALAPPDATA%\Programs\Switchr`, adds `switchr` to your PATH and the Start menu, and opens at sign-in | `scoop bucket add switchr https://github.com/dominikzabcik/switchr` then `scoop install switchr` |
+| Windows 10 and 11 | Installs into `%LOCALAPPDATA%\Programs\Switchr`, adds `switchr` to your PATH and the Start menu, and opens at sign-in. Windows on Arm runs the same build through its x64 emulation. | `scoop bucket add switchr https://github.com/dominikzabcik/switchr` then `scoop install switchr` |
 
 Every Linux download runs on x86_64 and aarch64. The `switchr` binary is fully static, so it doesn't depend on your distribution's libraries. The tray uses GTK 3, AppIndicator and libnotify for Python, which the packages pull in.
 
@@ -77,6 +79,7 @@ GNOME hides tray icons unless the **AppIndicator and KStatusNotifierItem Support
 | **Add an account** | Sign in to the tool as usual and Switchr saves the login. For another account, choose **Add account**: Switchr signs the tool out on this computer only, so the saved token stays valid, and saves the next login you make. |
 | **Switch** | Click one of a tool's other accounts. Each shows how much of its tightest limit is used. On macOS, when the account in use runs low, the one with the most room is marked, and you can right-click an account to rename or remove it. |
 | **Read the limits** | macOS shows the account in use with a large bar per limit, where a tick marks an even pace. On Linux and Windows, the menu shows each account's tightest limit and the icon shows the busiest account's two nearest limits. |
+| **Rename, remove and budgets** | On macOS, right-click an account, and set budgets in Insights. On Linux and Windows, use the tray's **Accounts** submenu to rename or remove an account, and **Set a budget** for a monthly budget across all accounts. |
 | **Insights** | Usage over time by account, API value, models, current limits and budgets. On macOS it's a window; on Linux and Windows it opens in your browser. |
 | **Alerts** | A notification when a limit or budget is nearly used, with a **Switch** button that moves you to the saved account with the most room. |
 
@@ -84,7 +87,7 @@ Codex logins made with an API key aren't supported, only ChatGPT sign-ins.
 
 ### The `switchr` command
 
-The same commands work on every system. On macOS, run them through the app binary, `/Applications/Switchr.app/Contents/MacOS/Switchr`.
+The same commands work on every system. On macOS, the installer and the Homebrew cask link the app binary onto your PATH as `switchr`; otherwise run `/Applications/Switchr.app/Contents/MacOS/Switchr` with the same arguments.
 
 ```text
 switchr status [--refresh]              accounts, limits and today's usage
@@ -98,7 +101,7 @@ switchr update                          install the latest verified release
 switchr doctor                          paths, secret storage and what Switchr can see
 ```
 
-Add `--json` to any of them for scripts. `switchr help` lists everything.
+Add `--json` to any of them for scripts. `switchr status --sample` and `switchr insights --sample` show made-up accounts, for trying Switchr out or taking screenshots. `switchr help` lists everything.
 
 ## Usage tracking
 
@@ -112,7 +115,7 @@ Switchr keeps its own record of what every account uses.
 
 - **Per account:** each request is credited to the account that was in use at that moment. Switchr records every switch, including logins you change outside it. Usage from before Switchr started goes to the tool's only saved account when there's one.
 - **API value:** requests are priced at each provider's standard API rates, from a table generated from [models.dev](https://models.dev). Subscriptions don't bill per token, so API value measures how much use you get, not what you pay. Cursor's on-demand charges are shown separately as billed.
-- **Budgets:** set one per account or across all accounts, per day, week or month, in Insights on macOS or with `switchr budget` anywhere. Switchr notifies you at 80% and at 100%.
+- **Budgets:** set one per account or across all accounts, per day, week or month, in Insights on macOS or with `switchr budget` anywhere. The Linux and Windows trays set a monthly budget across all accounts. Switchr notifies you at 80% and at 100%.
 - **Forecasts:** Switchr samples each limit and projects when it runs out at the recent rate. Once a limit is half used and on track to run out before it resets, the alert offers the switch.
 
 <p align="center">
@@ -145,20 +148,22 @@ Tools rotate their tokens on their own, so Switchr re-saves the in-use login on 
 
 ## Settings
 
-| Setting | macOS | Linux | Windows |
+| Setting | Default | macOS | Linux and Windows |
 | --- | --- | --- | --- |
-| Check usage every 5 minutes | On, in the **…** menu | Always on while the tray runs | Always on while the tray runs |
-| Check for updates | Daily, in the **…** menu | Twice a day | Twice a day |
-| Install updates automatically | On, in the **…** menu | Choose **Update** in the menu | Choose **Update** in the menu |
-| Open at login | Welcome window and **…** menu | **Open at login** in the menu | **Open at sign-in** in the menu |
+| Check usage every 5 minutes | On | **…** menu | **Check usage automatically** in the tray menu |
+| Check for updates | On | Daily, **…** menu | Twice a day |
+| Install updates automatically | On | **…** menu | Windows and the portable Linux build: **Install updates automatically** in the tray menu. Linux packages notify you instead, since installing needs your password. |
+| Open at login | On with the installers | Welcome window and **…** menu | **Open at sign-in** in the tray menu |
+
+The Linux tray keeps its settings in `~/.config/switchr/tray.json`, the Windows tray in `HKCU\Software\Switchr`. `switchr reset` removes both.
 
 ## Updates
 
 Switchr updates from this repository's releases. A release without a checksum, or with one that doesn't match, is never installed.
 
 - **macOS:** the app downloads `Switchr.zip`, checks it against `SHA256SUMS`, confirms the bundle inside is the expected version, swaps it in place and reopens. Click the version number in the menu's footer to check right away.
-- **Linux:** `switchr update`, or **Update** in the tray, downloads the package for the way you installed Switchr and installs it with `dnf`, `apt` or `pacman` (asking for your password through `sudo` or your desktop's dialog). The portable build updates in `~/.local` without root.
-- **Windows:** `switchr update`, or **Update** in the tray, replaces the installed files and restarts the tray. With Scoop, use `scoop update switchr`.
+- **Linux:** `switchr update`, or **Update** in the tray, downloads the package for the way you installed Switchr and installs it with `dnf`, `apt` or `pacman` (asking for your password through `sudo` or your desktop's dialog). The tray tells you once when a new version is out. The portable build updates in `~/.local` without root, automatically when that setting is on.
+- **Windows:** the tray installs a new release when nothing is in progress, replaces the files in place and restarts itself. `switchr update` does the same from a terminal. With Scoop, use `scoop update switchr`; the tray tells you when one is out.
 
 ## Privacy
 
@@ -195,7 +200,7 @@ First remove the saved logins, usage history and settings, if you want them gone
 | Fedora, RHEL | `sudo dnf remove switchr` |
 | Debian, Ubuntu | `sudo apt remove switchr` |
 | Arch Linux | `sudo pacman -R switchr` |
-| Portable Linux | Delete `~/.local/bin/switchr`, `~/.local/bin/switchr-tray` and `~/.config/autostart/dev.switchr.Switchr.desktop` |
+| Portable Linux | Delete `~/.local/bin/switchr`, `~/.local/bin/switchr-tray`, `~/.config/autostart/dev.switchr.Switchr.desktop`, and `dev.switchr.Switchr.*` in `~/.local/share/applications`, `~/.local/share/metainfo` and `~/.local/share/icons/hicolor/*/apps` |
 | Windows | `& ([scriptblock]::Create((irm https://raw.githubusercontent.com/dominikzabcik/switchr/main/install.ps1))) -Uninstall`, or `scoop uninstall switchr` |
 
 Your tools stay signed in with whatever account was last in use.
@@ -208,6 +213,7 @@ swift test                            # unit tests, on macOS, Linux and Windows
 ./scripts/build-app.sh --release      # macOS: plus Switchr.zip, Switchr.dmg and SHA256SUMS
 ./scripts/package-linux.sh            # Linux: static binary, tarball, RPM, DEB and Arch package
 ./scripts/package-windows.ps1         # Windows: switchr.exe, switchr-tray.exe and the runtime in a zip
+python3 scripts/render-manifests.py   # Scoop, AUR and winget manifests from a release's SHA256SUMS
 python3 scripts/update-pricing.py     # refresh model prices from models.dev
 ./scripts/render-art.sh               # re-render the icon, disk image background and banner
 ```
@@ -219,11 +225,13 @@ The Linux build needs Swift 6.3.3 with the matching [static Linux SDK](https://w
 1. Bump `VERSION`, `AppVersion.number` in `Sources/Switchr/Core/Version.swift`, and add a matching section to `CHANGELOG.md`.
 2. Commit, then tag and push: `git tag v$(cat VERSION) && git push origin v$(cat VERSION)`.
 
-The [Release workflow](.github/workflows/release.yml) tests and builds on macOS, Linux (x86_64 and aarch64) and Windows, publishes every download with one `SHA256SUMS`, and points the Scoop manifest at the new release. [CI](.github/workflows/ci.yml) tests every push on all three systems and installs the Linux packages on Fedora, Ubuntu, Debian, Arch Linux and openSUSE.
+The [Release workflow](.github/workflows/release.yml) tests and builds on macOS, Linux (x86_64 and aarch64) and Windows, publishes every download with one `SHA256SUMS` and the AUR PKGBUILD, and commits the Scoop, AUR and winget manifests for the release. Run it by hand first for a dry run that builds everything and publishes nothing.
+
+[CI](.github/workflows/ci.yml) tests every push on all three systems. It installs the Linux packages on Fedora, Ubuntu, Debian and Arch Linux (and on Fedora and Ubuntu for aarch64), builds the PKGBUILD with `makepkg`, runs both installers from the fresh build, uninstalls on Windows, and captures the Linux and Windows trays with sample data.
 
 ## Terms and trademarks
 
-Switchr moves between accounts you already have, such as a personal login and a work login. It doesn't give any account more usage than its plan includes. Using several accounts to get around one plan's limits can break a provider's terms, so read the terms for each service you use ([Anthropic](https://www.anthropic.com/legal/consumer-terms), [Cursor](https://cursor.com/terms-of-service), [OpenAI](https://openai.com/policies/row-terms-of-use/)) and use Switchr within them. Only save accounts that are yours: providers such as Anthropic don't allow sharing a login. If you'd rather Switchr make no requests on a timer, turn off **Check usage every 5 minutes** on macOS, or use the `switchr` command without the tray.
+Switchr moves between accounts you already have, such as a personal login and a work login. It doesn't give any account more usage than its plan includes. Using several accounts to get around one plan's limits can break a provider's terms, so read the terms for each service you use ([Anthropic](https://www.anthropic.com/legal/consumer-terms), [Cursor](https://cursor.com/terms-of-service), [OpenAI](https://openai.com/policies/row-terms-of-use/)) and use Switchr within them. Only save accounts that are yours: providers such as Anthropic don't allow sharing a login. If you'd rather Switchr make no requests on a timer, turn off **Check usage every 5 minutes** on macOS or **Check usage automatically** in the Linux and Windows trays.
 
 Switchr is an independent project. It isn't affiliated with, endorsed by or sponsored by Anthropic, Anysphere or OpenAI. Claude, Claude Code, Cursor, Codex and OpenAI are trademarks of their owners, and their logos appear only to identify each tool.
 

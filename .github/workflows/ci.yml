@@ -223,7 +223,7 @@ jobs:
           path: artifacts
 
       - name: Install Switchr and a virtual display
-        run: dnf install -y artifacts/*.rpm xorg-x11-server-Xvfb dbus-daemon ImageMagick adwaita-gtk2-theme google-noto-sans-fonts >/dev/null
+        run: dnf install -y artifacts/*.rpm xorg-x11-server-Xvfb dbus-daemon ImageMagick google-noto-sans-fonts >/dev/null
 
       - name: Run the tray and capture its menu and a prompt
         run: |
@@ -246,6 +246,8 @@ jobs:
           name: linux-screens
           path: linux-*.png
 
+  # Windows on Arm runs the x86_64 build through emulation: the Swift toolchain doesn't run on
+  # GitHub's Arm Windows runners yet.
   windows:
     name: Windows ${{ matrix.arch }}
     strategy:
@@ -254,8 +256,6 @@ jobs:
         include:
           - arch: x86_64
             runner: windows-2022
-          - arch: arm64
-            runner: windows-11-arm
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:

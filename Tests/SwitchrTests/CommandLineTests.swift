@@ -202,7 +202,7 @@ final class StorageTests: XCTestCase {
     func testFileSecretsAreReadableOnlyByTheUser() throws {
         #if os(Windows)
         throw XCTSkip("Windows files have no POSIX permissions; logins are DPAPI-encrypted instead.")
-        #endif
+        #else
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("switchr-secrets-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = FileSecretStore(directory: directory)
@@ -216,6 +216,7 @@ final class StorageTests: XCTestCase {
 
         store.delete("one")
         XCTAssertNil(store.read("one"))
+        #endif
     }
 
     func testVaultRoundTripsThroughAnyStore() async {

@@ -83,7 +83,14 @@ jobs:
 
       - name: Install the static Linux SDK and nfpm
         run: |
-          apt-get update -qq && apt-get install -y -qq curl python3 >/dev/null
+          # Ubuntu's mirror sometimes serves a half-synced index; retry, then switch to another mirror.
+          for attempt in 1 2 3; do
+            apt-get update -qq || true
+            if apt-get install -y -qq curl python3 >/dev/null; then break; fi
+            sed -i 's|http://archive.ubuntu.com/ubuntu|http://mirrors.edge.kernel.org/ubuntu|g; s|http://ports.ubuntu.com/ubuntu-ports|http://mirrors.edge.kernel.org/ubuntu-ports|g' /etc/apt/sources.list.d/ubuntu.sources || true
+            sleep 15
+          done
+          command -v curl >/dev/null
           swift sdk install "$STATIC_SDK_URL" --checksum "$STATIC_SDK_CHECKSUM"
           curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_${{ matrix.nfpm }}.tar.gz" | tar -xz -C /usr/local/bin nfpm
 

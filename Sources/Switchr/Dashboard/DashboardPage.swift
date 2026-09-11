@@ -118,8 +118,8 @@ button, input, select { font: inherit; color: inherit; }
 
 /* Components */
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; min-width: 0; }
-.has-backdrop .card { background: hsl(0 0% 10.6% / .8); -webkit-backdrop-filter: blur(18px) saturate(1.05); backdrop-filter: blur(18px) saturate(1.05); }
-.range { width: 180px; accent-color: hsl(0 0% 92%); }
+/* Over a scene, panels are tinted sheets: the scene reads through them, softened just enough to keep text crisp. */
+.has-backdrop .card { background: hsl(0 0% 9.5% / .64); border-color: hsl(0 0% 100% / .07); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }.range { width: 180px; accent-color: hsl(0 0% 92%); }
 /* Overview opens on today's figure, set large over the Field. */
 .hero { position: relative; container-type: inline-size; padding: 52px 4px 40px; display: grid; gap: 10px; }
 /* While a refresh runs, a pixel runner hops along the bottom of the hero. */

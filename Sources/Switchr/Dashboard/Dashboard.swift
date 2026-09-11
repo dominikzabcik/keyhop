@@ -19,7 +19,7 @@ enum Dashboard {
         let token: String
     }
 
-    static let sections = ["overview", "accounts", "usage", "budgets", "settings"]
+    static let sections = ["overview", "accounts", "usage", "budgets", "leaderboard", "settings"]
 
     private static var launchFile: URL { Platform.dataDirectory.appendingPathComponent("dashboard.json") }
 
@@ -189,6 +189,40 @@ struct DashboardState: Encodable {
     let adding: [String]
     let refreshing: Bool
     let messages: [String]
+    let cloud: DashboardCloud
+}
+
+/// Switchr cloud as the dashboard shows it.
+struct DashboardCloud: Encodable {
+    struct Linking: Encodable {
+        let userCode: String
+        let verifyUrl: String
+    }
+
+    /// Whether this version knows a Switchr cloud server. Without one the dashboard hides leaderboards.
+    let available: Bool
+    let linked: Bool
+    let server: String?
+    let login: String?
+    let profile: String?
+    let isPublic: Bool?
+    let lastSync: Date?
+    let lastSyncError: String?
+    let linking: Linking?
+}
+
+struct DashboardCloudLinkAction: Encodable {
+    let message: String
+    let note: String?
+    let userCode: String
+    let verifyUrl: String
+}
+
+struct DashboardLeaderboard: Encodable {
+    let board: CloudBoard
+    let teams: [CloudTeam]
+    let team: String?
+    let website: String
 }
 
 struct DashboardAction: Encodable {
@@ -438,6 +472,13 @@ actor DashboardSession {
     private let openWorkspace: @Sendable () throws -> Workspace
     private let changed: @Sendable () -> Void
     private let installUpdateHook: (@Sendable () async -> DashboardAction)?
+    private var cloudLinking: CloudLinking?
+
+    private struct CloudLinking {
+        let start: CloudClient.LinkStart
+        let expires: Date
+        let task: Task<Void, Never>
+    }
 
     /// The Mac app's window passes `workspace` to share the menu's AccountService, `changed` to
     /// hear about changes, and `installUpdate` to update the app its own way.
@@ -496,6 +537,14 @@ actor DashboardSession {
                 return .json(try await remove(try Self.decode(IDBody.self, request).id))
             case ("POST", "/api/budget"):
                 return .json(try await budget(try Self.decode(BudgetBody.self, request)))
+            case ("POST", "/api/cloud/link"):
+                return .json(try await cloudLink())
+            case ("POST", "/api/cloud/sync"):
+                return .json(try await cloudSync())
+            case ("POST", "/api/cloud/unlink"):
+                return .json(try await cloudUnlink())
+            case ("GET", "/api/cloud/leaderboard"):
+                return .json(try await cloudLeaderboard(period: request.query["period"], metric: request.query["metric"], team: request.query["team"]))
             case ("GET", "/api/usage"):
                 guard let range = InsightsRange(argument: request.query["range"] ?? "week") else { throw UsageError("Unknown range.") }
                 let word = request.query["tool"] ?? "all"
@@ -537,7 +586,8 @@ actor DashboardSession {
         messages.removeAll()
         return DashboardState(mode: sample ? "sample" : "live", version: AppVersion.current, platform: Platform.name,
                               dataDirectory: Platform.dataDirectory.path, savedAt: Date(), status: StatusDocument(overview),
-                              adding: adding.keys.map(\.rawValue).sorted(), refreshing: refreshing, messages: pending)
+                              adding: adding.keys.map(\.rawValue).sorted(), refreshing: refreshing, messages: pending,
+                              cloud: cloudStatus())
     }
 
     func usage(range: InsightsRange, tool: Provider?, readLogs: Bool) async throws -> DashboardUsage {
@@ -699,6 +749,121 @@ actor DashboardSession {
         guard let period = BudgetPeriod(rawValue: body.period ?? "month") else { throw UsageError("Choose day, week or month.") }
         try await workspace.tracker.setBudget(Budget(scope: scope, amount: amount, period: period), scope: scope)
         return DashboardAction(message: "Budget for \(name): \(Numbers.usd(amount)) \(period.title) at API prices.", note: nil)
+    }
+
+    // MARK: Cloud
+
+    func cloudStatus() -> DashboardCloud {
+        if sample {
+            return DashboardCloud(available: true, linked: true, server: "https://switchr.example", login: "you",
+                                  profile: "https://switchr.example/u/you", isPublic: true, lastSync: Date().addingTimeInterval(-600),
+                                  lastSyncError: nil, linking: nil)
+        }
+        let link = CloudLink.load()
+        let linking = cloudLinking.flatMap { $0.expires > Date() ? DashboardCloud.Linking(userCode: $0.start.userCode, verifyUrl: $0.start.verifyUrl) : nil }
+        return DashboardCloud(available: link != nil || Cloud.server != nil, linked: link != nil, server: link?.server ?? Cloud.server,
+                              login: link?.login, profile: link?.profileURL, isPublic: link?.isPublic, lastSync: link?.lastSync,
+                              lastSyncError: link?.lastSyncError, linking: linking)
+    }
+
+    /// Starts linking in the browser and keeps asking the website until someone approves the code.
+    private func cloudLink() async throws -> DashboardCloudLinkAction {
+        try refuseInSample()
+        guard let server = Cloud.server else { throw SwitchrError("Switchr cloud isn't available in this version yet.") }
+        if let pending = cloudLinking, pending.expires > Date() {
+            _ = Desktop.open(pending.start.verifyUrl)
+            return DashboardCloudLinkAction(message: "Approve the code \(pending.start.userCode) in your browser.", note: nil,
+                                            userCode: pending.start.userCode, verifyUrl: pending.start.verifyUrl)
+        }
+        let client = CloudClient(server: server)
+        let start = try await client.startLink(label: Cloud.deviceLabel)
+        let expires = Date().addingTimeInterval(TimeInterval(start.expiresIn))
+        let task = Task { await self.waitForCloudLink(client, start: start, server: server, expires: expires) }
+        cloudLinking = CloudLinking(start: start, expires: expires, task: task)
+        _ = Desktop.open(start.verifyUrl)
+        return DashboardCloudLinkAction(message: "Approve the code \(start.userCode) in your browser.", note: nil,
+                                        userCode: start.userCode, verifyUrl: start.verifyUrl)
+    }
+
+    private func waitForCloudLink(_ client: CloudClient, start: CloudClient.LinkStart, server: String, expires: Date) async {
+        defer { cloudLinking = nil }
+        while Date() < expires {
+            try? await Task.sleep(for: .seconds(max(start.interval, 2)))
+            if Task.isCancelled { return }
+            guard let result = try? await client.poll(start.deviceCode) else { continue }
+            switch result {
+            case .pending:
+                continue
+            case .expired:
+                messages.append("The code expired. Link Switchr cloud again from Settings.")
+                return
+            case .granted(let granted):
+                var link = CloudLink(server: server, token: granted.token, login: granted.user.login, name: granted.user.name,
+                                     isPublic: granted.user.isPublic, linkedAt: Date())
+                do {
+                    try link.save()
+                } catch {
+                    messages.append("Couldn't save the link: \(error.localizedDescription)")
+                    return
+                }
+                messages.append("Linked to @\(granted.user.login). Your daily totals are on their way.")
+                if let workspace = try? openWorkspace() {
+                    _ = try? await workspace.tracker.ingestLocalLogs()
+                    do {
+                        try await CloudSync.run(&link, tracker: workspace.tracker)
+                    } catch {
+                        link.lastSyncError = error.localizedDescription
+                        try? link.save()
+                    }
+                }
+                changed()
+                return
+            }
+        }
+    }
+
+    private func cloudSync() async throws -> DashboardAction {
+        try refuseInSample()
+        guard var link = CloudLink.load() else { throw SwitchrError("Link Switchr cloud first.") }
+        let workspace = try openWorkspace()
+        _ = try? await workspace.tracker.ingestLocalLogs()
+        do {
+            let saved = try await CloudSync.run(&link, tracker: workspace.tracker)
+            return DashboardAction(message: "Sent \(saved) daily totals to @\(link.login).", note: nil)
+        } catch let error as CloudError where error.kind == .unlinked {
+            CloudLink.remove()
+            throw error
+        }
+    }
+
+    private func cloudUnlink() async throws -> DashboardAction {
+        try refuseInSample()
+        if let pending = cloudLinking {
+            pending.task.cancel()
+            cloudLinking = nil
+            if CloudLink.load() == nil { return DashboardAction(message: "Stopped linking.", note: nil) }
+        }
+        guard let link = CloudLink.load() else { return DashboardAction(message: "This computer isn't linked.", note: nil) }
+        try? await CloudClient(server: link.server, token: link.token).unlink()
+        CloudLink.remove()
+        return DashboardAction(message: "Unlinked @\(link.login). Nothing more is sent from this computer.", note: nil)
+    }
+
+    private func cloudLeaderboard(period: String?, metric: String?, team: String?) async throws -> DashboardLeaderboard {
+        let period = period.flatMap { ["today", "week", "month", "all"].contains($0) ? $0 : nil } ?? "week"
+        let metric = metric.flatMap { ["tokens", "cost", "requests"].contains($0) ? $0 : nil } ?? "tokens"
+        let team = team.flatMap { $0.isEmpty ? nil : $0 }
+        if sample { return SampleData.leaderboard(period: period, metric: metric, team: team) }
+        guard let link = CloudLink.load() else { throw SwitchrError("Link Switchr cloud to see leaderboards.") }
+        let client = CloudClient(server: link.server, token: link.token)
+        do {
+            async let board = client.leaderboard(period: period, metric: metric, team: team)
+            async let teams = client.teams()
+            return DashboardLeaderboard(board: try await board, teams: try await teams, team: team, website: link.server)
+        } catch let error as CloudError where error.kind == .unlinked {
+            CloudLink.remove()
+            throw error
+        }
     }
 
     private func checkUpdate() async throws -> UpdateDocument {

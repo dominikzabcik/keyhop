@@ -5,7 +5,7 @@ import Foundation
 enum SwitchrCLI {
     static let commands: Set<String> = [
         "status", "refresh", "switch", "add", "rename", "remove", "usage", "dashboard", "insights", "budget",
-        "update", "doctor", "reset", "version", "help", "--help", "-h", "--version",
+        "cloud", "update", "doctor", "reset", "version", "help", "--help", "-h", "--version",
     ]
 
     static func handles(_ word: String) -> Bool {
@@ -42,6 +42,7 @@ enum SwitchrCLI {
             case "remove": try await Commands.remove(&args)
             case "usage": try await Commands.usage(&args)
             case "budget": try await Commands.budget(&args)
+            case "cloud": try await Commands.cloud(&args)
             case "update": try await Commands.update(&args)
             case "doctor": try await Commands.doctor(&args)
             case "reset": try await Commands.reset(&args)
@@ -79,6 +80,13 @@ enum SwitchrCLI {
       budget list [--json]
       budget set <account|all> <dollars> [--period day|week|month]
       budget clear <account|all>
+
+    Leaderboards
+      cloud login [--no-open]              Link this computer with GitHub and send daily totals
+      cloud status [--json]                Who this computer is linked to, and the last sync
+      cloud sync [--json]                  Send daily totals now (also runs hourly after a refresh)
+      cloud open                           Open your profile on the website
+      cloud logout                         Unlink this computer
 
     App
       update [--check] [--json]            Check for and install a new release

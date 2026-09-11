@@ -46,6 +46,8 @@ With `--status-file sample.json`, the real trays show that data without running 
 | `Sources/Switchr/CLI` | The `switchr` command, its JSON documents and sample data |
 | `Sources/Switchr/Dashboard` | The local dashboard: a small loopback HTTP server, its JSON API and access checks, and the page itself |
 | `Sources/Switchr/UI` | The Mac menu, the window that hosts the dashboard, the welcome window, design tokens and controls |
+| `Sources/Switchr/Cloud` | Linking to Switchr cloud, its client, and the hourly sync of daily totals |
+| `cloud` | Switchr cloud itself: a Cloudflare Worker with D1 for GitHub sign-in, teams, leaderboards and profiles. See [cloud/README.md](cloud/README.md) |
 | `Sources/SwitchrTray` | The Windows tray app; its menu model builds and runs everywhere |
 | `Sources/CSQLite` | The SQLite amalgamation, used on Linux and Windows |
 | `packaging/linux` | The Linux tray, desktop entry, AppStream metadata, nfpm description and `~/.local` installer |

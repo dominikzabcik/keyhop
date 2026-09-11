@@ -127,6 +127,17 @@ Switchr keeps its own record of what every account uses.
   <img src="docs/dashboard-usage.png" width="860" alt="The dashboard's Usage section with sample data: tokens, API value, requests and cache share, a stacked chart by account, 26 weeks of activity, token mix, models and accounts">
 </p>
 
+## Leaderboards
+
+Link Switchr with your GitHub account to compare usage with friends and teams: in Switchr's window open **Settings** and choose **Link with GitHub**, or run `switchr cloud login`. Switchr then sends daily totals per tool about once an hour.
+
+- **Global leaderboard:** ranked by tokens, API value or requests, for today, 7 days, 30 days or all time. Only people who make their profile public appear.
+- **Teams:** create a team on the website and share its invite link. Members see each other's totals, even with private profiles.
+- **Profiles:** a page at `/u/<login>` with a year of activity, streaks, tools and your weekly rank, ready to share.
+- **What's sent:** tokens, API value and requests per tool per day. Never prompts, emails, account names or models. `switchr cloud logout` unlinks a computer, and deleting your account on the website removes everything it holds.
+
+The service lives in [`cloud/`](cloud/README.md).
+
 ## What a switch does
 
 ```mermaid
@@ -178,6 +189,7 @@ There's no analytics and no telemetry. Switchr's network requests are:
 - **Token refresh:** for accounts that aren't in use, the providers' own sign-in services: `platform.claude.com` and `auth.openai.com`.
 - **Cursor usage export:** `cursor.com`, per saved Cursor account.
 - **Updates:** `api.github.com` and `github.com`, for release information and downloads.
+- **Leaderboards:** only after you link a computer, Switchr cloud receives your daily totals per tool.
 
 Everything else stays on your computer:
 

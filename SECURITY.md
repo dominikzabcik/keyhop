@@ -15,11 +15,22 @@ Never include real tokens, Keychain or keyring contents, `.credentials.json` or 
   - **Linux:** the Secret Service (GNOME Keyring or KWallet), or `0600` files in a `0700` folder when no keyring runs.
   - **Windows:** files encrypted with the Data Protection API for your user.
 - **Account names and labels:** `accounts.json` in Switchr's data folder. This file holds no tokens.
-- Nothing is sent anywhere except the providers' own usage and token-refresh endpoints, called with each account's own token, and GitHub for updates.
+- Nothing is sent anywhere except the providers' own usage and token-refresh endpoints, called with each account's own token, GitHub for updates, and, only once you link a computer, Switchr cloud for daily totals.
+- **Switchr cloud link:** `cloud.json` in Switchr's data folder, readable only by you, holding the linked login and the app token for Switchr cloud.
 
 ## The dashboard
 
 `switchr dashboard` serves Switchr's window on 127.0.0.1, never on a network interface. The address it opens carries a random 256-bit session key. Every API request must send that key, with a loopback Host header (so a website can't reach it through DNS rebinding), and changes must be JSON requests from the same origin. The server stops 15 minutes after its last window closes. The key is visible to your own user in that window's address and, while the window opens, in a process list.
+
+## Switchr cloud
+
+Leaderboards are opt-in. A computer sends nothing until you link it, by approving a short code in the browser after signing in with GitHub.
+
+- **Sent:** tokens, API value and requests per tool per day. Never prompts, emails, account names, models or provider tokens.
+- **Stored by the service:** your GitHub id, login, name and avatar URL, those daily totals, and team memberships. Session and app tokens are kept only as SHA-256 hashes, and GitHub's own token is discarded after reading your public profile.
+- **Visibility:** profiles are private until you make them public. Team members see each other's totals.
+- **Removal:** `switchr cloud logout` unlinks a computer. Deleting your account on the website removes everything it holds.
+- **Integrity:** totals are reported by your own Switchr, so a leaderboard is only as honest as its members. The service rejects impossible dates and implausible values.
 
 ## Known trade-offs
 

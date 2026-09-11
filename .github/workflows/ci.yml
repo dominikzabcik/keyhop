@@ -19,6 +19,31 @@ env:
   NFPM_VERSION: 2.47.0
 
 jobs:
+  cloud:
+    name: Switchr cloud
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: cloud
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: cloud/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Test in the Workers runtime
+        run: npm test
+
   macos:
     name: macOS
     runs-on: macos-15

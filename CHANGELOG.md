@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- Leaderboards. Link Switchr with GitHub (Settings in Switchr's window, or `switchr cloud login`) to join a global leaderboard, create teams with invite links, and get a public profile with a year of activity and streaks. Switchr sends daily totals per tool, about once an hour, and nothing else. The Leaderboard section in Switchr's window shows your rank and who's just ahead of you.
+- `switchr cloud login`, `status`, `sync`, `open` and `logout`.
+
 ## [0.7.1]
 
 - Switchr opens as an app on macOS. Launching it from Applications, Launchpad, Spotlight or the Dock opens Switchr's window: Overview, Accounts, Usage, Budgets and Settings, served by the app itself. It has a Dock icon while the window is open and goes back to the menu bar when it closes. Started at login or relaunched by an automatic update, it stays in the menu bar.

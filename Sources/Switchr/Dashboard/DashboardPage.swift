@@ -136,6 +136,8 @@ button, input, select { font: inherit; color: inherit; }
 .btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
 .btn:disabled { opacity: .45; cursor: default; }
 .btn.working { opacity: .6; cursor: progress; }
+a.btn { text-decoration: none; }
+.main p a:not(.btn) { color: var(--text); text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .badge {
@@ -256,6 +258,18 @@ select.field option { background: var(--raised); }
 .cell-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .cell-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Leaderboard */
+.avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--raised); color: var(--muted); font-weight: 600; }
+.podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.podium-card { padding: 16px; display: grid; gap: 12px; }
+.podium-card .place { color: var(--subtle); font-size: 12px; }
+.podium-card.you { border-color: var(--border-strong); }
+.podium-value { font-size: 24px; font-weight: 620; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.podium .mix-bar, .table .mix-bar { margin: 0; height: 6px; }
+.table tr.me td { background: hsl(0 0% 100% / .035); }
+.plain-link { color: inherit; text-decoration: none; }
+.plain-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
 /* Budgets and settings */
 .form { display: grid; gap: 14px; padding: 16px; }
 .form label { display: grid; gap: 6px; font-size: 12.5px; color: var(--muted); font-weight: 520; }
@@ -329,6 +343,7 @@ select.field option { background: var(--raised); }
       <a href="#accounts" data-section="accounts"><svg><use href="#i-accounts"/></svg>Accounts</a>
       <a href="#usage" data-section="usage"><svg><use href="#i-usage"/></svg>Usage</a>
       <a href="#budgets" data-section="budgets"><svg><use href="#i-budgets"/></svg>Budgets</a>
+      <a href="#leaderboard" data-section="leaderboard" hidden><svg><use href="#i-leaderboard"/></svg>Leaderboard</a>
       <a href="#settings" data-section="settings"><svg><use href="#i-settings"/></svg>Settings</a>
     </nav>
     <div class="sidebar-foot">
@@ -347,8 +362,8 @@ select.field option { background: var(--raised); }
 <script>
 (() => {
   "use strict";
-  const SECTIONS = ["overview", "accounts", "usage", "budgets", "settings"];
-  const TITLES = { overview: "Overview", accounts: "Accounts", usage: "Usage", budgets: "Budgets", settings: "Settings" };
+  const SECTIONS = ["overview", "accounts", "usage", "budgets", "leaderboard", "settings"];
+  const TITLES = { overview: "Overview", accounts: "Accounts", usage: "Usage", budgets: "Budgets", leaderboard: "Leaderboard", settings: "Settings" };
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const store = {
@@ -366,6 +381,7 @@ select.field option { background: var(--raised); }
   const ui = {
     section: SECTIONS.includes(wanted) ? wanted : (boot?.section || "overview"),
     range: "week", metric: "tokens", tool: "all",
+    boardPeriod: "week", boardMetric: "tokens", boardTeam: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
   };
   history.replaceState(null, "", "#" + ui.section);
@@ -443,6 +459,14 @@ select.field option { background: var(--raised); }
       if (ui.section === "overview") await Promise.all([loadUsage("today"), loadUsage("week")]);
       if (ui.section === "usage") await loadUsage(ui.range, ui.tool);
       if (ui.section === "budgets") await loadUsage("month");
+      if (ui.section === "leaderboard" && !isStatic && data.state?.cloud?.linked) {
+        try {
+          data.board = await api(`/api/cloud/leaderboard?period=${ui.boardPeriod}&metric=${ui.boardMetric}&team=${encodeURIComponent(ui.boardTeam)}`);
+          data.boardError = null;
+        } catch (error) {
+          data.boardError = error.message;
+        }
+      }
       if (ui.section === "settings" && !isStatic) {
         data.doctor = await api("/api/doctor");
         try { data.update = await api("/api/update"); data.updateError = null; } catch (error) { data.updateError = error.message; }
@@ -454,11 +478,25 @@ select.field option { background: var(--raised); }
 
   // MARK: Shell
 
+  let linkPoll = null;
+
   function render() {
     renderSidebar();
     if (!data.state) return;
     const tools = data.state.status.tools;
-    const page = { overview: overviewPage, accounts: accountsPage, usage: usagePage, budgets: budgetsPage, settings: settingsPage }[ui.section](tools);
+    const cloud = data.state.cloud;
+    const boardLink = $('#nav a[data-section="leaderboard"]');
+    if (boardLink) boardLink.hidden = isStatic || !cloud?.available;
+    if (ui.section === "leaderboard" && (isStatic || !cloud?.available)) ui.section = "overview";
+    // While a link waits for approval in the browser, check every few seconds instead of every 20.
+    if (cloud?.linking && !linkPoll) {
+      linkPoll = setTimeout(async () => {
+        linkPoll = null;
+        try { await loadState(); if (data.state.cloud.linked) await loadSection(); } catch {}
+        render();
+      }, 3000);
+    }
+    const page = { overview: overviewPage, accounts: accountsPage, usage: usagePage, budgets: budgetsPage, leaderboard: leaderboardPage, settings: settingsPage }[ui.section](tools);
     $("#title").textContent = TITLES[ui.section];
     $("#toolbar").innerHTML = page.toolbar || "";
     const offline = ui.offline ? `<div class="notice">${icon("alert")}<div><p>${esc(ui.offline)}</p></div></div>` : "";
@@ -911,6 +949,87 @@ select.field option { background: var(--raised); }
     </section>`;
   }
 
+  // MARK: Leaderboard
+
+  function ago(iso) {
+    const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if (seconds < 60) return "just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} h ago`;
+    return `${Math.floor(seconds / 86400)} d ago`;
+  }
+
+  function cloudCard(cloud) {
+    if (cloud.linking) {
+      return `<section class="card"><div class="card-head"><h2>Leaderboard</h2><span class="badge">Waiting</span></div>
+        <div class="card-body setting-row"><div><b>Approve <span class="mono">${esc(cloud.linking.userCode)}</span> in your browser</b>
+          <p>Sign in with GitHub, check that the code matches, and approve it. This page notices by itself.</p></div>
+          <div class="row-actions"><a class="btn sm" href="${esc(cloud.linking.verifyUrl)}" target="_blank" rel="noopener">Open sign-in</a>
+          <button class="btn sm ghost" data-action="cloud-unlink">Cancel</button></div></div></section>`;
+    }
+    if (!cloud.linked) {
+      return `<section class="card"><div class="card-head"><h2>Leaderboard</h2></div>
+        <div class="card-body setting-row"><div><b>Compare your usage with friends and teams</b>
+          <p>Link with GitHub to join leaderboards and get a profile you can share. Switchr sends tokens, API value and requests per tool per day. Never prompts, emails or account names.</p></div>
+          <button class="btn sm" data-action="cloud-link">Link with GitHub</button></div></section>`;
+    }
+    const synced = cloud.lastSyncError ? `The last sync failed: ${esc(cloud.lastSyncError)}` : cloud.lastSync ? `Synced ${esc(ago(cloud.lastSync))}` : "Not synced yet";
+    return `<section class="card"><div class="card-head"><h2>Leaderboard</h2><span class="badge live">Linked</span></div>
+      <div class="card-body setting-row"><div><b>@${esc(cloud.login)}${cloud.isPublic ? "" : " · private profile"}</b>
+        <p>${synced}. Daily totals go out hourly, after a refresh.</p></div>
+        <div class="row-actions"><a class="btn sm secondary" href="${esc(cloud.profile)}" target="_blank" rel="noopener">Open profile</a>
+        <button class="btn sm secondary" data-action="cloud-sync">Sync now</button>
+        <button class="btn sm ghost danger" data-action="cloud-unlink">Unlink</button></div></div></section>`;
+  }
+
+  function leaderboardPage() {
+    const cloud = data.state.cloud;
+    if (!cloud.linked || cloud.linking) return { body: cloudCard(cloud) };
+    const choice = (action, options, current) => `<div class="tabs">${options.map(([value, label]) => `<button data-action="${action}" data-value="${value}" aria-pressed="${value === current}">${label}</button>`).join("")}</div>`;
+    const teams = data.board?.teams || [];
+    const toolbar = `${teams.length ? `<select class="field" data-action="board-team"><option value="">Everyone</option>${teams.map((team) => `<option value="${esc(team.slug)}"${team.slug === ui.boardTeam ? " selected" : ""}>${esc(team.name)}</option>`).join("")}</select>` : ""}
+      ${choice("board-period", [["today", "Today"], ["week", "7 days"], ["month", "30 days"], ["all", "All time"]], ui.boardPeriod)}
+      ${choice("board-metric", [["tokens", "Tokens"], ["cost", "API value"], ["requests", "Requests"]], ui.boardMetric)}`;
+    if (data.boardError) return { toolbar, body: `<div class="notice">${icon("alert")}<div><p>${esc(data.boardError)}</p></div></div>` };
+    if (!data.board) return { toolbar, body: `<p class="lede">Loading the leaderboard…</p>` };
+
+    const entries = data.board.board.entries;
+    const site = data.board.website;
+    const value = (e) => ui.boardMetric === "cost" ? fmt.usd(e.cost) : ui.boardMetric === "requests" ? Math.round(e.requests).toLocaleString() : fmt.tokens(e.tokens);
+    const avatar = (e, size) => `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px" aria-hidden="true">${esc(e.login.slice(0, 1).toUpperCase())}</span>`;
+    const person = (e, size) => `<div class="who">${avatar(e, size)}<div><b>${esc(e.name || e.login)}</b><small>@${esc(e.login)}</small></div></div>`;
+    const mix = (e) => {
+      const parts = [["claude", "m1"], ["cursor", "m2"], ["codex", "m3"]].filter(([tool]) => (e.tools[tool] || 0) > 0);
+      const total = parts.reduce((sum, [tool]) => sum + e.tools[tool], 0);
+      return `<div class="mix-bar">${parts.map(([tool, tone]) => `<span class="${tone}" style="width:${(e.tools[tool] / total * 100).toFixed(2)}%" title="${esc(toolName(tool))} ${fmt.tokens(e.tools[tool])}"></span>`).join("")}</div>`;
+    };
+    const me = entries.find((e) => e.isYou);
+    const ahead = me && me.rank > 1 ? entries[me.rank - 2] : null;
+    const scope = ui.boardTeam ? (teams.find((team) => team.slug === ui.boardTeam)?.name || "your team") : "the global board";
+    const gap = ahead ? value({ tokens: ahead.tokens - me.tokens, cost: ahead.cost - me.cost, requests: ahead.requests - me.requests }) : null;
+
+    const stats = `<div class="stats">
+      <div class="card stat"><div class="label">Your rank</div><div class="value">${me ? `#${me.rank}` : "Unranked"}</div>
+        <div class="foot">${me ? `of ${entries.length} on ${esc(scope)}` : cloud.isPublic || ui.boardTeam ? "Nothing synced for this period" : "Private profiles rank only on teams"}</div></div>
+      <div class="card stat"><div class="label">You</div><div class="value">${me ? esc(value(me)) : "0"}</div>
+        <div class="foot">${me ? `${me.activeDays} active ${me.activeDays === 1 ? "day" : "days"}` : "&nbsp;"}</div></div>
+      <div class="card stat"><div class="label">${ahead ? `To catch @${esc(ahead.login)}` : "Ahead of you"}</div><div class="value">${gap ? esc(gap) : me ? "Nobody" : "&nbsp;"}</div>
+        <div class="foot">${ahead ? `They're #${ahead.rank}` : me ? "You lead this board" : "&nbsp;"}</div></div>
+      <div class="card stat"><div class="label">Profile</div><div class="value"><a class="plain-link" href="${esc(cloud.profile)}" target="_blank" rel="noopener">@${esc(cloud.login)}</a></div>
+        <div class="foot">${cloud.lastSync ? `Synced ${esc(ago(cloud.lastSync))}` : "Not synced yet"}</div></div>
+    </div>`;
+    const podium = entries.length ? `<div class="podium">${entries.slice(0, 3).map((e) => `<div class="card podium-card${e.isYou ? " you" : ""}">
+        <span class="place mono">#${e.rank}</span>${person(e, 36)}<div class="podium-value">${esc(value(e))}</div>${mix(e)}</div>`).join("")}</div>` : "";
+    const heading = { tokens: "Tokens", cost: "API value", requests: "Requests" }[ui.boardMetric];
+    const table = entries.length
+      ? `<section class="card"><table class="table"><thead><tr><th style="width:52px">#</th><th>Person</th><th>Tools</th><th class="right">Active days</th><th class="right">${heading}</th></tr></thead>
+          <tbody>${entries.map((e) => `<tr class="${e.isYou ? "me" : ""}"><td class="mono subtle">${e.rank}</td><td>${person(e, 26)}</td><td class="bar-cell">${mix(e)}</td>
+          <td class="right mono subtle">${e.activeDays}</td><td class="right mono">${esc(value(e))}</td></tr>`).join("")}</tbody></table></section>`
+      : `<section class="card"><p class="empty">Nobody has synced usage for this period yet.</p></section>`;
+    const note = `<p class="empty-inline subtle">Create teams and invite people on <a href="${esc(site)}/teams" target="_blank" rel="noopener">the website</a>.${cloud.isPublic ? "" : ` Your profile is private; make it public in the <a href="${esc(site)}/settings" target="_blank" rel="noopener">website's settings</a> to join the global board.`}</p>`;
+    return { toolbar, body: stats + podium + table + note };
+  }
+
   // MARK: Settings
 
   function settingsPage() {
@@ -928,6 +1047,7 @@ select.field option { background: var(--raised); }
       </div>`).join("")}</div>` : `<p class="empty">${isStatic ? "Not included in a saved page." : "Looking at this computer…"}</p>`;
 
     return { body: `
+      ${!isStatic && state.cloud?.available ? cloudCard(state.cloud) : ""}
       <section class="card"><div class="card-head"><h2>Updates</h2></div><div class="card-body">${updateRow}</div></section>
       <div class="split">
         <section class="card"><div class="card-head"><h2>Tools on this computer</h2></div>${tools}</section>
@@ -935,7 +1055,7 @@ select.field option { background: var(--raised); }
           <div class="list">
             <div class="row kv"><span>Data folder</span><span class="mono">${esc(doctor?.dataDirectory || state.dataDirectory)}</span></div>
             <div class="row kv"><span>Saved logins</span><span>${esc(doctor ? `${doctor.savedAccounts} in ${doctor.secretStore}` : state.status.secretStore)}</span></div>
-            <div class="row kv"><span>Network</span><span>The providers' own usage and sign-in services, and GitHub for updates. No analytics.</span></div>
+            <div class="row kv"><span>Network</span><span>The providers' own usage and sign-in services, GitHub for updates${state.cloud?.linked ? ", and Switchr cloud for your daily totals" : ""}. No analytics.</span></div>
             <div class="row kv"><span>This window</span><span>Served by switchr on 127.0.0.1 only, with a private session key.</span></div>
           </div>
         </section>
@@ -1030,10 +1150,30 @@ select.field option { background: var(--raised); }
       case "delete-budget": act(el, () => api("/api/budget", { scope: el.dataset.scope === "all" ? "all" : el.dataset.scope.replace("account:", ""), amount: null })); break;
       case "check-update": data.update = null; data.updateError = null; render(); await loadSection(); render(); break;
       case "install-update": act(el, () => api("/api/update", {})); break;
+      case "cloud-link": act(el, () => api("/api/cloud/link", {})); break;
+      case "cloud-sync": act(el, () => api("/api/cloud/sync", {})); break;
+      case "cloud-unlink": data.board = null; act(el, () => api("/api/cloud/unlink", {})); break;
+      case "board-period": case "board-metric":
+        ui[el.dataset.action === "board-period" ? "boardPeriod" : "boardMetric"] = el.dataset.value;
+        data.board = null;
+        render();
+        await loadSection();
+        render();
+        break;
     }
   });
 
   document.addEventListener("change", async (event) => {
+    const team = event.target.closest("select[data-action=board-team]");
+    if (team) {
+      ui.boardTeam = team.value;
+      team.blur();
+      data.board = null;
+      render();
+      await loadSection();
+      render();
+      return;
+    }
     const select = event.target.closest("select[data-action=tool]");
     if (!select) return;
     ui.tool = select.value;

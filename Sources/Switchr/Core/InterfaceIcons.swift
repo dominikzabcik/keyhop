@@ -8,6 +8,7 @@ enum InterfaceIcons {
         ("accounts", #"<circle cx="6" cy="5.5" r="2.5"/><path d="M1.8 13.5c.5-2.3 2.2-3.5 4.2-3.5s3.7 1.2 4.2 3.5"/><path d="M10.5 3.2a2.4 2.4 0 0 1 0 4.6"/><path d="M12.2 10.3c1.1.5 1.8 1.6 2 3.2"/>"#),
         ("usage", #"<path d="M2 13.5h12"/><path d="M4 11V7"/><path d="M8 11V3.5"/><path d="M12 11V5.5"/>"#),
         ("budgets", #"<rect x="1.8" y="3.5" width="12.4" height="9" rx="1.8"/><path d="M1.8 6.5h12.4"/><path d="M10.5 9.8h1.5"/>"#),
+        ("leaderboard", #"<rect x="1.8" y="8" width="4" height="5.5" rx="1"/><rect x="6" y="3.5" width="4" height="10" rx="1"/><rect x="10.2" y="10" width="4" height="3.5" rx="1"/>"#),
         ("settings", #"<path d="M2 4.5h6"/><path d="M11 4.5h3"/><circle cx="9.5" cy="4.5" r="1.5"/><path d="M2 11.5h2"/><path d="M7 11.5h7"/><circle cx="5.5" cy="11.5" r="1.5"/>"#),
         ("refresh", #"<path d="M13.5 8a5.5 5.5 0 0 1-9.6 3.6"/><path d="M2.5 8a5.5 5.5 0 0 1 9.6-3.6"/><path d="M12.3 1.8v2.8H9.5"/><path d="M3.7 14.2v-2.8h2.8"/>"#),
         ("update", #"<path d="M8 2.5v7.5"/><path d="M5 7l3 3 3-3"/><path d="M3 13.5h10"/>"#),

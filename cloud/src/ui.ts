@@ -1,7 +1,7 @@
 import { html, raw } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
 import { type Tool, TOOLS, TOOL_NAMES, type User, addDays } from "./env";
-import { FIELD_SCRIPT } from "./field";
+import { BACKDROP_SCRIPT } from "./backdrop";
 import type { Metric, Totals } from "./stats";
 
 export type Html = HtmlEscapedString | Promise<HtmlEscapedString>;
@@ -44,18 +44,10 @@ button, input { font: inherit; color: inherit; }
 .mono { font-family: var(--mono); font-size: 12.5px; }
 .muted { color: var(--muted); } .subtle { color: var(--subtle); }
 
-/* The Field behind the top of every page: dots that fade out over a long eased run, grain under
-   everything. It scrolls away with the page. */
-.backdrop { position: absolute; top: 0; left: 0; right: 0; height: 900px; z-index: 0; overflow: hidden; pointer-events: none; background: linear-gradient(to bottom, var(--field-wash, transparent), transparent 760px); }
-.backdrop .field-canvas {
-  position: absolute; inset: 0;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 360px, rgba(0,0,0,.92) 410px, rgba(0,0,0,.8) 460px, rgba(0,0,0,.65) 510px, rgba(0,0,0,.5) 560px, rgba(0,0,0,.36) 610px, rgba(0,0,0,.24) 660px, rgba(0,0,0,.14) 710px, rgba(0,0,0,.07) 760px, rgba(0,0,0,.03) 810px, transparent 860px);
-  mask-image: linear-gradient(to bottom, #000 0, #000 360px, rgba(0,0,0,.92) 410px, rgba(0,0,0,.8) 460px, rgba(0,0,0,.65) 510px, rgba(0,0,0,.5) 560px, rgba(0,0,0,.36) 610px, rgba(0,0,0,.24) 660px, rgba(0,0,0,.14) 710px, rgba(0,0,0,.07) 760px, rgba(0,0,0,.03) 810px, transparent 860px);
-}
-.backdrop::after {
-  content: ""; position: absolute; inset: 0; opacity: .045;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+/* The backdrop: an illustrated scene behind the first screen, fading into the page below. Its motion
+   is transform and opacity only, so it stays smooth. It scrolls away with the page. */
+.backdrop { position: absolute; top: 0; left: 0; right: 0; height: 100vh; min-height: 760px; z-index: 0; overflow: hidden; pointer-events: none; }
+.backdrop::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 38%; background: linear-gradient(to bottom, rgba(23,23,23,0), var(--bg)); }
 .top { position: relative; z-index: 1; border-bottom: 1px solid hsl(0 0% 100% / .05); background: transparent; }
 .top-inner { max-width: 1080px; margin: 0 auto; height: 56px; padding: 0 24px; display: flex; align-items: center; gap: 20px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 650; }
@@ -201,10 +193,7 @@ export function layout(options: {
   active?: "leaderboard" | "teams";
   body: Html;
   nonce: string;
-  /** The backdrop: the planet by default, or someone's own usage as ridges. */
-  field?: { scene: "planet" | "signal"; series?: number[] };
 }): Html {
-  const field = options.field ?? { scene: "planet" };
   const description = options.description ?? "Switchr leaderboards: who uses the most Claude Code, Cursor and Codex.";
   const current = (name: string) => (options.active === name ? raw('aria-current="page"') : "");
   const user = options.user;
@@ -225,7 +214,7 @@ export function layout(options: {
 <style>${raw(CSS)}</style>
 </head>
 <body>
-<div class="backdrop" aria-hidden="true" data-scene="${field.scene}" data-series="${JSON.stringify(field.series ?? [])}"></div>
+<div class="backdrop" aria-hidden="true"></div>
 <header class="top"><div class="top-inner">
   <a class="brand" href="/leaderboard">${raw(PIXEL_MARK)}Switchr</a>
   <nav class="nav" aria-label="Main">
@@ -245,13 +234,11 @@ export function layout(options: {
   <span>Totals are sent by the Switchr app: tokens, API value and requests per day. Nothing else.</span>
   <a href="https://github.com/dominikzabcik/switchr">GitHub</a>
 </footer>
-<script nonce="${options.nonce}">${raw(FIELD_SCRIPT)}
+<script nonce="${options.nonce}">${raw(BACKDROP_SCRIPT)}
 (function () {
   var host = document.querySelector(".backdrop");
-  if (!host || !window.SwitchrField) return;
-  var series = [];
-  try { series = JSON.parse(host.getAttribute("data-series") || "[]"); } catch (error) {}
-  window.SwitchrField.mount(host, { scene: host.getAttribute("data-scene"), series: series, tint: "ultraviolet", intensity: 0.6, band: 330, depth: 860 });
+  if (!host || !window.SwitchrBackdrop) return;
+  window.SwitchrBackdrop.mount(host, { scene: "leaves", opacity: 0.85 });
 })();
 </script>
 </body>

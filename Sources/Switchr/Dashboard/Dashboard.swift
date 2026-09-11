@@ -193,14 +193,15 @@ struct DashboardState: Encodable {
     let appearance: DashboardAppearance
 }
 
-/// How the Field behind Switchr's window looks, saved next to Switchr's other data.
+/// The scene behind Switchr's window, saved next to Switchr's other data.
 struct DashboardAppearance: Codable, Equatable {
-    static let scenes = ["planet", "nebula", "horizon", "signal", "image", "off"]
-    static let tints = ["ultraviolet", "mono", "ember", "moss"]
+    static let scenes = ["leaves", "dunes", "orbit", "arcade", "image", "off"]
+    static let scopes = ["all", "overview"]
 
-    var scene = "planet"
-    var tint = "ultraviolet"
-    var intensity = 0.6
+    var scene = "leaves"
+    var opacity = 0.8
+    /// "all" shows the scene behind every section, "overview" only behind Overview.
+    var scope = "all"
     /// Whether a picture for the image scene is saved.
     var image = false
 
@@ -800,8 +801,8 @@ actor DashboardSession {
 
     private struct AppearanceBody: Decodable {
         let scene: String?
-        let tint: String?
-        let intensity: Double?
+        let opacity: Double?
+        let scope: String?
         /// A JPEG data URL for the image scene, or an empty string to remove the saved picture.
         let image: String?
     }
@@ -817,13 +818,13 @@ actor DashboardSession {
             guard DashboardAppearance.scenes.contains(scene) else { throw UsageError("Unknown scene.") }
             appearance.scene = scene
         }
-        if let tint = body.tint {
-            guard DashboardAppearance.tints.contains(tint) else { throw UsageError("Unknown tint.") }
-            appearance.tint = tint
+        if let scope = body.scope {
+            guard DashboardAppearance.scopes.contains(scope) else { throw UsageError("Unknown scope.") }
+            appearance.scope = scope
         }
-        if let intensity = body.intensity {
-            guard intensity.isFinite else { throw UsageError("Intensity must be a number.") }
-            appearance.intensity = min(1, max(0.2, intensity))
+        if let opacity = body.opacity {
+            guard opacity.isFinite else { throw UsageError("Opacity must be a number.") }
+            appearance.opacity = min(1, max(0.1, opacity))
         }
         var message = "Saved."
         if let image = body.image {

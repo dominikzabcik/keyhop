@@ -6,7 +6,7 @@ enum DashboardPage {
     static func render(boot: String?) -> String {
         var page = template
             .replacingOccurrences(of: "{{icons}}", with: InterfaceIcons.symbols)
-            .replacingOccurrences(of: "{{field}}", with: Field.script)
+            .replacingOccurrences(of: "{{backdrop}}", with: Backdrop.script)
         for provider in Provider.allCases {
             page = page.replacingOccurrences(of: "{{mark-\(provider.rawValue)}}", with: ProviderMarks.path(for: provider))
         }
@@ -103,21 +103,13 @@ button, input, select { font: inherit; color: inherit; }
 .mac-window .brand, .mac-window .topbar { -webkit-user-select: none; user-select: none; cursor: default; }
 
 .content { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-/* The Field: dots behind the content, fading out over a long eased run so nothing reads as a band.
-   Grain sits on the same layer, under every card and word. */
-.backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: linear-gradient(to bottom, var(--field-wash, transparent), transparent 760px); }
-.backdrop .field-canvas {
-  position: absolute; inset: 0;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 360px, rgba(0,0,0,.92) 410px, rgba(0,0,0,.8) 460px, rgba(0,0,0,.65) 510px, rgba(0,0,0,.5) 560px, rgba(0,0,0,.36) 610px, rgba(0,0,0,.24) 660px, rgba(0,0,0,.14) 710px, rgba(0,0,0,.07) 760px, rgba(0,0,0,.03) 810px, transparent 860px);
-  mask-image: linear-gradient(to bottom, #000 0, #000 360px, rgba(0,0,0,.92) 410px, rgba(0,0,0,.8) 460px, rgba(0,0,0,.65) 510px, rgba(0,0,0,.5) 560px, rgba(0,0,0,.36) 610px, rgba(0,0,0,.24) 660px, rgba(0,0,0,.14) 710px, rgba(0,0,0,.07) 760px, rgba(0,0,0,.03) 810px, transparent 860px);
-}
-.backdrop::after {
-  content: ""; position: absolute; inset: 0; opacity: .045;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+/* The backdrop: an illustrated scene behind the content. Its motion is transform and opacity
+   only, so it stays smooth. */
+.backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; transition: opacity .4s ease; }
+.backdrop.scoped-out { opacity: 0 !important; }
 .topbar { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 52px; padding: 0 24px; border-bottom: 1px solid var(--border); flex: none; }
 /* Nothing scrolls under the top bar, so over the Field it simply gets out of the way. */
-.has-field .topbar { background: transparent; border-bottom-color: transparent; }
+.has-backdrop .topbar { background: transparent; border-bottom-color: transparent; }
 .topbar h1 { margin: 0; font-size: 15px; font-weight: 620; }
 .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .main { position: relative; z-index: 1; flex: 1; overflow: auto; padding: 22px 24px 40px; }
@@ -126,16 +118,19 @@ button, input, select { font: inherit; color: inherit; }
 
 /* Components */
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; min-width: 0; }
-.has-field .card { background: hsl(0 0% 10.6% / .8); -webkit-backdrop-filter: blur(18px) saturate(1.05); backdrop-filter: blur(18px) saturate(1.05); }
+.has-backdrop .card { background: hsl(0 0% 10.6% / .8); -webkit-backdrop-filter: blur(18px) saturate(1.05); backdrop-filter: blur(18px) saturate(1.05); }
 .range { width: 180px; accent-color: hsl(0 0% 92%); }
 /* Overview opens on today's figure, set large over the Field. */
-.hero { padding: 52px 4px 40px; display: grid; gap: 10px; }
+.hero { position: relative; container-type: inline-size; padding: 52px 4px 40px; display: grid; gap: 10px; }
+/* While a refresh runs, a pixel runner hops along the bottom of the hero. */
+.hero-run { position: absolute; left: 0; right: 0; bottom: 12px; height: 24px; opacity: 0; transition: opacity .3s ease; pointer-events: none; }
+.hero-run.on { opacity: 1; }
 .hero-figure { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 0; font-weight: 400; }
 .hero-figure .num { font-size: 60px; font-weight: 640; letter-spacing: -.005em; line-height: 1; font-variant-numeric: tabular-nums; }
 .hero-figure .unit { font-size: 19px; color: var(--muted); font-weight: 520; }
 .hero-line { margin: 0; color: var(--muted); font-size: 14px; }
 /* A soft shadow right behind the words keeps them clear of bright dots, without a band behind them. */
-.has-field .hero-figure, .has-field .hero-line { text-shadow: 0 1px 20px hsl(0 0% 9% / .95), 0 0 2px hsl(0 0% 9% / .8); }
+.has-backdrop .hero-figure, .has-backdrop .hero-line { text-shadow: 0 1px 20px hsl(0 0% 9% / .95), 0 0 2px hsl(0 0% 9% / .8); }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); min-height: 50px; }
 .card-head h2 { margin: 0; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .card-head .hint { color: var(--subtle); font-size: 12.5px; }
@@ -385,7 +380,7 @@ select.field option { background: var(--raised); }
 </div>
 <div class="tip" id="tip" hidden></div>
 <div class="toast away" id="toast" role="status" aria-live="polite"></div>
-<script>{{field}}</script>
+<script>{{backdrop}}</script>
 <script id="boot" type="application/json">{{boot}}</script>
 <script>
 (() => {
@@ -502,7 +497,7 @@ select.field option { background: var(--raised); }
     } catch (error) {
       ui.offline = error.message;
     }
-    applyField();
+    applyBackdrop();
   }
 
   // MARK: Shell
@@ -514,6 +509,7 @@ select.field option { background: var(--raised); }
     if (!data.state) return;
     const tools = data.state.status.tools;
     const cloud = data.state.cloud;
+    $("#backdrop")?.classList.toggle("scoped-out", data.state.appearance?.scope === "overview" && ui.section !== "overview");
     const boardLink = $('#nav a[data-section="leaderboard"]');
     if (boardLink) boardLink.hidden = isStatic || !cloud?.available;
     if (ui.section === "leaderboard" && (isStatic || !cloud?.available)) ui.section = "overview";
@@ -608,6 +604,7 @@ select.field option { background: var(--raised); }
     const hero = `<section class="hero">
       <h2 class="hero-figure"><span class="num">${fmt.tokens(status.today.tokens)}</span><span class="unit">tokens today</span></h2>
       <p class="hero-line">${today ? `${fmt.change(today.total.tokens, today.previous.tokens)} on yesterday · ` : ""}${fmt.count(status.today.requests)} requests${today && today.total.requests ? ` · ${esc(busiestHour(today))}` : ""}</p>
+      <div class="hero-run${data.state.refreshing ? " on" : ""}" aria-hidden="true">${window.SwitchrBackdrop ? window.SwitchrBackdrop.sprite("blip", "top:0") : ""}</div>
     </section>`;
     const stats = hero + `<div class="stats">
       <div class="card stat"><div class="label">Streak</div><div class="value">${streak ? `${streak.current} ${streak.current === 1 ? "day" : "days"}` : "…"}</div><div class="foot">${streak ? `Longest ${streak.longest} · ${fmt.count(streak.activeDays)} active days` : ""}</div></div>
@@ -983,43 +980,39 @@ select.field option { background: var(--raised); }
     </section>`;
   }
 
-  // MARK: Field
+  // MARK: Backdrop
 
-  let field = null;
-  let fieldImage = null;
-  let fieldImageLoading = false;
+  let backdrop = null;
+  let backdropImage = null;
+  let backdropImageLoading = false;
 
-  function fieldSeries() {
-    const usage = data.usage["week:all"] || data.usage["today:all"] || Object.values(data.usage)[0];
-    return usage && usage.heatmap ? usage.heatmap.map((day) => day.tokens) : [];
-  }
-
-  async function applyField() {
+  async function applyBackdrop() {
     const host = $("#backdrop");
-    if (!host || !window.SwitchrField) return;
-    const look = data.state?.appearance || { scene: "planet", tint: "ultraviolet", intensity: 0.6, image: false };
+    if (!host || !window.SwitchrBackdrop) return;
+    const look = data.state?.appearance || { scene: "leaves", opacity: 0.8, scope: "all", image: false };
     let scene = look.scene;
     if (scene === "image") {
-      if (!look.image || isStatic) scene = "horizon";
-      else if (!fieldImage && !fieldImageLoading) {
-        fieldImageLoading = true;
-        try { fieldImage = (await api("/api/appearance/image")).dataUrl; } catch { scene = "horizon"; } finally { fieldImageLoading = false; }
+      if (!look.image || isStatic) scene = "leaves";
+      else if (!backdropImage && !backdropImageLoading) {
+        backdropImageLoading = true;
+        try { backdropImage = (await api("/api/appearance/image")).dataUrl; } catch { scene = "leaves"; } finally { backdropImageLoading = false; }
       }
     }
-    document.documentElement.classList.toggle("has-field", scene !== "off");
-    const options = { scene, tint: look.tint, intensity: look.intensity, image: scene === "image" ? fieldImage : null, series: fieldSeries(), band: 360, depth: 860 };
-    if (field) field.update(options);
-    else field = window.SwitchrField.mount(host, options);
+    document.documentElement.classList.toggle("has-backdrop", scene !== "off");
+    host.classList.toggle("scoped-out", look.scope === "overview" && ui.section !== "overview");
+    const options = { scene, opacity: look.opacity, image: scene === "image" ? backdropImage : null };
+    if (backdrop) backdrop.update(options);
+    else backdrop = window.SwitchrBackdrop.mount(host, options);
   }
 
   async function setAppearance(change) {
     try {
       const result = await api("/api/appearance", change);
       data.state.appearance = result.appearance;
-      if (change.image !== undefined) fieldImage = change.image || null;
+      if (change.image !== undefined) backdropImage = change.image || null;
       if (change.image !== undefined) toast(result.message);
       render();
-      applyField();
+      applyBackdrop();
     } catch (error) {
       toast(error.message, true);
     }
@@ -1032,7 +1025,7 @@ select.field option { background: var(--raised); }
       const image = new Image();
       image.onload = () => {
         URL.revokeObjectURL(url);
-        let size = 960, quality = 0.84, result = "";
+        let size = 1600, quality = 0.84, result = "";
         do {
           const scale = Math.min(1, size / Math.max(image.width, image.height));
           const canvas = document.createElement("canvas");
@@ -1057,20 +1050,20 @@ select.field option { background: var(--raised); }
       return `<button data-action="appearance" data-key="${key}" data-value="${value}" aria-pressed="${value === current}"${locked ? ` disabled title="Choose a picture first"` : ""}>${label}</button>`;
     }).join("")}</div>`;
     const about = {
-      planet: "A ringed planet, lit across its shoulder.",
-      nebula: "Slow clouds of light with lanes of dust.",
-      horizon: "A planet's lit edge, drifting slowly.",
-      signal: "Your last 26 weeks of usage as a range of ridges.",
-      image: "Your picture, drawn in dots.",
+      leaves: "Dark leaves swaying on their stems, a few drifting down.",
+      dunes: "A desert world's horizon, turning slowly under the stars.",
+      orbit: "A ringed planet floating in the dark.",
+      arcade: "Pixel runners racing across a dot grid.",
+      image: "Your picture, softly behind everything.",
       off: "A plain surface.",
     }[look.scene];
-    return `<section class="card"><div class="card-head"><h2>Appearance</h2><span class="hint">The field behind this window</span></div>
+    return `<section class="card"><div class="card-head"><h2>Appearance</h2><span class="hint">The scene behind this window</span></div>
       <div class="list">
-        <div class="row setting-row"><div><b>Scene</b><p>${about}</p></div>${pick("scene", [["planet", "Planet"], ["nebula", "Nebula"], ["horizon", "Horizon"], ["signal", "Signal"], ["image", "Picture"], ["off", "Off"]], look.scene)}</div>
-        <div class="row setting-row"><div><b>Tint</b><p>The colors of the dots.</p></div>${pick("tint", [["ultraviolet", "Ultraviolet"], ["mono", "Mono"], ["ember", "Ember"], ["moss", "Moss"]], look.tint)}</div>
-        <div class="row setting-row"><div><b>Intensity</b><p>How bright the dots are.</p></div>
-          <input class="range" type="range" min="20" max="100" step="5" value="${Math.round(look.intensity * 100)}" data-appearance="intensity" aria-label="Intensity"${look.scene === "off" ? " disabled" : ""}></div>
-        <div class="row setting-row"><div><b>Picture</b><p>${look.image ? "Saved in Switchr's data folder." : "Photos and artwork with strong light and shadow work best."}</p></div>
+        <div class="row setting-row"><div><b>Scene</b><p>${about}</p></div>${pick("scene", [["leaves", "Leaves"], ["dunes", "Dunes"], ["orbit", "Orbit"], ["arcade", "Arcade"], ["image", "Picture"], ["off", "Off"]], look.scene)}</div>
+        <div class="row setting-row"><div><b>Show on</b><p>${look.scope === "overview" ? "Only behind Overview." : "Behind every section."}</p></div>${pick("scope", [["all", "Everywhere"], ["overview", "Overview only"]], look.scope)}</div>
+        <div class="row setting-row"><div><b>Opacity</b><p>How strongly the scene shows through.</p></div>
+          <input class="range" type="range" min="10" max="100" step="5" value="${Math.round(look.opacity * 100)}" data-appearance="opacity" aria-label="Opacity"${look.scene === "off" ? " disabled" : ""}></div>
+        <div class="row setting-row"><div><b>Picture</b><p>${look.image ? "Saved in Switchr's data folder." : "Any photo or artwork. It sits behind a soft veil, so text stays readable."}</p></div>
           <div class="row-actions"><label class="btn sm secondary">${look.image ? "Replace picture" : "Choose picture"}<input type="file" accept="image/*" data-appearance="image" hidden></label>
           ${look.image ? `<button class="btn sm ghost" data-action="appearance-clear">Remove</button>` : ""}</div></div>
       </div></section>`;
@@ -1296,7 +1289,7 @@ select.field option { background: var(--raised); }
   document.addEventListener("change", async (event) => {
     const look = event.target.closest("[data-appearance]");
     if (look) {
-      if (look.dataset.appearance === "intensity") { setAppearance({ intensity: Number(look.value) / 100 }); return; }
+      if (look.dataset.appearance === "opacity") { setAppearance({ opacity: Number(look.value) / 100 }); return; }
       const file = look.files && look.files[0];
       look.value = "";
       if (!file) return;
@@ -1353,7 +1346,7 @@ select.field option { background: var(--raised); }
   // MARK: Start
 
   async function start() {
-    if (isStatic) { render(); applyField(); return; }
+    if (isStatic) { render(); applyBackdrop(); return; }
     if (!token) {
       $("#main").innerHTML = `<div class="page"><div class="card"><p class="empty">This window isn't connected to Switchr. Open it from the tray, or run switchr dashboard.</p></div></div>`;
       return;

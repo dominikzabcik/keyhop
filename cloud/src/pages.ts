@@ -1,7 +1,7 @@
 import { type Context, Hono } from "hono";
 import { html, raw } from "hono/html";
 import { pageUser, safeNext } from "./auth";
-import { type AppEnv, type User, addDays, today } from "./env";
+import { type AppEnv, type User, today } from "./env";
 import { type Entry, type Metric, type Period, METRICS, PERIODS, isMetric, isPeriod, leaderboard, profile } from "./stats";
 import { inviteInfo, members, myTeams, teamForMember } from "./teams";
 import {
@@ -30,7 +30,7 @@ function render(
   c: C,
   title: string,
   body: Html,
-  options: { description?: string; active?: "leaderboard" | "teams"; status?: 200 | 404; field?: { scene: "planet" | "signal"; series?: number[] } } = {},
+  options: { description?: string; active?: "leaderboard" | "teams"; status?: 200 | 404 } = {},
 ) {
   const url = new URL(c.req.url);
   return c.html(
@@ -43,7 +43,6 @@ function render(
       active: options.active,
       body,
       nonce: c.get("nonce"),
-      field: options.field,
     }),
     options.status ?? 200,
   );
@@ -185,10 +184,6 @@ pages.get("/u/:login", async (c) => {
   if (person.login !== login) return c.redirect(`/u/${person.login}`, 301);
 
   const stats = await profile(c.env.DB, person.id, person.public === 1);
-  // Their year of usage, day by day, becomes the ridges behind the page.
-  const tokensByDay = new Map(stats.days.map((day) => [day.day, day.tokens]));
-  const series: number[] = [];
-  for (let back = 364; back >= 0; back--) series.push(tokensByDay.get(addDays(today(), -back)) ?? 0);
   const url = `${new URL(c.req.url).origin}/u/${person.login}`;
   const display = person.name || person.login;
   const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
@@ -225,7 +220,6 @@ pages.get("/u/:login", async (c) => {
       </section>`,
     {
       description: `${display} used ${tokens(stats.month.tokens)} tokens in the last 30 days. See their Switchr profile.`,
-      field: { scene: "signal", series },
     },
   );
 });

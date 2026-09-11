@@ -1,0 +1,18 @@
+PackageIdentifier: dominikzabcik.Switchr
+PackageVersion: 0.7.0
+PackageLocale: en-US
+Publisher: dominikzabcik
+PublisherUrl: https://github.com/dominikzabcik
+PackageName: Switchr
+PackageUrl: https://github.com/dominikzabcik/switchr
+License: MIT
+LicenseUrl: https://github.com/dominikzabcik/switchr/blob/main/LICENSE
+ShortDescription: Switch Claude Code, Cursor and Codex accounts in one click and track their usage.
+Tags:
+  - claude
+  - cursor
+  - codex
+  - accounts
+  - usage
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

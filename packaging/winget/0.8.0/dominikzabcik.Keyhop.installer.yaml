@@ -1,0 +1,14 @@
+PackageIdentifier: dominikzabcik.Keyhop
+PackageVersion: 0.8.0
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: keyhop-0.8.0\keyhop.exe
+    PortableCommandAlias: keyhop
+ReleaseDate: 2026-09-13
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/dominikzabcik/keyhop/releases/download/v0.8.0/keyhop-0.8.0-windows-x86_64.zip
+    InstallerSha256: 895E9DE374EBAB6E26C008C0B291C50B2282ECFA0209F3B46A85995D320B139B
+ManifestType: installer
+ManifestVersion: 1.6.0

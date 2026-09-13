@@ -17,7 +17,7 @@ async function request(path, init = {}) {
 
 async function signIn(login) {
   const response = await request(`/auth/dev?login=${login}`);
-  const cookie = response.headers.getSetCookie().find((value) => value.startsWith("switchr_session="));
+  const cookie = response.headers.getSetCookie().find((value) => value.startsWith("keyhop_session="));
   if (!cookie) throw new Error(`Dev login failed for ${login}: ${response.status}. Is DEV_LOGIN=true in .dev.vars?`);
   return cookie.split(";")[0];
 }

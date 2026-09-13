@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installs Switchr from this folder into ~/.local, on any Linux distribution. No root needed.
+# Installs Keyhop from this folder into ~/.local, on any Linux distribution. No root needed.
 #   PREFIX=/some/where ./install-local.sh   installs the programs somewhere else
 set -eu
 
@@ -8,23 +8,23 @@ prefix="${PREFIX:-$HOME/.local}"
 data="${XDG_DATA_HOME:-$HOME/.local/share}"
 
 mkdir -p "$prefix/bin" "$data/applications" "$data/metainfo"
-install -m 0755 "$here/switchr" "$prefix/bin/switchr"
-install -m 0755 "$here/switchr-tray" "$prefix/bin/switchr-tray"
-sed "s|^Exec=switchr-tray|Exec=$prefix/bin/switchr-tray|" "$here/dev.switchr.Switchr.desktop" > "$data/applications/dev.switchr.Switchr.desktop"
-cp "$here/dev.switchr.Switchr.metainfo.xml" "$data/metainfo/"
-for png in "$here"/icons/switchr-*.png; do
+install -m 0755 "$here/keyhop" "$prefix/bin/keyhop"
+install -m 0755 "$here/keyhop-tray" "$prefix/bin/keyhop-tray"
+sed "s|^Exec=keyhop-tray|Exec=$prefix/bin/keyhop-tray|" "$here/app.keyhop.Keyhop.desktop" > "$data/applications/app.keyhop.Keyhop.desktop"
+cp "$here/app.keyhop.Keyhop.metainfo.xml" "$data/metainfo/"
+for png in "$here"/icons/keyhop-*.png; do
   size=${png##*-}
   size=${size%.png}
   mkdir -p "$data/icons/hicolor/${size}x${size}/apps"
-  cp "$png" "$data/icons/hicolor/${size}x${size}/apps/dev.switchr.Switchr.png"
+  cp "$png" "$data/icons/hicolor/${size}x${size}/apps/app.keyhop.Keyhop.png"
 done
 if command -v update-desktop-database >/dev/null 2>&1; then update-desktop-database -q "$data/applications" || true; fi
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then gtk-update-icon-cache -q -t "$data/icons/hicolor" || true; fi
 
-echo "Installed switchr and switchr-tray into $prefix/bin."
+echo "Installed keyhop and keyhop-tray into $prefix/bin."
 case ":$PATH:" in
   *":$prefix/bin:"*) ;;
-  *) echo "Add $prefix/bin to your PATH to run switchr from a terminal." ;;
+  *) echo "Add $prefix/bin to your PATH to run keyhop from a terminal." ;;
 esac
 
 if ! python3 -c 'import gi; gi.require_version("Gtk", "3.0"); gi.require_version("AyatanaAppIndicator3", "0.1")' >/dev/null 2>&1; then

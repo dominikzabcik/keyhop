@@ -1,53 +1,53 @@
 # RPM, DEB and Arch packages from one description. scripts/package-linux.sh sets the variables
 # and stages the binary, and runs nfpm from the repository root.
-name: switchr
+name: keyhop
 arch: ${NFPM_ARCH}
 platform: linux
-version: ${SWITCHR_VERSION}
+version: ${KEYHOP_VERSION}
 release: 1
 section: devel
 priority: optional
 maintainer: dominikzabcik <35886301+dominikzabcik@users.noreply.github.com>
 description: |
   Switch Claude Code, Cursor and Codex accounts in one click and track their usage.
-  Includes the switchr command and a tray menu with limits, alerts and Insights.
-vendor: Switchr
+  Includes the keyhop command and a tray menu with limits, alerts and Insights.
+vendor: Keyhop
 homepage: https://github.com/dominikzabcik/switchr
 license: MIT
 
 contents:
-  - src: build/linux/package-root/switchr
-    dst: /usr/bin/switchr
+  - src: build/linux/package-root/keyhop
+    dst: /usr/bin/keyhop
     file_info:
       mode: 0755
-  - src: packaging/linux/switchr-tray
-    dst: /usr/bin/switchr-tray
+  - src: packaging/linux/keyhop-tray
+    dst: /usr/bin/keyhop-tray
     file_info:
       mode: 0755
-  - src: packaging/linux/dev.switchr.Switchr.desktop
-    dst: /usr/share/applications/dev.switchr.Switchr.desktop
-  - src: packaging/linux/dev.switchr.Switchr.metainfo.xml
-    dst: /usr/share/metainfo/dev.switchr.Switchr.metainfo.xml
-  - src: packaging/icons/switchr-16.png
-    dst: /usr/share/icons/hicolor/16x16/apps/dev.switchr.Switchr.png
-  - src: packaging/icons/switchr-24.png
-    dst: /usr/share/icons/hicolor/24x24/apps/dev.switchr.Switchr.png
-  - src: packaging/icons/switchr-32.png
-    dst: /usr/share/icons/hicolor/32x32/apps/dev.switchr.Switchr.png
-  - src: packaging/icons/switchr-48.png
-    dst: /usr/share/icons/hicolor/48x48/apps/dev.switchr.Switchr.png
-  - src: packaging/icons/switchr-64.png
-    dst: /usr/share/icons/hicolor/64x64/apps/dev.switchr.Switchr.png
-  - src: packaging/icons/switchr-128.png
-    dst: /usr/share/icons/hicolor/128x128/apps/dev.switchr.Switchr.png
-  - src: packaging/icons/switchr-256.png
-    dst: /usr/share/icons/hicolor/256x256/apps/dev.switchr.Switchr.png
-  - src: packaging/icons/switchr-512.png
-    dst: /usr/share/icons/hicolor/512x512/apps/dev.switchr.Switchr.png
+  - src: packaging/linux/app.keyhop.Keyhop.desktop
+    dst: /usr/share/applications/app.keyhop.Keyhop.desktop
+  - src: packaging/linux/app.keyhop.Keyhop.metainfo.xml
+    dst: /usr/share/metainfo/app.keyhop.Keyhop.metainfo.xml
+  - src: packaging/icons/keyhop-16.png
+    dst: /usr/share/icons/hicolor/16x16/apps/app.keyhop.Keyhop.png
+  - src: packaging/icons/keyhop-24.png
+    dst: /usr/share/icons/hicolor/24x24/apps/app.keyhop.Keyhop.png
+  - src: packaging/icons/keyhop-32.png
+    dst: /usr/share/icons/hicolor/32x32/apps/app.keyhop.Keyhop.png
+  - src: packaging/icons/keyhop-48.png
+    dst: /usr/share/icons/hicolor/48x48/apps/app.keyhop.Keyhop.png
+  - src: packaging/icons/keyhop-64.png
+    dst: /usr/share/icons/hicolor/64x64/apps/app.keyhop.Keyhop.png
+  - src: packaging/icons/keyhop-128.png
+    dst: /usr/share/icons/hicolor/128x128/apps/app.keyhop.Keyhop.png
+  - src: packaging/icons/keyhop-256.png
+    dst: /usr/share/icons/hicolor/256x256/apps/app.keyhop.Keyhop.png
+  - src: packaging/icons/keyhop-512.png
+    dst: /usr/share/icons/hicolor/512x512/apps/app.keyhop.Keyhop.png
   - src: LICENSE
-    dst: /usr/share/licenses/switchr/LICENSE
+    dst: /usr/share/licenses/keyhop/LICENSE
   - src: README.md
-    dst: /usr/share/doc/switchr/README.md
+    dst: /usr/share/doc/keyhop/README.md
 
 overrides:
   rpm:

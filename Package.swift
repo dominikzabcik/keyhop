@@ -1,17 +1,17 @@
 // swift-tools-version:5.10
 import PackageDescription
 
-// `Switchr` builds everywhere: on macOS it's the menu bar app, which also answers the `switchr`
-// commands; on Linux and Windows it's the `switchr` command that the tray apps drive.
-// `SwitchrTray` is the Windows tray app; on other systems it only prints where to find the tray.
+// `Keyhop` builds everywhere: on macOS it's the menu bar app, which also answers the `keyhop`
+// commands; on Linux and Windows it's the `keyhop` command that the tray apps drive.
+// `KeyhopTray` is the Windows tray app; on other systems it only prints where to find the tray.
 // There are no package dependencies, so distribution builds can run offline. SQLite comes from
 // the system on macOS and from the bundled amalgamation elsewhere, so Linux builds link statically.
 let package = Package(
-    name: "Switchr",
+    name: "Keyhop",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "Switchr", targets: ["Switchr"]),
-        .executable(name: "SwitchrTray", targets: ["SwitchrTray"]),
+        .executable(name: "Keyhop", targets: ["Keyhop"]),
+        .executable(name: "KeyhopTray", targets: ["KeyhopTray"]),
     ],
     targets: [
         .target(
@@ -28,22 +28,22 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "Switchr",
+            name: "Keyhop",
             dependencies: [.target(name: "CSQLite", condition: .when(platforms: [.linux, .windows]))],
-            path: "Sources/Switchr"
+            path: "Sources/Keyhop"
         ),
         .executableTarget(
-            name: "SwitchrTray",
-            path: "Sources/SwitchrTray",
+            name: "KeyhopTray",
+            path: "Sources/KeyhopTray",
             linkerSettings: [
                 // A window app, so starting it at sign-in doesn't open a console.
                 .unsafeFlags(["-Xlinker", "/SUBSYSTEM:WINDOWS", "-Xlinker", "/ENTRY:mainCRTStartup"], .when(platforms: [.windows])),
             ]
         ),
         .testTarget(
-            name: "SwitchrTests",
-            dependencies: ["Switchr"],
-            path: "Tests/SwitchrTests"
+            name: "KeyhopTests",
+            dependencies: ["Keyhop"],
+            path: "Tests/KeyhopTests"
         ),
     ]
 )

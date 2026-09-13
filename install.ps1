@@ -1,12 +1,12 @@
-# Installs the latest Switchr release for the current Windows user and starts the tray.
+# Installs the latest Keyhop release for the current Windows user and starts the tray.
 #
-#   irm https://raw.githubusercontent.com/dominikzabcik/switchr/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.ps1 | iex
 #
 # To remove it again:
 #
-#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/dominikzabcik/switchr/main/install.ps1))) -Uninstall
+#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.ps1))) -Uninstall
 #
-# No administrator rights: Switchr goes in %LOCALAPPDATA%\Programs\Switchr, on your PATH,
+# No administrator rights: Keyhop goes in %LOCALAPPDATA%\Programs\Keyhop, on your PATH,
 # in the Start menu, and opens at sign-in. -From installs from a folder holding a release zip and
 # its SHA256SUMS instead of GitHub, for testing unpublished builds.
 param([switch]$Uninstall, [string]$From, [switch]$NoStart)
@@ -15,9 +15,9 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$repo = 'dominikzabcik/switchr'
-$target = Join-Path $env:LOCALAPPDATA 'Programs\Switchr'
-$shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Switchr.lnk'
+$repo = 'dominikzabcik/keyhop'
+$target = Join-Path $env:LOCALAPPDATA 'Programs\Keyhop'
+$shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Keyhop.lnk'
 $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x86_64' }
 
@@ -45,7 +45,7 @@ function Step([string]$label, [scriptblock]$action) {
 }
 
 function Stop-Tray {
-  Get-Process -Name 'switchr-tray' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+  Get-Process -Name 'keyhop-tray' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
   Start-Sleep -Milliseconds 400
 }
 
@@ -59,34 +59,34 @@ function Set-UserPath([bool]$add) {
 # The file for this computer: arm64 when the release has one, otherwise x86_64, which Windows on
 # Arm runs too.
 function Select-Zip($names) {
-  $native = $names | Where-Object { $_ -like "switchr-*-windows-$arch.zip" } | Select-Object -First 1
+  $native = $names | Where-Object { $_ -like "keyhop-*-windows-$arch.zip" } | Select-Object -First 1
   if ($native) { return $native }
-  return $names | Where-Object { $_ -like 'switchr-*-windows-x86_64.zip' } | Select-Object -First 1
+  return $names | Where-Object { $_ -like 'keyhop-*-windows-x86_64.zip' } | Select-Object -First 1
 }
 
 Write-Host ''
-Write-Host ('  ' + (Paint 'Switchr' $bone) + '  ' + (Paint 'Your AI accounts, one click apart.' $dim))
+Write-Host ('  ' + (Paint 'Keyhop' $bone) + '  ' + (Paint 'Your AI accounts, one click apart.' $dim))
 Write-Host ''
 
 if ($Uninstall) {
   Step 'Stopping the tray' { Stop-Tray }
-  Step 'Removing Switchr' {
-    Remove-ItemProperty -Path $runKey -Name 'Switchr' -ErrorAction SilentlyContinue
+  Step 'Removing Keyhop' {
+    Remove-ItemProperty -Path $runKey -Name 'Keyhop' -ErrorAction SilentlyContinue
     if (Test-Path $shortcut) { Remove-Item $shortcut }
     Set-UserPath $false
     if (Test-Path $target) { Remove-Item -Recurse -Force $target }
   }
   Write-Host ''
-  Write-Host ('  ' + (Paint 'Switchr is removed. Saved logins and usage history stay in' $dim) + " $env:LOCALAPPDATA\Switchr; run 'switchr reset' first to remove them too.")
+  Write-Host ('  ' + (Paint 'Keyhop is removed. Saved logins and usage history stay in' $dim) + " $env:LOCALAPPDATA\Keyhop; run 'keyhop reset' first to remove them too.")
   exit 0
 }
 
 if (-not [Environment]::Is64BitOperatingSystem) {
-  Write-Host (Paint '  Switchr needs 64-bit Windows 10 or later.' $rust)
+  Write-Host (Paint '  Keyhop needs 64-bit Windows 10 or later.' $rust)
   exit 1
 }
 
-$work = Join-Path ([IO.Path]::GetTempPath()) ("switchr-" + [Guid]::NewGuid())
+$work = Join-Path ([IO.Path]::GetTempPath()) ("keyhop-" + [Guid]::NewGuid())
 New-Item -ItemType Directory $work | Out-Null
 try {
   $script:zipName = $null
@@ -96,14 +96,14 @@ try {
   if ($From) {
     Step 'Reading the local release' {
       $folder = (Resolve-Path $From).Path
-      $script:zipName = Select-Zip (Get-ChildItem $folder -Filter 'switchr-*-windows-*.zip').Name
+      $script:zipName = Select-Zip (Get-ChildItem $folder -Filter 'keyhop-*-windows-*.zip').Name
       if (-not $script:zipName) { throw "No Windows zip in $folder." }
       Copy-Item (Join-Path $folder $script:zipName) $work
       Copy-Item (Join-Path $folder 'SHA256SUMS') $work
     }
   } else {
     Step 'Finding the latest release' {
-      $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -Headers @{ 'User-Agent' = 'switchr-installer' }
+      $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -Headers @{ 'User-Agent' = 'keyhop-installer' }
       $script:zipName = Select-Zip $release.assets.name
       if (-not $script:zipName) { throw "Release $($release.tag_name) has no Windows download." }
       $script:assets = $release.assets
@@ -117,7 +117,7 @@ try {
     }
   }
   $archive = Join-Path $work $script:zipName
-  $script:version = ($script:zipName -replace '^switchr-', '') -replace '-windows-.*$', ''
+  $script:version = ($script:zipName -replace '^keyhop-', '') -replace '-windows-.*$', ''
 
   Step 'Verifying checksum' {
     $line = Get-Content (Join-Path $work 'SHA256SUMS') | Where-Object { $_ -match ('\s\*?' + [Regex]::Escape($script:zipName) + '\s*$') } | Select-Object -First 1
@@ -127,10 +127,10 @@ try {
     if ($expected -ne $actual) { throw 'The download does not match the release checksum.' }
   }
 
-  Step "Installing Switchr $script:version" {
+  Step "Installing Keyhop $script:version" {
     Stop-Tray
     Expand-Archive -Path $archive -DestinationPath $work -Force
-    $source = Get-ChildItem $work -Directory | Where-Object { $_.Name -like 'switchr-*' } | Select-Object -First 1
+    $source = Get-ChildItem $work -Directory | Where-Object { $_.Name -like 'keyhop-*' } | Select-Object -First 1
     if (-not $source) { throw 'The download has an unexpected layout.' }
     New-Item -ItemType Directory -Force $target | Out-Null
     Copy-Item (Join-Path $source.FullName '*') $target -Recurse -Force
@@ -138,18 +138,18 @@ try {
 
     $shell = New-Object -ComObject WScript.Shell
     $link = $shell.CreateShortcut($shortcut)
-    $link.TargetPath = Join-Path $target 'switchr-tray.exe'
+    $link.TargetPath = Join-Path $target 'keyhop-tray.exe'
     $link.WorkingDirectory = $target
-    $link.IconLocation = (Join-Path $target 'switchr.ico') + ',0'
+    $link.IconLocation = (Join-Path $target 'keyhop.ico') + ',0'
     $link.Description = 'Switch Claude Code, Cursor and Codex accounts'
     $link.Save()
 
-    Set-ItemProperty -Path $runKey -Name 'Switchr' -Value ('"' + (Join-Path $target 'switchr-tray.exe') + '"')
+    Set-ItemProperty -Path $runKey -Name 'Keyhop' -Value ('"' + (Join-Path $target 'keyhop-tray.exe') + '"')
   }
 
   if (-not $NoStart) {
     Step 'Starting the tray' {
-      Start-Process -FilePath (Join-Path $target 'switchr-tray.exe') -WorkingDirectory $target
+      Start-Process -FilePath (Join-Path $target 'keyhop-tray.exe') -WorkingDirectory $target
     }
   }
 } finally {
@@ -157,6 +157,6 @@ try {
 }
 
 Write-Host ''
-Write-Host ('  ' + (Paint 'Switchr is in the notification area.' $bone) + ' ' + (Paint 'Click the two tracks to switch accounts.' $dim))
-Write-Host ('  ' + (Paint "Open a new terminal to use 'switchr'. It opens at sign-in; turn that off in its menu." $dim))
+Write-Host ('  ' + (Paint 'Keyhop is in the notification area.' $bone) + ' ' + (Paint 'Click the two tracks to switch accounts.' $dim))
+Write-Host ('  ' + (Paint "Open a new terminal to use 'keyhop'. It opens at sign-in; turn that off in its menu." $dim))
 Write-Host ''

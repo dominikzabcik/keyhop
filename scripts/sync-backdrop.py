@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Copies the backdrop script from cloud/src/backdrop.ts into Sources/Switchr/Dashboard/Backdrop.swift.
+"""Copies the backdrop script from cloud/src/backdrop.ts into Sources/Keyhop/Dashboard/Backdrop.swift.
 
 The website and the app's dashboard run the same script. Edit cloud/src/backdrop.ts, then run this;
 BackdropTests fails while the two copies differ.
@@ -15,9 +15,9 @@ script = source[start:end]
 if '"""#' in script or "\\#" in script:
     raise SystemExit("The backdrop script can't contain \"\"\"# or \\# inside a Swift raw string.")
 
-(ROOT / "Sources/Switchr/Dashboard/Backdrop.swift").write_text(
+(ROOT / "Sources/Keyhop/Dashboard/Backdrop.swift").write_text(
     "import Foundation\n\n"
-    "/// Switchr's backdrop: illustrated scenes behind the dashboard. The website runs the same script\n"
+    "/// Keyhop's backdrop: illustrated scenes behind the dashboard. The website runs the same script\n"
     "/// from cloud/src/backdrop.ts, and BackdropTests keeps the two copies identical.\n"
     "enum Backdrop {\n"
     '    static let script = #"""\n' + script + '\n"""#\n'

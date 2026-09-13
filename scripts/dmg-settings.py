@@ -1,7 +1,7 @@
-# dmgbuild settings for Switchr.dmg. Run through scripts/build-app.sh --dmg.
+# dmgbuild settings for Keyhop.dmg. Run through scripts/build-app.sh --dmg.
 import os.path
 
-app = defines.get("app", "build/Switchr.app")  # noqa: F821 (provided by dmgbuild)
+app = defines.get("app", "build/Keyhop.app")  # noqa: F821 (provided by dmgbuild)
 app_name = os.path.basename(app)
 
 format = "UDZO"

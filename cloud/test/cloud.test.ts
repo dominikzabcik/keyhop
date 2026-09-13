@@ -15,17 +15,17 @@ function call(path: string, init: RequestInit = {}): Promise<Response> {
 async function signIn(login: string): Promise<string> {
   const response = await call(`/auth/dev?login=${login}&next=/leaderboard`);
   expect(response.status).toBe(302);
-  const cookie = response.headers.getSetCookie().find((value) => value.startsWith("switchr_session="));
+  const cookie = response.headers.getSetCookie().find((value) => value.startsWith("keyhop_session="));
   expect(cookie).toBeDefined();
   return cookie!.split(";")[0];
 }
 
-/** Posts a form the way Switchr's pages do: same origin, with the session cookie. */
+/** Posts a form the way Keyhop's pages do: same origin, with the session cookie. */
 function form(path: string, cookie: string, fields: Record<string, string> = {}, origin = BASE): Promise<Response> {
   return call(path, { method: "POST", headers: { cookie, origin }, body: new URLSearchParams(fields) });
 }
 
-/** Links an app the way Switchr does and returns its bearer token. */
+/** Links an app the way Keyhop does and returns its bearer token. */
 async function linkApp(cookie: string): Promise<string> {
   const start = await call("/api/device/start", { method: "POST", body: JSON.stringify({ label: "Test Mac" }) });
   const { deviceCode, userCode } = (await start.json()) as { deviceCode: string; userCode: string };
@@ -94,7 +94,7 @@ describe("linking the app", () => {
   it("doesn't accept an app token as a browser session, or the reverse", async () => {
     const cookie = await signIn("mixer");
     const token = await linkApp(cookie);
-    const asCookie = await call("/api/me", { headers: { cookie: `switchr_session=${token}` } });
+    const asCookie = await call("/api/me", { headers: { cookie: `keyhop_session=${token}` } });
     expect(asCookie.status).toBe(401);
     const asBearer = await call("/api/me", { headers: { authorization: `Bearer ${cookie.split("=")[1]}` } });
     expect(asBearer.status).toBe(401);
@@ -176,7 +176,7 @@ describe("ranked seasons", () => {
     expect(body.you.next.tokens).toBeGreaterThan(0);
     expect(body.entries.find((entry) => entry.login === "ivan")?.tier.key).toBe("silver");
 
-    // A month Switchr never ran isn't a season.
+    // A month Keyhop never ran isn't a season.
     expect((await call("/api/season?season=2020-01")).status).toBe(400);
   });
 
@@ -235,7 +235,7 @@ describe("privacy and safety", () => {
   });
 
   it("offers the development login on localhost only", async () => {
-    const response = await exports.default.fetch(new Request("https://switchr.example/auth/dev?login=mallory", { redirect: "manual" }));
+    const response = await exports.default.fetch(new Request("https://keyhop.example/auth/dev?login=mallory", { redirect: "manual" }));
     expect(response.status).toBe(404);
   });
 

@@ -9,7 +9,7 @@ import { teamForMember } from "./teams";
  * so standings can never drift from the usage they came from.
  */
 
-/** Switchr's first ranked season. Months before this one aren't offered. */
+/** Keyhop's first ranked season. Months before this one aren't offered. */
 export const FIRST_SEASON = "2026-09";
 
 export interface Tier {
@@ -98,7 +98,7 @@ export function seasonLabel(season: string): string {
   return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
-/** Every season Switchr has run, newest first. */
+/** Every season Keyhop has run, newest first. */
 export function seasonList(reference = today()): string[] {
   const list: string[] = [];
   let season = currentSeason(reference);

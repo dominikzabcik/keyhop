@@ -20,7 +20,7 @@ env:
 
 jobs:
   cloud:
-    name: Switchr cloud
+    name: Keyhop cloud
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
@@ -59,35 +59,35 @@ jobs:
 
       - name: Check the bundle
         run: |
-          lipo -archs build/Switchr.app/Contents/MacOS/Switchr | grep -q x86_64
-          lipo -archs build/Switchr.app/Contents/MacOS/Switchr | grep -q arm64
-          plutil -lint build/Switchr.app/Contents/Info.plist
-          codesign --verify build/Switchr.app
-          # switchr:// opens the app's window.
-          plutil -extract CFBundleURLTypes.0.CFBundleURLSchemes.0 raw build/Switchr.app/Contents/Info.plist | grep -qx switchr
-          build/Switchr.app/Contents/MacOS/Switchr version
-          # Linked as `switchr`, the app binary is the command.
-          ln -s "$PWD/build/Switchr.app/Contents/MacOS/Switchr" "$RUNNER_TEMP/switchr"
-          "$RUNNER_TEMP/switchr" status --sample
+          lipo -archs build/Keyhop.app/Contents/MacOS/Keyhop | grep -q x86_64
+          lipo -archs build/Keyhop.app/Contents/MacOS/Keyhop | grep -q arm64
+          plutil -lint build/Keyhop.app/Contents/Info.plist
+          codesign --verify build/Keyhop.app
+          # keyhop:// opens the app's window.
+          plutil -extract CFBundleURLTypes.0.CFBundleURLSchemes.0 raw build/Keyhop.app/Contents/Info.plist | grep -qx keyhop
+          build/Keyhop.app/Contents/MacOS/Keyhop version
+          # Linked as `keyhop`, the app binary is the command.
+          ln -s "$PWD/build/Keyhop.app/Contents/MacOS/Keyhop" "$RUNNER_TEMP/keyhop"
+          "$RUNNER_TEMP/keyhop" status --sample
 
       - name: Render menu snapshots and the sample dashboard page
         run: |
-          build/Switchr.app/Contents/MacOS/Switchr --snapshot "$RUNNER_TEMP/switchr"
-          build/Switchr.app/Contents/MacOS/Switchr insights --sample --no-open --output "$RUNNER_TEMP/switchr-insights.html"
+          build/Keyhop.app/Contents/MacOS/Keyhop --snapshot "$RUNNER_TEMP/keyhop"
+          build/Keyhop.app/Contents/MacOS/Keyhop insights --sample --no-open --output "$RUNNER_TEMP/keyhop-insights.html"
 
       - name: Lint scripts and manifests
         run: |
           brew install shellcheck
           shellcheck install.sh scripts/*.sh packaging/linux/install-local.sh
-          python3 -m py_compile packaging/linux/switchr-tray scripts/render-manifests.py
-          ruby -c Casks/switchr.rb
+          python3 -m py_compile packaging/linux/keyhop-tray scripts/render-manifests.py
+          ruby -c Casks/keyhop.rb
 
       - uses: actions/upload-artifact@v7
         with:
           name: macos-screens
           path: |
-            ${{ runner.temp }}/switchr-*.png
-            ${{ runner.temp }}/switchr-insights.html
+            ${{ runner.temp }}/keyhop-*.png
+            ${{ runner.temp }}/keyhop-insights.html
           if-no-files-found: warn
 
   linux:
@@ -189,30 +189,30 @@ jobs:
             artifact: linux-x86_64
             install: |
               pacman -Syu --noconfirm --needed base-devel python sudo
-              version=$(ls artifacts/switchr-*-linux-x86_64.tar.gz | sed 's/.*switchr-\(.*\)-linux-.*/\1/')
+              version=$(ls artifacts/keyhop-*-linux-x86_64.tar.gz | sed 's/.*keyhop-\(.*\)-linux-.*/\1/')
               python3 scripts/render-manifests.py --version "$version" --sums artifacts/SHA256SUMS --out "$RUNNER_TEMP/rendered" --local-sources
               useradd -m builder && mkdir /tmp/pkg && cp "$RUNNER_TEMP/rendered/packaging/arch/PKGBUILD" artifacts/*.tar.gz /tmp/pkg/ && chown -R builder /tmp/pkg
               echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
               su builder -c "cd /tmp/pkg && makepkg --syncdeps --noconfirm"
-              pacman -U --noconfirm /tmp/pkg/switchr-bin-*.pkg.tar.zst
+              pacman -U --noconfirm /tmp/pkg/keyhop-bin-*.pkg.tar.zst
             tray: true
           - name: Fedora (install.sh)
             image: fedora:latest
             runner: ubuntu-24.04
             artifact: linux-x86_64
-            install: SWITCHR_INSTALL_FROM=artifacts bash install.sh
+            install: KEYHOP_INSTALL_FROM=artifacts bash install.sh
             tray: true
           - name: Ubuntu 24.04 (install.sh)
             image: ubuntu:24.04
             runner: ubuntu-24.04
             artifact: linux-x86_64
-            install: apt-get update -qq && echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/99switchr-ci && SWITCHR_INSTALL_FROM=artifacts bash install.sh
+            install: apt-get update -qq && echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/99keyhop-ci && KEYHOP_INSTALL_FROM=artifacts bash install.sh
             tray: true
           - name: openSUSE (install.sh, portable)
             image: opensuse/tumbleweed:latest
             runner: ubuntu-24.04
             artifact: linux-x86_64
-            install: zypper --non-interactive install tar gzip python3 curl && SWITCHR_INSTALL_FROM=artifacts bash install.sh && ln -s "$HOME/.local/bin/switchr" "$HOME/.local/bin/switchr-tray" /usr/local/bin/
+            install: zypper --non-interactive install tar gzip python3 curl && KEYHOP_INSTALL_FROM=artifacts bash install.sh && ln -s "$HOME/.local/bin/keyhop" "$HOME/.local/bin/keyhop-tray" /usr/local/bin/
             tray: false
     steps:
       - uses: actions/checkout@v7
@@ -226,20 +226,20 @@ jobs:
         shell: bash
         run: ${{ matrix.install }}
 
-      - name: Run switchr
+      - name: Run keyhop
         shell: bash
         env:
-          SWITCHR_SECRET_STORE: file
+          KEYHOP_SECRET_STORE: file
         run: |
-          switchr version
-          switchr doctor
-          switchr status --json > status.json
-          switchr-tray --print-menu status.json
-          switchr status --sample --json > sample.json
-          switchr-tray --print-menu sample.json
-          switchr insights --no-open --no-read --output insights.html
+          keyhop version
+          keyhop doctor
+          keyhop status --json > status.json
+          keyhop-tray --print-menu status.json
+          keyhop status --sample --json > sample.json
+          keyhop-tray --print-menu sample.json
+          keyhop insights --no-open --no-read --output insights.html
           # GitHub may rate-limit this runner, but a certificate problem must never happen.
-          out=$(switchr update --check 2>&1) || true
+          out=$(keyhop update --check 2>&1) || true
           echo "$out"
           if grep -qi certificate <<<"$out"; then exit 1; fi
 
@@ -259,7 +259,7 @@ jobs:
           name: linux-x86_64
           path: artifacts
 
-      - name: Install Switchr and a virtual display
+      - name: Install Keyhop and a virtual display
         run: dnf install -y artifacts/*.rpm xorg-x11-server-Xvfb dbus-daemon ImageMagick google-noto-sans-fonts webkit2gtk4.1 >/dev/null
 
       - name: Capture the tray's menu, a prompt and the dashboard
@@ -268,11 +268,11 @@ jobs:
           WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS: "1"
         run: |
           export XDG_RUNTIME_DIR=/tmp/runtime && mkdir -m 700 -p $XDG_RUNTIME_DIR
-          switchr status --sample --json > sample.json
+          keyhop status --sample --json > sample.json
           Xvfb :99 -screen 0 1440x900x24 >/dev/null 2>&1 &
           export DISPLAY=:99 && sleep 2
 
-          switchr dashboard --sample --no-open --json > dashboard.json 2> dashboard.log &
+          keyhop dashboard --sample --no-open --json > dashboard.json 2> dashboard.log &
           server=$!
           sleep 3
           url=$(sed -n 's/.*"url":"\([^"]*\)".*/\1/p' dashboard.json)
@@ -282,7 +282,7 @@ jobs:
           gi.require_version("Gtk", "3.0")
           gi.require_version("WebKit2", "4.1")
           from gi.repository import Gtk, WebKit2
-          window = Gtk.Window(title="Switchr")
+          window = Gtk.Window(title="Keyhop")
           window.set_decorated(False)
           window.set_default_size(1440, 900)
           window.move(0, 0)
@@ -303,10 +303,10 @@ jobs:
 
           # Output goes to a file: accessibility helpers GTK starts outlive the session and would hold a pipe open.
           timeout 120 dbus-run-session -- sh -c '
-            timeout 20 switchr-tray --status-file sample.json --show-menu & sleep 6
+            timeout 20 keyhop-tray --status-file sample.json --show-menu & sleep 6
             import -window root linux-menu.png
             wait
-            timeout 20 switchr-tray --status-file sample.json --show-dialog & sleep 6
+            timeout 20 keyhop-tray --status-file sample.json --show-dialog & sleep 6
             import -window root linux-dialog.png
             wait
           ' > tray.log 2>&1 || true
@@ -353,21 +353,21 @@ jobs:
       - name: Install with install.ps1 and run it
         shell: pwsh
         run: |
-          $env:SWITCHR_DATA_DIR = Join-Path $env:RUNNER_TEMP 'switchr-data'
+          $env:KEYHOP_DATA_DIR = Join-Path $env:RUNNER_TEMP 'keyhop-data'
           ./install.ps1 -From build\windows -NoStart
-          $installed = Join-Path $env:LOCALAPPDATA 'Programs\Switchr'
-          & "$installed\switchr.exe" version; if ($LASTEXITCODE) { exit 1 }
-          & "$installed\switchr.exe" doctor; if ($LASTEXITCODE) { exit 1 }
-          & "$installed\switchr.exe" insights --no-open --no-read --output "$env:RUNNER_TEMP\insights.html"; if ($LASTEXITCODE) { exit 1 }
-          & "$installed\switchr.exe" status --sample --json | Set-Content "$env:RUNNER_TEMP\sample.json"
-          & "$installed\switchr-tray.exe" --print-menu "$env:RUNNER_TEMP\sample.json" | Out-Host
-          if (-not (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Switchr.lnk'))) { throw 'No Start menu shortcut' }
-          if (-not (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name Switchr -ErrorAction SilentlyContinue)) { throw 'Not set to open at sign-in' }
+          $installed = Join-Path $env:LOCALAPPDATA 'Programs\Keyhop'
+          & "$installed\keyhop.exe" version; if ($LASTEXITCODE) { exit 1 }
+          & "$installed\keyhop.exe" doctor; if ($LASTEXITCODE) { exit 1 }
+          & "$installed\keyhop.exe" insights --no-open --no-read --output "$env:RUNNER_TEMP\insights.html"; if ($LASTEXITCODE) { exit 1 }
+          & "$installed\keyhop.exe" status --sample --json | Set-Content "$env:RUNNER_TEMP\sample.json"
+          & "$installed\keyhop-tray.exe" --print-menu "$env:RUNNER_TEMP\sample.json" | Out-Host
+          if (-not (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Keyhop.lnk'))) { throw 'No Start menu shortcut' }
+          if (-not (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name Keyhop -ErrorAction SilentlyContinue)) { throw 'Not set to open at sign-in' }
           if (([Environment]::GetEnvironmentVariable('Path', 'User') -split ';') -notcontains $installed) { throw 'Not on PATH' }
 
-          $tray = Start-Process -FilePath "$installed\switchr-tray.exe" -PassThru
+          $tray = Start-Process -FilePath "$installed\keyhop-tray.exe" -PassThru
           Start-Sleep -Seconds 10
-          if ($tray.HasExited) { throw "switchr-tray.exe exited with code $($tray.ExitCode)" }
+          if ($tray.HasExited) { throw "keyhop-tray.exe exited with code $($tray.ExitCode)" }
           Stop-Process -Id $tray.Id
 
       - name: Capture the tray menu and a prompt
@@ -381,9 +381,9 @@ jobs:
             $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
             $bitmap.Save($path)
           }
-          $installed = Join-Path $env:LOCALAPPDATA 'Programs\Switchr'
+          $installed = Join-Path $env:LOCALAPPDATA 'Programs\Keyhop'
           foreach ($shot in @(@('--show-menu', 'windows-menu'), @('--show-dialog', 'windows-dialog'))) {
-            $tray = Start-Process -FilePath "$installed\switchr-tray.exe" -ArgumentList '--status-file', "$env:RUNNER_TEMP\sample.json", $shot[0] -PassThru
+            $tray = Start-Process -FilePath "$installed\keyhop-tray.exe" -ArgumentList '--status-file', "$env:RUNNER_TEMP\sample.json", $shot[0] -PassThru
             Start-Sleep -Seconds 5
             Capture "$env:RUNNER_TEMP\$($shot[1])-${{ matrix.arch }}.png"
             Stop-Process -Id $tray.Id -ErrorAction SilentlyContinue
@@ -393,8 +393,8 @@ jobs:
         shell: pwsh
         run: |
           ./install.ps1 -Uninstall
-          if (Test-Path (Join-Path $env:LOCALAPPDATA 'Programs\Switchr')) { throw 'Files left behind' }
-          if (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name Switchr -ErrorAction SilentlyContinue) { throw 'Still opens at sign-in' }
+          if (Test-Path (Join-Path $env:LOCALAPPDATA 'Programs\Keyhop')) { throw 'Files left behind' }
+          if (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name Keyhop -ErrorAction SilentlyContinue) { throw 'Still opens at sign-in' }
 
       - uses: actions/upload-artifact@v7
         with:
@@ -418,6 +418,6 @@ jobs:
           find artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.rpm' -o -name '*.deb' -o -name '*.pkg.tar.zst' \) -exec cp {} dist/ \;
           (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
           python3 scripts/render-manifests.py --version "$(cat VERSION)" --sums dist/SHA256SUMS --out rendered
-          python3 -m json.tool rendered/bucket/switchr.json >/dev/null
+          python3 -m json.tool rendered/bucket/keyhop.json >/dev/null
           bash -n rendered/packaging/arch/PKGBUILD
           cat rendered/packaging/arch/PKGBUILD rendered/packaging/winget/*/*.yaml

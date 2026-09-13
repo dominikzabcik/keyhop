@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerates Sources/Switchr/Tracking/PricingTable.swift from https://models.dev.
+"""Regenerates Sources/Keyhop/Tracking/PricingTable.swift from https://models.dev.
 
 Run from the repository root:
 
@@ -11,7 +11,7 @@ import pathlib
 import subprocess
 
 PROVIDERS = ["anthropic", "openai", "google", "xai", "deepseek", "moonshotai", "zai"]
-OUTPUT = pathlib.Path("Sources/Switchr/Tracking/PricingTable.swift")
+OUTPUT = pathlib.Path("Sources/Keyhop/Tracking/PricingTable.swift")
 
 
 def literal(value):

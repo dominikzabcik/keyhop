@@ -162,7 +162,7 @@ teams.post("/t/:slug/delete", pageUser, async (c) => {
   return c.redirect("/teams");
 });
 
-// MARK: JSON for the Switchr app
+// MARK: JSON for the Keyhop app
 
 teams.get("/api/teams", apiUser, async (c) => c.json({ teams: await myTeams(c.env.DB, c.get("user")!.id) }));
 

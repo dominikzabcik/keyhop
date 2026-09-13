@@ -1,4 +1,4 @@
-// Renders Switchr's art in the dashboard's design: the app icon at every size (the macOS icon set,
+// Renders Keyhop's art in the dashboard's design: the app icon at every size (the macOS icon set,
 // Linux PNGs and a Windows .ico), the disk image background and the README banner.
 // Run through scripts/render-art.sh, which puts the output into Assets/, docs/ and packaging/.
 import AppKit
@@ -240,7 +240,7 @@ func dmgBackground(scale k: CGFloat) -> CGImage {
         fill(ctx, CGPath(roundedRect: rect, cornerWidth: 3, cornerHeight: 3, transform: nil), gray(0.08, alpha))
     }
 
-    draw(ctx, line("Drag Switchr into Applications", size: 16, weight: .semibold, color: gray(0.06)), center: CGPoint(x: 330, y: y(312)))
+    draw(ctx, line("Drag Keyhop into Applications", size: 16, weight: .semibold, color: gray(0.06)), center: CGPoint(x: 330, y: y(312)))
     draw(ctx, line("If macOS blocks the first launch: System Settings › Privacy & Security › Open Anyway",
                    size: 11.5, weight: .regular, color: gray(0.06)), center: CGPoint(x: 330, y: y(338)))
     return ctx.makeImage()!
@@ -256,7 +256,7 @@ func banner(scale k: CGFloat) -> CGImage {
     surface(ctx, clip: CGPath(rect: bounds, transform: nil), bounds: bounds, grainScale: 1 / k, top: gray(0.105), bottom: gray(0.07))
 
     // The mark and the name as one group, centered on the banner.
-    let name = line("Switchr", size: 96, weight: .semibold, color: Brand.ink)
+    let name = line("Keyhop", size: 96, weight: .semibold, color: Brand.ink)
     let nameWidth = CTLineGetBoundsWithOptions(name, .useGlyphPathBounds).width
     let markWidth: CGFloat = 176, gap: CGFloat = 44
     let left = size.width / 2 - (markWidth + gap + nameWidth) / 2
@@ -282,9 +282,9 @@ for (points, scales) in [(16, [1, 2]), (32, [1, 2]), (128, [1, 2]), (256, [1, 2]
 }
 writePNG(icon(pixels: 1024), "\(out)/icon-1024.png")
 for size in [16, 24, 32, 48, 64, 128, 256, 512] {
-    writePNG(icon(pixels: size), "\(icons)/switchr-\(size).png")
+    writePNG(icon(pixels: size), "\(icons)/keyhop-\(size).png")
 }
-writeICO(sizes: [16, 24, 32, 48, 64, 128, 256], "\(out)/switchr.ico")
+writeICO(sizes: [16, 24, 32, 48, 64, 128, 256], "\(out)/keyhop.ico")
 writePNG(dmgBackground(scale: 1), "\(out)/dmg-background.png")
 writePNG(dmgBackground(scale: 2), "\(out)/dmg-background@2x.png")
 writePNG(banner(scale: 2), "\(out)/banner.png")

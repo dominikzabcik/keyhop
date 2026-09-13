@@ -15,6 +15,6 @@ iconutil -c icns "$work/AppIcon.iconset" -o Assets/AppIcon.icns
 tiffutil -cathidpicheck "$work/dmg-background.png" "$work/dmg-background@2x.png" -out Assets/dmg-background.tiff
 cp "$work/banner.png" docs/banner.png
 cp "$work/icon-1024.png" docs/icon.png
-cp "$work"/icons/switchr-*.png packaging/icons/
-cp "$work/switchr.ico" packaging/windows/switchr.ico
-echo "Updated Assets/AppIcon.icns, Assets/dmg-background.tiff, docs/banner.png, docs/icon.png, packaging/icons and packaging/windows/switchr.ico"
+cp "$work"/icons/keyhop-*.png packaging/icons/
+cp "$work/keyhop.ico" packaging/windows/keyhop.ico
+echo "Updated Assets/AppIcon.icns, Assets/dmg-background.tiff, docs/banner.png, docs/icon.png, packaging/icons and packaging/windows/keyhop.ico"

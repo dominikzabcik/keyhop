@@ -1,4 +1,4 @@
--- Switchr cloud: GitHub accounts, app links, daily totals, teams and invites.
+-- Keyhop cloud: GitHub accounts, app links, daily totals, teams and invites.
 -- Only daily totals per tool are stored: no emails, account names, prompts or models.
 
 CREATE TABLE users (
@@ -13,7 +13,7 @@ CREATE TABLE users (
   updated_at INTEGER NOT NULL
 );
 
--- Browser sessions ("web") and Switchr apps linked to an account ("app"). Only token hashes are kept.
+-- Browser sessions ("web") and Keyhop apps linked to an account ("app"). Only token hashes are kept.
 CREATE TABLE sessions (
   id TEXT PRIMARY KEY,
   token_hash TEXT NOT NULL UNIQUE,
@@ -26,7 +26,7 @@ CREATE TABLE sessions (
 );
 CREATE INDEX sessions_user ON sessions(user_id);
 
--- A Switchr app waiting for someone to approve its code in the browser.
+-- A Keyhop app waiting for someone to approve its code in the browser.
 CREATE TABLE device_links (
   device_hash TEXT PRIMARY KEY,
   user_code TEXT NOT NULL UNIQUE,

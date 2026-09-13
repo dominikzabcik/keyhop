@@ -1,6 +1,6 @@
-# Switchr cloud
+# Keyhop cloud
 
-Leaderboards, teams and public profiles for Switchr. It runs as one Cloudflare Worker with a D1 database, and serves both the website and the API the app uses.
+Leaderboards, teams and public profiles for Keyhop. It runs as one Cloudflare Worker with a D1 database, and serves both the website and the API the app uses.
 
 ## What it stores
 
@@ -16,9 +16,9 @@ No prompts, emails, account names, models or GitHub tokens are stored. Deleting 
 
 ## How the app links
 
-1. Switchr calls `POST /api/device/start` and shows the code it gets back.
+1. Keyhop calls `POST /api/device/start` and shows the code it gets back.
 2. You open `/link?code=…`, sign in with GitHub, check the code and approve.
-3. Switchr polls `POST /api/device/token` and receives its own token, then sends daily totals to `POST /api/usage` about once an hour.
+3. Keyhop polls `POST /api/device/token` and receives its own token, then sends daily totals to `POST /api/usage` about once an hour.
 
 Browser sessions and app tokens are separate: neither works in the other's place. Changes made with a browser session must come from the site's own pages.
 
@@ -34,15 +34,15 @@ npm test                         # runs inside the Workers runtime
 npm run typecheck
 ```
 
-Point a local Switchr at it with `SWITCHR_CLOUD_URL=http://localhost:8787 switchr cloud login`. Use `SWITCHR_DATA_DIR` to keep that link away from your real data.
+Point a local Keyhop at it with `KEYHOP_CLOUD_URL=http://localhost:8787 keyhop cloud login`. Use `KEYHOP_DATA_DIR` to keep that link away from your real data.
 
 ## Deploy
 
 1. Sign in to Cloudflare: `npx wrangler login`.
-2. Create the database: `npx wrangler d1 create switchr`, and put the `database_id` it prints into `wrangler.jsonc`.
+2. Create the database: `npx wrangler d1 create keyhop`, and put the `database_id` it prints into `wrangler.jsonc`.
 3. Create a GitHub OAuth app at github.com/settings/developers, with the callback URL `https://<your host>/auth/github/callback`.
 4. Store its credentials: `npx wrangler secret put GITHUB_CLIENT_ID`, then `npx wrangler secret put GITHUB_CLIENT_SECRET`.
 5. `npm run deploy` applies the migrations and publishes the Worker.
-6. Set `Cloud.defaultServer` in `Sources/Switchr/Cloud/Cloud.swift` to the site's address, and release the app. Until then, the app hides leaderboards.
+6. Set `Cloud.defaultServer` in `Sources/Keyhop/Cloud/Cloud.swift` to the site's address, and release the app. Until then, the app hides leaderboards.
 
 Never set `DEV_LOGIN` in production. The development login also refuses any host other than localhost.

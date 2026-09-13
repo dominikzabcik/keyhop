@@ -53,7 +53,7 @@ function render(
 export function notFound(c: C, message = "There's nothing here.") {
   return render(
     c,
-    "Not found · Switchr",
+    "Not found · Keyhop",
     html`<section class="card center-card">${raw(PIXEL_MARK)}<h1>Not found</h1><p class="lede">${message}</p><a class="btn secondary" href="/leaderboard">Go to the leaderboard</a></section>`,
     { status: 404 },
   );
@@ -125,11 +125,11 @@ pages.get("/login", (c) => {
   if (c.get("user")) return c.redirect(next);
   return render(
     c,
-    "Sign in · Switchr",
+    "Sign in · Keyhop",
     html`<section class="card center-card">
       ${raw(PIXEL_MARK)}
-      <h1>Sign in to Switchr</h1>
-      <p class="lede">Use your GitHub account. Switchr reads only your public GitHub profile: your name, login and avatar.</p>
+      <h1>Sign in to Keyhop</h1>
+      <p class="lede">Use your GitHub account. Keyhop reads only your public GitHub profile: your name, login and avatar.</p>
       <a class="btn" href="/auth/github?next=${encodeURIComponent(next)}">${githubIcon()}Continue with GitHub</a>
     </section>`,
   );
@@ -140,11 +140,11 @@ pages.get("/welcome", pageUser, (c) => {
   const next = safeNext(c.req.query("next"));
   return render(
     c,
-    "Welcome · Switchr",
+    "Welcome · Keyhop",
     html`<section class="card center-card">
       ${avatar(user, 56)}
       <h1>Welcome, ${user.name || user.login}</h1>
-      <p class="lede">Link the Switchr app to send your daily totals: open Switchr, then Settings, then Leaderboard.</p>
+      <p class="lede">Link the Keyhop app to send your daily totals: open Keyhop, then Settings, then Leaderboard.</p>
       <form class="form" method="post" action="/welcome">
         <input type="hidden" name="next" value="${next}">
         <label class="check"><input type="checkbox" name="public">
@@ -161,7 +161,7 @@ pages.get("/leaderboard", async (c) => {
   const entries = await leaderboard(c.env.DB, { period, metric });
   return render(
     c,
-    "Leaderboard · Switchr",
+    "Leaderboard · Keyhop",
     html`
       <div class="head">
         <div><h1>Leaderboard</h1><p class="lede">Ranked by ${METRICS[metric].label.toLowerCase()} ${PERIOD_PHRASES[period]}.</p></div>
@@ -171,7 +171,7 @@ pages.get("/leaderboard", async (c) => {
         ? html`<div class="notice"><div><b>You aren't on the leaderboard</b><p>Your profile is private. Turn it public in <a href="/settings">Settings</a> to join.</p></div></div>`
         : ""}
       ${board(entries, metric, user, "Nobody has synced usage for this period yet.")}`,
-    { active: "leaderboard", description: `Who used the most AI ${PERIOD_PHRASES[period]}, on Switchr.` },
+    { active: "leaderboard", description: `Who used the most AI ${PERIOD_PHRASES[period]}, on Keyhop.` },
   );
 });
 
@@ -188,7 +188,7 @@ async function seasonPage(c: C, season: string) {
 
   return render(
     c,
-    `Season ${seasonLabel(season)} · Switchr`,
+    `Season ${seasonLabel(season)} · Keyhop`,
     html`
       <div class="head">
         <div><h1>Season</h1><p class="lede">${seasonLabel(season)} · ${when}. Your tier comes from the tokens you use this month.</p></div>
@@ -241,7 +241,7 @@ async function seasonPage(c: C, season: string) {
       </section>`,
     {
       active: "season",
-      description: `Switchr's ${seasonLabel(season)} season: who ranks where in Claude Code, Cursor and Codex.`,
+      description: `Keyhop's ${seasonLabel(season)} season: who ranks where in Claude Code, Cursor and Codex.`,
     },
   );
 }
@@ -275,13 +275,13 @@ pages.get("/u/:login", async (c) => {
   const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
   return render(
     c,
-    `${display} · Switchr`,
+    `${display} · Keyhop`,
     html`
       <section class="card profile-head">
         ${avatar(person, 64)}
         <div class="grow">
           <h1>${display}</h1>
-          <p class="lede">@${person.login} · on Switchr since ${monthYear(person.created_at)}${person.public !== 1 ? html` · <span class="badge">Private</span>` : ""}</p>
+          <p class="lede">@${person.login} · on Keyhop since ${monthYear(person.created_at)}${person.public !== 1 ? html` · <span class="badge">Private</span>` : ""}</p>
         </div>
         ${person.public === 1 ? html`<label class="share">Share this profile<input class="field mono" readonly value="${url}"></label>` : ""}
       </section>
@@ -312,7 +312,7 @@ pages.get("/u/:login", async (c) => {
         </div></div>
       </section>`,
     {
-      description: `${display} used ${tokens(stats.month.tokens)} tokens in the last 30 days. See their Switchr profile.`,
+      description: `${display} used ${tokens(stats.month.tokens)} tokens in the last 30 days. See their Keyhop profile.`,
     },
   );
 });
@@ -323,12 +323,12 @@ pages.get("/teams", pageUser, async (c) => {
   const error = c.req.query("error");
   const errors: Record<string, string> = {
     name: "Give the team a name of at least 2 characters.",
-    limit: "You own as many teams as Switchr allows.",
+    limit: "You own as many teams as Keyhop allows.",
     taken: "That name was just taken. Try another.",
   };
   return render(
     c,
-    "Teams · Switchr",
+    "Teams · Keyhop",
     html`
       <div class="head"><div><h1>Teams</h1><p class="lede">Compare usage with the people you work with. Members see each other's daily totals.</p></div></div>
       <section class="aside-layout">
@@ -368,7 +368,7 @@ pages.get("/t/:slug", pageUser, async (c) => {
   const owner = role === "owner";
   return render(
     c,
-    `${team.name} · Switchr`,
+    `${team.name} · Keyhop`,
     html`
       <div class="head">
         <div><h1>${team.name}</h1><p class="lede">${people.length} ${people.length === 1 ? "member" : "members"}, ranked by ${METRICS[metric].label.toLowerCase()} ${PERIOD_PHRASES[period]}.</p></div>
@@ -428,7 +428,7 @@ pages.get("/invite/:code", async (c) => {
   if (user && (await teamForMember(c.env.DB, info.slug, user.id))) return c.redirect(`/t/${info.slug}`);
   return render(
     c,
-    `Join ${info.name} · Switchr`,
+    `Join ${info.name} · Keyhop`,
     html`<section class="card center-card">
       ${raw(PIXEL_MARK)}
       <h1>Join ${info.name}</h1>
@@ -439,7 +439,7 @@ pages.get("/invite/:code", async (c) => {
         ? html`<form method="post" action="/invite/${code}"><button class="btn" type="submit">Join team</button></form>`
         : html`<a class="btn" href="/login?next=${encodeURIComponent(`/invite/${code}`)}">${githubIcon()}Sign in with GitHub to join</a>`}
     </section>`,
-    { description: `Join ${info.name} on Switchr and compare AI usage with your team.` },
+    { description: `Join ${info.name} on Keyhop and compare AI usage with your team.` },
   );
 });
 
@@ -452,7 +452,7 @@ pages.get("/settings", pageUser, async (c) => {
     .all<{ id: string; label: string | null; created_at: number; last_used_at: number }>();
   return render(
     c,
-    "Settings · Switchr",
+    "Settings · Keyhop",
     html`
       <div class="head"><div><h1>Settings</h1><p class="lede">Signed in as @${user.login} with GitHub.</p></div></div>
       ${c.req.query("saved") ? html`<div class="notice ok"><div><b>Saved</b></div></div>` : ""}
@@ -468,10 +468,10 @@ pages.get("/settings", pageUser, async (c) => {
         <div class="card">
           <div class="card-head"><h2>Linked apps</h2><span class="hint">${apps.length}</span></div>
           ${apps.length === 0
-            ? html`<p class="empty">No Switchr app is linked yet. In Switchr, open Settings, then Leaderboard.</p>`
+            ? html`<p class="empty">No Keyhop app is linked yet. In Keyhop, open Settings, then Leaderboard.</p>`
             : apps.map(
                 (app) => html`<div class="list-row">
-                  <span class="person"><span><b>${app.label || "Switchr"}</b><small>Linked ${monthYear(app.created_at)} · used ${ago(app.last_used_at)}</small></span></span>
+                  <span class="person"><span><b>${app.label || "Keyhop"}</b><small>Linked ${monthYear(app.created_at)} · used ${ago(app.last_used_at)}</small></span></span>
                   <form method="post" action="/settings/apps/${app.id}/revoke"><button class="btn ghost sm" type="submit">Unlink</button></form>
                 </div>`,
               )}
@@ -498,11 +498,11 @@ pages.get("/link", pageUser, (c) => {
   if (c.req.query("done")) {
     return render(
       c,
-      "Switchr linked · Switchr",
+      "Keyhop linked · Keyhop",
       html`<section class="card center-card">
         ${raw(PIXEL_MARK)}
-        <h1>Switchr is linked</h1>
-        <p class="lede">Go back to Switchr. It starts sending your daily totals to @${user.login}.</p>
+        <h1>Keyhop is linked</h1>
+        <p class="lede">Go back to Keyhop. It starts sending your daily totals to @${user.login}.</p>
         <a class="btn secondary" href="/u/${user.login}">View your profile</a>
       </section>`,
     );
@@ -510,17 +510,17 @@ pages.get("/link", pageUser, (c) => {
   const code = (c.req.query("code") ?? "").toUpperCase().slice(0, 9);
   return render(
     c,
-    "Link Switchr · Switchr",
+    "Link Keyhop · Keyhop",
     html`<section class="card center-card">
       ${raw(PIXEL_MARK)}
-      <h1>Link Switchr</h1>
-      <p class="lede">Check that this code matches the one in your Switchr window. Only approve a code you started yourself.</p>
+      <h1>Link Keyhop</h1>
+      <p class="lede">Check that this code matches the one in your Keyhop window. Only approve a code you started yourself.</p>
       <form class="form" method="post" action="/link">
         <input class="field code" name="code" value="${code}" maxlength="9" required autocomplete="off" aria-label="Code">
-        ${c.req.query("error") ? html`<p class="error-text">That code expired or was already used. Start again in Switchr.</p>` : ""}
+        ${c.req.query("error") ? html`<p class="error-text">That code expired or was already used. Start again in Keyhop.</p>` : ""}
         <button class="btn" type="submit">Link to @${user.login}</button>
       </form>
-      <p class="muted" style="margin:0;font-size:13px">Switchr sends tokens, API value and requests per tool per day. Never prompts, emails or account names.</p>
+      <p class="muted" style="margin:0;font-size:13px">Keyhop sends tokens, API value and requests per tool per day. Never prompts, emails or account names.</p>
     </section>`,
   );
 });

@@ -3,14 +3,14 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { randomToken, sha256, userCode } from "./crypto";
 import { type AppEnv, type Env, type User, now } from "./env";
 
-export const SESSION_COOKIE = "switchr_session";
-const OAUTH_COOKIE = "switchr_oauth";
+export const SESSION_COOKIE = "keyhop_session";
+const OAUTH_COOKIE = "keyhop_oauth";
 const WEB_SESSION_SECONDS = 30 * 24 * 3600;
 const LINK_SECONDS = 10 * 60;
 
 const USER_COLUMNS = "u.id, u.github_id, u.login, u.name, u.avatar_url, u.public, u.created_at";
 
-/** Reads who is signed in: a session cookie in the browser, or a bearer token from the Switchr app. */
+/** Reads who is signed in: a session cookie in the browser, or a bearer token from the Keyhop app. */
 export const session: MiddlewareHandler<AppEnv> = async (c, next) => {
   c.set("user", null);
   c.set("sessionKind", null);
@@ -38,7 +38,7 @@ export const session: MiddlewareHandler<AppEnv> = async (c, next) => {
 };
 
 /**
- * Changes made with a session cookie must come from Switchr's own pages. SameSite=Lax already keeps
+ * Changes made with a session cookie must come from Keyhop's own pages. SameSite=Lax already keeps
  * the cookie off cross-site form posts; this refuses anything else that slips through.
  */
 export const sameOrigin: MiddlewareHandler<AppEnv> = async (c, next) => {
@@ -166,7 +166,7 @@ auth.get("/auth/github/callback", async (c) => {
   if (!grant.access_token) return c.text("GitHub didn't confirm the sign-in. Try again.", 502);
 
   const response = await fetch("https://api.github.com/user", {
-    headers: { authorization: `Bearer ${grant.access_token}`, accept: "application/vnd.github+json", "user-agent": "switchr-cloud" },
+    headers: { authorization: `Bearer ${grant.access_token}`, accept: "application/vnd.github+json", "user-agent": "keyhop-cloud" },
   });
   if (!response.ok) return c.text("Couldn't read your GitHub profile. Try again.", 502);
   const { user, created } = await upsertUser(c.env.DB, (await response.json()) as GitHubProfile);
@@ -193,7 +193,7 @@ auth.post("/auth/logout", async (c) => {
   return c.redirect("/leaderboard");
 });
 
-// MARK: Linking the Switchr app
+// MARK: Linking the Keyhop app
 
 auth.post("/api/device/start", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { label?: unknown };

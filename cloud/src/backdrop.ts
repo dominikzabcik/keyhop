@@ -1,9 +1,9 @@
-// Switchr's backdrop: illustrated scenes behind the page. The same script runs in the app's
-// dashboard (Sources/Switchr/Dashboard/Backdrop.swift), and a Swift test keeps the two copies equal.
+// Keyhop's backdrop: illustrated scenes behind the page. The same script runs in the app's
+// dashboard (Sources/Keyhop/Dashboard/Backdrop.swift), and a Swift test keeps the two copies equal.
 export const BACKDROP_SCRIPT = String.raw`/* backdrop:start */
 (function () {
   "use strict";
-  if (window.SwitchrBackdrop) return;
+  if (window.KeyhopBackdrop) return;
 
   // Every moving part animates only transform and opacity, which the browser hands to the GPU, so
   // the scenes stay smooth and cost next to nothing. Nothing on the page depends on them.
@@ -327,6 +327,6 @@ export const BACKDROP_SCRIPT = String.raw`/* backdrop:start */
     return { update: update };
   }
 
-  window.SwitchrBackdrop = { mount: mount, sprite: sprite };
+  window.KeyhopBackdrop = { mount: mount, sprite: sprite };
 })();
 /* backdrop:end */`;

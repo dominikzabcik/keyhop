@@ -1,15 +1,15 @@
 # Homebrew cask for the Mac app. Install with:
-#   brew tap dominikzabcik/keyhop https://github.com/dominikzabcik/switchr
+#   brew tap dominikzabcik/keyhop https://github.com/dominikzabcik/keyhop
 #   brew install --cask keyhop
 # Keyhop updates itself, so the cask always points at the latest release.
 cask "keyhop" do
   version :latest
   sha256 :no_check
 
-  url "https://github.com/dominikzabcik/switchr/releases/latest/download/Keyhop.dmg"
+  url "https://github.com/dominikzabcik/keyhop/releases/latest/download/Keyhop.dmg"
   name "Keyhop"
   desc "Switch Claude Code, Cursor and Codex accounts from the menu bar"
-  homepage "https://github.com/dominikzabcik/switchr"
+  homepage "https://github.com/dominikzabcik/keyhop"
 
   auto_updates true
   depends_on macos: ">= :sonoma"

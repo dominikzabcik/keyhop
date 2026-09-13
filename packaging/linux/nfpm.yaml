@@ -12,7 +12,7 @@ description: |
   Switch Claude Code, Cursor and Codex accounts in one click and track their usage.
   Includes the keyhop command and a tray menu with limits, alerts and Insights.
 vendor: Keyhop
-homepage: https://github.com/dominikzabcik/switchr
+homepage: https://github.com/dominikzabcik/keyhop
 license: MIT
 
 contents:

@@ -19,8 +19,8 @@
     </p>
   </description>
   <launchable type="desktop-id">app.keyhop.Keyhop.desktop</launchable>
-  <url type="homepage">https://github.com/dominikzabcik/switchr</url>
-  <url type="bugtracker">https://github.com/dominikzabcik/switchr/issues</url>
+  <url type="homepage">https://github.com/dominikzabcik/keyhop</url>
+  <url type="bugtracker">https://github.com/dominikzabcik/keyhop/issues</url>
   <provides>
     <binary>keyhop</binary>
     <binary>keyhop-tray</binary>

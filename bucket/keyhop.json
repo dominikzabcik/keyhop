@@ -1,11 +1,11 @@
 {
     "version": "0.7.1",
     "description": "Switch Claude Code, Cursor and Codex accounts in one click and track their usage.",
-    "homepage": "https://github.com/dominikzabcik/switchr",
+    "homepage": "https://github.com/dominikzabcik/keyhop",
     "license": "MIT",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/dominikzabcik/switchr/releases/download/v0.7.1/keyhop-0.7.1-windows-x86_64.zip",
+            "url": "https://github.com/dominikzabcik/keyhop/releases/download/v0.7.1/keyhop-0.7.1-windows-x86_64.zip",
             "hash": "fe65879cf096ffa15ee59ddc4cde7bcdaff404edf59560c2e898504bc0595dbb"
         }
     },
@@ -23,12 +23,12 @@
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://github.com/dominikzabcik/switchr/releases/download/v$version/keyhop-$version-windows-x86_64.zip"
+                "url": "https://github.com/dominikzabcik/keyhop/releases/download/v$version/keyhop-$version-windows-x86_64.zip"
             }
         },
         "extract_dir": "keyhop-$version",
         "hash": {
-            "url": "https://github.com/dominikzabcik/switchr/releases/download/v$version/SHA256SUMS",
+            "url": "https://github.com/dominikzabcik/keyhop/releases/download/v$version/SHA256SUMS",
             "regex": "$sha256\\s+$basename"
         }
     }

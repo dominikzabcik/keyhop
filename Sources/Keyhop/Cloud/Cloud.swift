@@ -9,7 +9,7 @@ import FoundationNetworking
 enum Cloud {
     /// The deployed service. `KEYHOP_CLOUD_URL` points Keyhop at another one, like a local
     /// `npm run dev` in cloud/.
-    static let defaultServer: String? = "https://switchr.qwezdi.workers.dev"
+    static let defaultServer: String? = "https://keyhop.app"
 
     static var server: String? {
         if let override = ProcessInfo.processInfo.environment["KEYHOP_CLOUD_URL"], !override.isEmpty { return override }

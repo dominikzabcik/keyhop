@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/dominikzabcik/switchr/actions/workflows/ci.yml"><img src="https://github.com/dominikzabcik/switchr/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/dominikzabcik/switchr/releases/latest"><img src="https://img.shields.io/github/v/release/dominikzabcik/keyhop?label=release&color=171717" alt="Latest release"></a>
+  <a href="https://github.com/dominikzabcik/keyhop/actions/workflows/ci.yml"><img src="https://github.com/dominikzabcik/keyhop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/dominikzabcik/keyhop/releases/latest"><img src="https://img.shields.io/github/v/release/dominikzabcik/keyhop?label=release&color=171717" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-171717" alt="MIT license"></a>
 </p>
 
@@ -43,12 +43,12 @@ Both installers download the latest release and check its SHA-256 before install
 
 | System | What the installer does | Or install it yourself |
 | --- | --- | --- |
-| macOS 14 or later | Installs Keyhop into Applications, links the `keyhop` command onto your PATH, and opens it. Files downloaded this way aren't flagged by Gatekeeper, so there's no security prompt. | `Keyhop.dmg` from the [latest release](../../releases/latest), or `brew tap dominikzabcik/keyhop https://github.com/dominikzabcik/switchr && brew install --cask keyhop` |
+| macOS 14 or later | Installs Keyhop into Applications, links the `keyhop` command onto your PATH, and opens it. Files downloaded this way aren't flagged by Gatekeeper, so there's no security prompt. | `Keyhop.dmg` from the [latest release](../../releases/latest), or `brew tap dominikzabcik/keyhop https://github.com/dominikzabcik/keyhop && brew install --cask keyhop` |
 | Fedora, RHEL | Installs the RPM with `dnf` | `sudo dnf install ./keyhop-<version>-1.x86_64.rpm` |
 | Debian, Ubuntu | Installs the DEB with `apt` | `sudo apt install ./keyhop_<version>_amd64.deb` |
 | Arch Linux | Installs the package with `pacman` | `sudo pacman -U keyhop-<version>-1-x86_64.pkg.tar.zst`, or build the release's `keyhop-bin` PKGBUILD with `makepkg -si` |
 | Any other Linux | Installs the portable build into `~/.local`, without root. Set `KEYHOP_LOCAL=1` to choose this anywhere. | Unpack `keyhop-<version>-linux-<arch>.tar.gz` and run `./install-local.sh` |
-| Windows 10 and 11 | Installs into `%LOCALAPPDATA%\Programs\Keyhop`, adds `keyhop` to your PATH and the Start menu, and opens at sign-in. Windows on Arm runs the same build through its x64 emulation. | `scoop bucket add keyhop https://github.com/dominikzabcik/switchr` then `scoop install keyhop` |
+| Windows 10 and 11 | Installs into `%LOCALAPPDATA%\Programs\Keyhop`, adds `keyhop` to your PATH and the Start menu, and opens at sign-in. Windows on Arm runs the same build through its x64 emulation. | `scoop bucket add keyhop https://github.com/dominikzabcik/keyhop` then `scoop install keyhop` |
 
 Every Linux download runs on x86_64 and aarch64. The `keyhop` binary is fully static, so it doesn't depend on your distribution's libraries. The tray uses GTK 3, AppIndicator and libnotify for Python, which the packages pull in.
 
@@ -136,7 +136,7 @@ Link Keyhop with your GitHub account to compare usage with friends and teams: in
 - **Profiles:** a page at `/u/<login>` with a year of activity, streaks, tools and your weekly rank, ready to share.
 - **What's sent:** tokens, API value and requests per tool per day. Never prompts, emails, account names or models. `keyhop cloud logout` unlinks a computer, and deleting your account on the website removes everything it holds.
 
-See the leaderboard at [switchr.qwezdi.workers.dev](https://switchr.qwezdi.workers.dev/leaderboard). The service lives in [`cloud/`](cloud/README.md).
+See the leaderboard at [keyhop.app](https://keyhop.app/leaderboard). The service lives in [`cloud/`](cloud/README.md).
 
 ## What a switch does
 

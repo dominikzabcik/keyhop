@@ -253,7 +253,7 @@ export function layout(options: {
 <footer class="site-foot">
   <span>Keyhop</span>
   <span>Totals are sent by the Keyhop app: tokens, API value and requests per day. Nothing else.</span>
-  <a href="https://github.com/dominikzabcik/switchr">GitHub</a>
+  <a href="https://github.com/dominikzabcik/keyhop">GitHub</a>
 </footer>
 <script nonce="${options.nonce}">${raw(BACKDROP_SCRIPT)}
 (function () {

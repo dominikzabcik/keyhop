@@ -5,16 +5,16 @@ pkgver=0.7.1
 pkgrel=1
 pkgdesc="Switch Claude Code, Cursor and Codex accounts in one click and track their usage."
 arch=('x86_64' 'aarch64')
-url="https://github.com/dominikzabcik/switchr"
+url="https://github.com/dominikzabcik/keyhop"
 license=('MIT')
 depends=('python-gobject' 'gtk3' 'libayatana-appindicator' 'libnotify' 'libsecret' 'ca-certificates')
 optdepends=('webkit2gtk-4.1: Keyhop window inside the tray instead of a browser window')
 provides=('keyhop')
 conflicts=('keyhop')
 options=('!strip' '!debug')
-source_x86_64=("https://github.com/dominikzabcik/switchr/releases/download/v$pkgver/keyhop-$pkgver-linux-x86_64.tar.gz")
+source_x86_64=("https://github.com/dominikzabcik/keyhop/releases/download/v$pkgver/keyhop-$pkgver-linux-x86_64.tar.gz")
 sha256sums_x86_64=('4d343e885807eea04151ef4772a584135784d727be82e2ee254e6dcaba7be580')
-source_aarch64=("https://github.com/dominikzabcik/switchr/releases/download/v$pkgver/keyhop-$pkgver-linux-aarch64.tar.gz")
+source_aarch64=("https://github.com/dominikzabcik/keyhop/releases/download/v$pkgver/keyhop-$pkgver-linux-aarch64.tar.gz")
 sha256sums_aarch64=('912dfaa2626cb9f5b15b283f8577487eae4b893e44655547e22a145d9087dad9')
 
 package() {

@@ -4,6 +4,7 @@ import { auth, sameOrigin, session } from "./auth";
 import { randomToken } from "./crypto";
 import type { AppEnv } from "./env";
 import { notFound, pages } from "./pages";
+import { seasons } from "./seasons";
 import { teams } from "./teams";
 import { usage } from "./usage";
 
@@ -26,6 +27,7 @@ app.use("*", sameOrigin);
 
 app.route("/", auth);
 app.route("/", usage);
+app.route("/", seasons);
 app.route("/", teams);
 app.route("/", account);
 app.route("/", pages);

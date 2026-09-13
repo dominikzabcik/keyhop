@@ -102,6 +102,35 @@ struct CloudBoard: Codable {
     let entries: [Entry]
 }
 
+/// A ranked season: one calendar month, with the tier your tokens earned in it.
+struct CloudSeason: Codable {
+    struct Tier: Codable {
+        let key: String
+        let name: String
+        /// 3, 2 or 1 inside a tier. Master has none.
+        let division: Int?
+    }
+
+    struct Step: Codable {
+        let label: String
+        let tokens: Int
+    }
+
+    struct You: Codable {
+        let rank: Int?
+        let tokens: Int
+        let tier: Tier
+        let next: Step?
+    }
+
+    let season: String
+    let label: String
+    let daysLeft: Int
+    let over: Bool
+    let players: Int
+    let you: You?
+}
+
 struct CloudTeam: Codable {
     let slug: String
     let name: String
@@ -194,6 +223,16 @@ struct CloudClient {
         let (data, status) = try await send("GET", "/api/leaderboard?\(query)")
         guard status == 200 else { throw problem(data, status) }
         return try JSONDecoder().decode(CloudBoard.self, from: data)
+    }
+
+    func season(team: String?) async throws -> CloudSeason {
+        var query = ""
+        if let team, let encoded = team.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-_"))) {
+            query = "?team=\(encoded)"
+        }
+        let (data, status) = try await send("GET", "/api/season\(query)")
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(CloudSeason.self, from: data)
     }
 
     func teams() async throws -> [CloudTeam] {

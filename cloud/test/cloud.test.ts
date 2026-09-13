@@ -2,6 +2,7 @@ import { exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { addDays, today } from "../src/env";
 import { streaks } from "../src/stats";
+import { currentSeason, daysLeft, nextStep, seasonRange, tierFor } from "../src/seasons";
 import { parseUsage } from "../src/usage";
 
 const BASE = "http://localhost";
@@ -135,6 +136,56 @@ describe("leaderboards", () => {
     const nonce = page.headers.get("content-security-policy")!.match(/script-src 'nonce-([^']+)'/)?.[1];
     expect(nonce).toBeTruthy();
     expect(body.match(/<script\b[^>]*>/g)).toEqual([`<script nonce="${nonce}">`]);
+  });
+});
+
+describe("ranked seasons", () => {
+  it("puts tokens on the ladder, with three divisions inside each tier", () => {
+    expect(tierFor(0)).toMatchObject({ key: "bronze", division: 3 });
+    expect(tierFor(249_000_000)).toMatchObject({ key: "bronze", division: 1 });
+    expect(tierFor(250_000_000)).toMatchObject({ key: "silver", division: 3 });
+    expect(tierFor(2_000_000_000)).toMatchObject({ key: "gold" });
+    expect(tierFor(50_000_000_000)).toMatchObject({ key: "master", division: null });
+    expect(nextStep(50_000_000_000)).toBeNull();
+    expect(nextStep(0)?.tokens).toBeGreaterThan(0);
+  });
+
+  it("counts a season as its own calendar month, stopping at today", () => {
+    expect(seasonRange("2026-09", "2026-09-13")).toEqual({ from: "2026-09-01", to: "2026-09-13", over: false });
+    expect(seasonRange("2026-09", "2026-10-04")).toEqual({ from: "2026-09-01", to: "2026-09-30", over: true });
+    expect(daysLeft("2026-09", "2026-09-30")).toBe(1);
+    expect(daysLeft("2026-09", "2026-10-01")).toBe(0);
+    expect(currentSeason("2026-09-13")).toBe("2026-09");
+  });
+
+  it("ranks the season and tells you your own place", async () => {
+    const day = today();
+    const ivan = await linkApp(await signIn("ivan"));
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${ivan}` }, body: JSON.stringify({ public: true }) });
+    await upload(ivan, [{ day, tool: "claude", tokens: 300_000_000, cost: 12, requests: 900 }]);
+
+    const response = await call("/api/season", { headers: { authorization: `Bearer ${ivan}` } });
+    const body = (await response.json()) as {
+      season: string;
+      you: { rank: number; tier: { key: string }; next: { tokens: number } };
+      entries: { login: string; tier: { key: string } }[];
+    };
+    expect(body.season).toBe(currentSeason());
+    expect(body.you.rank).toBe(1);
+    expect(body.you.tier.key).toBe("silver");
+    expect(body.you.next.tokens).toBeGreaterThan(0);
+    expect(body.entries.find((entry) => entry.login === "ivan")?.tier.key).toBe("silver");
+
+    // A month Switchr never ran isn't a season.
+    expect((await call("/api/season?season=2020-01")).status).toBe(400);
+  });
+
+  it("renders the season page with the ladder", async () => {
+    const page = await call("/season");
+    expect(page.status).toBe(200);
+    const body = await page.text();
+    expect(body).toContain("<h1>Season</h1>");
+    expect(body).toContain("The ladder");
   });
 });
 

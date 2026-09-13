@@ -293,6 +293,20 @@ select.field option { background: var(--raised); }
 /* Leaderboard */
 .avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--raised); color: var(--muted); font-weight: 600; }
 .podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+/* Tiers read by their mark and their name, in a quiet tone of their own. */
+.tier { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--tier); white-space: nowrap; }
+.tier svg { width: 23px; height: 18px; fill: currentColor; flex: none; }
+.tier.sm { gap: 6px; font-size: 12.5px; }
+.tier.sm svg { width: 15px; height: 12px; }
+.tier-bronze { --tier: hsl(26 20% 58%); }
+.tier-silver { --tier: hsl(0 0% 68%); }
+.tier-gold { --tier: hsl(42 26% 66%); }
+.tier-platinum { --tier: hsl(190 12% 72%); }
+.tier-diamond { --tier: hsl(205 20% 80%); }
+.tier-master { --tier: hsl(0 0% 95%); }
+.season-row { display: flex; align-items: center; gap: 16px; padding: 14px 16px; flex-wrap: wrap; }
+.season-row .grow { flex: 1; min-width: 200px; }
+.season-row p { margin: 3px 0 0; color: var(--muted); }
 .podium-card { padding: 16px; display: grid; gap: 12px; }
 .podium-card .place { color: var(--subtle); font-size: 12px; }
 .podium-card.you { border-color: var(--border-strong); }
@@ -1132,6 +1146,39 @@ select.field option { background: var(--raised); }
         <button class="btn sm ghost danger" data-action="cloud-unlink">Unlink</button></div></div></section>`;
   }
 
+  // Six squares climbing to the right, lit as far as the tier has come.
+  function tierMark(key) {
+    const steps = { bronze: 1, silver: 2, gold: 3, platinum: 4, diamond: 5, master: 6 }[key] || 1;
+    const cells = Array.from({ length: 6 }, (_, index) => {
+      const height = 3 + index * 2.4;
+      return `<rect x="${index * 4}" y="${(17 - height).toFixed(1)}" width="3" height="${height.toFixed(1)}" rx="1" fill-opacity="${index < steps ? 1 : 0.22}"/>`;
+    }).join("");
+    return `<svg viewBox="0 0 23 18" aria-hidden="true">${cells}</svg>`;
+  }
+
+  function tierTag(tier, size) {
+    const roman = ["", "I", "II", "III"][tier.division || 0];
+    return `<span class="tier tier-${esc(tier.key)}${size === "sm" ? " sm" : ""}">${tierMark(tier.key)}<span>${esc(tier.name)}${roman ? ` ${roman}` : ""}</span></span>`;
+  }
+
+  // This month's ranked season, above the board.
+  function seasonRow(season, website) {
+    if (!season) return "";
+    const you = season.you;
+    const left = season.over ? "Finished" : season.daysLeft === 1 ? "Ends today" : `${season.daysLeft} days left`;
+    const note = !you || you.rank === null || you.rank === undefined
+      ? "Sync some usage this month to take a place."
+      : you.next
+        ? `${fmt.tokens(you.next.tokens)} more tokens for ${esc(you.next.label)}.`
+        : "You're at the top of the ladder.";
+    const place = you && you.rank ? `#${you.rank} of ${season.players}. ` : "";
+    return `<section class="card season-row">
+      ${tierTag(you ? you.tier : { key: "bronze", name: "Bronze", division: 3 })}
+      <div class="grow"><b>${esc(season.label)} · ${esc(left)}</b><p>${place}${note}</p></div>
+      <a class="btn sm secondary" href="${esc(website)}/season" target="_blank" rel="noopener">Open season</a>
+    </section>`;
+  }
+
   function leaderboardPage() {
     const cloud = data.state.cloud;
     if (!cloud.linked || cloud.linking) return { body: cloudCard(cloud) };
@@ -1177,7 +1224,7 @@ select.field option { background: var(--raised); }
           <td class="right mono subtle">${e.activeDays}</td><td class="right mono">${esc(value(e))}</td></tr>`).join("")}</tbody></table></section>`
       : `<section class="card"><p class="empty">Nobody has synced usage for this period yet.</p></section>`;
     const note = `<p class="empty-inline subtle">Create teams and invite people on <a href="${esc(site)}/teams" target="_blank" rel="noopener">the website</a>.${cloud.isPublic ? "" : ` Your profile is private; make it public in the <a href="${esc(site)}/settings" target="_blank" rel="noopener">website's settings</a> to join the global board.`}</p>`;
-    return { toolbar, body: stats + podium + table + note };
+    return { toolbar, body: seasonRow(data.board.season, site) + stats + podium + table + note };
   }
 
   // MARK: Settings

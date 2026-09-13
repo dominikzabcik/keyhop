@@ -281,6 +281,8 @@ struct DashboardLeaderboard: Encodable {
     let teams: [CloudTeam]
     let team: String?
     let website: String
+    /// This month's ranked season. Nil when the website is too old to have it.
+    let season: CloudSeason?
 }
 
 struct DashboardAction: Encodable {
@@ -999,7 +1001,10 @@ actor DashboardSession {
         do {
             async let board = client.leaderboard(period: period, metric: metric, team: team)
             async let teams = client.teams()
-            return DashboardLeaderboard(board: try await board, teams: try await teams, team: team, website: link.server)
+            // A website without seasons still serves the board, so this one failure isn't fatal.
+            async let season = try? await client.season(team: team)
+            return DashboardLeaderboard(board: try await board, teams: try await teams, team: team, website: link.server,
+                                        season: await season)
         } catch let error as CloudError where error.kind == .unlinked {
             CloudLink.remove()
             throw error

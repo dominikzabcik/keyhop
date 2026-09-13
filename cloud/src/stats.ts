@@ -61,24 +61,46 @@ type Row = {
  */
 export async function leaderboard(
   db: D1Database,
-  options: { period: Period; metric: Metric; teamId?: string; limit?: number; reference?: string },
+  options: {
+    period: Period;
+    metric: Metric;
+    teamId?: string;
+    limit?: number;
+    reference?: string;
+    /** First day to count, instead of the period's own start. Seasons use this. */
+    from?: string;
+    /** Last day to count. Days after it, like the rest of a month in progress, are left out. */
+    until?: string;
+  },
 ): Promise<Entry[]> {
   const column = METRICS[options.metric].column;
-  const scope = options.teamId
-    ? "d.user_id IN (SELECT user_id FROM team_members WHERE team_id = ?2)"
-    : "u.public = 1";
-  const statement = db.prepare(
-    `SELECT d.user_id, u.login, u.name, u.avatar_url, u.public, SUM(d.tokens) AS tokens, SUM(d.cost_micros) AS cost_micros,
+  const start = options.from ?? since(options.period, options.reference ?? today());
+  // Conditions and their values are built together, so each ? has exactly one value.
+  const where = ["d.day >= ?"];
+  const values: string[] = [start];
+  if (options.until) {
+    where.push("d.day <= ?");
+    values.push(options.until);
+  }
+  if (options.teamId) {
+    where.push("d.user_id IN (SELECT user_id FROM team_members WHERE team_id = ?)");
+    values.push(options.teamId);
+  } else {
+    where.push("u.public = 1");
+  }
+  const { results } = await db
+    .prepare(
+      `SELECT d.user_id, u.login, u.name, u.avatar_url, u.public, SUM(d.tokens) AS tokens, SUM(d.cost_micros) AS cost_micros,
        SUM(d.requests) AS requests, COUNT(DISTINCT CASE WHEN d.tokens > 0 THEN d.day END) AS active_days, ${TOOL_SUMS}
      FROM daily_usage d JOIN users u ON u.id = d.user_id
-     WHERE d.day >= ?1 AND ${scope}
+     WHERE ${where.join(" AND ")}
      GROUP BY d.user_id
      HAVING SUM(d.${column}) > 0
      ORDER BY SUM(d.${column}) DESC, u.login COLLATE NOCASE ASC
      LIMIT ${Math.min(Math.max(options.limit ?? 100, 1), 500)}`,
-  );
-  const start = since(options.period, options.reference ?? today());
-  const { results } = await (options.teamId ? statement.bind(start, options.teamId) : statement.bind(start)).all<Row>();
+    )
+    .bind(...values)
+    .all<Row>();
   return results.map((row, index) => ({
     rank: index + 1,
     userId: row.user_id,

@@ -4,6 +4,7 @@ import { pageUser, safeNext } from "./auth";
 import { type AppEnv, type User, today } from "./env";
 import { type Entry, type Metric, type Period, METRICS, PERIODS, isMetric, isPeriod, leaderboard, profile } from "./stats";
 import { inviteInfo, members, myTeams, teamForMember } from "./teams";
+import { TIERS, currentSeason, daysLeft, isSeason, seasonBoard, seasonLabel, seasonList, seasonRange, nextStep, tierFor } from "./seasons";
 import {
   type Html,
   PIXEL_MARK,
@@ -17,6 +18,7 @@ import {
   metricValue,
   mixBar,
   monthYear,
+  tierTag,
   tokens,
   toolRows,
   usd,
@@ -30,7 +32,7 @@ function render(
   c: C,
   title: string,
   body: Html,
-  options: { description?: string; active?: "leaderboard" | "teams"; status?: 200 | 404 } = {},
+  options: { description?: string; active?: "leaderboard" | "teams" | "season"; status?: 200 | 404 } = {},
 ) {
   const url = new URL(c.req.url);
   return c.html(
@@ -173,6 +175,86 @@ pages.get("/leaderboard", async (c) => {
   );
 });
 
+/** One month of ranked play. Past seasons are counted the same way, so they never go stale. */
+async function seasonPage(c: C, season: string) {
+  const viewer = c.get("user");
+  const board = await seasonBoard(c.env.DB, { season, metric: "tokens" });
+  const mine = viewer ? board.find((entry) => entry.userId === viewer.id) : undefined;
+  const range = seasonRange(season);
+  const left = daysLeft(season);
+  const step = nextStep(mine?.tokens ?? 0);
+  const recent = seasonList().slice(0, 6);
+  const when = range.over ? "Finished" : left === 1 ? "Ends today" : `${left} days left`;
+
+  return render(
+    c,
+    `Season ${seasonLabel(season)} · Switchr`,
+    html`
+      <div class="head">
+        <div><h1>Season</h1><p class="lede">${seasonLabel(season)} · ${when}. Your tier comes from the tokens you use this month.</p></div>
+        ${recent.length > 1
+          ? html`<nav class="tabs" aria-label="Season">${recent.map(
+              (id) => html`<a href="${id === currentSeason() ? "/season" : `/season/${id}`}" ${id === season ? raw('aria-current="true"') : ""}>${seasonLabel(id).replace(" ", " ")}</a>`,
+            )}</nav>`
+          : ""}
+      </div>
+      ${viewer
+        ? html`<section class="card season-head">
+            ${tierTag(tierFor(mine?.tokens ?? 0), "lg")}
+            <div class="grow">
+              <b>${mine ? `#${mine.rank} of ${board.length}` : "Unranked"}</b>
+              <p class="next">${mine
+                ? step
+                  ? `${tokens(step.tokens)} more tokens for ${step.label}.`
+                  : "You're at the top of the ladder."
+                : viewer.public === 1
+                  ? "Sync some usage this month to take a place."
+                  : "Turn your profile public in Settings to join the season."}</p>
+            </div>
+            <span class="mono muted">${tokens(mine?.tokens ?? 0)} this season</span>
+          </section>`
+        : ""}
+      ${board.length === 0
+        ? html`<div class="card empty">Nobody has synced usage for this season yet.</div>`
+        : html`<div class="card"><div class="table-wrap"><table class="table">
+            <thead><tr><th class="rank">#</th><th>Person</th><th>Tier</th><th class="hide-sm">Tools</th>
+              <th class="num hide-sm">Active days</th><th class="num">Tokens</th></tr></thead>
+            <tbody>${board.map(
+              (entry) => html`<tr class="${viewer?.id === entry.userId ? "me" : ""}">
+                <td class="rank">${entry.rank}</td>
+                <td><div style="display:flex;align-items:center">${personCell(entry, viewer, 28)}${viewer?.id === entry.userId ? html`<span class="badge you">You</span>` : ""}</div></td>
+                <td>${tierTag(entry.tier)}</td>
+                <td class="hide-sm">${mixBar(entry.tools)}</td>
+                <td class="num hide-sm">${entry.activeDays}</td>
+                <td class="num strong">${tokens(entry.tokens)}</td>
+              </tr>`,
+            )}</tbody>
+          </table></div></div>`}
+      <section class="card">
+        <div class="card-head"><h2>The ladder</h2><span class="hint">Tokens in one season</span></div>
+        <div class="ladder">${TIERS.map(
+          (tier) => html`<div class="ladder-row ${tierFor(mine?.tokens ?? 0).key === tier.key && mine ? "here" : ""}">
+            ${tierTag({ key: tier.key, name: tier.name, division: null })}
+            <span class="at">${tier.at === 0 ? "from the first token" : `from ${tokens(tier.at)}`}</span>
+          </div>`,
+        )}</div>
+      </section>`,
+    {
+      active: "season",
+      description: `Switchr's ${seasonLabel(season)} season: who ranks where in Claude Code, Cursor and Codex.`,
+    },
+  );
+}
+
+pages.get("/season", (c) => seasonPage(c, currentSeason()));
+
+pages.get("/season/:id", (c) => {
+  const id = c.req.param("id");
+  if (!isSeason(id)) return notFound(c, "That season hasn't run.");
+  if (id === currentSeason()) return c.redirect("/season");
+  return seasonPage(c, id);
+});
+
 pages.get("/u/:login", async (c) => {
   const login = c.req.param("login");
   const person = await c.env.DB.prepare("SELECT id, github_id, login, name, avatar_url, public, created_at FROM users WHERE login = ? COLLATE NOCASE")
@@ -183,7 +265,11 @@ pages.get("/u/:login", async (c) => {
   if (!person || (person.public !== 1 && !isSelf)) return notFound(c, "This profile is private, or doesn't exist.");
   if (person.login !== login) return c.redirect(`/u/${person.login}`, 301);
 
-  const stats = await profile(c.env.DB, person.id, person.public === 1);
+  const [stats, season] = await Promise.all([
+    profile(c.env.DB, person.id, person.public === 1),
+    seasonBoard(c.env.DB, { season: currentSeason(), metric: "tokens" }),
+  ]);
+  const place = season.find((entry) => entry.userId === person.id);
   const url = `${new URL(c.req.url).origin}/u/${person.login}`;
   const display = person.name || person.login;
   const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
@@ -198,6 +284,13 @@ pages.get("/u/:login", async (c) => {
           <p class="lede">@${person.login} · on Switchr since ${monthYear(person.created_at)}${person.public !== 1 ? html` · <span class="badge">Private</span>` : ""}</p>
         </div>
         ${person.public === 1 ? html`<label class="share">Share this profile<input class="field mono" readonly value="${url}"></label>` : ""}
+      </section>
+      <section class="card season-head">
+        ${tierTag(tierFor(place?.tokens ?? 0), "lg")}
+        <div class="grow">
+          <b><a href="/season" style="text-decoration:none">${seasonLabel(currentSeason())} season</a></b>
+          <p class="next">${place ? `#${place.rank} of ${season.length}, with ${tokens(place.tokens)} tokens.` : "Not ranked this season yet."}</p>
+        </div>
       </section>
       <section class="stats">
         <div class="card stat"><div class="label">Tokens, 30 days</div><div class="value">${tokens(stats.month.tokens)}</div><div class="foot">${count(stats.month.requests)} requests</div></div>

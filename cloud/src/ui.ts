@@ -171,6 +171,26 @@ a.place-card:hover { border-color: var(--border-strong); }
 .center-card .form { width: 100%; text-align: left; }
 .code { font-family: var(--mono); font-size: 22px; letter-spacing: .12em; text-align: center; height: 48px; }
 
+/* Tiers are told apart by their mark and their name; the tone is a quiet shift, never a colour badge. */
+.tier { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 12.5px; color: var(--tier); white-space: nowrap; }
+.tier .tier-mark { width: 15px; height: 12px; fill: currentColor; flex: none; }
+.tier.lg { font-size: 16px; gap: 10px; }
+.tier.lg .tier-mark { width: 23px; height: 18px; }
+.tier-bronze { --tier: hsl(26 20% 58%); }
+.tier-silver { --tier: hsl(0 0% 68%); }
+.tier-gold { --tier: hsl(42 26% 66%); }
+.tier-platinum { --tier: hsl(190 12% 72%); }
+.tier-diamond { --tier: hsl(205 20% 80%); }
+.tier-master { --tier: hsl(0 0% 95%); }
+.season-head { display: flex; align-items: center; gap: 18px; padding: 18px 20px; flex-wrap: wrap; }
+.season-head .grow { flex: 1; min-width: 220px; }
+.season-head .next { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+.ladder { display: grid; gap: 0; }
+.ladder-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; }
+.ladder-row + .ladder-row { border-top: 1px solid var(--border); }
+.ladder-row.here { background: hsl(0 0% 100% / .04); }
+.ladder-row .at { color: var(--subtle); font-family: var(--mono); font-size: 12.5px; }
+
 .site-foot { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 20px 24px 40px; color: var(--subtle); font-size: 12.5px; display: flex; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--border); }
 .site-foot a { color: var(--muted); text-decoration: none; } .site-foot a:hover { color: var(--text); }
 
@@ -190,7 +210,7 @@ export function layout(options: {
   origin: string;
   path: string;
   user: User | null;
-  active?: "leaderboard" | "teams";
+  active?: "leaderboard" | "teams" | "season";
   body: Html;
   nonce: string;
 }): Html {
@@ -219,6 +239,7 @@ export function layout(options: {
   <a class="brand" href="/leaderboard">${raw(PIXEL_MARK)}Switchr</a>
   <nav class="nav" aria-label="Main">
     <a href="/leaderboard" ${current("leaderboard")}>Leaderboard</a>
+    <a href="/season" ${current("season")}>Season</a>
     ${user ? html`<a href="/teams" ${current("teams")}>Teams</a>` : ""}
   </nav>
   <div class="who">
@@ -243,6 +264,28 @@ export function layout(options: {
 </script>
 </body>
 </html>`;
+}
+
+/** How many of the six steps a tier has climbed. */
+const TIER_STEPS: Record<string, number> = { bronze: 1, silver: 2, gold: 3, platinum: 4, diamond: 5, master: 6 };
+
+/**
+ * A tier's mark: six squares climbing to the right, in the same pixel language as Switchr's own,
+ * with the steps this tier has reached lit.
+ */
+export function tierMark(key: string): Html {
+  const lit = TIER_STEPS[key] ?? 1;
+  const steps = Array.from({ length: 6 }, (_, index) => {
+    const height = 3 + index * 2.4;
+    return `<rect x="${index * 4}" y="${(17 - height).toFixed(1)}" width="3" height="${height.toFixed(1)}" rx="1" fill-opacity="${index < lit ? 1 : 0.22}"/>`;
+  }).join("");
+  return html`${raw(`<svg class="tier-mark" viewBox="0 0 23 18" aria-hidden="true">${steps}</svg>`)}`;
+}
+
+/** A tier, written out with its mark. */
+export function tierTag(tier: { key: string; name: string; division: number | null }, size: "sm" | "lg" = "sm"): Html {
+  const roman = ["", "I", "II", "III"][tier.division ?? 0];
+  return html`<span class="tier tier-${tier.key}${size === "lg" ? " lg" : ""}">${tierMark(tier.key)}<span>${tier.name}${roman ? ` ${roman}` : ""}</span></span>`;
 }
 
 export function githubIcon(): Html {

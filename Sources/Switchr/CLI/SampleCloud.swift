@@ -33,8 +33,16 @@ extension SampleData {
                              tokens: row.tokens, cost: row.cost, requests: row.requests, activeDays: min(Int(days), Int(days * 0.8) + 1),
                              tools: row.split, isYou: row.person.you)
         }
+        // The sample season counts the same made-up people over a month.
+        let mine = rows.first { $0.person.you }
+        let seasonTokens = Int((mine?.person.daily ?? 0) * 26 * 1_000_000)
+        let season = CloudSeason(
+            season: "2026-09", label: "September 2026", daysLeft: 18, over: false, players: entries.count,
+            you: CloudSeason.You(rank: 3, tokens: seasonTokens,
+                                 tier: CloudSeason.Tier(key: "silver", name: "Silver", division: 2),
+                                 next: CloudSeason.Step(label: "Silver I", tokens: 94_000_000)))
         return DashboardLeaderboard(board: CloudBoard(period: period, metric: metric, entries: entries),
                                     teams: [CloudTeam(slug: "night-shift", name: "Night Shift", role: "member", members: 4)],
-                                    team: team, website: "https://switchr.example")
+                                    team: team, website: "https://switchr.example", season: season)
     }
 }

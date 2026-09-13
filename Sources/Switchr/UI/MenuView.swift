@@ -413,7 +413,7 @@ private struct AddingPanel: View {
     var body: some View {
         VStack(spacing: 10) {
             PixelMark(animated: true)
-                .frame(width: 44, height: 24)
+                .frame(width: 34, height: 34)
                 .padding(.bottom, 4)
             Text("Waiting for a new \(provider.name) login")
                 .font(.system(size: 14, weight: .semibold))

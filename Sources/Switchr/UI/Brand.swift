@@ -82,54 +82,52 @@ struct Badge: View {
     }
 }
 
-/// Switchr's mark: two rows of four squares, as in the dashboard's sidebar. Animated, the lit
-/// squares hand over from one row to the other, the way a switch moves work between accounts.
+/// The mark: a stem, the joint that makes it a K, and two arms with the upper one hopped clear.
+/// Animated, the light hops between the arms, the way work moves between accounts.
 struct PixelMark: View {
     var animated = false
     var tint = Brand.text
 
-    static let logo = lit(top: 3, bottom: 1)
+    /// How lit each arm is, 0...1. The logo keeps both solid.
+    static let logo: [Double] = [1, 1]
 
-    static func lit(top: Int, bottom: Int) -> [Bool] {
-        (0..<4).map { $0 < top } + (0..<4).map { $0 < bottom }
-    }
-
-    /// Holds at each end, then steps across.
-    static func handoff(step: Int) -> [Bool] {
-        let tops = [3, 3, 3, 2, 1, 1, 1, 2]
-        let top = tops[((step % tops.count) + tops.count) % tops.count]
-        return lit(top: top, bottom: 4 - top)
+    /// The light rests on one arm, then hops to the other.
+    static func hop(step: Int) -> [Double] {
+        let arms: [[Double]] = [[1, 0.26], [1, 0.26], [1, 0.26], [0.26, 1], [0.26, 1], [0.26, 1]]
+        return arms[((step % arms.count) + arms.count) % arms.count]
     }
 
     var body: some View {
         if animated {
             TimelineView(.periodic(from: .now, by: 0.3)) { context in
-                grid(Self.handoff(step: Int(context.date.timeIntervalSinceReferenceDate / 0.3)))
+                grid(Self.hop(step: Int(context.date.timeIntervalSinceReferenceDate / 0.3)))
             }
         } else {
             grid(Self.logo)
         }
     }
 
-    private func grid(_ lit: [Bool]) -> some View {
+    private func grid(_ arms: [Double]) -> some View {
         GeometryReader { geo in
-            let unit = min(geo.size.width / 22, geo.size.height / 12)
-            VStack(spacing: unit * 4) {
-                ForEach(0..<2, id: \.self) { row in
-                    HStack(spacing: unit * 2) {
-                        ForEach(0..<4, id: \.self) { column in
-                            RoundedRectangle(cornerRadius: unit, style: .continuous)
-                                .fill(tint)
-                                .opacity(lit[row * 4 + column] ? 1 : 0.22)
-                                .frame(width: unit * 4, height: unit * 4)
-                        }
-                    }
-                }
+            let unit = min(geo.size.width, geo.size.height) / 24
+            ZStack(alignment: .topLeading) {
+                square(x: 2.5, y: 2.5, width: 6, height: 19.5, unit: unit, opacity: 1)
+                square(x: 9.6, y: 9.2, width: 6, height: 6, unit: unit, opacity: 1)
+                square(x: 16, y: 1, width: 6, height: 6, unit: unit, opacity: arms[0])
+                square(x: 16, y: 17, width: 6, height: 6, unit: unit, opacity: arms[1])
             }
-            .frame(width: geo.size.width, height: geo.size.height)
-            .animation(.easeOut(duration: 0.2), value: lit)
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
+            .animation(.easeOut(duration: 0.2), value: arms)
         }
         .accessibilityHidden(true)
+    }
+
+    private func square(x: Double, y: Double, width: Double, height: Double, unit: Double, opacity: Double) -> some View {
+        RoundedRectangle(cornerRadius: unit * 1.5, style: .continuous)
+            .fill(tint)
+            .opacity(opacity)
+            .frame(width: unit * width, height: unit * height)
+            .offset(x: unit * x, y: unit * y)
     }
 }
 

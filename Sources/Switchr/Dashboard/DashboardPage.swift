@@ -23,7 +23,7 @@ enum DashboardPage {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>Switchr</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171717'/%3E%3Cg fill='%23EBEBEB'%3E%3Crect x='6' y='10' width='4' height='4' rx='1'/%3E%3Crect x='11' y='10' width='4' height='4' rx='1'/%3E%3Crect x='16' y='10' width='4' height='4' rx='1'/%3E%3Crect x='6' y='18' width='4' height='4' rx='1'/%3E%3C/g%3E%3Cg fill='%23EBEBEB' fill-opacity='.25'%3E%3Crect x='21' y='10' width='4' height='4' rx='1'/%3E%3Crect x='11' y='18' width='4' height='4' rx='1'/%3E%3Crect x='16' y='18' width='4' height='4' rx='1'/%3E%3Crect x='21' y='18' width='4' height='4' rx='1'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171717'/%3E%3Cg fill='%23EBEBEB'%3E%3Crect x='3.3' y='3.3' width='8' height='26' rx='2'/%3E%3Crect x='12.8' y='12.3' width='8' height='8' rx='2'/%3E%3Crect x='21.3' y='1.3' width='8' height='8' rx='2'/%3E%3Crect x='21.3' y='22.7' width='8' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E">
 <style>
 :root {
   --bg: hsl(0 0% 9%);
@@ -74,7 +74,7 @@ button, input, select { font: inherit; color: inherit; }
 .shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); height: 100vh; }
 .sidebar { display: flex; flex-direction: column; background: var(--sidebar); border-right: 1px solid var(--border); min-height: 0; }
 .brand { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 18px; border-bottom: 1px solid var(--border); }
-.brand svg { width: 22px; height: 12px; flex: none; }
+.brand svg { width: 17px; height: 17px; flex: none; }
 .brand b { font-weight: 650; font-size: 14px; letter-spacing: .01em; }
 .brand .badge { margin-left: auto; }
 .nav { display: grid; gap: 2px; padding: 12px 10px; }
@@ -380,7 +380,7 @@ select.field option { background: var(--raised); }
 <div class="shell">
   <aside class="sidebar">
     <div class="brand">
-      <svg viewBox="0 0 22 12" aria-hidden="true"><g fill="#EBEBEB"><rect x="0" y="0" width="4" height="4" rx="1"/><rect x="6" y="0" width="4" height="4" rx="1"/><rect x="12" y="0" width="4" height="4" rx="1"/><rect x="0" y="8" width="4" height="4" rx="1"/></g><g fill="#EBEBEB" fill-opacity=".22"><rect x="18" y="0" width="4" height="4" rx="1"/><rect x="6" y="8" width="4" height="4" rx="1"/><rect x="12" y="8" width="4" height="4" rx="1"/><rect x="18" y="8" width="4" height="4" rx="1"/></g></svg>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#EBEBEB"><rect x="2.5" y="2.5" width="6" height="19.5" rx="1.5"/><rect x="9.6" y="9.2" width="6" height="6" rx="1.5"/><rect x="16" y="1" width="6" height="6" rx="1.5"/><rect x="16" y="17" width="6" height="6" rx="1.5"/></g></svg>
       <b>Switchr</b>
       <span id="mode"></span>
     </div>

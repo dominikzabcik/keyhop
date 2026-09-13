@@ -20,10 +20,10 @@ const GITHUB =
   "M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12";
 
 /** Switchr's pixel mark: two rows of four squares, three lit on top and one below. */
-export const PIXEL_MARK = `<svg class="pixel" viewBox="0 0 22 12" aria-hidden="true"><g fill="#EBEBEB"><rect x="0" y="0" width="4" height="4" rx="1"/><rect x="6" y="0" width="4" height="4" rx="1"/><rect x="12" y="0" width="4" height="4" rx="1"/><rect x="0" y="8" width="4" height="4" rx="1"/></g><g fill="#EBEBEB" fill-opacity=".22"><rect x="18" y="0" width="4" height="4" rx="1"/><rect x="6" y="8" width="4" height="4" rx="1"/><rect x="12" y="8" width="4" height="4" rx="1"/><rect x="18" y="8" width="4" height="4" rx="1"/></g></svg>`;
+export const PIXEL_MARK = `<svg class="pixel" viewBox="0 0 24 24" aria-hidden="true"><g fill="#EBEBEB"><rect x="2.5" y="2.5" width="6" height="19.5" rx="1.5"/><rect x="9.6" y="9.2" width="6" height="6" rx="1.5"/><rect x="16" y="1" width="6" height="6" rx="1.5"/><rect x="16" y="17" width="6" height="6" rx="1.5"/></g></svg>`;
 
 const FAVICON =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171717'/%3E%3Cg fill='%23EBEBEB'%3E%3Crect x='6' y='10' width='4' height='4' rx='1'/%3E%3Crect x='11' y='10' width='4' height='4' rx='1'/%3E%3Crect x='16' y='10' width='4' height='4' rx='1'/%3E%3Crect x='6' y='18' width='4' height='4' rx='1'/%3E%3C/g%3E%3Cg fill='%23EBEBEB' fill-opacity='.25'%3E%3Crect x='21' y='10' width='4' height='4' rx='1'/%3E%3Crect x='11' y='18' width='4' height='4' rx='1'/%3E%3Crect x='16' y='18' width='4' height='4' rx='1'/%3E%3Crect x='21' y='18' width='4' height='4' rx='1'/%3E%3C/g%3E%3C/svg%3E";
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171717'/%3E%3Cg fill='%23EBEBEB'%3E%3Crect x='3.3' y='3.3' width='8' height='26' rx='2'/%3E%3Crect x='12.8' y='12.3' width='8' height='8' rx='2'/%3E%3Crect x='21.3' y='1.3' width='8' height='8' rx='2'/%3E%3Crect x='21.3' y='22.7' width='8' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E";
 
 // The dashboard's tokens and components, so the website and the app read as one product.
 const CSS = `
@@ -51,7 +51,7 @@ button, input { font: inherit; color: inherit; }
 .top { position: relative; z-index: 1; border-bottom: 1px solid hsl(0 0% 100% / .05); background: transparent; }
 .top-inner { max-width: 1080px; margin: 0 auto; height: 56px; padding: 0 24px; display: flex; align-items: center; gap: 20px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 650; }
-.pixel { width: 22px; height: 12px; flex: none; }
+.pixel { width: 17px; height: 17px; flex: none; }
 .nav { display: flex; gap: 2px; }
 .nav a, .who .me-link { height: 32px; padding: 0 10px; border-radius: 7px; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-weight: 520; transition: background .12s ease, color .12s ease; }
 .nav a:hover, .who .me-link:hover { background: var(--hover); color: var(--text); }
@@ -167,7 +167,7 @@ a.place-card:hover { border-color: var(--border-strong); }
 .list-row + .list-row { border-top: 1px solid var(--border); }
 .list-row form { margin: 0; }
 .center-card { max-width: 440px; width: 100%; margin: 40px auto 0; padding: 32px 28px; display: grid; gap: 16px; text-align: center; justify-items: center; }
-.center-card .pixel { width: 44px; height: 24px; }
+.center-card .pixel { width: 40px; height: 40px; }
 .center-card .form { width: 100%; text-align: left; }
 .code { font-family: var(--mono); font-size: 22px; letter-spacing: .12em; text-align: center; height: 48px; }
 

@@ -100,20 +100,23 @@ func surface(_ ctx: CGContext, clip: CGPath, bounds: CGRect, grainScale: CGFloat
     ctx.restoreGState()
 }
 
-/// Switchr's mark, as in the dashboard's sidebar and the menu bar: two rows of four squares on a
-/// 22 x 12 grid, three lit on top and one below.
-func pixelMark(_ ctx: CGContext, center: CGPoint, width: CGFloat, levels: [CGFloat] = [3, 1]) {
-    let unit = width / 22
-    for row in 0..<2 {
-        for column in 0..<4 {
-            let rect = CGRect(x: center.x - 11 * unit + CGFloat(column) * 6 * unit,
-                              y: center.y + 2 * unit - CGFloat(row) * 8 * unit,
-                              width: 4 * unit, height: 4 * unit)
-            let square = CGPath(roundedRect: rect, cornerWidth: unit, cornerHeight: unit, transform: nil)
-            let lit = min(max(levels[row] - CGFloat(column), 0), 1)
-            fill(ctx, square, Brand.unlit)
-            if lit > 0 { fill(ctx, square, Brand.ink.copy(alpha: lit)!) }
-        }
+/// Keyhop's K on its 24-unit grid: a solid stem, the joint that makes it a letter, and two arms with
+/// the upper one hopped clear. `levels` (0...1 each) fills the arms, so the menu bar can show the two
+/// nearest limits in the same shape. The logo itself keeps both arms solid.
+func pixelMark(_ ctx: CGContext, center: CGPoint, width: CGFloat, levels: [CGFloat] = [1, 1]) {
+    let unit = width / 24
+    func place(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> CGPath {
+        // The grid is read top-down; Core Graphics counts up, so y flips here.
+        let rect = CGRect(x: center.x - 12 * unit + x * unit, y: center.y + 12 * unit - (y + h) * unit,
+                          width: w * unit, height: h * unit)
+        return CGPath(roundedRect: rect, cornerWidth: unit * 1.5, cornerHeight: unit * 1.5, transform: nil)
+    }
+    fill(ctx, place(2.5, 2.5, 6, 19.5), Brand.ink)
+    fill(ctx, place(9.6, 9.2, 6, 6), Brand.ink)
+    for (index, arm) in [place(16, 1, 6, 6), place(16, 17, 6, 6)].enumerated() {
+        let lit = min(max(levels[index], 0), 1)
+        fill(ctx, arm, Brand.unlit)
+        if lit > 0 { fill(ctx, arm, Brand.ink.copy(alpha: lit)!) }
     }
 }
 
@@ -179,18 +182,20 @@ func smallIcon(pixels n: Int) -> CGImage {
     let body = continuousRect(bounds.insetBy(dx: inset, dy: inset), radius: size * 0.22)
     surface(ctx, clip: body, bounds: bounds, grainScale: 1, grain: false)
 
-    let side = n <= 16 ? 2 : n <= 24 ? 3 : 4
-    let gap = n <= 16 ? 1 : 2
-    let left = (n - (side * 4 + gap * 3)) / 2
-    let top = (n - side * 3) / 2
-    let radius = CGFloat(side) * 0.25
-    for row in 0..<2 {
-        for column in 0..<4 {
-            let lit = column < (row == 0 ? 3 : 1)
-            let rect = CGRect(x: left + column * (side + gap), y: n - top - side - row * side * 2, width: side, height: side)
-            fill(ctx, CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil), lit ? Brand.ink : gray(1, 0.26))
-        }
+    // Whole pixels on a three-row grid: stem, joint, and two arms, so even 16 pixels keeps the K.
+    let arm = max(2, Int((Double(n) * 0.25).rounded()))
+    let gap = max(1, Int((Double(n) * 0.055).rounded()))
+    let height = arm * 3
+    let left = (n - (arm * 3 + gap * 2)) / 2
+    let top = (n - height) / 2
+    let radius = CGFloat(arm) * 0.28
+    func box(_ x: Int, _ y: Int, _ w: Int, _ h: Int) -> CGPath {
+        CGPath(roundedRect: CGRect(x: x, y: n - y - h, width: w, height: h), cornerWidth: radius, cornerHeight: radius, transform: nil)
     }
+    fill(ctx, box(left, top, arm, height), Brand.ink)
+    fill(ctx, box(left + arm + gap, top + arm, arm, arm), Brand.ink)
+    fill(ctx, box(left + (arm + gap) * 2, top, arm, arm), Brand.ink)
+    fill(ctx, box(left + (arm + gap) * 2, top + arm * 2, arm, arm), Brand.ink)
     return ctx.makeImage()!
 }
 

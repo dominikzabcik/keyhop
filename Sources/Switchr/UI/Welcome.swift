@@ -61,7 +61,7 @@ struct WelcomeView: View {
     var body: some View {
         VStack(spacing: 0) {
             PixelMark(animated: true)
-                .frame(width: 66, height: 36)
+                .frame(width: 52, height: 52)
                 .padding(.top, 58)
 
             Text("Switchr")

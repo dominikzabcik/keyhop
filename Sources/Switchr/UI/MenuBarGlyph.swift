@@ -2,22 +2,22 @@
 import AppKit
 import SwiftUI
 
-/// Menu bar icon: Switchr's pixel mark, two rows of four squares on the dashboard logo's grid. With
-/// limits read, each row is one of the account in use's two nearest limits, lit as far as it's used.
+/// Menu bar icon: the K, drawn on whole pixels. With limits read, each arm is one of the account in
+/// use's two nearest limits, lit as far as it's used.
 enum MenuBarGlyph {
-    /// `sweep` (0...1) replaces the data with the hand-off animation.
+    /// `sweep` (0...1) replaces the data with the hop animation.
     static func image(windows: [UsageWindow], sweep: Double? = nil) -> NSImage {
-        let levels = levels(windows: windows, sweep: sweep)
-        // 22 x 12 points: squares of 4 with gaps of 2 across and 4 between rows, whole pixels at 2x.
-        let image = NSImage(size: NSSize(width: 22, height: 16), flipped: true) { _ in
-            for row in 0..<2 {
-                for column in 0..<4 {
-                    let lit = min(max(levels[row] - Double(column), 0), 1)
-                    NSColor.black.withAlphaComponent(0.28 + 0.72 * lit).setFill()
-                    let square = NSRect(x: CGFloat(column) * 6, y: 2 + CGFloat(row) * 8, width: 4, height: 4)
-                    NSBezierPath(roundedRect: square, xRadius: 1, yRadius: 1).fill()
-                }
+        let arms = levels(windows: windows, sweep: sweep)
+        // 16 x 16 points: a 4-point grid with 1-point gaps, whole pixels at 1x and 2x.
+        let image = NSImage(size: NSSize(width: 16, height: 16), flipped: true) { _ in
+            func box(_ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat, _ alpha: CGFloat) {
+                NSColor.black.withAlphaComponent(alpha).setFill()
+                NSBezierPath(roundedRect: NSRect(x: x, y: y, width: width, height: height), xRadius: 1, yRadius: 1).fill()
             }
+            box(1, 2, 4, 12, 1)
+            box(6, 6, 4, 4, 1)
+            box(11, 2, 4, 4, 0.28 + 0.72 * arms[0])
+            box(11, 10, 4, 4, 0.28 + 0.72 * arms[1])
             return true
         }
         image.isTemplate = true
@@ -27,14 +27,14 @@ enum MenuBarGlyph {
         return image
     }
 
-    /// Lit squares per row, 0...4. With nothing read yet it's the logo: three on top, one below.
+    /// How lit each arm is, 0...1. With nothing read yet both are solid, as in the logo.
     static func levels(windows: [UsageWindow], sweep: Double?) -> [Double] {
         if let sweep {
             let top = 0.5 - 0.42 * cos(sweep * 3 * 2 * .pi)
-            return [top * 4, (1 - top) * 4]
+            return [top, 1 - top]
         }
-        guard !windows.isEmpty else { return [3, 1] }
-        return (0..<2).map { $0 < windows.count ? min(max(windows[$0].usedPercent / 100, 0), 1) * 4 : 0 }
+        guard !windows.isEmpty else { return [1, 1] }
+        return (0..<2).map { $0 < windows.count ? min(max(windows[$0].usedPercent / 100, 0), 1) : 0 }
     }
 }
 

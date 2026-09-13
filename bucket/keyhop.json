@@ -1,15 +1,15 @@
 {
-    "version": "0.7.1",
+    "version": "0.8.0",
     "description": "Switch Claude Code, Cursor and Codex accounts in one click and track their usage.",
     "homepage": "https://github.com/dominikzabcik/keyhop",
     "license": "MIT",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/dominikzabcik/keyhop/releases/download/v0.7.1/keyhop-0.7.1-windows-x86_64.zip",
-            "hash": "fe65879cf096ffa15ee59ddc4cde7bcdaff404edf59560c2e898504bc0595dbb"
+            "url": "https://github.com/dominikzabcik/keyhop/releases/download/v0.8.0/keyhop-0.8.0-windows-x86_64.zip",
+            "hash": "895e9de374ebab6e26c008c0b291c50b2282ecfa0209f3b46a85995d320b139b"
         }
     },
-    "extract_dir": "keyhop-0.7.1",
+    "extract_dir": "keyhop-0.8.0",
     "bin": "keyhop.exe",
     "shortcuts": [
         [

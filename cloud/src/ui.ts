@@ -193,6 +193,24 @@ a.place-card:hover { border-color: var(--border-strong); }
 .ladder-row.here { background: hsl(0 0% 100% / .04); }
 .ladder-row .at { color: var(--subtle); font-family: var(--mono); font-size: 12.5px; }
 
+/* Badges keep the tiers' manner: a mark and a name, lit when earned and quiet when not, never a
+   coloured chip. Every glyph is built from the same squares as Keyhop's own mark. */
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0 20px; padding: 4px 16px 12px; }
+.badge-row { display: flex; align-items: center; gap: 11px; padding: 9px 0; min-width: 0; }
+.badge-row svg { width: 20px; height: 20px; fill: var(--text); flex: none; }
+.badge-row b { display: block; font-weight: 600; font-size: 13px; }
+.badge-row small { display: block; color: var(--subtle); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.badge-row.locked { opacity: .32; }
+.quest-row { display: grid; grid-template-columns: minmax(0, 1fr) 130px; gap: 6px 18px; align-items: center; padding: 12px 16px; }
+.quest-row + .quest-row { border-top: 1px solid var(--border); }
+.quest-row b { font-weight: 600; }
+.quest-row p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+.quest-track { height: 6px; border-radius: 99px; background: var(--faint); overflow: hidden; }
+.quest-track span { display: block; height: 100%; border-radius: inherit; background: var(--text); }
+.quest-row.done .quest-track span { background: var(--good); }
+.quest-state { margin-top: 6px; font-size: 12px; color: var(--subtle); font-variant-numeric: tabular-nums; }
+.quest-row.done .quest-state { color: var(--good); }
+
 .site-foot { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 20px 24px 40px; color: var(--subtle); font-size: 12.5px; display: flex; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--border); }
 .site-foot a { color: var(--muted); text-decoration: none; } .site-foot a:hover { color: var(--text); }
 
@@ -660,6 +678,28 @@ export function tierMark(key: string): Html {
 export function tierTag(tier: { key: string; name: string; division: number | null }, size: "sm" | "lg" = "sm"): Html {
   const roman = ["", "I", "II", "III"][tier.division ?? 0];
   return html`<span class="tier tier-${tier.key}${size === "lg" ? " lg" : ""}">${tierMark(tier.key)}<span>${tier.name}${roman ? ` ${roman}` : ""}</span></span>`;
+}
+
+/** Each badge's glyph, as squares on the same 24-unit grid as Keyhop's mark. */
+const BADGE_MARKS: Record<string, [number, number, number, number][]> = {
+  "first-sync": [[9, 9, 6, 6]],
+  "streak-7": [[1, 9, 6, 6], [9, 9, 6, 6], [17, 9, 6, 6]],
+  "streak-30": [[3, 3, 8, 8], [13, 3, 8, 8], [3, 13, 8, 8], [13, 13, 8, 8]],
+  "streak-100": [[9, 1, 6, 6], [1, 9, 6, 6], [9, 9, 6, 6], [17, 9, 6, 6], [9, 17, 6, 6]],
+  "all-tools": [[9, 1, 6, 6], [1, 15, 6, 6], [17, 15, 6, 6]],
+  "big-day": [[3, 3, 18, 18]],
+  billion: [[2, 9, 13, 13], [15, 2, 7, 7]],
+  "ten-billion": [[1, 1, 11, 11], [12, 12, 11, 11]],
+  climber: [[2, 15, 5, 7], [9.5, 9, 5, 13], [17, 3, 5, 19]],
+  podium: [[1, 11, 6, 11], [9, 5, 6, 17], [17, 9, 6, 13]],
+};
+
+export function badgeMark(key: string): Html {
+  const squares = BADGE_MARKS[key] ?? BADGE_MARKS["first-sync"];
+  const rects = squares
+    .map(([x, y, width, height]) => `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="1.5"/>`)
+    .join("");
+  return html`${raw(`<svg viewBox="0 0 24 24" aria-hidden="true">${rects}</svg>`)}`;
 }
 
 export function githubIcon(): Html {

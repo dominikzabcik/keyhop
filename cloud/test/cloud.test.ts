@@ -4,6 +4,7 @@ import { addDays, today } from "../src/env";
 import { streaks } from "../src/stats";
 import { currentSeason, daysLeft, nextStep, seasonRange, tierFor } from "../src/seasons";
 import { parseUsage } from "../src/usage";
+import { badgesFrom, questsFrom } from "../src/quests";
 
 const BASE = "http://localhost";
 
@@ -317,5 +318,63 @@ describe("privacy and safety", () => {
     await upload(token, [{ day: today(), tool: "claude", tokens: 10, cost: 0, requests: 1 }]);
     expect((await form("/settings/delete", heidi, { confirm: "heidi" })).headers.get("location")).toBe("/leaderboard");
     expect((await call("/api/me", { headers: { authorization: `Bearer ${token}` } })).status).toBe(401);
+  });
+});
+
+describe("quests and badges", () => {
+  const rows = (entries: [string, string, number][]) => entries.map(([day, tool, tokens]) => ({ day, tool: tool as never, tokens }));
+
+  it("measures today's and this week's goals", () => {
+    const reference = "2026-09-13";
+    const list = questsFrom(
+      rows([
+        [reference, "claude", 5000],
+        [reference, "cursor", 2000],
+        ["2026-09-12", "claude", 1000],
+        ["2026-09-11", "claude", 1000],
+        ["2026-09-10", "codex", 1000],
+        ["2026-09-09", "claude", 1000],
+      ]),
+      reference,
+    );
+    const by = Object.fromEntries(list.map((entry) => [entry.key, entry]));
+    expect(by["today"].complete).toBe(true);
+    expect(by["two-tools"]).toMatchObject({ done: 2, target: 2, complete: true });
+    expect(by["beat-yesterday"].complete).toBe(true);
+    expect(by["five-days"]).toMatchObject({ done: 5, complete: true });
+    expect(by["every-tool"]).toMatchObject({ done: 3, complete: true });
+  });
+
+  it("leaves a goal short when the days do not add up", () => {
+    const reference = "2026-09-13";
+    const by = Object.fromEntries(questsFrom(rows([[reference, "claude", 10]]), reference).map((entry) => [entry.key, entry]));
+    expect(by["two-tools"]).toMatchObject({ done: 1, complete: false });
+    expect(by["five-days"]).toMatchObject({ done: 1, complete: false });
+  });
+
+  it("earns badges from the days themselves", () => {
+    const reference = "2026-09-13";
+    const entries: [string, string, number][] = Array.from({ length: 7 }, (_, back) => [addDays(reference, -back), "claude", 1000]);
+    entries.push([reference, "cursor", 1], [reference, "codex", 1]);
+    const by = Object.fromEntries(badgesFrom(rows(entries), { top3: false, bestTier: null }, reference).map((entry) => [entry.key, entry]));
+    expect(by["first-sync"].earned).toBe(true);
+    expect(by["streak-7"]).toMatchObject({ earned: true, day: reference });
+    expect(by["streak-30"].earned).toBe(false);
+    expect(by["all-tools"]).toMatchObject({ earned: true, day: reference });
+    expect(by["billion"].earned).toBe(false);
+  });
+
+  it("earns the token badges once the running total passes them", () => {
+    const by = Object.fromEntries(
+      badgesFrom(
+        rows([["2026-09-01", "claude", 600_000_000], ["2026-09-02", "claude", 600_000_000]]),
+        { top3: true, bestTier: "gold" },
+        "2026-09-13",
+      ).map((entry) => [entry.key, entry]),
+    );
+    expect(by["billion"]).toMatchObject({ earned: true, day: "2026-09-02" });
+    expect(by["ten-billion"].earned).toBe(false);
+    expect(by["climber"].earned).toBe(true);
+    expect(by["podium"].earned).toBe(true);
   });
 });

@@ -4,6 +4,7 @@ import { pageUser, safeNext } from "./auth";
 import { type AppEnv, type User, today } from "./env";
 import { landingPage } from "./landing";
 import { downloadPage, privacyPage, securityPage, termsPage } from "./marketing";
+import { profileBadges, questsFor } from "./quests";
 import { TIERS, currentSeason, daysLeft, isSeason, nextStep, seasonBoard, seasonLabel, seasonList, seasonRange, tierFor } from "./seasons";
 import { type Entry, type Metric, type Period, METRICS, PERIODS, isMetric, isPeriod, leaderboard, profile } from "./stats";
 import { inviteInfo, members, myTeams, teamForMember } from "./teams";
@@ -12,6 +13,7 @@ import {
   PIXEL_MARK,
   ago,
   avatar,
+  badgeMark,
   count,
   githubIcon,
   heatmap,
@@ -229,7 +231,10 @@ pages.get("/leaderboard", async (c) => {
 /** One month of ranked play. Past seasons are counted the same way, so they never go stale. */
 async function seasonPage(c: C, season: string) {
   const viewer = c.get("user");
-  const board = await seasonBoard(c.env.DB, { season, metric: "tokens" });
+  const [board, goals] = await Promise.all([
+    seasonBoard(c.env.DB, { season, metric: "tokens" }),
+    viewer ? questsFor(c.env.DB, viewer.id) : Promise.resolve(null),
+  ]);
   const mine = viewer ? board.find((entry) => entry.userId === viewer.id) : undefined;
   const range = seasonRange(season);
   const left = daysLeft(season);
@@ -263,6 +268,20 @@ async function seasonPage(c: C, season: string) {
                   : "Turn your profile public in Settings to join the season."}</p>
             </div>
             <span class="mono muted">${tokens(mine?.tokens ?? 0)} this season</span>
+          </section>`
+        : ""}
+      ${goals
+        ? html`<section class="card">
+            <div class="card-head"><h2>Quests</h2><span class="hint">Today and this week</span></div>
+            ${goals.map(
+              (goal) => html`<div class="quest-row ${goal.complete ? "done" : ""}">
+                <div><b>${goal.name}</b><p>${goal.note}</p></div>
+                <div>
+                  <div class="quest-track"><span style="width:${Math.round((goal.done / goal.target) * 100)}%"></span></div>
+                  <div class="quest-state">${goal.complete ? "Done" : goal.target <= 7 ? `${goal.done} of ${goal.target}` : `${Math.round((goal.done / goal.target) * 100)}%`}</div>
+                </div>
+              </div>`,
+            )}
           </section>`
         : ""}
       ${board.length === 0
@@ -316,10 +335,12 @@ pages.get("/u/:login", async (c) => {
   if (!person || (person.public !== 1 && !isSelf)) return notFound(c, "This profile is private, or doesn't exist.");
   if (person.login !== login) return c.redirect(`/u/${person.login}`, 301);
 
-  const [stats, season] = await Promise.all([
+  const [stats, season, badges] = await Promise.all([
     profile(c.env.DB, person.id, person.public === 1),
     seasonBoard(c.env.DB, { season: currentSeason(), metric: "tokens" }),
+    profileBadges(c.env.DB, person.id),
   ]);
+  const earned = badges.filter((entry) => entry.earned);
   const place = season.find((entry) => entry.userId === person.id);
   const url = `${new URL(c.req.url).origin}/u/${person.login}`;
   const display = person.name || person.login;
@@ -342,6 +363,15 @@ pages.get("/u/:login", async (c) => {
           <b><a href="/season" style="text-decoration:none">${seasonLabel(currentSeason())} season</a></b>
           <p class="next">${place ? `#${place.rank} of ${season.length}, with ${tokens(place.tokens)} tokens.` : "Not ranked this season yet."}</p>
         </div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Badges</h2><span class="hint">${earned.length} of ${badges.length}</span></div>
+        <div class="badges">${badges.map(
+          (entry) => html`<div class="badge-row ${entry.earned ? "" : "locked"}">
+            ${badgeMark(entry.key)}
+            <span><b>${entry.name}</b><small>${entry.earned && entry.day ? `Earned ${entry.day}` : entry.note}</small></span>
+          </div>`,
+        )}</div>
       </section>
       <section class="stats">
         <div class="card stat"><div class="label">Tokens, 30 days</div><div class="value">${tokens(stats.month.tokens)}</div><div class="foot">${count(stats.month.requests)} requests</div></div>

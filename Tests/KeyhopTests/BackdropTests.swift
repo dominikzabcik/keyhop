@@ -4,7 +4,9 @@ import XCTest
 final class BackdropTests: XCTestCase {
     func testTheAppAndTheWebsiteShareOneBackdropScript() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        // Windows checks the file out with CRLF line endings, so compare the text itself, not them.
         let text = try String(contentsOf: root.appendingPathComponent("cloud/src/backdrop.ts"), encoding: .utf8)
+            .replacingOccurrences(of: "\r\n", with: "\n")
         guard let start = text.range(of: "/* backdrop:start */"), let end = text.range(of: "/* backdrop:end */") else {
             return XCTFail("cloud/src/backdrop.ts has lost its backdrop markers")
         }

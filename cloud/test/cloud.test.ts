@@ -99,6 +99,27 @@ describe("linking the app", () => {
     expect(asCookie.status).toBe(401);
     const asBearer = await call("/api/me", { headers: { authorization: `Bearer ${cookie.split("=")[1]}` } });
     expect(asBearer.status).toBe(401);
+    const browserAtApi = await call("/api/me", { headers: { cookie } });
+    expect(browserAtApi.status).toBe(401);
+    const appAtSettings = await call("/settings/delete", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      body: new URLSearchParams({ confirm: "mixer" }),
+    });
+    expect(appAtSettings.status).toBe(403);
+    expect((await call("/api/me", { headers: { authorization: `Bearer ${token}` } })).status).toBe(200);
+  });
+
+  it("allows only one browser session to claim a device code", async () => {
+    const start = await call("/api/device/start", { method: "POST", body: JSON.stringify({ label: "Shared Mac" }) });
+    const { userCode } = (await start.json()) as { userCode: string };
+    const first = await signIn("first-claim");
+    const second = await signIn("second-claim");
+    const [one, two] = await Promise.all([form("/link", first, { code: userCode }), form("/link", second, { code: userCode })]);
+    expect([one.headers.get("location"), two.headers.get("location")].sort()).toEqual([
+      `/link?code=${encodeURIComponent(userCode)}&error=expired`,
+      "/link?done=1",
+    ]);
   });
 });
 
@@ -110,7 +131,8 @@ describe("leaderboards", () => {
     expect(body).toContain("Every account.");
     expect(body).toContain("Download Keyhop");
     expect(body).toContain("Your prompts never pass through Keyhop.");
-    expect(body).toContain("Planned, not shipped yet");
+    expect(body).toContain("Shipping now and next");
+    expect(body).toContain("01 · Smart Hop");
     expect(body).toContain("02 · MCP");
     expect(body).toContain("03 · Mobile companion");
     expect(body).toContain('<link rel="canonical" href="https://keyhop.app/">');
@@ -376,5 +398,18 @@ describe("quests and badges", () => {
     expect(by["ten-billion"].earned).toBe(false);
     expect(by["climber"].earned).toBe(true);
     expect(by["podium"].earned).toBe(true);
+  });
+});
+
+describe("link abuse controls", () => {
+  it("slows a device that polls too quickly", async () => {
+    const start = await call("/api/device/start", { method: "POST", body: JSON.stringify({ label: "Noisy Mac" }) });
+    const { deviceCode } = (await start.json()) as { deviceCode: string };
+    let response: Response | undefined;
+    for (let attempt = 0; attempt < 31; attempt++) {
+      response = await call("/api/device/token", { method: "POST", body: JSON.stringify({ deviceCode }) });
+    }
+    expect(response?.status).toBe(429);
+    expect(response?.headers.get("retry-after")).toBe("10");
   });
 });

@@ -30,22 +30,26 @@ enum AlertRules {
                 // Early in a window a few samples can project a run-out that never happens.
                 guard nearlyOut || (eta != nil && window.usedPercent >= 50) else { continue }
 
-                let alternative = accounts
-                    .filter { $0.provider == provider && $0.id != id }
-                    .compactMap { other -> (Account, Double)? in
-                        guard let used = usage[other.id]?.windows.first(where: { $0.label == window.label })?.usedPercent, used < 80 else { return nil }
-                        return (other, used)
-                    }
-                    .min { $0.1 < $1.1 }
+                let alternative = SmartHop.recommendation(
+                    for: provider,
+                    accounts: accounts,
+                    active: active,
+                    usage: usage,
+                    forecasts: forecasts,
+                    budgets: budgets,
+                    budgetSpend: budgetSpend,
+                    excluding: [id],
+                    now: now
+                ).flatMap { $0.room >= 20 ? $0 : nil }
 
                 let title = nearlyOut
                     ? "\(provider.name) \(window.label.lowercased()) limit at \(Int(window.usedPercent.rounded()))%"
                     : "\(provider.name) \(window.label.lowercased()) limit runs out around \(eta!.formatted(date: .omitted, time: .shortened))"
-                let body = alternative.map { "\(account.displayName) is close to its limit. \($0.0.displayName) has \(Int((100 - $0.1).rounded()))% left." }
+                let body = alternative.map { "\(account.displayName) is close to its limit. \($0.name) has \(Int($0.room.rounded()))% left." }
                     ?? "\(account.displayName) is close to its limit, and no other saved \(provider.name) account has room."
                 let windowID = window.resetsAt.map { String(Int($0.timeIntervalSince1970 / 3600)) } ?? "open"
                 alerts.append(AlertCandidate(key: "limit:\(id.uuidString):\(window.label):\(windowID):\(nearlyOut ? "90" : "pace")",
-                                             title: title, body: body, switchTo: alternative?.0.id))
+                                             title: title, body: body, switchTo: alternative?.account))
             }
         }
 

@@ -43,6 +43,7 @@ struct StatusDocument: Encodable {
     let today: SpendDocument
     let tools: [Tool]
     let budgets: [BudgetDocument]
+    let recommendations: [AccountRecommendation]
     let alerts: [AlertCandidate]
     let notices: [String]
 
@@ -89,6 +90,15 @@ struct StatusDocument: Encodable {
         alerts = overview.alerts
         notices = overview.notices
         budgets = overview.budgets.map { BudgetDocument($0, spent: overview.budgetSpend[$0.scope] ?? 0, accounts: overview.accounts) }
+        recommendations = SmartHop.recommendations(
+            accounts: overview.accounts,
+            active: overview.active,
+            usage: overview.usage,
+            forecasts: overview.forecasts,
+            budgets: overview.budgets,
+            budgetSpend: overview.budgetSpend,
+            now: now
+        )
         tools = Provider.allCases.map { provider in
             Tool(
                 id: provider.rawValue,
@@ -123,6 +133,25 @@ struct StatusDocument: Encodable {
                 }
             )
         }
+    }
+}
+
+struct RecommendationListDocument: Encodable {
+    let version = AppVersion.current
+    let generatedAt: Date
+    let recommendations: [AccountRecommendation]
+
+    init(_ overview: Overview, provider: Provider? = nil, now: Date = Date()) {
+        generatedAt = now
+        recommendations = SmartHop.recommendations(
+            accounts: overview.accounts,
+            active: overview.active,
+            usage: overview.usage,
+            forecasts: overview.forecasts,
+            budgets: overview.budgets,
+            budgetSpend: overview.budgetSpend,
+            now: now
+        ).filter { provider == nil || $0.tool == provider?.rawValue }
     }
 }
 
@@ -224,6 +253,16 @@ struct DoctorDocument: Encodable {
 // MARK: Terminal output
 
 enum Reports {
+    static func recommendations(_ document: RecommendationListDocument) -> String {
+        guard !document.recommendations.isEmpty else {
+            return "No recommendation yet. Run `keyhop refresh` after saving an account so Keyhop can read its limits."
+        }
+        return document.recommendations.map { recommendation in
+            let state = recommendation.active ? "already in use" : "switch available"
+            return "\(Provider(rawValue: recommendation.tool)?.name ?? recommendation.tool): \(recommendation.name) (\(state))\n  \(recommendation.reason)"
+        }.joined(separator: "\n")
+    }
+
     static func status(_ overview: Overview) -> String {
         var lines = overview.notices
         guard !overview.accounts.isEmpty else {

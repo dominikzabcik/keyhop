@@ -43,14 +43,14 @@ export const session: MiddlewareHandler<AppEnv> = async (c, next) => {
  */
 export const sameOrigin: MiddlewareHandler<AppEnv> = async (c, next) => {
   const reads = c.req.method === "GET" || c.req.method === "HEAD" || c.req.method === "OPTIONS";
-  if (!reads && !c.req.header("authorization") && getCookie(c, SESSION_COOKIE)) {
+  if (!reads && c.get("sessionKind") === "web") {
     if (c.req.header("origin") !== new URL(c.req.url).origin) return c.text("Cross-site request refused.", 403);
   }
   await next();
 };
 
 export const apiUser: MiddlewareHandler<AppEnv> = async (c, next) => {
-  if (!c.get("user")) return c.json({ error: "Sign in first." }, 401);
+  if (!c.get("user") || c.get("sessionKind") !== "app") return c.json({ error: "Link the Keyhop app first." }, 401);
   await next();
 };
 
@@ -59,6 +59,12 @@ export const pageUser: MiddlewareHandler<AppEnv> = async (c, next) => {
     const url = new URL(c.req.url);
     return c.redirect(`/login?next=${encodeURIComponent(url.pathname + url.search)}`);
   }
+  if (c.get("sessionKind") !== "web") return c.text("A browser session is required.", 403);
+  await next();
+};
+
+export const signedInUser: MiddlewareHandler<AppEnv> = async (c, next) => {
+  if (!c.get("user")) return c.json({ error: "Sign in first." }, 401);
   await next();
 };
 
@@ -196,6 +202,11 @@ auth.post("/auth/logout", async (c) => {
 // MARK: Linking the Keyhop app
 
 auth.post("/api/device/start", async (c) => {
+  const actor = c.req.header("cf-connecting-ip") ?? "unknown";
+  if (!(await c.env.DEVICE_START_LIMITER.limit({ key: actor })).success) {
+    c.header("Retry-After", "60");
+    return c.json({ error: "Too many linking attempts. Wait a minute and try again." }, 429);
+  }
   const body = (await c.req.json().catch(() => ({}))) as { label?: unknown };
   const label = typeof body.label === "string" ? body.label.trim().slice(0, 60) : "";
   const deviceCode = randomToken();
@@ -220,6 +231,10 @@ auth.post("/api/device/token", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { deviceCode?: unknown };
   if (typeof body.deviceCode !== "string") return c.json({ error: "expired" }, 410);
   const hash = await sha256(body.deviceCode);
+  if (!(await c.env.DEVICE_POLL_LIMITER.limit({ key: hash })).success) {
+    c.header("Retry-After", "10");
+    return c.json({ error: "Polling too quickly. Wait before trying again." }, 429);
+  }
   const link = await c.env.DB.prepare("SELECT user_id, label, expires_at FROM device_links WHERE device_hash = ?")
     .bind(hash)
     .first<{ user_id: string | null; label: string | null; expires_at: number }>();
@@ -241,11 +256,12 @@ auth.post("/api/device/token", async (c) => {
 auth.post("/link", pageUser, async (c) => {
   const form = await c.req.parseBody();
   const code = String(form.code ?? "").trim().toUpperCase();
-  const link = await c.env.DB.prepare("SELECT device_hash FROM device_links WHERE user_code = ? AND user_id IS NULL AND expires_at > ?")
-    .bind(code, now())
-    .first<{ device_hash: string }>();
-  if (!link) return c.redirect(`/link?code=${encodeURIComponent(code)}&error=expired`);
-  await c.env.DB.prepare("UPDATE device_links SET user_id = ? WHERE device_hash = ?").bind(c.get("user")!.id, link.device_hash).run();
+  const claimed = await c.env.DB.prepare(
+    "UPDATE device_links SET user_id = ? WHERE user_code = ? AND user_id IS NULL AND expires_at > ?",
+  )
+    .bind(c.get("user")!.id, code, now())
+    .run();
+  if (claimed.meta.changes !== 1) return c.redirect(`/link?code=${encodeURIComponent(code)}&error=expired`);
   return c.redirect("/link?done=1");
 });
 

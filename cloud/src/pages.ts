@@ -136,7 +136,7 @@ function board(entries: Entry[], metric: Metric, viewer: User | null, emptyText:
 
 pages.get("/", (c) =>
   render(c, "Keyhop · Switch AI coding accounts without breaking flow", landingPage(), {
-    description: "Switch Claude Code, Cursor and Codex accounts, watch limits and explore Keyhop's roadmap for AI, MCP and mobile.",
+    description: "Switch Claude Code, Cursor and Codex accounts, watch limits, get Smart Hop recommendations and connect local AI agents through MCP.",
     mode: "landing",
     softwareSchema: true,
   }),

@@ -51,6 +51,10 @@ struct TrayStatus: Decodable {
         let spent: Double
     }
 
+    struct Recommendation: Decodable {
+        let account: UUID
+    }
+
     let version: String
     let refreshedAt: Date?
     let today: Spend
@@ -58,6 +62,7 @@ struct TrayStatus: Decodable {
     let alerts: [Alert]
     let notices: [String]
     let budgets: [Budget]
+    let recommendations: [Recommendation]?
 
     static func decode(_ data: Data) throws -> TrayStatus {
         try TrayJSON.decoder.decode(TrayStatus.self, from: data)
@@ -73,6 +78,10 @@ struct TrayStatus: Decodable {
     /// The budget across all accounts, the one the tray lets you set.
     var overallBudget: Budget? {
         budgets.first { $0.scope == "all" }
+    }
+
+    func recommends(_ account: UUID) -> Bool {
+        recommendations?.contains { $0.account == account } ?? false
     }
 }
 
@@ -150,7 +159,7 @@ enum TrayMenu {
             for tool in status.tools {
                 items.append(TrayMenuItem(title: tool.name, enabled: false))
                 for account in tool.accounts {
-                    let detail = self.detail(account)
+                    let detail = self.detail(account, recommended: !account.active && status.recommends(account.id))
                     items.append(TrayMenuItem(
                         title: detail.isEmpty ? account.name : "\(account.name)\t\(detail)",
                         command: account.active ? nil : .switchTo(account.id),
@@ -210,12 +219,13 @@ enum TrayMenu {
     }
 
     /// The tightest limit, or why there isn't one.
-    static func detail(_ account: TrayStatus.Account) -> String {
+    static func detail(_ account: TrayStatus.Account, recommended: Bool = false) -> String {
+        let prefix = recommended ? "Smart Hop · " : ""
         if let tightest = account.limits.max(by: { $0.usedPercent < $1.usedPercent }) {
-            return "\(Int(tightest.usedPercent.rounded()))% of \(tightest.label)"
+            return "\(prefix)\(Int(tightest.usedPercent.rounded()))% of \(tightest.label)"
         }
         if account.error != nil { return "limits unavailable" }
-        return account.plan ?? ""
+        return prefix + (account.plan ?? "")
     }
 
     /// Windows cuts tray tooltips at 127 characters.

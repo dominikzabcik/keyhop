@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { deleteCookie, getCookie } from "hono/cookie";
-import { SESSION_COOKIE, apiUser, pageUser, publicUser, safeNext } from "./auth";
+import { SESSION_COOKIE, apiUser, pageUser, publicUser, safeNext, signedInUser } from "./auth";
 import { sha256 } from "./crypto";
 import type { AppEnv } from "./env";
 
@@ -16,7 +16,7 @@ account.patch("/api/me", apiUser, async (c) => {
 });
 
 /** Signs out whatever is calling: the app unlinks itself, or the browser ends its session. */
-account.delete("/api/session", apiUser, async (c) => {
+account.delete("/api/session", signedInUser, async (c) => {
   const token = c.req.header("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1] ?? getCookie(c, SESSION_COOKIE);
   if (token) await c.env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256(token)).run();
   return c.body(null, 204);

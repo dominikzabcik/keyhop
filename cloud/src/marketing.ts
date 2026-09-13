@@ -2,6 +2,7 @@ import { html } from "hono/html";
 import type { Html } from "./ui";
 
 const RELEASES = "https://github.com/dominikzabcik/keyhop/releases/latest";
+const DOWNLOADS = `${RELEASES}/download`;
 const REPOSITORY = "https://github.com/dominikzabcik/keyhop";
 
 function pageHero(kicker: string, title: string, description: string): Html {
@@ -29,19 +30,19 @@ export function downloadPage(): Html {
         <div class="platform-head"><span class="platform-mark">⌘</span><div><h2>macOS</h2><p>macOS 14 or later · Apple silicon and Intel</p></div></div>
         ${codeBlock("Terminal", "curl -fsSL https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.sh | bash")}
         <p>Installs Keyhop into Applications, adds the <code>keyhop</code> command to your PATH and opens the app.</p>
-        <div class="platform-actions"><a class="btn" href="${RELEASES}">Download for macOS</a><a href="${REPOSITORY}#install">Homebrew and DMG options</a></div>
+        <div class="platform-actions"><a class="btn" href="${DOWNLOADS}/Keyhop.dmg">Download for macOS</a><a href="${REPOSITORY}#install">Homebrew and DMG options</a></div>
       </article>
       <article class="platform-card">
         <div class="platform-head"><span class="platform-mark">◆</span><div><h2>Linux</h2><p>x86_64 and aarch64 · Static binary</p></div></div>
         ${codeBlock("Shell", "curl -fsSL https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.sh | bash")}
         <p>The installer selects RPM, DEB, Arch or a portable <code>~/.local</code> build for your distribution.</p>
-        <div class="platform-actions"><a class="btn secondary" href="${RELEASES}">All Linux packages</a><a href="${REPOSITORY}#install">Package details</a></div>
+        <div class="platform-actions"><a class="btn secondary" href="${DOWNLOADS}/Keyhop-Linux-x86_64.tar.gz">Linux x86_64</a><a href="${DOWNLOADS}/Keyhop-Linux-aarch64.tar.gz">Linux aarch64</a><a href="${RELEASES}">All packages</a></div>
       </article>
       <article class="platform-card">
         <div class="platform-head"><span class="platform-mark">⊞</span><div><h2>Windows</h2><p>Windows 10 and 11 · Per-user install</p></div></div>
         ${codeBlock("PowerShell", "irm https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.ps1 | iex")}
         <p>Installs without administrator rights, adds Keyhop to PATH and the Start menu, and opens it at sign-in.</p>
-        <div class="platform-actions"><a class="btn secondary" href="${RELEASES}">Download for Windows</a><a href="${REPOSITORY}#install">Scoop option</a></div>
+        <div class="platform-actions"><a class="btn secondary" href="${DOWNLOADS}/Keyhop-Windows-x86_64.zip">Download for Windows</a><a href="${REPOSITORY}#install">Scoop option</a></div>
       </article>
     </section>
 

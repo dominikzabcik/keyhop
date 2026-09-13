@@ -102,14 +102,15 @@ def relative(moment, now=None):
     return f"{seconds // 86400} d ago"
 
 
-def account_detail(account):
+def account_detail(account, recommended=False):
+    prefix = "Smart Hop · " if recommended else ""
     limits = account.get("limits") or []
     if limits:
         tightest = max(limits, key=lambda limit: limit["usedPercent"])
-        return f"{round(tightest['usedPercent'])}% of {tightest['label']}"
+        return f"{prefix}{round(tightest['usedPercent'])}% of {tightest['label']}"
     if account.get("error"):
         return "limits unavailable"
-    return account.get("plan") or ""
+    return prefix + (account.get("plan") or "")
 
 
 def overall_budget(status):
@@ -144,10 +145,11 @@ def build_menu(status, busy=None, update=None, settings=None):
     if busy:
         items += [{"title": busy, "enabled": False}, {"separator": True}]
     if status:
+        recommended = {entry["account"] for entry in status.get("recommendations", [])}
         for tool in status["tools"]:
             items.append({"title": tool["name"], "enabled": False})
             for account in tool["accounts"]:
-                detail = account_detail(account)
+                detail = account_detail(account, not account["active"] and account["id"] in recommended)
                 items.append({
                     "title": account["name"] + (f"  ·  {detail}" if detail else ""),
                     "command": None if account["active"] else ("switch", account["id"]),

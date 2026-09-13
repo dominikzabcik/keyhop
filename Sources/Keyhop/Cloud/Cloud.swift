@@ -34,8 +34,13 @@ struct CloudError: LocalizedError {
     static let unlinked = CloudError(kind: .unlinked, message: "This computer isn't linked to Keyhop cloud anymore. Run keyhop cloud login.")
 }
 
-/// The link to a Keyhop cloud account, kept next to Keyhop's other data and readable only by you.
+/// The link to a Keyhop cloud account. Metadata stays in `cloud.json`; the bearer token lives in
+/// the system secret store alongside provider logins.
 struct CloudLink: Codable, Equatable {
+    private static let tokenService = "app.keyhop.cloud"
+    private static let tokenAccount = "session"
+    private static let standardStore: any SecretStore = SecretStores.standard(service: tokenService)
+
     var server: String
     var token: String
     var login: String
@@ -49,12 +54,70 @@ struct CloudLink: Codable, Equatable {
 
     var profileURL: String { "\(server)/u/\(login)" }
 
-    static func load() -> CloudLink? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? DashboardJSON.decoder.decode(CloudLink.self, from: data)
+    init(server: String, token: String, login: String, name: String?, isPublic: Bool, linkedAt: Date,
+         lastSync: Date? = nil, lastSyncError: String? = nil) {
+        self.server = server
+        self.token = token
+        self.login = login
+        self.name = name
+        self.isPublic = isPublic
+        self.linkedAt = linkedAt
+        self.lastSync = lastSync
+        self.lastSyncError = lastSyncError
     }
 
-    func save() throws {
+    private enum CodingKeys: String, CodingKey {
+        case server, token, login, name, isPublic, linkedAt, lastSync, lastSyncError
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        server = try values.decode(String.self, forKey: .server)
+        token = try values.decodeIfPresent(String.self, forKey: .token) ?? ""
+        login = try values.decode(String.self, forKey: .login)
+        name = try values.decodeIfPresent(String.self, forKey: .name)
+        isPublic = try values.decode(Bool.self, forKey: .isPublic)
+        linkedAt = try values.decode(Date.self, forKey: .linkedAt)
+        lastSync = try values.decodeIfPresent(Date.self, forKey: .lastSync)
+        lastSyncError = try values.decodeIfPresent(String.self, forKey: .lastSyncError)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(server, forKey: .server)
+        try values.encode(login, forKey: .login)
+        try values.encodeIfPresent(name, forKey: .name)
+        try values.encode(isPublic, forKey: .isPublic)
+        try values.encode(linkedAt, forKey: .linkedAt)
+        try values.encodeIfPresent(lastSync, forKey: .lastSync)
+        try values.encodeIfPresent(lastSyncError, forKey: .lastSyncError)
+    }
+
+    static func load(store: (any SecretStore)? = nil) -> CloudLink? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        guard var link = try? DashboardJSON.decoder.decode(CloudLink.self, from: data) else { return nil }
+        let credentials = store ?? standardStore
+        if link.token.isEmpty {
+            guard let saved = credentials.read(tokenAccount), !saved.isEmpty else { return nil }
+            link.token = String(decoding: saved, as: UTF8.self)
+            return link
+        }
+        do {
+            try credentials.write(Data(link.token.utf8), account: tokenAccount)
+            try link.writeMetadata()
+        } catch {
+            return link
+        }
+        return link
+    }
+
+    func save(store: (any SecretStore)? = nil) throws {
+        let credentials = store ?? Self.standardStore
+        try credentials.write(Data(token.utf8), account: Self.tokenAccount)
+        try writeMetadata()
+    }
+
+    private func writeMetadata() throws {
         try FileManager.default.createDirectory(at: Platform.dataDirectory, withIntermediateDirectories: true)
         try Files.writeAtomically(DashboardJSON.encoder.encode(self), to: Self.url)
         #if !os(Windows)
@@ -62,7 +125,8 @@ struct CloudLink: Codable, Equatable {
         #endif
     }
 
-    static func remove() {
+    static func remove(store: (any SecretStore)? = nil) {
+        (store ?? standardStore).delete(tokenAccount)
         try? FileManager.default.removeItem(at: url)
     }
 }
@@ -129,6 +193,31 @@ struct CloudSeason: Codable {
     let over: Bool
     let players: Int
     let you: You?
+}
+
+/// This week's goals and the badges earned, as the website counts them.
+struct CloudQuests: Codable {
+    struct Quest: Codable {
+        let key: String
+        let name: String
+        let note: String
+        /// "day" or "week".
+        let period: String
+        let done: Int
+        let target: Int
+        let complete: Bool
+    }
+
+    struct Badge: Codable {
+        let key: String
+        let name: String
+        let note: String
+        let earned: Bool
+        let day: String?
+    }
+
+    let quests: [Quest]
+    let badges: [Badge]
 }
 
 struct CloudTeam: Codable {
@@ -233,6 +322,12 @@ struct CloudClient {
         let (data, status) = try await send("GET", "/api/season\(query)")
         guard status == 200 else { throw problem(data, status) }
         return try JSONDecoder().decode(CloudSeason.self, from: data)
+    }
+
+    func quests() async throws -> CloudQuests {
+        let (data, status) = try await send("GET", "/api/quests")
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(CloudQuests.self, from: data)
     }
 
     func teams() async throws -> [CloudTeam] {

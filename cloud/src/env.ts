@@ -1,5 +1,7 @@
 export interface Env {
   DB: D1Database;
+  DEVICE_START_LIMITER: RateLimit;
+  DEVICE_POLL_LIMITER: RateLimit;
   /** GitHub OAuth app credentials, set with `wrangler secret put`. */
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;

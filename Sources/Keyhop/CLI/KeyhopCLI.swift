@@ -4,8 +4,8 @@ import Foundation
 /// for data; on macOS the app binary answers the same commands.
 enum KeyhopCLI {
     static let commands: Set<String> = [
-        "status", "refresh", "switch", "add", "rename", "remove", "usage", "dashboard", "insights", "budget",
-        "cloud", "update", "doctor", "reset", "version", "help", "--help", "-h", "--version",
+        "status", "refresh", "recommend", "switch", "add", "rename", "remove", "usage", "dashboard", "insights", "budget",
+        "cloud", "mcp", "update", "doctor", "reset", "version", "help", "--help", "-h", "--version",
     ]
 
     static func handles(_ word: String) -> Bool {
@@ -36,6 +36,7 @@ enum KeyhopCLI {
             case "insights": try await Commands.insights(&args)
             case "status": try await Commands.status(&args)
             case "refresh": try await Commands.refresh(&args)
+            case "recommend": try await Commands.recommend(&args)
             case "switch": try await Commands.switchAccount(&args)
             case "add": try await Commands.add(&args)
             case "rename": try await Commands.rename(&args)
@@ -43,6 +44,7 @@ enum KeyhopCLI {
             case "usage": try await Commands.usage(&args)
             case "budget": try await Commands.budget(&args)
             case "cloud": try await Commands.cloud(&args)
+            case "mcp": try await MCPServer.run(&args)
             case "update": try await Commands.update(&args)
             case "doctor": try await Commands.doctor(&args)
             case "reset": try await Commands.reset(&args)
@@ -68,6 +70,7 @@ enum KeyhopCLI {
     Accounts
       status [--refresh] [--json]          Accounts, limits and today's usage
       refresh [--json]                     Read logins, limits and usage logs now
+      recommend [--tool <tool>] [--json]   Smart Hop's best current runway
       switch <account> [--tool <tool>]     Move a tool to a saved account
       add <tool> [--no-wait]               Sign a tool out here so you can save another account
       rename <account> <name>              Give an account a name
@@ -87,6 +90,9 @@ enum KeyhopCLI {
       cloud sync [--json]                  Send daily totals now (also runs hourly after a refresh)
       cloud open                           Open your profile on the website
       cloud logout                         Unlink this computer
+
+    Agents
+      mcp                                  Serve read-only status, usage and Smart Hop tools over stdio
 
     App
       update [--check] [--json]            Check for and install a new release

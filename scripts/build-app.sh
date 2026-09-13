@@ -5,12 +5,16 @@
 #   --dmg       write build/Keyhop.dmg (uses dmgbuild; installs it into .build/dmg-venv if missing)
 #   --release   --zip, --dmg and build/SHA256SUMS
 # KEYHOP_VERSION overrides the version in VERSION. A leading "v" is dropped.
+# KEYHOP_CODESIGN_IDENTITY signs with Developer ID; KEYHOP_NOTARY_PROFILE also notarizes and staples.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION="${KEYHOP_VERSION:-$(cat VERSION)}"
 VERSION="${VERSION#v}"
 APP="build/Keyhop.app"
+SIGN_IDENTITY="${KEYHOP_CODESIGN_IDENTITY:--}"
+NOTARY_PROFILE="${KEYHOP_NOTARY_PROFILE:-}"
+NOTARY_KEYCHAIN="${KEYHOP_NOTARY_KEYCHAIN:-}"
 
 install=false zip=false dmg=false sums=false
 for arg in "$@"; do
@@ -58,16 +62,21 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-codesign --force --sign - "$APP"
+if [[ "$SIGN_IDENTITY" == "-" ]]; then
+  codesign --force --sign - "$APP"
+else
+  codesign --force --deep --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP"
+fi
+codesign --verify --deep --strict "$APP"
 echo "Built $APP ($VERSION)"
 
-if $zip; then
+package_zip() {
   rm -f build/Keyhop.zip
   ditto -c -k --keepParent "$APP" build/Keyhop.zip
   echo "Wrote build/Keyhop.zip"
-fi
+}
 
-if $dmg; then
+package_dmg() {
   DMGBUILD=$(command -v dmgbuild || true)
   if [[ -z $DMGBUILD ]]; then
     if [[ ! -x .build/dmg-venv/bin/dmgbuild ]]; then
@@ -79,6 +88,38 @@ if $dmg; then
   rm -f build/Keyhop.dmg
   "$DMGBUILD" -s scripts/dmg-settings.py -D app="$APP" Keyhop build/Keyhop.dmg
   echo "Wrote build/Keyhop.dmg"
+}
+
+if $zip; then
+  package_zip
+fi
+
+if [[ -n "$NOTARY_PROFILE" ]]; then
+  if [[ "$SIGN_IDENTITY" == "-" ]]; then
+    echo "Notarization requires KEYHOP_CODESIGN_IDENTITY." >&2
+    exit 1
+  fi
+  temporary_submission=false
+  if ! $zip; then
+    package_zip
+    temporary_submission=true
+  fi
+  notary_args=(--keychain-profile "$NOTARY_PROFILE")
+  if [[ -n "$NOTARY_KEYCHAIN" ]]; then notary_args+=(--keychain "$NOTARY_KEYCHAIN"); fi
+  xcrun notarytool submit build/Keyhop.zip "${notary_args[@]}" --wait
+  xcrun stapler staple "$APP"
+  xcrun stapler validate "$APP"
+  if $zip; then package_zip; elif $temporary_submission; then rm -f build/Keyhop.zip; fi
+fi
+
+if $dmg; then
+  package_dmg
+  if [[ -n "$NOTARY_PROFILE" ]]; then
+    codesign --force --timestamp --sign "$SIGN_IDENTITY" build/Keyhop.dmg
+    xcrun notarytool submit build/Keyhop.dmg "${notary_args[@]}" --wait
+    xcrun stapler staple build/Keyhop.dmg
+    xcrun stapler validate build/Keyhop.dmg
+  fi
 fi
 
 if $sums; then

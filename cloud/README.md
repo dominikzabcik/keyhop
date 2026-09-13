@@ -22,6 +22,8 @@ No prompts, emails, account names, models or GitHub tokens are stored. Deleting 
 
 Browser sessions and app tokens are separate: neither works in the other's place. Changes made with a browser session must come from the site's own pages.
 
+Starting a link is rate-limited per IP, polling is rate-limited per code and approving a code is one atomic database update. A browser cookie cannot use app APIs, and an app bearer token cannot use website settings.
+
 ## Develop
 
 ```bash
@@ -44,5 +46,7 @@ Point a local Keyhop at it with `KEYHOP_CLOUD_URL=http://localhost:8787 keyhop c
 4. Store its credentials: `npx wrangler secret put GITHUB_CLIENT_ID`, then `npx wrangler secret put GITHUB_CLIENT_SECRET`.
 5. `npm run deploy` applies the migrations and publishes the Worker.
 6. Set `Cloud.defaultServer` in `Sources/Keyhop/Cloud/Cloud.swift` to the site's address, and release the app. Until then, the app hides leaderboards.
+
+After CI succeeds on `main`, [Deploy cloud](../.github/workflows/deploy-cloud.yml) applies D1 migrations and deploys automatically when the repository has a `CLOUDFLARE_API_TOKEN` secret and a `CLOUDFLARE_ACCOUNT_ID` variable. Scope the token to this account and Worker; without either value, the workflow records a skipped deployment instead of exposing credentials or failing unrelated CI.
 
 Never set `DEV_LOGIN` in production. The development login also refuses any host other than localhost.

@@ -58,7 +58,7 @@ final class CloudTests: XCTestCase {
         ])
     }
 
-    func testTheLinkIsSavedPrivately() throws {
+    func testTheLinkKeepsItsTokenInTheSecretStore() throws {
         #if os(Windows)
         throw XCTSkip("Uses setenv to move the data folder, which Windows doesn't have.")
         #else
@@ -70,13 +70,39 @@ final class CloudTests: XCTestCase {
         }
         let link = CloudLink(server: "https://keyhop.example", token: "secret", login: "mira", name: nil, isPublic: false,
                              linkedAt: Date(timeIntervalSince1970: 1_800_000_000))
-        try link.save()
-        XCTAssertEqual(CloudLink.load(), link)
+        let store = MemorySecretStore()
+        try link.save(store: store)
+        XCTAssertEqual(CloudLink.load(store: store), link)
         XCTAssertEqual(link.profileURL, "https://keyhop.example/u/mira")
+        XCTAssertFalse(String(decoding: try Data(contentsOf: CloudLink.url), as: UTF8.self).contains("secret"))
+        XCTAssertEqual(store.read("session"), Data("secret".utf8))
         let permissions = try FileManager.default.attributesOfItem(atPath: CloudLink.url.path)[.posixPermissions] as? Int
         XCTAssertEqual(permissions, 0o600)
-        CloudLink.remove()
-        XCTAssertNil(CloudLink.load())
+        CloudLink.remove(store: store)
+        XCTAssertNil(CloudLink.load(store: store))
+        XCTAssertNil(store.read("session"))
+        #endif
+    }
+
+    func testExistingCloudFilesMoveTheirTokenIntoTheSecretStore() throws {
+        #if os(Windows)
+        throw XCTSkip("Uses setenv to move the data folder, which Windows doesn't have.")
+        #else
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("keyhop-cloud-migration-\(UUID().uuidString)")
+        setenv("KEYHOP_DATA_DIR", folder.path, 1)
+        defer {
+            unsetenv("KEYHOP_DATA_DIR")
+            try? FileManager.default.removeItem(at: folder)
+        }
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let legacy = """
+        {"server":"https://keyhop.example","token":"old-secret","login":"mira","isPublic":false,"linkedAt":"2027-01-15T08:00:00Z"}
+        """
+        try Data(legacy.utf8).write(to: CloudLink.url)
+        let store = MemorySecretStore()
+        XCTAssertEqual(CloudLink.load(store: store)?.token, "old-secret")
+        XCTAssertEqual(store.read("session"), Data("old-secret".utf8))
+        XCTAssertFalse(String(decoding: try Data(contentsOf: CloudLink.url), as: UTF8.self).contains("old-secret"))
         #endif
     }
 }

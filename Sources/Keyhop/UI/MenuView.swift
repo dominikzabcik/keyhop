@@ -104,20 +104,26 @@ private struct ToolTab: View {
 
 private struct ToolPanel: View {
     @EnvironmentObject private var store: AccountStore
+    @EnvironmentObject private var tracker: UsageTracker
     let provider: Provider
     @Binding var renaming: UUID?
 
     var body: some View {
         let accounts = store.accounts(for: provider)
         let inUse = store.active[provider].flatMap { id in accounts.first { $0.id == id } }
-        let others = accounts
-            .filter { $0.id != inUse?.id }
-            .sorted { (room($0) ?? -1) > (room($1) ?? -1) }
-        // Only point at an alternative when the account in use is actually getting tight.
+        let others = accounts.filter { $0.id != inUse?.id }.sorted { (room($0) ?? -1) > (room($1) ?? -1) }
         let best: UUID? = {
-            guard let inUse, let inUseRoom = room(inUse), inUseRoom < 30,
-                  let candidate = others.first, let candidateRoom = room(candidate), candidateRoom >= 20 else { return nil }
-            return candidate.id
+            guard let inUse, let inUseRoom = room(inUse), inUseRoom < 30 else { return nil }
+            return SmartHop.recommendation(
+                for: provider,
+                accounts: accounts,
+                active: store.active,
+                usage: store.usage,
+                forecasts: tracker.forecasts,
+                budgets: tracker.budgets,
+                budgetSpend: tracker.budgetSpend,
+                excluding: [inUse.id]
+            ).flatMap { $0.room >= 20 ? $0.account : nil }
         }()
 
         VStack(spacing: 10) {
@@ -374,14 +380,14 @@ private struct AlternativeRow: View {
         }
         let detail = detailWords()
         guard best else { return Text(detail ?? "Switch").foregroundStyle(Brand.subtle) }
-        let lead = Text("Most room").foregroundStyle(Brand.good)
+        let lead = Text("Smart Hop").foregroundStyle(Brand.good)
         guard let detail else { return lead }
         return lead + Text(" · \(detail)").foregroundStyle(Brand.subtle)
     }
 
     private func subtitleWords(_ snapshot: UsageSnapshot?) -> String {
         if let error = snapshot?.error, snapshot?.windows.isEmpty ?? true { return error }
-        return [best ? "Most room" : nil, detailWords()].compactMap { $0 }.joined(separator: ", ")
+        return [best ? "Smart Hop recommendation" : nil, detailWords()].compactMap { $0 }.joined(separator: ", ")
     }
 }
 

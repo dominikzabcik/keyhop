@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { apiUser } from "./auth";
 import { type AppEnv, type Tool, TOOLS, addDays, today } from "./env";
 import { currentSeason, seasonBoard, seasonOf, tierFor } from "./seasons";
 import { streaks } from "./stats";
@@ -217,9 +218,8 @@ export async function questsFor(db: D1Database, userId: string, reference = toda
 export const quests = new Hono<AppEnv>();
 
 /** The signed-in person's quests and badges, for the app's window and the website. */
-quests.get("/api/quests", async (c) => {
-  const user = c.get("user");
-  if (!user) return c.json({ error: "Sign in to see your quests." }, 401);
+quests.get("/api/quests", apiUser, async (c) => {
+  const user = c.get("user")!;
   const { quests: list, badges } = await questsAndBadges(c.env.DB, user.id);
   return c.json({
     season: currentSeason(),

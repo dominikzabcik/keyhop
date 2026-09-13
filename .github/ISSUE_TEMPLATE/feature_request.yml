@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a workflow, AI tool, integration or improvement for Keyhop.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What slows you down today?
+      description: Describe the workflow or problem before proposing a solution.
+      placeholder: When I move between accounts or tools, I need to…
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What should Keyhop do?
+      description: Explain the result you want and where it should appear.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where would this help?
+      multiple: true
+      options:
+        - macOS app
+        - Linux tray
+        - Windows tray
+        - Command line
+        - MCP and agents
+        - keyhop.app
+        - New provider
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy or security considerations
+      description: Mention any credentials, prompts, source code or cloud data the idea might touch. Never paste real tokens.

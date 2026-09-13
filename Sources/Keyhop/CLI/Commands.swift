@@ -193,6 +193,25 @@ enum Commands {
         }
     }
 
+    static func recommend(_ args: inout Arguments) async throws {
+        let json = args.flag("--json")
+        let refresh = args.flag("--refresh")
+        let sample = args.flag("--sample")
+        let provider = try toolOption(&args)
+        try args.finish()
+        let overview: Overview
+        if sample {
+            overview = SampleData.overview()
+        } else {
+            var workspace = try Workspace.open()
+            overview = refresh
+                ? try await performRefresh(&workspace, claimAlerts: false)
+                : try await currentOverview(workspace)
+        }
+        let document = RecommendationListDocument(overview, provider: provider)
+        if json { try Output.json(document) } else { print(Reports.recommendations(document)) }
+    }
+
     // MARK: Accounts
 
     static func switchAccount(_ args: inout Arguments) async throws {
@@ -594,6 +613,7 @@ enum ResetAll {
         for account in accounts {
             await vault.delete(account.id)
         }
+        CloudLink.remove()
         try? FileManager.default.removeItem(at: directory)
         #if os(macOS)
         if Bundle.main.bundlePath.hasSuffix(".app") {

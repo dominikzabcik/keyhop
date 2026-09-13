@@ -33,6 +33,17 @@ extension SampleData {
                              tokens: row.tokens, cost: row.cost, requests: row.requests, activeDays: min(Int(days), Int(days * 0.8) + 1),
                              tools: row.split, isYou: row.person.you)
         }
+        let sampleQuests = CloudQuests(
+            quests: [
+                CloudQuests.Quest(key: "today", name: "Get going", note: "Use any tool today.", period: "day", done: 1, target: 1, complete: true),
+                CloudQuests.Quest(key: "two-tools", name: "Two tools", note: "Use two different tools today.", period: "day", done: 1, target: 2, complete: false),
+                CloudQuests.Quest(key: "beat-yesterday", name: "Beat yesterday", note: "Pass yesterday's 6,200K tokens.", period: "day", done: 4_100_000, target: 6_200_000, complete: false),
+                CloudQuests.Quest(key: "five-days", name: "Five days", note: "Use Keyhop on five days this week.", period: "week", done: 5, target: 5, complete: true),
+                CloudQuests.Quest(key: "every-tool", name: "Every tool", note: "Use all three tools this week.", period: "week", done: 3, target: 3, complete: true),
+                CloudQuests.Quest(key: "beat-last-week", name: "Beat last week", note: "Pass last week's total.", period: "week", done: 38_000_000, target: 44_000_000, complete: false),
+            ],
+            badges: [])
+
         // The sample season counts the same made-up people over a month.
         let mine = rows.first { $0.person.you }
         let seasonTokens = Int((mine?.person.daily ?? 0) * 26 * 1_000_000)
@@ -43,6 +54,6 @@ extension SampleData {
                                  next: CloudSeason.Step(label: "Silver I", tokens: 94_000_000)))
         return DashboardLeaderboard(board: CloudBoard(period: period, metric: metric, entries: entries),
                                     teams: [CloudTeam(slug: "night-shift", name: "Night Shift", role: "member", members: 4)],
-                                    team: team, website: "https://keyhop.example", season: season)
+                                    team: team, website: "https://keyhop.example", season: season, quests: sampleQuests)
     }
 }

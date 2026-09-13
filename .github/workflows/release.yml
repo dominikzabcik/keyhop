@@ -65,6 +65,38 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Prepare Developer ID signing
+        if: needs.check.outputs.publish == 'true'
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          for name in MACOS_CERTIFICATE_P12 MACOS_CERTIFICATE_PASSWORD APPLE_ID APPLE_TEAM_ID APPLE_APP_PASSWORD; do
+            if [[ -z "${!name}" ]]; then echo "Missing release secret: $name" >&2; exit 1; fi
+          done
+          certificate="$RUNNER_TEMP/keyhop-developer-id.p12"
+          keychain="$RUNNER_TEMP/keyhop-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 32)"
+          printf '%s' "$MACOS_CERTIFICATE_P12" | base64 --decode > "$certificate"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$certificate" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain"
+          security default-keychain -d user -s "$keychain"
+          identity="$(security find-identity -v -p codesigning "$keychain" | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -1)"
+          if [[ -z "$identity" ]]; then echo "The certificate is not a Developer ID Application identity." >&2; exit 1; fi
+          xcrun notarytool store-credentials keyhop-notary --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --keychain "$keychain"
+          {
+            echo "KEYHOP_CODESIGN_IDENTITY=$identity"
+            echo "KEYHOP_NOTARY_PROFILE=keyhop-notary"
+            echo "KEYHOP_NOTARY_KEYCHAIN=$keychain"
+          } >> "$GITHUB_ENV"
+
       - name: Run tests
         run: swift test
 
@@ -75,6 +107,14 @@ jobs:
         env:
           KEYHOP_VERSION: ${{ needs.check.outputs.version }}
         run: ./scripts/build-app.sh --release
+
+      - name: Verify the notarized app
+        if: needs.check.outputs.publish == 'true'
+        run: |
+          codesign --verify --deep --strict --verbose=2 build/Keyhop.app
+          xcrun stapler validate build/Keyhop.app
+          xcrun stapler validate build/Keyhop.dmg
+          spctl --assess --type execute --verbose=2 build/Keyhop.app
 
       - uses: actions/upload-artifact@v7
         with:
@@ -104,7 +144,7 @@ jobs:
       - name: Install the static Linux SDK and nfpm
         run: |
           # Ubuntu's mirror sometimes serves a half-synced index; retry, then switch to another mirror.
-          for attempt in 1 2 3; do
+          for _ in 1 2 3; do
             apt-get update -qq || true
             if apt-get install -y -qq curl python3 >/dev/null; then break; fi
             sed -i 's|http://archive.ubuntu.com/ubuntu|http://mirrors.edge.kernel.org/ubuntu|g; s|http://ports.ubuntu.com/ubuntu-ports|http://mirrors.edge.kernel.org/ubuntu-ports|g' /etc/apt/sources.list.d/ubuntu.sources || true
@@ -150,6 +190,20 @@ jobs:
       - name: Run tests
         run: swift test
 
+      - name: Prepare Authenticode signing
+        if: needs.check.outputs.publish == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_PFX: ${{ secrets.WINDOWS_CERTIFICATE_PFX }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE_PFX) { throw 'Missing release secret: WINDOWS_CERTIFICATE_PFX' }
+          if (-not $env:WINDOWS_CERTIFICATE_PASSWORD) { throw 'Missing release secret: WINDOWS_CERTIFICATE_PASSWORD' }
+          $certificate = Join-Path $env:RUNNER_TEMP 'keyhop-authenticode.pfx'
+          [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_PFX))
+          "KEYHOP_WINDOWS_CERTIFICATE=$certificate" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "KEYHOP_WINDOWS_CERTIFICATE_PASSWORD=$env:WINDOWS_CERTIFICATE_PASSWORD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Build the zip
         shell: pwsh
         env:
@@ -179,6 +233,12 @@ jobs:
           pattern: release-*
           merge-multiple: true
           path: dist
+
+      - name: Add stable download names
+        run: |
+          cp "dist/keyhop-$VERSION-windows-x86_64.zip" dist/Keyhop-Windows-x86_64.zip
+          cp "dist/keyhop-$VERSION-linux-x86_64.tar.gz" dist/Keyhop-Linux-x86_64.tar.gz
+          cp "dist/keyhop-$VERSION-linux-aarch64.tar.gz" dist/Keyhop-Linux-aarch64.tar.gz
 
       - name: Write checksums
         run: |

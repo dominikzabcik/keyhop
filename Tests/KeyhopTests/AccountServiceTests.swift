@@ -67,6 +67,23 @@ struct FakeAdapter: ProviderAdapter {
     }
 }
 
+struct UnconfirmedAdapter: ProviderAdapter {
+    let provider: Provider = .codex
+    let tool: FakeTool
+    let result: Secret?
+
+    func readLive() async throws -> LiveLogin? {
+        guard let secret = tool.login, let user = secret["user"] else { return nil }
+        return LiveLogin(identity: user, email: "\(user)@example.com", plan: nil, secret: secret)
+    }
+
+    func apply(_ secret: Secret) async throws { tool.login = result }
+    func signOutLocally() async throws { tool.login = nil }
+    func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
+        LimitReport(windows: [], plan: nil)
+    }
+}
+
 final class AccountServiceTests: XCTestCase {
     private var directory: URL!
 
@@ -124,6 +141,42 @@ final class AccountServiceTests: XCTestCase {
         XCTAssertEqual(adaSecret?["token"], "a2")
         let active = await service.active
         XCTAssertEqual(active[.codex], bob)
+    }
+
+    func testSwitchingFailsWhenTheToolDoesNotApplyTheChosenLogin() async throws {
+        let tool = FakeTool(["user": "ada"])
+        let vault = Vault(store: MemorySecretStore())
+        let service = AccountService(directory: directory, adapters: [.codex: FakeAdapter(provider: .codex, tool: tool)], vault: vault)
+        let ada = try savedID(await service.syncLive(.codex))
+        tool.login = ["user": "bob"]
+        _ = try savedID(await service.syncLive(.codex))
+
+        let broken = AccountService(directory: directory,
+                                    adapters: [.codex: UnconfirmedAdapter(tool: tool, result: ["user": "bob"])], vault: vault)
+        do {
+            try await broken.switchTo(ada)
+            XCTFail("An unconfirmed switch should fail")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("reports"))
+        }
+    }
+
+    func testSwitchingFailsWhenTheToolAppearsSignedOutAfterApply() async throws {
+        let tool = FakeTool(["user": "ada"])
+        let vault = Vault(store: MemorySecretStore())
+        let service = AccountService(directory: directory, adapters: [.codex: FakeAdapter(provider: .codex, tool: tool)], vault: vault)
+        let ada = try savedID(await service.syncLive(.codex))
+        tool.login = ["user": "bob"]
+        _ = try savedID(await service.syncLive(.codex))
+
+        let broken = AccountService(directory: directory,
+                                    adapters: [.codex: UnconfirmedAdapter(tool: tool, result: nil)], vault: vault)
+        do {
+            try await broken.switchTo(ada)
+            XCTFail("A signed-out readback should fail")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("appears signed out"))
+        }
     }
 
     func testAddingSignsOutLocallyAndSavesTheNextLogin() async throws {

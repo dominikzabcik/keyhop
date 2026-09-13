@@ -305,6 +305,14 @@ select.field option { background: var(--raised); }
 .tier-diamond { --tier: hsl(205 20% 80%); }
 .tier-master { --tier: hsl(0 0% 95%); }
 .season-row { display: flex; align-items: center; gap: 16px; padding: 14px 16px; flex-wrap: wrap; }
+.quest-row { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 4px 18px; align-items: center; padding: 11px 16px; }
+.quest-row + .quest-row { border-top: 1px solid var(--border); }
+.quest-row p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+.quest-track { height: 6px; border-radius: 99px; background: var(--faint); overflow: hidden; }
+.quest-track span { display: block; height: 100%; border-radius: inherit; background: var(--text); }
+.quest-row.done .quest-track span { background: var(--good); }
+.quest-state { margin-top: 5px; font-size: 12px; color: var(--subtle); font-variant-numeric: tabular-nums; }
+.quest-row.done .quest-state { color: var(--good); }
 .season-row .grow { flex: 1; min-width: 200px; }
 .season-row p { margin: 3px 0 0; color: var(--muted); }
 .podium-card { padding: 16px; display: grid; gap: 12px; }
@@ -1179,6 +1187,19 @@ select.field option { background: var(--raised); }
     </section>`;
   }
 
+  // The same goals the website shows, so the window and the site never disagree.
+  function questsCard(quests) {
+    if (!quests || !quests.quests || quests.quests.length === 0) return "";
+    const done = quests.quests.filter((goal) => goal.complete).length;
+    const row = (goal) => `<div class="quest-row${goal.complete ? " done" : ""}">
+      <div><b>${esc(goal.name)}</b><p>${esc(goal.note)}</p></div>
+      <div><div class="quest-track"><span style="width:${Math.max(0, Math.min(100, Math.round((goal.done / goal.target) * 100)))}%"></span></div>
+        <div class="quest-state">${goal.complete ? "Done" : goal.target <= 7 ? `${goal.done} of ${goal.target}` : `${Math.round((goal.done / goal.target) * 100)}%`}</div></div>
+    </div>`;
+    return `<section class="card"><div class="card-head"><h2>Quests</h2><span class="hint">${done} of ${quests.quests.length} done</span></div>
+      ${quests.quests.map(row).join("")}</section>`;
+  }
+
   function leaderboardPage() {
     const cloud = data.state.cloud;
     if (!cloud.linked || cloud.linking) return { body: cloudCard(cloud) };
@@ -1224,7 +1245,7 @@ select.field option { background: var(--raised); }
           <td class="right mono subtle">${e.activeDays}</td><td class="right mono">${esc(value(e))}</td></tr>`).join("")}</tbody></table></section>`
       : `<section class="card"><p class="empty">Nobody has synced usage for this period yet.</p></section>`;
     const note = `<p class="empty-inline subtle">Create teams and invite people on <a href="${esc(site)}/teams" target="_blank" rel="noopener">the website</a>.${cloud.isPublic ? "" : ` Your profile is private; make it public in the <a href="${esc(site)}/settings" target="_blank" rel="noopener">website's settings</a> to join the global board.`}</p>`;
-    return { toolbar, body: seasonRow(data.board.season, site) + stats + podium + table + note };
+    return { toolbar, body: seasonRow(data.board.season, site) + stats + questsCard(data.board.quests) + podium + table + note };
   }
 
   // MARK: Settings

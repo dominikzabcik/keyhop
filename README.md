@@ -81,11 +81,11 @@ GNOME hides tray icons unless the **AppIndicator and KStatusNotifierItem Support
 | | |
 | --- | --- |
 | **Add an account** | Sign in to the tool as usual and Keyhop saves the login. For another account, choose **Add account**: Keyhop signs the tool out on this computer only, so the saved token stays valid, and saves the next login you make. |
-| **Switch** | Click one of a tool's other accounts. Each shows how much of its tightest limit is used. On macOS, when the account in use runs low, the one with the most room is marked, and you can right-click an account to rename or remove it. |
+| **Switch** | Click one of a tool's other accounts. Each shows how much of its tightest limit is used. When the account in use runs low, Smart Hop marks the best runway from limits, forecasts, resets and budgets. |
 | **Read the limits** | macOS shows the account in use with a large bar per limit, where a tick marks an even pace. On Linux and Windows, the menu shows each account's tightest limit and the icon shows the busiest account's two nearest limits. |
 | **Rename, remove and budgets** | On macOS, right-click an account in the menu, or use Keyhop's window, which also sets budgets. On Linux and Windows, use the tray's **Accounts** submenu to rename or remove an account, and **Set a budget** for a monthly budget across all accounts. |
 | **Dashboard** | Keyhop's window: Overview, Accounts, Usage (charts, activity, token mix, models), Budgets and Settings, over a live backdrop you can change in **Settings › Appearance**. On macOS, open Keyhop from Applications or choose **Open Keyhop** in the menu. Click the tray icon on Windows, choose **Open Keyhop** in the Linux tray, or run `keyhop dashboard` anywhere. |
-| **Alerts** | A notification when a limit or budget is nearly used, with a **Switch** button that moves you to the saved account with the most room. |
+| **Alerts** | A notification when a limit or budget is nearly used, with a **Switch** button for Smart Hop's best available account. |
 
 Codex logins made with an API key aren't supported, only ChatGPT sign-ins.
 
@@ -95,6 +95,7 @@ The same commands work on every system. On macOS, the installer and the Homebrew
 
 ```text
 keyhop status [--refresh]              accounts, limits and today's usage
+keyhop recommend [--tool codex]        Smart Hop's best current runway
 keyhop switch work@studio.dev          move a tool to a saved account (email, name or ID)
 keyhop add cursor                      sign Cursor out here and save the next login
 keyhop rename work@studio.dev Work     give an account a name
@@ -104,9 +105,32 @@ keyhop insights --output usage.html    save the dashboard as one file you can sh
 keyhop budget set all 200 --period month
 keyhop update                          install the latest verified release
 keyhop doctor                          paths, secret storage and what Keyhop can see
+keyhop mcp                             read-only MCP server over standard input/output
 ```
 
 Add `--json` to any of them for scripts. `keyhop status --sample` and `keyhop dashboard --sample` show made-up accounts, for trying Keyhop out or taking screenshots. `keyhop help` lists everything.
+
+### Smart Hop and MCP
+
+Smart Hop ranks saved accounts locally from remaining limits, reset timing, recent forecasts and budgets. It is deterministic, works offline with cached data and never reads prompts or source code. Run `keyhop recommend`, or use the recommendation shown in the app and tray.
+
+`keyhop mcp` exposes three read-only tools to local AI clients: `keyhop_status`, `keyhop_usage` and `keyhop_recommendation`. They can inspect cached Keyhop data, but cannot switch accounts or read credentials. Add it to a client with one of these configurations:
+
+```bash
+claude mcp add --scope user keyhop -- keyhop mcp
+```
+
+```json
+{"mcpServers":{"keyhop":{"command":"keyhop","args":["mcp"]}}}
+```
+
+Use the JSON in Cursor's MCP settings. For Codex, put the equivalent in `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.keyhop]
+command = "keyhop"
+args = ["mcp"]
+```
 
 ## Usage tracking
 
@@ -122,6 +146,7 @@ Keyhop keeps its own record of what every account uses.
 - **API value:** requests are priced at each provider's standard API rates, from a table generated from [models.dev](https://models.dev). Subscriptions don't bill per token, so API value measures how much use you get, not what you pay. Cursor's on-demand charges are shown separately as billed.
 - **Budgets:** set one per account or across all accounts, per day, week or month, in the Budgets section of Keyhop's window or with `keyhop budget` anywhere. The Linux and Windows trays set a monthly budget across all accounts. Keyhop notifies you at 80% and at 100%.
 - **Forecasts:** Keyhop samples each limit and projects when it runs out at the recent rate. Once a limit is half used and on track to run out before it resets, the alert offers the switch.
+- **Smart Hop:** the recommendation combines remaining limit room, budget room, reset timing and projected runout, with stable tie-breaking so the same data always gives the same answer.
 
 <p align="center">
   <img src="docs/dashboard-usage.png" width="860" alt="The dashboard's Usage section with sample data: tokens, API value, requests and cache share, a stacked chart by account, 26 weeks of activity, token mix, models and accounts">
@@ -198,14 +223,14 @@ Everything else stays on your computer:
 | Saved logins | Login Keychain, service `app.keyhop.vault` | Secret Service (GNOME Keyring or KWallet) through `secret-tool`, or `0600` files in `~/.local/share/keyhop/vault` when no keyring runs | Files encrypted with the Data Protection API for your user, in `%LOCALAPPDATA%\Keyhop\vault` |
 | Accounts and usage history | `~/Library/Application Support/Keyhop` | `~/.local/share/keyhop` | `%LOCALAPPDATA%\Keyhop` |
 
-The account list holds no tokens, and the data folder is readable only by you. `KEYHOP_DATA_DIR` moves it, and `KEYHOP_SECRET_STORE=file` uses private files instead of a keyring.
+The account list and `cloud.json` hold no tokens. The Keyhop cloud app token uses the same protected secret store as saved logins, under service `app.keyhop.cloud`. The data folder is readable only by you. `KEYHOP_DATA_DIR` moves it, and `KEYHOP_SECRET_STORE=file` uses private files instead of a keyring.
 
 ## Security notes
 
 - On macOS, Keychain calls go through `/usr/bin/security`, so there are no access prompts. Writes pass the credential as an argument, where other processes running as your user can briefly see it. On Linux, logins reach `secret-tool` over stdin instead.
 - The dashboard is served on 127.0.0.1 only, by the Mac app for its own window and by `keyhop` elsewhere. Its window gets a random session key, every request must carry it, and requests from other websites or host names are refused. The `keyhop` server stops 15 minutes after its last window closes.
 - On macOS, the Cursor login link travels through Launch Services and never appears in a process list. On Linux and Windows it's passed to Cursor's own executable as an argument, where other processes running as your user can briefly see it.
-- Releases aren't notarized or code-signed with a certificate. Every download is listed with its SHA-256 in the release's `SHA256SUMS`. Build from source if you'd rather not run a prebuilt binary.
+- Releases through v0.8.0 aren't notarized or certificate-signed. The release workflow now requires Apple notarization and Windows Authenticode signing before publishing; every download also remains covered by `SHA256SUMS`.
 - The endpoints are the private ones the tools call themselves, so a provider update can break Keyhop. If that happens, [open an issue](../../issues/new/choose). Report vulnerabilities privately, as described in [SECURITY.md](SECURITY.md).
 
 ## Uninstall
@@ -243,7 +268,7 @@ The Linux build needs Swift 6.3.3 with the matching [static Linux SDK](https://w
 1. Bump `VERSION`, `AppVersion.number` in `Sources/Keyhop/Core/Version.swift`, and add a matching section to `CHANGELOG.md`.
 2. Commit, then tag and push: `git tag v$(cat VERSION) && git push origin v$(cat VERSION)`.
 
-The [Release workflow](.github/workflows/release.yml) tests and builds on macOS, Linux (x86_64 and aarch64) and Windows, publishes every download with one `SHA256SUMS` and the AUR PKGBUILD, and commits the Scoop, AUR and winget manifests for the release. Run it by hand first for a dry run that builds everything and publishes nothing.
+The [Release workflow](.github/workflows/release.yml) tests and builds on macOS, Linux (x86_64 and aarch64) and Windows, publishes every download with one `SHA256SUMS` and the AUR PKGBUILD, and commits the Scoop, AUR and winget manifests for the release. Publishing fails closed unless the repository has `MACOS_CERTIFICATE_P12`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD`, `WINDOWS_CERTIFICATE_PFX` and `WINDOWS_CERTIFICATE_PASSWORD`; dry runs need none of them. Run it by hand first for a dry run that builds everything and publishes nothing.
 
 [CI](.github/workflows/ci.yml) tests every push on all three systems. It installs the Linux packages on Fedora, Ubuntu, Debian and Arch Linux (and on Fedora and Ubuntu for aarch64), builds the PKGBUILD with `makepkg`, runs both installers from the fresh build, uninstalls on Windows, and captures the Linux and Windows trays with sample data.
 

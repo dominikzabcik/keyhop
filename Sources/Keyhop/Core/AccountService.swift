@@ -115,8 +115,18 @@ actor AccountService {
             throw KeyhopError("The saved login for \(account.email) is missing from \(vault.storeName).")
         }
         try await adapter.apply(secret)
-        _ = await syncLive(provider)
-        return account
+        switch await syncLive(provider) {
+        case .current(let active) where active == id,
+             .saved(let active) where active == id:
+            return account
+        case .failed(let message):
+            throw KeyhopError("The login was applied, but Keyhop couldn't confirm the switch. \(message)")
+        case .signedOut:
+            throw KeyhopError("The login was applied, but \(provider.name) still appears signed out.")
+        case .current(let active), .saved(let active):
+            let live = self.account(active)?.displayName ?? "another account"
+            throw KeyhopError("The login was applied, but \(provider.name) reports \(live) instead of \(account.displayName).")
+        }
     }
 
     /// Signs the tool out on this machine only, after saving its login, so the next sign-in can be

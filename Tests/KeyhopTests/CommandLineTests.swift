@@ -76,6 +76,25 @@ final class AlertRulesTests: XCTestCase {
         XCTAssertTrue(alerts.first?.title.contains("95%") ?? false)
     }
 
+    func testSmartHopBalancesLimitRoomForecastsAndBudgets() throws {
+        let inUse = account("a@x.dev"), cheap = account("b@x.dev"), risky = account("c@x.dev")
+        let accountBudget = Budget(scope: Budget.scope(for: cheap.id), amount: 100, period: .month)
+        let forecasts = [AlertRules.forecastKey(risky.id, "5h"): now.addingTimeInterval(600)]
+        let recommendation = SmartHop.recommendation(
+            for: .claude,
+            accounts: [inUse, cheap, risky],
+            active: [.claude: inUse.id],
+            usage: [inUse.id: reading(95), cheap.id: reading(25), risky.id: reading(5)],
+            forecasts: forecasts,
+            budgets: [accountBudget],
+            budgetSpend: [accountBudget.scope: 20],
+            now: now
+        )
+        XCTAssertEqual(try XCTUnwrap(recommendation).account, cheap.id)
+        XCTAssertEqual(recommendation?.budgetRemaining, 80)
+        XCTAssertFalse(recommendation?.active ?? true)
+    }
+
     func testEarlyForecastsStayQuiet() {
         let inUse = account("a@x.dev")
         let forecasts = [AlertRules.forecastKey(inUse.id, "5h"): now.addingTimeInterval(1800)]
@@ -112,7 +131,7 @@ final class TrayContractTests: XCTestCase {
     func testStatusCarriesEverythingTheTraysRead() throws {
         let data = try Output.encoder.encode(StatusDocument(SampleData.overview()))
         let root = try object(JSONSerialization.jsonObject(with: data))
-        for key in ["version", "refreshedAt", "today", "tools", "alerts", "notices", "budgets"] {
+        for key in ["version", "refreshedAt", "today", "tools", "alerts", "notices", "budgets", "recommendations"] {
             XCTAssertNotNil(root[key], key)
         }
         let today = try object(root["today"])
@@ -145,6 +164,44 @@ final class TrayContractTests: XCTestCase {
             let digest = SampleData.digest(range: range, accounts: SampleData.accounts(), now: justAfterMidnight)
             XCTAssertGreaterThan(digest.total.requests, 0, range.title)
         }
+    }
+}
+
+final class MCPTests: XCTestCase {
+    func testInitializesAndListsOnlyReadOnlyTools() async throws {
+        let initializeResponse = await MCPServer.response(to: [
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": ["protocolVersion": "2025-11-25"],
+        ])
+        let initialized = try XCTUnwrap(initializeResponse)
+        let result = try XCTUnwrap(initialized["result"] as? [String: Any])
+        XCTAssertEqual(result["protocolVersion"] as? String, "2025-11-25")
+
+        let listResponse = await MCPServer.response(to: ["jsonrpc": "2.0", "id": 2, "method": "tools/list"])
+        let listed = try XCTUnwrap(listResponse)
+        let listResult = try XCTUnwrap(listed["result"] as? [String: Any])
+        let tools = try XCTUnwrap(listResult["tools"] as? [[String: Any]])
+        XCTAssertEqual(Set(tools.compactMap { $0["name"] as? String }), ["keyhop_status", "keyhop_usage", "keyhop_recommendation"])
+        XCTAssertTrue(tools.allSatisfy { (($0["annotations"] as? [String: Any])?["readOnlyHint"] as? Bool) == true })
+    }
+
+    func testRejectsUnknownMCPMethods() async throws {
+        let methodResponse = await MCPServer.response(to: ["jsonrpc": "2.0", "id": "x", "method": "nope"])
+        let response = try XCTUnwrap(methodResponse)
+        let error = try XCTUnwrap(response["error"] as? [String: Any])
+        XCTAssertEqual(error["code"] as? Int, -32601)
+
+        let toolResponse = await MCPServer.response(to: [
+            "jsonrpc": "2.0",
+            "id": "y",
+            "method": "tools/call",
+            "params": ["name": "keyhop_switch"],
+        ])
+        let unknownTool = try XCTUnwrap(toolResponse)
+        let toolError = try XCTUnwrap(unknownTool["error"] as? [String: Any])
+        XCTAssertEqual(toolError["code"] as? Int, -32602)
     }
 }
 

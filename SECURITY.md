@@ -16,7 +16,7 @@ Never include real tokens, Keychain or keyring contents, `.credentials.json` or 
   - **Windows:** files encrypted with the Data Protection API for your user.
 - **Account names and labels:** `accounts.json` in Keyhop's data folder. This file holds no tokens.
 - Nothing is sent anywhere except the providers' own usage and token-refresh endpoints, called with each account's own token, GitHub for updates, and, only once you link a computer, Keyhop cloud for daily totals.
-- **Keyhop cloud link:** `cloud.json` in Keyhop's data folder, readable only by you, holding the linked login and the app token for Keyhop cloud.
+- **Keyhop cloud link:** `cloud.json` in Keyhop's data folder holds non-secret link metadata. Its app token is stored separately through the protected secret store, under service `app.keyhop.cloud`.
 
 ## The dashboard
 
@@ -37,4 +37,4 @@ Leaderboards are opt-in. A computer sends nothing until you link it, by approvin
 - On macOS, Keychain writes pass the credential to `/usr/bin/security` as an argument, where other processes running as your user can briefly see it. `security -i` would avoid that, but it splits long input.
 - On Linux and Windows, handing a login to a running Cursor passes its tokens to Cursor's executable as an argument, with the same brief visibility.
 - On Linux without a keyring, and for the files Claude Code itself keeps on Linux and Windows, protection comes from file permissions and your user account rather than encryption.
-- Releases aren't notarized or signed with a certificate. Every download has a SHA-256 in the release's `SHA256SUMS`, and every updater checks it. Build from source if you'd rather not run a prebuilt binary.
+- Releases through v0.8.0 aren't notarized or certificate-signed. New publishing runs require Apple notarization and Windows Authenticode signing, and fail when those credentials are missing. Every download also has a SHA-256 in `SHA256SUMS`, which every updater checks.

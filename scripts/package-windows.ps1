@@ -8,6 +8,19 @@ $version = if ($env:KEYHOP_VERSION) { $env:KEYHOP_VERSION } else { (Get-Content 
 $version = $version.TrimStart('v')
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x86_64' }
 
+function Sign-KeyhopBinary($path) {
+  if (-not $env:KEYHOP_WINDOWS_CERTIFICATE) { return }
+  $signTool = $env:KEYHOP_SIGNTOOL
+  if (-not $signTool) {
+    $signTool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Filter signtool.exe -Recurse |
+      Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+  }
+  if (-not $signTool) { throw 'Could not find signtool.exe.' }
+  & $signTool sign /f $env:KEYHOP_WINDOWS_CERTIFICATE /p $env:KEYHOP_WINDOWS_CERTIFICATE_PASSWORD /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com $path
+  if ($LASTEXITCODE) { throw "Signing failed for $path." }
+  if ((Get-AuthenticodeSignature $path).Status -ne 'Valid') { throw "The signature on $path is not valid." }
+}
+
 swift build -c release
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 $bin = (swift build -c release --show-bin-path).Trim()
@@ -19,6 +32,8 @@ New-Item -ItemType Directory -Force $stage | Out-Null
 
 Copy-Item (Join-Path $bin 'Keyhop.exe') (Join-Path $stage 'keyhop.exe')
 Copy-Item (Join-Path $bin 'KeyhopTray.exe') (Join-Path $stage 'keyhop-tray.exe')
+Sign-KeyhopBinary (Join-Path $stage 'keyhop.exe')
+Sign-KeyhopBinary (Join-Path $stage 'keyhop-tray.exe')
 
 # The Swift runtime DLLs, from the runtime folder the toolchain put on PATH.
 $folders = $env:Path -split ';' | Where-Object { $_ -and (Test-Path (Join-Path $_ 'swiftCore.dll')) }

@@ -5,6 +5,7 @@ import { randomToken } from "./crypto";
 import type { AppEnv } from "./env";
 import { notFound, pages } from "./pages";
 import { seasons } from "./seasons";
+import { site } from "./site";
 import { teams } from "./teams";
 import { usage } from "./usage";
 
@@ -16,7 +17,7 @@ app.use("*", async (c, next) => {
   await next();
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
-  // The only script is the backdrop, and only with this response's nonce. Every page works without it.
+  // Executable scripts are limited to the backdrop and only run with this response's nonce.
   c.header(
     "Content-Security-Policy",
     `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`,
@@ -25,6 +26,7 @@ app.use("*", async (c, next) => {
 app.use("*", session);
 app.use("*", sameOrigin);
 
+app.route("/", site);
 app.route("/", auth);
 app.route("/", usage);
 app.route("/", seasons);

@@ -102,6 +102,22 @@ describe("linking the app", () => {
 });
 
 describe("leaderboards", () => {
+  it("renders the product landing page at the root", async () => {
+    const page = await call("/");
+    expect(page.status).toBe(200);
+    const body = await page.text();
+    expect(body).toContain("Every account.");
+    expect(body).toContain("Download Keyhop");
+    expect(body).toContain("Your prompts never pass through Keyhop.");
+    expect(body).toContain("Planned, not shipped yet");
+    expect(body).toContain("02 · MCP");
+    expect(body).toContain("03 · Mobile companion");
+    expect(body).toContain('<link rel="canonical" href="https://keyhop.app/">');
+    expect(body).toContain('<meta name="robots" content="index, follow, max-image-preview:large">');
+    expect(body).toContain('<script type="application/ld+json"');
+    expect(body).toContain('"@type":"SoftwareApplication"');
+  });
+
   it("ranks public profiles only, by the chosen measure", async () => {
     const day = today();
     const alice = await linkApp(await signIn("alice"));
@@ -136,6 +152,62 @@ describe("leaderboards", () => {
     const nonce = page.headers.get("content-security-policy")!.match(/script-src 'nonce-([^']+)'/)?.[1];
     expect(nonce).toBeTruthy();
     expect(body.match(/<script\b[^>]*>/g)).toEqual([`<script nonce="${nonce}">`]);
+  });
+});
+
+describe("public site", () => {
+  it.each([
+    ["/download", "Ready on every desktop."],
+    ["/privacy", "Your work is not the product."],
+    ["/terms", "Use Keyhop with accounts that are yours."],
+    ["/security", "Report problems privately."],
+  ])("renders %s with canonical metadata", async (path, heading) => {
+    const page = await call(path);
+    expect(page.status).toBe(200);
+    const body = await page.text();
+    expect(body).toContain(`<h1>${heading}</h1>`);
+    expect(body).toContain(`<link rel="canonical" href="https://keyhop.app${path}">`);
+    expect(body).toContain('<meta property="og:image"');
+  });
+
+  it("publishes crawler and security discovery files", async () => {
+    const robots = await call("/robots.txt");
+    expect(robots.headers.get("content-type")).toContain("text/plain");
+    const robotsBody = await robots.text();
+    expect(robotsBody).toContain("Sitemap: https://keyhop.app/sitemap.xml");
+    expect(robotsBody).not.toContain("Disallow: /login");
+
+    const sitemap = await call("/sitemap.xml");
+    expect(sitemap.headers.get("content-type")).toContain("application/xml");
+    const sitemapBody = await sitemap.text();
+    expect(sitemapBody).toContain("<loc>https://keyhop.app/download</loc>");
+    expect(sitemapBody).toContain("<loc>https://keyhop.app/privacy</loc>");
+
+    const security = await call("/.well-known/security.txt");
+    expect(security.headers.get("content-type")).toContain("text/plain");
+    expect(await security.text()).toContain("Contact: https://github.com/dominikzabcik/keyhop/security/advisories/new");
+  });
+
+  it("keeps sign-in and error pages out of search results", async () => {
+    for (const path of ["/login?next=/settings", "/does-not-exist"]) {
+      const page = await call(path);
+      expect(page.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+      expect(await page.text()).toContain('<meta name="robots" content="noindex, nofollow">');
+    }
+  });
+
+  it("indexes only public profile pages", async () => {
+    const cookie = await signIn("searchable");
+    const privateProfile = await call("/u/searchable", { headers: { cookie } });
+    expect(privateProfile.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+
+    await form("/settings/profile", cookie, { public: "on" });
+    const publicProfile = await call("/u/searchable");
+    expect(publicProfile.headers.get("x-robots-tag")).toBeNull();
+    expect(await publicProfile.text()).toContain('<meta name="robots" content="index, follow, max-image-preview:large">');
+
+    const sitemap = await call("/sitemap.xml");
+    expect(await sitemap.text()).toContain("<loc>https://keyhop.app/u/searchable</loc>");
   });
 });
 

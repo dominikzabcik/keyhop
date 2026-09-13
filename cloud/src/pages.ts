@@ -2,9 +2,11 @@ import { type Context, Hono } from "hono";
 import { html, raw } from "hono/html";
 import { pageUser, safeNext } from "./auth";
 import { type AppEnv, type User, today } from "./env";
+import { landingPage } from "./landing";
+import { downloadPage, privacyPage, securityPage, termsPage } from "./marketing";
+import { TIERS, currentSeason, daysLeft, isSeason, nextStep, seasonBoard, seasonLabel, seasonList, seasonRange, tierFor } from "./seasons";
 import { type Entry, type Metric, type Period, METRICS, PERIODS, isMetric, isPeriod, leaderboard, profile } from "./stats";
 import { inviteInfo, members, myTeams, teamForMember } from "./teams";
-import { TIERS, currentSeason, daysLeft, isSeason, seasonBoard, seasonLabel, seasonList, seasonRange, nextStep, tierFor } from "./seasons";
 import {
   type Html,
   PIXEL_MARK,
@@ -32,17 +34,29 @@ function render(
   c: C,
   title: string,
   body: Html,
-  options: { description?: string; active?: "leaderboard" | "teams" | "season"; status?: 200 | 404 } = {},
+  options: {
+    description?: string;
+    active?: "leaderboard" | "teams" | "season";
+    mode?: "app" | "landing" | "marketing";
+    index?: boolean;
+    softwareSchema?: boolean;
+    canonicalPath?: string;
+    status?: 200 | 404;
+  } = {},
 ) {
   const url = new URL(c.req.url);
+  if (options.index === false) c.header("X-Robots-Tag", "noindex, nofollow");
   return c.html(
     layout({
       title,
       description: options.description,
-      origin: url.origin,
       path: url.pathname + url.search,
       user: c.get("user"),
       active: options.active,
+      mode: options.mode,
+      index: options.index,
+      softwareSchema: options.softwareSchema,
+      canonicalPath: options.canonicalPath,
       body,
       nonce: c.get("nonce"),
     }),
@@ -55,7 +69,7 @@ export function notFound(c: C, message = "There's nothing here.") {
     c,
     "Not found · Keyhop",
     html`<section class="card center-card">${raw(PIXEL_MARK)}<h1>Not found</h1><p class="lede">${message}</p><a class="btn secondary" href="/leaderboard">Go to the leaderboard</a></section>`,
-    { status: 404 },
+    { status: 404, index: false },
   );
 }
 
@@ -118,7 +132,42 @@ function board(entries: Entry[], metric: Metric, viewer: User | null, emptyText:
     ${legend()}`;
 }
 
-pages.get("/", (c) => c.redirect("/leaderboard"));
+pages.get("/", (c) =>
+  render(c, "Keyhop · Switch AI coding accounts without breaking flow", landingPage(), {
+    description: "Switch Claude Code, Cursor and Codex accounts, watch limits and explore Keyhop's roadmap for AI, MCP and mobile.",
+    mode: "landing",
+    softwareSchema: true,
+  }),
+);
+
+pages.get("/download", (c) =>
+  render(c, "Download Keyhop for macOS, Linux and Windows", downloadPage(), {
+    description: "Download Keyhop for macOS, Linux or Windows and switch Claude Code, Cursor and Codex accounts without breaking flow.",
+    mode: "marketing",
+    softwareSchema: true,
+  }),
+);
+
+pages.get("/privacy", (c) =>
+  render(c, "Privacy · Keyhop", privacyPage(), {
+    description: "How Keyhop stores provider credentials, reads local usage and handles optional cloud leaderboard data.",
+    mode: "marketing",
+  }),
+);
+
+pages.get("/terms", (c) =>
+  render(c, "Use and trademarks · Keyhop", termsPage(), {
+    description: "Responsible use, software license, cloud service terms and third-party trademarks for Keyhop.",
+    mode: "marketing",
+  }),
+);
+
+pages.get("/security", (c) =>
+  render(c, "Security · Keyhop", securityPage(), {
+    description: "Keyhop's security model, release verification and private vulnerability reporting channel.",
+    mode: "marketing",
+  }),
+);
 
 pages.get("/login", (c) => {
   const next = safeNext(c.req.query("next"));
@@ -132,6 +181,7 @@ pages.get("/login", (c) => {
       <p class="lede">Use your GitHub account. Keyhop reads only your public GitHub profile: your name, login and avatar.</p>
       <a class="btn" href="/auth/github?next=${encodeURIComponent(next)}">${githubIcon()}Continue with GitHub</a>
     </section>`,
+    { index: false },
   );
 });
 
@@ -152,6 +202,7 @@ pages.get("/welcome", pageUser, (c) => {
         <button class="btn" type="submit">Continue</button>
       </form>
     </section>`,
+    { index: false },
   );
 });
 
@@ -313,6 +364,8 @@ pages.get("/u/:login", async (c) => {
       </section>`,
     {
       description: `${display} used ${tokens(stats.month.tokens)} tokens in the last 30 days. See their Keyhop profile.`,
+      index: person.public === 1,
+      canonicalPath: `/u/${person.login}`,
     },
   );
 });
@@ -352,7 +405,7 @@ pages.get("/teams", pageUser, async (c) => {
           </form>
         </div>
       </section>`,
-    { active: "teams" },
+    { active: "teams", index: false },
   );
 });
 
@@ -416,7 +469,7 @@ pages.get("/t/:slug", pageUser, async (c) => {
           </div></div>
         </aside>
       </section>`,
-    { active: "teams" },
+    { active: "teams", index: false },
   );
 });
 
@@ -439,7 +492,7 @@ pages.get("/invite/:code", async (c) => {
         ? html`<form method="post" action="/invite/${code}"><button class="btn" type="submit">Join team</button></form>`
         : html`<a class="btn" href="/login?next=${encodeURIComponent(`/invite/${code}`)}">${githubIcon()}Sign in with GitHub to join</a>`}
     </section>`,
-    { description: `Join ${info.name} on Keyhop and compare AI usage with your team.` },
+    { description: `Join ${info.name} on Keyhop and compare AI usage with your team.`, index: false },
   );
 });
 
@@ -490,6 +543,7 @@ pages.get("/settings", pageUser, async (c) => {
           </form>
         </div>
       </section>`,
+    { index: false },
   );
 });
 
@@ -505,6 +559,7 @@ pages.get("/link", pageUser, (c) => {
         <p class="lede">Go back to Keyhop. It starts sending your daily totals to @${user.login}.</p>
         <a class="btn secondary" href="/u/${user.login}">View your profile</a>
       </section>`,
+      { index: false },
     );
   }
   const code = (c.req.query("code") ?? "").toUpperCase().slice(0, 9);
@@ -522,5 +577,6 @@ pages.get("/link", pageUser, (c) => {
       </form>
       <p class="muted" style="margin:0;font-size:13px">Keyhop sends tokens, API value and requests per tool per day. Never prompts, emails or account names.</p>
     </section>`,
+    { index: false },
   );
 });

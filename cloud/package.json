@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler d1 migrations apply keyhop --local && wrangler dev",
-    "deploy": "wrangler d1 migrations apply keyhop --remote && wrangler deploy",
+    "dev": "wrangler d1 migrations apply switchr --local && wrangler dev",
+    "deploy": "wrangler d1 migrations apply switchr --remote && wrangler deploy",
     "test": "vitest run",
     "types": "wrangler types",
     "typecheck": "wrangler types && tsc --noEmit"

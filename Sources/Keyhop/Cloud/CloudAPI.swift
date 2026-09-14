@@ -148,8 +148,10 @@ struct CloudClient {
         case granted(Granted)
     }
 
-    func startLink(label: String) async throws -> LinkStart {
-        let (data, status) = try await send("POST", "/api/device/start", body: ["label": label])
+    func startLink(label: String, readOnly: Bool = false) async throws -> LinkStart {
+        let (data, status) = try await send(
+            "POST", "/api/device/start", body: ["label": label, "access": readOnly ? "read" : "write"]
+        )
         guard status == 200 else { throw problem(data, status) }
         return try JSONDecoder().decode(LinkStart.self, from: data)
     }

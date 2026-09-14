@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import SwiftUI
 import UIKit
 
@@ -15,9 +16,9 @@ struct PhoneLink: Codable, Equatable {
 
 enum TokenStore {
     private static let service = "app.keyhop.ios"
-    private static let account = "session"
+    private static let tokenAccount = "session"
 
-    static func read() -> String? {
+    static func read(account: String = tokenAccount) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -30,25 +31,34 @@ enum TokenStore {
         return token
     }
 
-    static func write(_ token: String) {
+    static func write(_ token: String, account: String = tokenAccount) throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
         ]
-        SecItemDelete(query as CFDictionary)
-        var insert = query
-        insert[kSecValueData as String] = Data(token.utf8)
-        insert[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(insert as CFDictionary, nil)
+        let value: [String: Any] = [
+            kSecValueData as String: Data(token.utf8),
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ]
+        var status = SecItemUpdate(query as CFDictionary, value as CFDictionary)
+        if status == errSecItemNotFound {
+            status = SecItemAdd(query.merging(value) { _, new in new } as CFDictionary, nil)
+        }
+        guard status == errSecSuccess else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+        }
     }
 
-    static func clear() {
-        SecItemDelete([
+    static func clear(account: String = tokenAccount) throws {
+        let status = SecItemDelete([
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
         ] as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+        }
     }
 }
 
@@ -72,6 +82,8 @@ final class Store: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: Self.linkKey),
            let saved = try? JSONDecoder().decode(PhoneLink.self, from: data), TokenStore.read() != nil {
             link = saved
+        } else {
+            UserDefaults.standard.removeObject(forKey: Self.linkKey)
         }
     }
 
@@ -91,7 +103,11 @@ final class Store: ObservableObject {
                 CloudQuests.Quest(key: "five-days", name: "Five days", note: "Use Keyhop on five days this week.", period: "week", done: 5, target: 5, complete: true),
                 CloudQuests.Quest(key: "every-tool", name: "Every tool", note: "Use all three tools this week.", period: "week", done: 2, target: 3, complete: false),
             ],
-            badges: [])
+            badges: [
+                CloudQuests.Badge(key: "first-hop", name: "First hop", note: "Join your first season.", earned: true, day: "2026-09-01"),
+                CloudQuests.Badge(key: "billion", name: "One billion", note: "Use one billion tokens in a season.", earned: true, day: "2026-09-08"),
+                CloudQuests.Badge(key: "podium", name: "Podium", note: "Finish a week in the top three.", earned: false, day: nil),
+            ])
         let people: [(String, String?, Int, Bool)] = [
             ("mira", "Mira K.", 6_370_000_000, false),
             ("jonas", nil, 5_180_000_000, false),
@@ -120,15 +136,23 @@ final class Store: ObservableObject {
         loading = true
         defer { loading = false }
         do {
+            async let profile = client.me()
             async let season = client.season(team: nil)
             async let board = client.leaderboard(period: "week", metric: "tokens", team: nil)
             async let quests = try? await client.quests()
-            self.season = try await season
-            self.board = try await board
+            let (updatedProfile, updatedSeason, updatedBoard) = try await (profile, season, board)
+            if var saved = link {
+                saved.login = updatedProfile.login
+                saved.name = updatedProfile.name
+                UserDefaults.standard.set(try JSONEncoder().encode(saved), forKey: Self.linkKey)
+                link = saved
+            }
+            self.season = updatedSeason
+            self.board = updatedBoard
             self.quests = await quests
             problem = nil
         } catch let error as CloudError where error.kind == .unlinked {
-            unlink()
+            try? clearLocalLink()
             problem = "This phone isn't linked anymore. Link it again."
         } catch {
             problem = error.localizedDescription
@@ -140,12 +164,18 @@ final class Store: ObservableObject {
         problem = nil
         let client = CloudClient(server: server)
         do {
-            let start = try await client.startLink(label: Self.deviceLabel)
+            let start = try await client.startLink(label: Self.deviceLabel, readOnly: true)
+            guard let verificationURL = Self.verificationURL(start.verifyUrl, server: server) else {
+                throw CloudError(kind: .server, message: "Keyhop cloud returned an unsafe linking address.")
+            }
             pending = start
-            if let url = URL(string: start.verifyUrl) { await UIApplication.shared.open(url) }
+            guard await UIApplication.shared.open(verificationURL) else {
+                throw CloudError(kind: .server, message: "Couldn't open the linking page.")
+            }
             pollTask?.cancel()
             pollTask = Task { await self.waitForApproval(client, start: start, server: server) }
         } catch {
+            pending = nil
             problem = error.localizedDescription
         }
     }
@@ -170,10 +200,16 @@ final class Store: ObservableObject {
                 problem = "That code expired. Try linking again."
                 return
             case .granted(let granted):
-                TokenStore.write(granted.token)
                 let saved = PhoneLink(server: server, login: granted.user.login, name: granted.user.name)
-                UserDefaults.standard.set(try? JSONEncoder().encode(saved), forKey: Self.linkKey)
-                link = saved
+                do {
+                    let metadata = try JSONEncoder().encode(saved)
+                    try TokenStore.write(granted.token)
+                    UserDefaults.standard.set(metadata, forKey: Self.linkKey)
+                    link = saved
+                } catch {
+                    problem = "Couldn't protect this phone's link: \(error.localizedDescription)"
+                    return
+                }
                 await refresh()
                 return
             }
@@ -181,19 +217,39 @@ final class Store: ObservableObject {
         problem = "That code expired. Try linking again."
     }
 
-    func unlink() {
+    func unlink() async {
         cancelLink()
-        TokenStore.clear()
+        do {
+            if let client { try await client.unlink() }
+            try clearLocalLink()
+            problem = nil
+        } catch {
+            problem = "Couldn't finish unlinking this phone: \(error.localizedDescription)"
+        }
+    }
+
+    private func clearLocalLink() throws {
+        var keychainError: Error?
+        do {
+            try TokenStore.clear()
+        } catch {
+            keychainError = error
+        }
         UserDefaults.standard.removeObject(forKey: Self.linkKey)
         link = nil
         season = nil
         board = nil
         quests = nil
+        if let keychainError { throw keychainError }
     }
 
-    /// How this phone shows up under Linked apps on the website.
-    private static var deviceLabel: String {
-        let name = UIDevice.current.name
-        return name.isEmpty ? "Keyhop on iPhone" : "\(name) (iOS)"
+    static func verificationURL(_ value: String, server: String) -> URL? {
+        guard let url = URL(string: value), let origin = URL(string: server),
+              let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http",
+              scheme == origin.scheme?.lowercased(),
+              url.host?.lowercased() == origin.host?.lowercased(), url.port == origin.port else { return nil }
+        return url
     }
+
+    private static let deviceLabel = "Keyhop on iPhone"
 }

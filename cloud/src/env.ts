@@ -29,6 +29,7 @@ export type AppEnv = {
   Variables: {
     user: User | null;
     sessionKind: "web" | "app" | null;
+    sessionAccess: "read" | "write" | null;
     /** Lets the page's one script run under the content security policy. */
     nonce: string;
   };

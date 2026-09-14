@@ -141,14 +141,14 @@ export function landingPage(): Html {
     <section class="landing-section" id="roadmap">
       <div class="roadmap-heading">
         <div>
-          <span class="landing-kicker">Shipping now and next</span>
+          <span class="landing-kicker">Available now and next</span>
           <h2>One layer between you and every AI tool.</h2>
         </div>
-        <p>Smart Hop and a local MCP server are built for the next release. Mobile alerts, automations and more providers are the next steps toward a private coordination layer for every agent and device.</p>
+        <p>Smart Hop and the local MCP server ship in Keyhop 0.9. The iOS companion is already building from source; mobile alerts, automations and more providers are next.</p>
       </div>
       <div class="future-grid">
         <article class="future-card future-ai">
-          <div class="future-label"><span>01 · Smart Hop</span><em>Next release</em></div>
+          <div class="future-label"><span>01 · Smart Hop</span><em>Available now</em></div>
           <h3>Know the best account before the next session starts.</h3>
           <p>Keyhop weighs remaining capacity, reset time, forecasts and budgets locally, then recommends the cleanest place to keep working—without reading your prompts.</p>
           <div class="future-preview route-preview" aria-hidden="true">
@@ -157,7 +157,7 @@ export function landingPage(): Html {
           </div>
         </article>
         <article class="future-card future-mcp">
-          <div class="future-label"><span>02 · MCP</span><em>Next release</em></div>
+          <div class="future-label"><span>02 · MCP</span><em>Available now</em></div>
           <h3>Let agents check the runway before they run.</h3>
           <p>The local, read-only MCP server lets assistants inspect account health, cached usage and Smart Hop recommendations. Models receive useful status, never raw credentials or permission to switch.</p>
           <div class="future-preview mcp-preview" aria-hidden="true">
@@ -167,9 +167,9 @@ export function landingPage(): Html {
           </div>
         </article>
         <article class="future-card future-mobile">
-          <div class="future-label"><span>03 · Mobile companion</span><em>Planned</em></div>
-          <h3>Carry every reset in your pocket.</h3>
-          <p>An optional iOS and Android companion for limit alerts, reset countdowns and account health. Your desktop remains in charge of every credential and switch.</p>
+          <div class="future-label"><span>03 · Mobile companion</span><em>In development</em></div>
+          <h3>Carry your season in your pocket.</h3>
+          <p>The iOS companion already shows standings, quests and badges when built from source. Limit alerts, reset countdowns and Android are next; your desktop stays in charge of provider credentials and switches.</p>
           <div class="future-preview phone-preview" aria-hidden="true">
             <div class="phone-top"><span>9:41</span><i></i></div>
             <div class="phone-alert"><span>Codex · Personal</span><b>Ready again in 24m</b></div>
@@ -265,7 +265,7 @@ export function landingPage(): Html {
         <details><summary>Where are my provider tokens stored?</summary><p>In Login Keychain on macOS, Secret Service or private files on Linux, and DPAPI-encrypted files on Windows. Provider tokens are never sent to keyhop.app.</p></details>
         <details><summary>Do I have to use the leaderboard?</summary><p>No. The desktop app, account switching, limits, history, budgets and alerts all work without a Keyhop cloud account. Leaderboards and teams are opt-in.</p></details>
         <details><summary>What does “API value” mean?</summary><p>Keyhop prices the tokens you used at each provider’s standard API rates. It shows the value of your usage, not a bill from your subscription.</p></details>
-        <details><summary>Are Smart Hop, MCP and the mobile app available now?</summary><p>Smart Hop and the read-only MCP server are built on main and ship in the next release. The iOS and Android companion, automations and provider SDK are planned; their scope may change with feedback.</p></details>
+        <details><summary>Are Smart Hop, MCP and the mobile app available now?</summary><p>Smart Hop and the read-only MCP server ship in Keyhop 0.9. The iOS companion builds from source with seasons, standings, quests and badges; it is not in the App Store yet. Android, mobile alerts, automations and the provider SDK remain planned.</p></details>
         <details><summary>Can I inspect or build Keyhop myself?</summary><p>Yes. Keyhop is MIT licensed, its installers are readable shell scripts, and the application, cloud service, packaging and tests are all in the public repository.</p></details>
       </div>
     </section>

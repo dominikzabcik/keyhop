@@ -55,7 +55,7 @@ jobs:
         run: brew install xcodegen
 
       - name: Generate the project
-        run: xcodegen generate --spec ios/project.yml
+        run: bash scripts/generate-ios-project.sh
 
       # A simulator that exists on this runner, whichever iPhone it happens to have.
       - name: Pick a simulator
@@ -65,12 +65,12 @@ jobs:
           echo "Using $name"
           echo "SIMULATOR=$name" >> "$GITHUB_ENV"
 
-      - name: Build
+      - name: Build and test
         working-directory: ios
         run: |
           xcodebuild -project Keyhop.xcodeproj -scheme Keyhop \
             -destination "platform=iOS Simulator,name=$SIMULATOR" \
-            -derivedDataPath build build | tail -5
+            -derivedDataPath build test | tail -8
 
       # A build that runs is worth more than one that only compiles: the app is launched with sample
       # data and has to still be alive a moment later.

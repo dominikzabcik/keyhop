@@ -1,7 +1,7 @@
 import { type Context, Hono } from "hono";
 import { html, raw } from "hono/html";
 import { pageUser, safeNext } from "./auth";
-import { type AppEnv, type User, today } from "./env";
+import { type AppEnv, type User, now, today } from "./env";
 import { landingPage } from "./landing";
 import { downloadPage, privacyPage, securityPage, termsPage } from "./marketing";
 import { profileBadges, questsFor } from "./quests";
@@ -531,10 +531,10 @@ pages.get("/invite/:code", async (c) => {
 pages.get("/settings", pageUser, async (c) => {
   const user = c.get("user")!;
   const { results: apps } = await c.env.DB.prepare(
-    "SELECT id, label, created_at, last_used_at FROM sessions WHERE user_id = ? AND kind = 'app' ORDER BY last_used_at DESC",
+    "SELECT id, label, access, created_at, last_used_at FROM sessions WHERE user_id = ? AND kind = 'app' ORDER BY last_used_at DESC",
   )
     .bind(user.id)
-    .all<{ id: string; label: string | null; created_at: number; last_used_at: number }>();
+    .all<{ id: string; label: string | null; access: "read" | "write"; created_at: number; last_used_at: number }>();
   return render(
     c,
     "Settings · Keyhop",
@@ -563,7 +563,7 @@ pages.get("/settings", pageUser, async (c) => {
             ? html`<p class="empty">No Keyhop app is linked yet. In Keyhop, open Settings, then Leaderboard.</p>`
             : apps.map(
                 (app) => html`<div class="list-row">
-                  <span class="person"><span><b>${app.label || "Keyhop"}</b><small>Linked ${monthYear(app.created_at)} · used ${ago(app.last_used_at)}</small></span></span>
+                  <span class="person"><span><b>${app.label || "Keyhop"}</b><small>${app.access === "read" ? "Read only · " : ""}Linked ${monthYear(app.created_at)} · used ${ago(app.last_used_at)}</small></span></span>
                   <form method="post" action="/settings/apps/${app.id}/revoke"><button class="btn ghost sm" type="submit">Unlink</button></form>
                 </div>`,
               )}
@@ -586,7 +586,7 @@ pages.get("/settings", pageUser, async (c) => {
   );
 });
 
-pages.get("/link", pageUser, (c) => {
+pages.get("/link", pageUser, async (c) => {
   const user = c.get("user")!;
   if (c.req.query("done")) {
     return render(
@@ -595,13 +595,18 @@ pages.get("/link", pageUser, (c) => {
       html`<section class="card center-card">
         ${raw(PIXEL_MARK)}
         <h1>Keyhop is linked</h1>
-        <p class="lede">Go back to Keyhop. It starts sending your daily totals to @${user.login}.</p>
+        <p class="lede">Go back to Keyhop. It can now use the leaderboard as @${user.login}.</p>
         <a class="btn secondary" href="/u/${user.login}">View your profile</a>
       </section>`,
       { index: false },
     );
   }
   const code = (c.req.query("code") ?? "").toUpperCase().slice(0, 9);
+  const pending = code
+    ? await c.env.DB.prepare("SELECT label, access FROM device_links WHERE user_code = ? AND user_id IS NULL AND expires_at > ?")
+        .bind(code, now())
+        .first<{ label: string | null; access: "read" | "write" }>()
+    : null;
   return render(
     c,
     "Link Keyhop · Keyhop",
@@ -614,7 +619,9 @@ pages.get("/link", pageUser, (c) => {
         ${c.req.query("error") ? html`<p class="error-text">That code expired or was already used. Start again in Keyhop.</p>` : ""}
         <button class="btn" type="submit">Link to @${user.login}</button>
       </form>
-      <p class="muted" style="margin:0;font-size:13px">Keyhop sends tokens, API value and requests per tool per day. Never prompts, emails or account names.</p>
+      <p class="muted" style="margin:0;font-size:13px">${pending?.access === "read"
+        ? html`<b>${pending.label || "This companion"}</b> can read your profile, season, quests and standings. It cannot upload usage or change your profile.`
+        : html`<b>${pending?.label || "Keyhop"}</b> can send tokens, API value and requests per tool per day. Never prompts, emails or account names.`}</p>
     </section>`,
     { index: false },
   );

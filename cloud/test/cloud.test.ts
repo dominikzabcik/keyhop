@@ -126,6 +126,53 @@ describe("linking the app", () => {
       "/link?done=1",
     ]);
   });
+
+  it("redeems an approved device code only once under concurrent polling", async () => {
+    const from = { "cf-connecting-ip": "10.0.1.1" };
+    const start = await call("/api/device/start", {
+      method: "POST",
+      headers: from,
+      body: JSON.stringify({ label: "Fast phone" }),
+    });
+    const { deviceCode, userCode } = (await start.json()) as { deviceCode: string; userCode: string };
+    const cookie = await signIn("parallel-linker");
+    expect((await form("/link", cookie, { code: userCode })).headers.get("location")).toBe("/link?done=1");
+
+    const polls = await Promise.all([
+      call("/api/device/token", { method: "POST", headers: from, body: JSON.stringify({ deviceCode }) }),
+      call("/api/device/token", { method: "POST", headers: from, body: JSON.stringify({ deviceCode }) }),
+    ]);
+    expect(polls.map((response) => response.status).sort()).toEqual([200, 410]);
+
+    const granted = polls.find((response) => response.status === 200)!;
+    const { token } = (await granted.json()) as { token: string };
+    expect((await call("/api/me", { headers: { authorization: `Bearer ${token}` } })).status).toBe(200);
+  });
+
+  it("keeps a phone link read-only and lets it revoke itself", async () => {
+    const from = { "cf-connecting-ip": "10.0.1.2" };
+    const start = await call("/api/device/start", {
+      method: "POST",
+      headers: from,
+      body: JSON.stringify({ label: "Test phone", access: "read" }),
+    });
+    const { deviceCode, userCode } = (await start.json()) as { deviceCode: string; userCode: string };
+    const cookie = await signIn("phone-reader");
+    const approval = await call(`/link?code=${userCode}`, { headers: { cookie } });
+    const approvalBody = await approval.text();
+    expect(approvalBody).toContain("Test phone");
+    expect(approvalBody).toContain("It cannot upload usage or change your profile.");
+    await form("/link", cookie, { code: userCode });
+    const grant = await call("/api/device/token", { method: "POST", headers: from, body: JSON.stringify({ deviceCode }) });
+    const { token } = (await grant.json()) as { token: string };
+    const authorization = { authorization: `Bearer ${token}` };
+
+    expect((await call("/api/me", { headers: authorization })).status).toBe(200);
+    expect((await upload(token, [])).status).toBe(403);
+    expect((await call("/api/me", { method: "PATCH", headers: authorization, body: JSON.stringify({ public: true }) })).status).toBe(403);
+    expect((await call("/api/session", { method: "DELETE", headers: authorization })).status).toBe(204);
+    expect((await call("/api/me", { headers: authorization })).status).toBe(401);
+  });
 });
 
 describe("leaderboards", () => {
@@ -136,7 +183,7 @@ describe("leaderboards", () => {
     expect(body).toContain("Every account.");
     expect(body).toContain("Download Keyhop");
     expect(body).toContain("Your prompts never pass through Keyhop.");
-    expect(body).toContain("Shipping now and next");
+    expect(body).toContain("Available now and next");
     expect(body).toContain("01 · Smart Hop");
     expect(body).toContain("02 · MCP");
     expect(body).toContain("03 · Mobile companion");

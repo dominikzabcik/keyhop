@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { deleteCookie, getCookie } from "hono/cookie";
-import { SESSION_COOKIE, apiUser, pageUser, publicUser, safeNext, signedInUser } from "./auth";
+import { SESSION_COOKIE, apiUser, apiWriter, pageUser, publicUser, safeNext, signedInUser } from "./auth";
 import { sha256 } from "./crypto";
 import type { AppEnv } from "./env";
 
@@ -8,7 +8,7 @@ export const account = new Hono<AppEnv>();
 
 account.get("/api/me", apiUser, (c) => c.json({ user: publicUser(c.get("user")!) }));
 
-account.patch("/api/me", apiUser, async (c) => {
+account.patch("/api/me", apiUser, apiWriter, async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { public?: unknown };
   if (typeof body.public !== "boolean") return c.json({ error: "Send { public: true } or { public: false }." }, 400);
   await c.env.DB.prepare("UPDATE users SET public = ? WHERE id = ?").bind(body.public ? 1 : 0, c.get("user")!.id).run();

@@ -14,21 +14,23 @@ const USER_COLUMNS = "u.id, u.github_id, u.login, u.name, u.display_name, u.bio,
 export const session: MiddlewareHandler<AppEnv> = async (c, next) => {
   c.set("user", null);
   c.set("sessionKind", null);
+  c.set("sessionAccess", null);
   const bearer = c.req.header("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1];
   const token = bearer ?? getCookie(c, SESSION_COOKIE);
   if (token) {
     const kind = bearer ? "app" : "web";
     const hash = await sha256(token);
     const row = await c.env.DB.prepare(
-      `SELECT ${USER_COLUMNS}, s.kind AS session_kind, s.expires_at, s.last_used_at
+      `SELECT ${USER_COLUMNS}, s.kind AS session_kind, s.access AS session_access, s.expires_at, s.last_used_at
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`,
     )
       .bind(hash)
-      .first<User & { session_kind: string; expires_at: number | null; last_used_at: number }>();
+      .first<User & { session_kind: string; session_access: "read" | "write"; expires_at: number | null; last_used_at: number }>();
     if (row && row.session_kind === kind && (row.expires_at === null || row.expires_at > now())) {
-      const { session_kind, expires_at, last_used_at, ...user } = row;
+      const { session_kind, session_access, expires_at, last_used_at, ...user } = row;
       c.set("user", user);
       c.set("sessionKind", kind);
+      c.set("sessionAccess", session_access);
       if (now() - last_used_at > 3600) {
         await c.env.DB.prepare("UPDATE sessions SET last_used_at = ? WHERE token_hash = ?").bind(now(), hash).run();
       }
@@ -51,6 +53,11 @@ export const sameOrigin: MiddlewareHandler<AppEnv> = async (c, next) => {
 
 export const apiUser: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (!c.get("user") || c.get("sessionKind") !== "app") return c.json({ error: "Link the Keyhop app first." }, 401);
+  await next();
+};
+
+export const apiWriter: MiddlewareHandler<AppEnv> = async (c, next) => {
+  if (c.get("sessionAccess") !== "write") return c.json({ error: "This linked app is read-only." }, 403);
   await next();
 };
 
@@ -207,17 +214,21 @@ auth.post("/api/device/start", async (c) => {
     c.header("Retry-After", "60");
     return c.json({ error: "Too many linking attempts. Wait a minute and try again." }, 429);
   }
-  const body = (await c.req.json().catch(() => ({}))) as { label?: unknown };
+  const body = (await c.req.json().catch(() => ({}))) as { label?: unknown; access?: unknown };
+  if (body.access !== undefined && body.access !== "read" && body.access !== "write") {
+    return c.json({ error: "Access must be read or write." }, 400);
+  }
   const label = typeof body.label === "string" ? body.label.trim().slice(0, 60) : "";
+  const access = body.access === "read" ? "read" : "write";
   const deviceCode = randomToken();
   const at = now();
   await c.env.DB.prepare("DELETE FROM device_links WHERE expires_at < ?").bind(at).run();
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = userCode();
     const inserted = await c.env.DB.prepare(
-      "INSERT OR IGNORE INTO device_links (device_hash, user_code, label, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
+      "INSERT OR IGNORE INTO device_links (device_hash, user_code, label, access, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
     )
-      .bind(await sha256(deviceCode), code, label || null, at, at + LINK_SECONDS)
+      .bind(await sha256(deviceCode), code, label || null, access, at, at + LINK_SECONDS)
       .run();
     if (inserted.meta.changes === 1) {
       const origin = new URL(c.req.url).origin;
@@ -243,12 +254,15 @@ auth.post("/api/device/token", async (c) => {
 
   const token = randomToken();
   const at = now();
-  await c.env.DB.batch([
+  const [created] = await c.env.DB.batch([
     c.env.DB.prepare(
-      "INSERT INTO sessions (id, token_hash, user_id, kind, label, created_at, last_used_at) VALUES (?, ?, ?, 'app', ?, ?, ?)",
-    ).bind(crypto.randomUUID(), await sha256(token), link.user_id, link.label, at, at),
-    c.env.DB.prepare("DELETE FROM device_links WHERE device_hash = ?").bind(hash),
+      `INSERT OR IGNORE INTO sessions (id, token_hash, user_id, kind, label, access, created_at, last_used_at)
+       SELECT ?, ?, user_id, 'app', label, access, ?, ? FROM device_links
+       WHERE device_hash = ? AND user_id IS NOT NULL AND expires_at > ?`,
+    ).bind(`device:${hash}`, await sha256(token), at, at, hash, at),
+    c.env.DB.prepare("DELETE FROM device_links WHERE device_hash = ? AND user_id IS NOT NULL").bind(hash),
   ]);
+  if (created.meta.changes !== 1) return c.json({ error: "expired" }, 410);
   const user = await c.env.DB.prepare(`SELECT ${USER_COLUMNS} FROM users u WHERE u.id = ?`).bind(link.user_id).first<User>();
   return c.json({ token, user: publicUser(user!) });
 });

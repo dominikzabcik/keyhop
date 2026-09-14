@@ -224,14 +224,14 @@ Everything else stays on your computer:
 | Saved logins | Login Keychain, service `app.keyhop.vault` | Secret Service (GNOME Keyring or KWallet) through `secret-tool`, or `0600` files in `~/.local/share/keyhop/vault` when no keyring runs | Files encrypted with the Data Protection API for your user, in `%LOCALAPPDATA%\Keyhop\vault` |
 | Accounts and usage history | `~/Library/Application Support/Keyhop` | `~/.local/share/keyhop` | `%LOCALAPPDATA%\Keyhop` |
 
-The account list and `cloud.json` hold no tokens. The Keyhop cloud app token uses the same protected secret store as saved logins, under service `app.keyhop.cloud`. The data folder is readable only by you. `KEYHOP_DATA_DIR` moves it, and `KEYHOP_SECRET_STORE=file` uses private files instead of a keyring.
+The account list and `cloud.json` hold no tokens. The desktop's Keyhop cloud app token uses the same protected secret store as saved logins, under service `app.keyhop.cloud`; the iOS companion keeps its separate read-only link in Keychain under service `app.keyhop.ios`, marked as available only on that device. The data folder is readable only by you. `KEYHOP_DATA_DIR` moves it, and `KEYHOP_SECRET_STORE=file` uses private files instead of a keyring.
 
 ## Security notes
 
 - On macOS, Keychain calls go through `/usr/bin/security`, so there are no access prompts. Writes pass the credential as an argument, where other processes running as your user can briefly see it. On Linux, logins reach `secret-tool` over stdin instead.
 - The dashboard is served on 127.0.0.1 only, by the Mac app for its own window and by `keyhop` elsewhere. Its window gets a random session key, every request must carry it, and requests from other websites or host names are refused. The `keyhop` server stops 15 minutes after its last window closes.
 - On macOS, the Cursor login link travels through Launch Services and never appears in a process list. On Linux and Windows it's passed to Cursor's own executable as an argument, where other processes running as your user can briefly see it.
-- Releases through v0.8.0 aren't notarized or certificate-signed. The release workflow now requires Apple notarization and Windows Authenticode signing before publishing; every download also remains covered by `SHA256SUMS`.
+- Releases through v0.9.0 aren't notarized or certificate-signed. The release workflow signs and notarizes when its Apple and Windows credentials are configured; every download remains covered by `SHA256SUMS`, which the updaters verify.
 - The endpoints are the private ones the tools call themselves, so a provider update can break Keyhop. If that happens, [open an issue](../../issues/new/choose). Report vulnerabilities privately, as described in [SECURITY.md](SECURITY.md).
 
 ## Uninstall
@@ -259,11 +259,11 @@ swift test                            # unit tests, on macOS, Linux and Windows
 ./scripts/package-windows.ps1         # Windows: keyhop.exe, keyhop-tray.exe and the runtime in a zip
 python3 scripts/render-manifests.py   # Scoop, AUR and winget manifests from a release's SHA256SUMS
 python3 scripts/update-pricing.py     # refresh model prices from models.dev
-xcodegen generate --spec ios/project.yml  # iOS: the companion's Xcode project, then build it there
+bash scripts/generate-ios-project.sh      # iOS: version, icon and Xcode project, then build it there
 ./scripts/render-art.sh               # re-render the icons for every system, the disk image background and the banner
 ```
 
-The iOS companion in [`ios/`](ios/) reads the leaderboard, your season and your quests. It builds and runs in the simulator; putting it on a phone needs an Apple Developer Program membership, so it is not released. Its project is generated from `ios/project.yml` rather than committed, and it compiles the Mac app's own cloud client, so both read the website the same way.
+The iOS companion in [`ios/`](ios/) reads the leaderboard, your season, quests and badges. It builds, tests and runs in the simulator; putting it on a phone needs an Apple Developer Program membership, so it is not released. Its project is generated from `ios/project.yml` rather than committed, and it compiles the Mac app's own cloud client, so both read the website the same way.
 
 The Linux build needs Swift 6.3.3 with the matching [static Linux SDK](https://www.swift.org/documentation/articles/static-linux-getting-started.html) and [nfpm](https://nfpm.goreleaser.com). The Windows build needs the Swift toolchain for Windows. See [CONTRIBUTING.md](CONTRIBUTING.md) for the code layout, the macOS debug flags and conventions.
 
@@ -272,7 +272,7 @@ The Linux build needs Swift 6.3.3 with the matching [static Linux SDK](https://w
 1. Bump `VERSION`, `AppVersion.number` in `Sources/Keyhop/Core/Version.swift`, and add a matching section to `CHANGELOG.md`.
 2. Commit, then tag and push: `git tag v$(cat VERSION) && git push origin v$(cat VERSION)`.
 
-The [Release workflow](.github/workflows/release.yml) tests and builds on macOS, Linux (x86_64 and aarch64) and Windows, publishes every download with one `SHA256SUMS` and the AUR PKGBUILD, and commits the Scoop, AUR and winget manifests for the release. Publishing fails closed unless the repository has `MACOS_CERTIFICATE_P12`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD`, `WINDOWS_CERTIFICATE_PFX` and `WINDOWS_CERTIFICATE_PASSWORD`; dry runs need none of them. Run it by hand first for a dry run that builds everything and publishes nothing.
+The [Release workflow](.github/workflows/release.yml) tests and builds on macOS, Linux (x86_64 and aarch64) and Windows, publishes every download with one `SHA256SUMS` and the AUR PKGBUILD, and commits the Scoop, AUR and winget manifests for the release. It signs and notarizes when the repository has `MACOS_CERTIFICATE_P12`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD`, `WINDOWS_CERTIFICATE_PFX` and `WINDOWS_CERTIFICATE_PASSWORD`; without them, it publishes checksum-protected unsigned builds. Run it by hand first for a dry run that builds everything and publishes nothing.
 
 [CI](.github/workflows/ci.yml) tests every push on all three systems. It installs the Linux packages on Fedora, Ubuntu, Debian and Arch Linux (and on Fedora and Ubuntu for aarch64), builds the PKGBUILD with `makepkg`, runs both installers from the fresh build, uninstalls on Windows, and captures the Linux and Windows trays with sample data.
 

@@ -109,8 +109,10 @@ struct SeasonView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
+                    problem
                     standing
                     quests
+                    badges
                     board
                 }
                 .padding(.horizontal, 16)
@@ -125,7 +127,7 @@ struct SeasonView: View {
                         if let url = store.link?.profileURL {
                             Link("Open my profile", destination: url)
                         }
-                        Button("Unlink this phone", role: .destructive) { store.unlink() }
+                        Button("Unlink this phone", role: .destructive) { Task { await store.unlink() } }
                     } label: {
                         Image(systemName: "ellipsis.circle").foregroundStyle(Brand.muted)
                     }
@@ -133,6 +135,17 @@ struct SeasonView: View {
             }
             .refreshable { await store.refresh() }
             .task { await store.refresh() }
+        }
+    }
+
+    @ViewBuilder private var problem: some View {
+        if let message = store.problem {
+            Card {
+                Text(message)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color(red: 0.93, green: 0.48, blue: 0.41))
+                    .padding(16)
+            }
         }
     }
 
@@ -171,6 +184,40 @@ struct SeasonView: View {
                 }
             }
             .padding(18)
+        }
+    }
+
+    @ViewBuilder private var badges: some View {
+        if let badges = store.quests?.badges, !badges.isEmpty {
+            Card {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Badges")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Brand.text)
+                        .padding(.bottom, 12)
+                    ForEach(Array(badges.enumerated()), id: \.element.key) { index, badge in
+                        if index > 0 { Divider().overlay(Brand.border).padding(.vertical, 10) }
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: badge.earned ? "checkmark.seal.fill" : "seal")
+                                .foregroundStyle(badge.earned ? Brand.good : Brand.subtle)
+                                .frame(width: 20)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(badge.name)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(Brand.text)
+                                Text(badge.note)
+                                    .font(.system(size: 12.5))
+                                    .foregroundStyle(Brand.muted)
+                            }
+                            Spacer(minLength: 8)
+                            Text(badge.earned ? "Earned" : "Locked")
+                                .font(.system(size: 12.5, weight: .medium))
+                                .foregroundStyle(badge.earned ? Brand.good : Brand.subtle)
+                        }
+                    }
+                }
+                .padding(18)
+            }
         }
     }
 

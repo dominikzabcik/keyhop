@@ -51,7 +51,7 @@ extension Commands {
                                      isPublic: granted.user.isPublic, linkedAt: Date())
                 try link.save()
                 print("Linked to @\(granted.user.login).")
-                var workspace = try Workspace.open()
+                let workspace = try Workspace.open()
                 _ = try? await workspace.tracker.ingestLocalLogs()
                 do {
                     let saved = try await CloudSync.run(&link, tracker: workspace.tracker)

@@ -44,6 +44,47 @@ jobs:
       - name: Test in the Workers runtime
         run: npm test
 
+  ios:
+    name: iOS
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate the project
+        run: xcodegen generate --spec ios/project.yml
+
+      # A simulator that exists on this runner, whichever iPhone it happens to have.
+      - name: Pick a simulator
+        run: |
+          name="$(xcrun simctl list devices available --json \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["name"] for v in d.values() for x in v if x["name"].startswith("iPhone")))')"
+          echo "Using $name"
+          echo "SIMULATOR=$name" >> "$GITHUB_ENV"
+
+      - name: Build
+        working-directory: ios
+        run: |
+          xcodebuild -project Keyhop.xcodeproj -scheme Keyhop \
+            -destination "platform=iOS Simulator,name=$SIMULATOR" \
+            -derivedDataPath build build | tail -5
+
+      # A build that runs is worth more than one that only compiles: the app is launched with sample
+      # data and has to still be alive a moment later.
+      - name: Launch it
+        working-directory: ios
+        run: |
+          xcrun simctl boot "$SIMULATOR" || true
+          xcrun simctl bootstatus "$SIMULATOR" -b
+          xcrun simctl install booted build/Build/Products/Debug-iphonesimulator/Keyhop.app
+          xcrun simctl launch booted app.keyhop.ios --sample
+          sleep 5
+          xcrun simctl spawn booted launchctl list | grep -q app.keyhop.ios
+          echo "Keyhop is running in the simulator."
+
   macos:
     name: macOS
     runs-on: macos-15

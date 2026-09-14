@@ -9,3 +9,5 @@ __pycache__/
 *.xcworkspace/
 DerivedData/
 xcuserdata/
+# xcodegen writes this from project.yml, so it is not a source.
+ios/Sources/Info.plist

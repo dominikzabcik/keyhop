@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.0]
+
+- Smart Hop names the account with the most runway for each tool. It scores every saved account on the room left on its tightest limit (three quarters of the score), how much of its budget is left (one quarter), a bonus when that limit resets within twelve hours, and a penalty when recent use projects an early run-out. `keyhop recommend [--tool <tool>]` prints it with the reason, the menu and the tray point at it, and a limit alert now names an account that still has room instead of only warning you.
+- Keyhop speaks MCP, so a coding agent can read its own runway. `keyhop mcp` serves three tools over stdio: `keyhop_status` (saved and active accounts, limits, budgets, alerts and recommendations), `keyhop_usage` (cached token, request and API value history by range and tool) and `keyhop_recommendation` (the best current account). All three are read-only, and none of them can see prompts or source code.
+- Quests in Keyhop's window. The Leaderboard section shows today's and this week's goals with their progress, the same six the website counts.
+- Your leaderboard token moves out of `cloud.json` into the system secret store, alongside your provider logins.
+- Linking a computer is rate limited on the website: ten starts and thirty checks a minute.
+
 ## [0.8.0]
 
 - Switchr is now **Keyhop**, at [keyhop.app](https://keyhop.app). The app, the `keyhop` command and the website carry a new mark: a stem, the joint that makes it a K, and two arms, with the upper one hopped clear. In the menu bar those two arms fill as your two nearest limits do. This is a clean break: Keyhop keeps its own data folder and saved logins, so add your accounts once and sign in to the leaderboard again with `keyhop cloud login`.

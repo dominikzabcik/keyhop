@@ -280,6 +280,8 @@ jobs:
           | Any Linux | `keyhop-@V@-linux-<arch>.tar.gz`, then `./install-local.sh` |
           | Windows 10 and 11 | `keyhop-@V@-windows-x86_64.zip` (Windows on Arm runs it too), or `scoop install keyhop` from this repository's bucket |
 
+          `Keyhop.dmg`, `Keyhop-Linux-x86_64.tar.gz`, `Keyhop-Linux-aarch64.tar.gz` and `Keyhop-Windows-x86_64.zip` always point at the newest release, so a link to one of them keeps working. The versioned names above pin this release.
+
           Every file is listed with its SHA-256 in `SHA256SUMS`.
           NOTES
           } | sed 's/^          //' | sed "s/@V@/$VERSION/g" > dist-notes.md

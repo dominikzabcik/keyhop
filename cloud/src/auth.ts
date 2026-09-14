@@ -8,7 +8,7 @@ const OAUTH_COOKIE = "keyhop_oauth";
 const WEB_SESSION_SECONDS = 30 * 24 * 3600;
 const LINK_SECONDS = 10 * 60;
 
-const USER_COLUMNS = "u.id, u.github_id, u.login, u.name, u.avatar_url, u.public, u.created_at";
+const USER_COLUMNS = "u.id, u.github_id, u.login, u.name, u.display_name, u.bio, u.link, u.avatar_url, u.public, u.created_at";
 
 /** Reads who is signed in: a session cookie in the browser, or a bearer token from the Keyhop app. */
 export const session: MiddlewareHandler<AppEnv> = async (c, next) => {

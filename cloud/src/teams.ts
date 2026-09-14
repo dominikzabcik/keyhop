@@ -56,7 +56,7 @@ export async function teamForMember(db: D1Database, slug: string, userId: string
 export async function members(db: D1Database, teamId: string) {
   const { results } = await db
     .prepare(
-      `SELECT u.id, u.login, u.name, u.avatar_url, u.public, m.role, m.joined_at FROM team_members m
+      `SELECT u.id, u.login, COALESCE(u.display_name, u.name) AS name, u.avatar_url, u.public, m.role, m.joined_at FROM team_members m
        JOIN users u ON u.id = m.user_id WHERE m.team_id = ? ORDER BY m.role = 'owner' DESC, u.login COLLATE NOCASE`,
     )
     .bind(teamId)

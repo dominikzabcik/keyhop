@@ -327,7 +327,7 @@ pages.get("/season/:id", (c) => {
 
 pages.get("/u/:login", async (c) => {
   const login = c.req.param("login");
-  const person = await c.env.DB.prepare("SELECT id, github_id, login, name, avatar_url, public, created_at FROM users WHERE login = ? COLLATE NOCASE")
+  const person = await c.env.DB.prepare("SELECT id, github_id, login, name, display_name, bio, link, avatar_url, public, created_at FROM users WHERE login = ? COLLATE NOCASE")
     .bind(login)
     .first<User>();
   const viewer = c.get("user");
@@ -343,7 +343,7 @@ pages.get("/u/:login", async (c) => {
   const earned = badges.filter((entry) => entry.earned);
   const place = season.find((entry) => entry.userId === person.id);
   const url = `${new URL(c.req.url).origin}/u/${person.login}`;
-  const display = person.name || person.login;
+  const display = person.display_name || person.name || person.login;
   const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
   return render(
     c,
@@ -354,6 +354,8 @@ pages.get("/u/:login", async (c) => {
         <div class="grow">
           <h1>${display}</h1>
           <p class="lede">@${person.login} · on Keyhop since ${monthYear(person.created_at)}${person.public !== 1 ? html` · <span class="badge">Private</span>` : ""}</p>
+          ${person.bio ? html`<p class="bio">${person.bio}</p>` : ""}
+          ${person.link ? html`<p class="bio"><a class="profile-link" href="${person.link}" rel="nofollow noopener ugc" target="_blank">${person.link.replace(/^https?:\/\//, "").replace(/\/$/, "")}</a></p>` : ""}
         </div>
         ${person.public === 1 ? html`<label class="share">Share this profile<input class="field mono" readonly value="${url}"></label>` : ""}
       </section>
@@ -543,6 +545,13 @@ pages.get("/settings", pageUser, async (c) => {
         <div class="card">
           <div class="card-head"><h2>Profile</h2></div>
           <form class="form card-body" method="post" action="/settings/profile">
+            <label>Display name<input class="field" name="display_name" maxlength="40" autocomplete="off"
+              placeholder="${user.name ?? user.login}" value="${user.display_name ?? ""}"></label>
+            <label>Bio<input class="field" name="bio" maxlength="160" autocomplete="off"
+              placeholder="One line about you" value="${user.bio ?? ""}"></label>
+            <label>Link<input class="field" name="link" maxlength="200" autocomplete="off" inputmode="url"
+              placeholder="your-site.dev" value="${user.link ?? ""}"></label>
+            ${c.req.query("error") === "link" ? html`<p class="error-text">That link isn't a web address. Use one starting with http or https.</p>` : ""}
             <label class="check"><input type="checkbox" name="public" ${user.public === 1 ? raw("checked") : ""}>
               <span>Show me on the global leaderboard<small>Your profile at /u/${user.login} becomes public. Teams you join always see your totals.</small></span></label>
             <div><button class="btn" type="submit">Save</button></div>

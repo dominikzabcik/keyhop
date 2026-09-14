@@ -152,6 +152,9 @@ a.place-card:hover { border-color: var(--border-strong); }
 .stat .label { color: var(--muted); font-size: 13px; }
 .stat .value { margin-top: 6px; font-size: 24px; font-weight: 620; letter-spacing: -.01em; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .stat .foot { margin-top: 4px; font-size: 12.5px; color: var(--subtle); }
+.bio { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
+.profile-link { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border-strong); }
+.profile-link:hover { border-bottom-color: var(--text); }
 .profile-head { display: flex; align-items: center; gap: 18px; padding: 20px; flex-wrap: wrap; }
 .profile-head .grow { flex: 1; min-width: 200px; }
 .share { display: grid; gap: 6px; width: min(340px, 100%); font-size: 12.5px; color: var(--subtle); }

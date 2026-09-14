@@ -90,7 +90,7 @@ export async function leaderboard(
   }
   const { results } = await db
     .prepare(
-      `SELECT d.user_id, u.login, u.name, u.avatar_url, u.public, SUM(d.tokens) AS tokens, SUM(d.cost_micros) AS cost_micros,
+      `SELECT d.user_id, u.login, COALESCE(u.display_name, u.name) AS name, u.avatar_url, u.public, SUM(d.tokens) AS tokens, SUM(d.cost_micros) AS cost_micros,
        SUM(d.requests) AS requests, COUNT(DISTINCT CASE WHEN d.tokens > 0 THEN d.day END) AS active_days, ${TOOL_SUMS}
      FROM daily_usage d JOIN users u ON u.id = d.user_id
      WHERE ${where.join(" AND ")}

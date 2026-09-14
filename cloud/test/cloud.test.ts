@@ -5,6 +5,7 @@ import { streaks } from "../src/stats";
 import { currentSeason, daysLeft, nextStep, seasonRange, tierFor } from "../src/seasons";
 import { parseUsage } from "../src/usage";
 import { badgesFrom, questsFrom } from "../src/quests";
+import { webLink } from "../src/account";
 
 const BASE = "http://localhost";
 
@@ -27,12 +28,16 @@ function form(path: string, cookie: string, fields: Record<string, string> = {},
 }
 
 /** Links an app the way Keyhop does and returns its bearer token. */
+/** Each linked app comes from its own address, so one test's linking never uses up another's allowance. */
+let linkedApps = 0;
+
 async function linkApp(cookie: string): Promise<string> {
-  const start = await call("/api/device/start", { method: "POST", body: JSON.stringify({ label: "Test Mac" }) });
+  const from = { "cf-connecting-ip": `10.0.0.${++linkedApps}` };
+  const start = await call("/api/device/start", { method: "POST", headers: from, body: JSON.stringify({ label: "Test Mac" }) });
   const { deviceCode, userCode } = (await start.json()) as { deviceCode: string; userCode: string };
   const approved = await form("/link", cookie, { code: userCode });
   expect(approved.headers.get("location")).toBe("/link?done=1");
-  const token = await call("/api/device/token", { method: "POST", body: JSON.stringify({ deviceCode }) });
+  const token = await call("/api/device/token", { method: "POST", headers: from, body: JSON.stringify({ deviceCode }) });
   expect(token.status).toBe(200);
   return ((await token.json()) as { token: string }).token;
 }
@@ -411,5 +416,59 @@ describe("link abuse controls", () => {
     }
     expect(response?.status).toBe(429);
     expect(response?.headers.get("retry-after")).toBe("10");
+  });
+});
+
+describe("profiles", () => {
+  it("stores a link only when it is a web address", () => {
+    expect(webLink("keyhop.app")).toBe("https://keyhop.app/");
+    expect(webLink("https://example.dev/me")).toBe("https://example.dev/me");
+    expect(webLink("  ")).toBeNull();
+    expect(webLink(undefined)).toBeNull();
+    expect(webLink("javascript:alert(1)")).toBeNull();
+    expect(webLink("mailto:me@example.dev")).toBeNull();
+  });
+
+  it("shows the chosen name, keeps the GitHub one, and serves a card", async () => {
+    const cookie = await signIn("nadia");
+    const token = await linkApp(cookie);
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    await upload(token, [{ day: today(), tool: "claude", tokens: 4200, cost: 1, requests: 5 }]);
+
+    const saved = await form("/settings/profile", cookie, { public: "on", display_name: "Nadia K.", bio: "Ships at night.", link: "example.dev" });
+    expect(saved.headers.get("location")).toBe("/settings?saved=1");
+
+    const page = await (await call("/u/nadia")).text();
+    expect(page).toContain("Nadia K.");
+    expect(page).toContain("Ships at night.");
+    expect(page).toContain("https://example.dev/");
+
+    const card = await call("/u/nadia/card.svg");
+    expect(card.status).toBe(200);
+    expect(card.headers.get("content-type")).toContain("image/svg+xml");
+    const svg = await card.text();
+    expect(svg).toContain("<svg");
+    expect(svg).toContain("Nadia K.");
+  });
+
+  it("refuses a link that is not http or https, and keeps the rest", async () => {
+    const cookie = await signIn("oscar");
+    const rejected = await form("/settings/profile", cookie, { public: "on", display_name: "Oscar", link: "javascript:alert(1)" });
+    expect(rejected.headers.get("location")).toBe("/settings?error=link");
+  });
+
+  it("keeps a private profile's card private", async () => {
+    await signIn("quinn");
+    expect((await call("/u/quinn/card.svg")).status).toBe(404);
+  });
+
+  it("escapes a name in the card rather than letting it become markup", async () => {
+    const cookie = await signIn("rex");
+    const token = await linkApp(cookie);
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    await form("/settings/profile", cookie, { public: "on", display_name: '<script>x</script>' });
+    const svg = await (await call("/u/rex/card.svg")).text();
+    expect(svg).not.toContain("<script>");
+    expect(svg).toContain("&lt;script&gt;");
   });
 });

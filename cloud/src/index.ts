@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { account } from "./account";
 import { auth, sameOrigin, session } from "./auth";
+import { card } from "./card";
 import { randomToken } from "./crypto";
 import type { AppEnv } from "./env";
 import { notFound, pages } from "./pages";
@@ -30,6 +31,7 @@ app.use("*", sameOrigin);
 app.route("/", site);
 app.route("/", auth);
 app.route("/", usage);
+app.route("/", card);
 app.route("/", quests);
 app.route("/", seasons);
 app.route("/", teams);

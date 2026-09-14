@@ -13,7 +13,12 @@ export interface User {
   id: string;
   github_id: number;
   login: string;
+  /** From GitHub, refreshed at every sign-in. */
   name: string | null;
+  /** Chosen here, and left alone by that refresh. */
+  display_name: string | null;
+  bio: string | null;
+  link: string | null;
   avatar_url: string | null;
   public: number;
   created_at: number;

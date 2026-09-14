@@ -28,9 +28,32 @@ account.post("/welcome", pageUser, async (c) => {
   return c.redirect(safeNext(String(form.next ?? "")));
 });
 
+/** Keeps a field within its limit, and turns an empty one back into nothing. */
+function text(value: unknown, limit: number): string | null {
+  const trimmed = String(value ?? "").trim().replace(/\s+/g, " ").slice(0, limit);
+  return trimmed.length === 0 ? null : trimmed;
+}
+
+/** A link is stored only when it is an ordinary web address. */
+export function webLink(value: unknown): string | null {
+  const raw = text(value, 200);
+  if (!raw) return null;
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const url = new URL(candidate);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 account.post("/settings/profile", pageUser, async (c) => {
   const form = await c.req.parseBody();
-  await c.env.DB.prepare("UPDATE users SET public = ? WHERE id = ?").bind(form.public === "on" ? 1 : 0, c.get("user")!.id).run();
+  const link = webLink(form.link);
+  if (form.link && String(form.link).trim() !== "" && link === null) return c.redirect("/settings?error=link");
+  await c.env.DB.prepare("UPDATE users SET public = ?, display_name = ?, bio = ?, link = ? WHERE id = ?")
+    .bind(form.public === "on" ? 1 : 0, text(form.display_name, 40), text(form.bio, 160), link, c.get("user")!.id)
+    .run();
   return c.redirect("/settings?saved=1");
 });
 

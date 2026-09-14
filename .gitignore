@@ -3,3 +3,9 @@
 .swiftpm/
 build/
 __pycache__/
+
+# Xcode, for the iOS app. The project is generated from project.yml, so it is not committed.
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+xcuserdata/

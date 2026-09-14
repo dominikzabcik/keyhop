@@ -158,7 +158,8 @@ Link Keyhop with your GitHub account to compare usage with friends and teams: in
 
 - **Global leaderboard:** ranked by tokens, API value or requests, for today, 7 days, 30 days or all time. Only people who make their profile public appear.
 - **Teams:** create a team on the website and share its invite link. Members see each other's totals, even with private profiles.
-- **Profiles:** a page at `/u/<login>` with a year of activity, streaks, tools and your weekly rank, ready to share.
+- **Ranked seasons:** every calendar month is a season, and the tokens you use in it place you on a ladder of six tiers from Bronze to Master, each with three divisions. Finished seasons stay readable, and quests and badges are counted the same way: from the daily totals themselves, so nothing can drift.
+- **Profiles:** a page at `/u/<login>` with a year of activity, streaks, tools, badges and your weekly rank. Set a display name, a bio and a link in Settings, and share the card at `/u/<login>/card.svg`.
 - **What's sent:** tokens, API value and requests per tool per day. Never prompts, emails, account names or models. `keyhop cloud logout` unlinks a computer, and deleting your account on the website removes everything it holds.
 
 See the leaderboard at [keyhop.app](https://keyhop.app/leaderboard). The service lives in [`cloud/`](cloud/README.md).
@@ -258,8 +259,11 @@ swift test                            # unit tests, on macOS, Linux and Windows
 ./scripts/package-windows.ps1         # Windows: keyhop.exe, keyhop-tray.exe and the runtime in a zip
 python3 scripts/render-manifests.py   # Scoop, AUR and winget manifests from a release's SHA256SUMS
 python3 scripts/update-pricing.py     # refresh model prices from models.dev
+xcodegen generate --spec ios/project.yml   # iOS companion: generate its Xcode project, then build it in Xcode
 ./scripts/render-art.sh               # re-render the icons for every system, the disk image background and the banner
 ```
+
+The iOS companion in [`ios/`](ios/) reads the leaderboard, your season and your quests. It builds and runs in the simulator; putting it on a phone needs an Apple Developer Program membership, so it is not released. Its project is generated from `ios/project.yml` rather than committed, and it compiles the Mac app's own cloud client, so both read the website the same way.
 
 The Linux build needs Swift 6.3.3 with the matching [static Linux SDK](https://www.swift.org/documentation/articles/static-linux-getting-started.html) and [nfpm](https://nfpm.goreleaser.com). The Windows build needs the Swift toolchain for Windows. See [CONTRIBUTING.md](CONTRIBUTING.md) for the code layout, the macOS debug flags and conventions.
 

@@ -34,8 +34,7 @@ enum WelcomeWindow {
             window.center()
             self.window = window
         }
-        // Closing the window counts as seen; only the move prompt comes back.
-        if markSeen && !canMove { UserDefaults.standard.set(true, forKey: seenKey) }
+        // Closing the window counts as seen, wherever in the two steps someone stops.
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }
@@ -46,19 +45,45 @@ enum WelcomeWindow {
         window = nil
         store.pointAtMenuBar()
         // A real first run goes on into Keyhop's window; the preview just closes.
-        if markSeen { AppWindow.show() }
+        if markSeen { AppWindow.show(section: WelcomeView.leaderboardWanted ? "leaderboard" : "overview") }
+        WelcomeView.leaderboardWanted = false
     }
 }
 
 struct WelcomeView: View {
+    /// What Keyhop grew into after the first screen was written. Named here so the window and the
+    /// changelog say the same things.
+    fileprivate struct Capability: Identifiable {
+        let icon: String
+        let title: String
+        let detail: String
+        var id: String { title }
+    }
+
+    fileprivate static let capabilities = [
+        Capability(icon: "usage", title: "Limits and usage", detail: "What each account used, and what it cost."),
+        Capability(icon: "refresh", title: "Smart Hop", detail: "The account with the most runway, named for you."),
+        Capability(icon: "leaderboard", title: "Leaderboard", detail: "Seasons, quests and badges with friends."),
+        Capability(icon: "settings", title: "For your agents", detail: "keyhop mcp, read-only, over stdio."),
+    ]
+
     @EnvironmentObject private var store: AccountStore
     var canMove = Relocator.canMove
     let dismiss: () -> Void
 
     @State private var openAtLogin = true
     @State private var problem: String?
+    /// Which step to open on. The first run starts at the beginning; snapshots ask for either.
+    var startAtMore = false
+    @State private var showingMore = false
+    /// Read by the window when the flow ends, to choose which section opens.
+    static var leaderboardWanted = false
 
     var body: some View {
+        if showingMore || startAtMore { more } else { first }
+    }
+
+    private var first: some View {
         VStack(spacing: 0) {
             PixelMark(animated: true)
                 .frame(width: 52, height: 52)
@@ -94,7 +119,7 @@ struct WelcomeView: View {
             }
 
             Button(action: primaryAction) {
-                Text(canMove ? "Move to Applications" : "Open Keyhop")
+                Text(canMove ? "Move to Applications" : "Continue")
             }
             .buttonStyle(AppButtonStyle(kind: .primary, size: .large, fullWidth: true))
             .keyboardShortcut(.defaultAction)
@@ -114,6 +139,80 @@ struct WelcomeView: View {
         .environment(\.colorScheme, .dark)
     }
 
+    /// The second step: what Keyhop does once the accounts are in, and the one thing that needs a
+    /// choice. Nothing here reaches the network; the leaderboard opens Keyhop's own settings.
+    private var more: some View {
+        VStack(spacing: 0) {
+            PixelMark()
+                .frame(width: 32, height: 32)
+                .padding(.top, 34)
+
+            Text("What else Keyhop does")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(Brand.text)
+                .padding(.top, 14)
+
+            VStack(spacing: 0) {
+                ForEach(Array(Self.capabilities.enumerated()), id: \.element.id) { index, capability in
+                    if index > 0 { RowDivider() }
+                    HStack(alignment: .top, spacing: 12) {
+                        Icon(capability.icon, size: 15)
+                            .padding(.top, 1)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(capability.title)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Brand.text)
+                            Text(capability.detail)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Brand.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 9)
+                    .padding(.horizontal, 14)
+                }
+            }
+            .card()
+            .padding(.top, 18)
+            .padding(.horizontal, 32)
+
+            Spacer(minLength: 12)
+
+            Button { finish(openingLeaderboard: true) } label: {
+                Text("Set up the leaderboard")
+            }
+            .buttonStyle(AppButtonStyle(kind: .primary, size: .large, fullWidth: true))
+            .keyboardShortcut(.defaultAction)
+            .padding(.horizontal, 32)
+
+            Button { finish(openingLeaderboard: false) } label: {
+                Text("Not now")
+            }
+            .buttonStyle(AppButtonStyle(kind: .ghost, size: .large, fullWidth: true))
+            .padding(.horizontal, 32)
+            .padding(.top, 6)
+
+            Text("Signing in is optional. Keyhop sends daily totals, nothing else.")
+                .font(.system(size: 11.5))
+                .foregroundStyle(Brand.subtle)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 32)
+                .padding(.top, 12)
+        }
+        .padding(.bottom, 26)
+        .frame(width: 420, height: 500)
+        .background(Brand.background)
+        .environment(\.colorScheme, .dark)
+    }
+
+    private func finish(openingLeaderboard: Bool) {
+        // Held on the type, since the window reads it after this view is gone.
+        Self.leaderboardWanted = openingLeaderboard
+        dismiss()
+    }
+
     private var footnote: String {
         canMove ? "Keyhop copies itself there and reopens." : "Keyhop also stays in the menu bar."
     }
@@ -128,7 +227,7 @@ struct WelcomeView: View {
             return
         }
         if openAtLogin { try? SMAppService.mainApp.register() }
-        dismiss()
+        showingMore = true
     }
 }
 

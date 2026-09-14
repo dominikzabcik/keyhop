@@ -132,6 +132,8 @@ enum Snapshot {
         write(MenuView().environmentObject(store).environmentObject(tracker).environment(\.staticSnapshot, true).clipShape(corners),
               to: "\(prefix)-menu.png")
         write(WelcomeView(canMove: false, dismiss: {}).environmentObject(store).clipShape(corners), to: "\(prefix)-welcome.png")
+        write(WelcomeView(canMove: false, dismiss: {}, startAtMore: true).environmentObject(store).clipShape(corners),
+              to: "\(prefix)-welcome-more.png")
     }
 
     private static func write(_ view: some View, to path: String) {

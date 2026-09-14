@@ -259,7 +259,7 @@ swift test                            # unit tests, on macOS, Linux and Windows
 ./scripts/package-windows.ps1         # Windows: keyhop.exe, keyhop-tray.exe and the runtime in a zip
 python3 scripts/render-manifests.py   # Scoop, AUR and winget manifests from a release's SHA256SUMS
 python3 scripts/update-pricing.py     # refresh model prices from models.dev
-xcodegen generate --spec ios/project.yml   # iOS companion: generate its Xcode project, then build it in Xcode
+xcodegen generate --spec ios/project.yml  # iOS: the companion's Xcode project, then build it there
 ./scripts/render-art.sh               # re-render the icons for every system, the disk image background and the banner
 ```
 

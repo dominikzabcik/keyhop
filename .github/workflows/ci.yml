@@ -57,19 +57,26 @@ jobs:
       - name: Generate the project
         run: bash scripts/generate-ios-project.sh
 
-      # A simulator that exists on this runner, whichever iPhone it happens to have.
+      # A simulator that exists on this runner, whichever iPhone it happens to have. Keep its ID:
+      # names can repeat when a runner has more than one iOS runtime installed.
       - name: Pick a simulator
         run: |
-          name="$(xcrun simctl list devices available --json \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["name"] for v in d.values() for x in v if x["name"].startswith("iPhone")))')"
-          echo "Using $name"
-          echo "SIMULATOR=$name" >> "$GITHUB_ENV"
+          python3 <<'PY' >> "$GITHUB_ENV"
+          import json
+          import subprocess
+
+          output = subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "--json"])
+          devices = json.loads(output)["devices"]
+          phone = next(item for runtime in devices.values() for item in runtime if item["name"].startswith("iPhone"))
+          print("SIMULATOR_ID=" + phone["udid"])
+          PY
+          echo "Selected an available iPhone simulator by UDID."
 
       - name: Build and test
         working-directory: ios
         run: |
           xcodebuild -project Keyhop.xcodeproj -scheme Keyhop \
-            -destination "platform=iOS Simulator,name=$SIMULATOR" \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
             -derivedDataPath build test | tail -8
 
       # A build that runs is worth more than one that only compiles: the app is launched with sample
@@ -77,8 +84,8 @@ jobs:
       - name: Launch it
         working-directory: ios
         run: |
-          xcrun simctl boot "$SIMULATOR" || true
-          xcrun simctl bootstatus "$SIMULATOR" -b
+          xcrun simctl boot "$SIMULATOR_ID" || true
+          xcrun simctl bootstatus "$SIMULATOR_ID" -b
           xcrun simctl install booted build/Build/Products/Debug-iphonesimulator/Keyhop.app
           xcrun simctl launch booted app.keyhop.ios --sample
           sleep 5

@@ -237,7 +237,7 @@ struct CloudClient {
             request.httpBody = try JSONEncoder().encode(body)
         }
         do {
-            return try await HTTP.send(request)
+            return try await Self.send(request)
         } catch {
             throw CloudError(kind: .server, message: "Couldn't reach Keyhop cloud: \(error.localizedDescription)")
         }
@@ -245,6 +245,21 @@ struct CloudClient {
 
     private func send(_ method: String, _ path: String) async throws -> (Data, Int) {
         try await send(method, path, body: Optional<[String: String]>.none)
+    }
+
+    /// The one request this file makes, on the completion-handler API every Foundation has. The Mac
+    /// app's HTTP helper carries a curl fallback for static Linux builds; nothing here needs it, and
+    /// keeping the call local is what lets another platform compile this file alone.
+    private static func send(_ request: URLRequest) async throws -> (Data, Int) {
+        try await withCheckedThrowingContinuation { continuation in
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: (data ?? Data(), (response as? HTTPURLResponse)?.statusCode ?? 0))
+                }
+            }.resume()
+        }
     }
 
     private func problem(_ data: Data, _ status: Int) -> Error {

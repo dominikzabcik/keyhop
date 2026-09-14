@@ -62,7 +62,7 @@ enum AlertRules {
             alerts.append(AlertCandidate(
                 key: "budget:\(budget.scope):\(periodStart):\(Int(threshold * 100))",
                 title: threshold >= 1 ? "\(name) is over its \(budget.period.adjective) budget" : "\(name) used 80% of its \(budget.period.adjective) budget",
-                body: "\(Numbers.usd(spent)) of \(Numbers.usd(budget.amount)) at API prices.",
+                body: "\(Numbers.usd(spent)) of \(Numbers.usd(budget.amount)).",
                 switchTo: nil
             ))
         }

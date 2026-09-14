@@ -354,7 +354,7 @@ enum Commands {
                 print("No budgets yet. Set one with `keyhop budget set all 200 --period month`.")
             } else {
                 for document in documents {
-                    print("\(document.name): \(Numbers.usd(document.spent)) of \(Numbers.usd(document.amount)) per \(document.period) at API prices")
+                    print("\(document.name): \(Numbers.usd(document.spent)) of \(Numbers.usd(document.amount)) per \(document.period)")
                 }
             }
 
@@ -370,7 +370,7 @@ enum Commands {
             }
             let scope = try budgetScope(target, tool: tool, accounts: accounts)
             try await workspace.tracker.setBudget(Budget(scope: scope.id, amount: amount, period: period), scope: scope.id)
-            print("Budget for \(scope.name): \(Numbers.usd(amount)) \(period.title) at API prices. Keyhop warns at 80% and 100%.")
+            print("Budget for \(scope.name): \(Numbers.usd(amount)) \(period.title), counting what you are charged. Keyhop warns at 80% and 100%.")
 
         case "clear":
             let tool = try toolOption(&args)

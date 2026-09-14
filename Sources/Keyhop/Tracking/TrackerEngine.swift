@@ -207,13 +207,21 @@ actor TrackerEngine {
         return budgets
     }
 
+    /// What a budget counts: what the provider actually charged where it reports that, and the value
+    /// of the tokens at standard API prices everywhere else. Cursor's on-demand usage is the first
+    /// kind, and counting it at API prices would let real money go by unnoticed.
+    static func charged(_ totals: Totals) -> Double {
+        max(totals.billed, totals.cost)
+    }
+
     /// What each budget has used so far in its current period.
     func budgetSpend(for budgets: [Budget], now: Date, sole: [Provider: UUID]) throws -> [String: Double] {
         var spend: [String: Double] = [:]
         for period in Set(budgets.map(\.period)) {
             let totals = try accountTotals(in: period.interval(containing: now), sole: sole)
             for budget in budgets where budget.period == period {
-                spend[budget.scope] = budget.account.map { totals.byAccount[$0]?.cost ?? 0 } ?? totals.all.cost
+                spend[budget.scope] = budget.account.map { totals.byAccount[$0].map(Self.charged) ?? 0 }
+                    ?? Self.charged(totals.all)
             }
         }
         return spend

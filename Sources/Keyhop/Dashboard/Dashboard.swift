@@ -814,7 +814,7 @@ actor DashboardSession {
         }
         guard let period = BudgetPeriod(rawValue: body.period ?? "month") else { throw UsageError("Choose day, week or month.") }
         try await workspace.tracker.setBudget(Budget(scope: scope, amount: amount, period: period), scope: scope)
-        return DashboardAction(message: "Budget for \(name): \(Numbers.usd(amount)) \(period.title) at API prices.", note: nil)
+        return DashboardAction(message: "Budget for \(name): \(Numbers.usd(amount)) \(period.title).", note: nil)
     }
 
     // MARK: Appearance

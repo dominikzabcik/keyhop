@@ -134,4 +134,11 @@ final class TrackerEngineTests: XCTestCase {
         let cleared = try await engine.budgets()
         XCTAssertTrue(cleared.isEmpty)
     }
+
+    func testABudgetCountsWhatTheProviderChargedWhenItSaysSo() {
+        // Cursor reports what it really charged for on-demand usage; the rest is valued at API prices.
+        XCTAssertEqual(TrackerEngine.charged(Totals(cost: 4, billed: 11)), 11)
+        XCTAssertEqual(TrackerEngine.charged(Totals(cost: 7, billed: 0)), 7)
+        XCTAssertEqual(TrackerEngine.charged(Totals()), 0)
+    }
 }

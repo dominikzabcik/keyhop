@@ -943,7 +943,7 @@ select.field option { background: var(--raised); }
       <div class="row budget-row">
         ${budgetRow(b).replace(/^<div class="row budget-row">|<\/div>\s*$/g, "")}
         ${isStatic ? "" : `<div class="row-actions" style="justify-content:flex-start;margin-left:-10px"><button class="btn sm ghost" data-action="edit-budget" data-scope="${esc(b.scope)}">Change</button><button class="btn sm ghost danger" data-action="delete-budget" data-scope="${esc(b.scope)}">Remove</button></div>`}
-      </div>`).join("")}</div>` : `<p class="empty">No budgets yet. Budgets count usage at API prices and warn you at 80% and 100%.</p>`;
+      </div>`).join("")}</div>` : `<p class="empty">No budgets yet. A budget counts what you are charged where a provider reports it, the tokens at API prices elsewhere, and warns you at 80% and 100%.</p>`;
     const form = isStatic ? "" : `<section class="card">
       <div class="card-head"><h2>${editing ? "Change budget" : "New budget"}</h2></div>
       <form class="form" data-form="budget">

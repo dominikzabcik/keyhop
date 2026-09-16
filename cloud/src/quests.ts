@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { apiUser } from "./auth";
-import { type AppEnv, type Tool, TOOLS, addDays, today } from "./env";
+import { type AppEnv, type Tool, MEASURED_TOOLS, addDays, today } from "./env";
 import { currentSeason, seasonBoard, seasonOf, tierFor } from "./seasons";
 import { streaks } from "./stats";
 
@@ -98,7 +98,7 @@ export function questsFrom(rows: DayRow[], reference = today()): Quest[] {
       Math.max(yesterday.tokens, 1),
     ),
     quest("five-days", "Five days", "Use Keyhop on five days this week.", "week", weekActive, 5),
-    quest("every-tool", "Every tool", "Use all four tools this week.", "week", weekTools.size, TOOLS.length),
+    quest("every-tool", "Every tool", `Use all ${MEASURED_TOOLS.length} tracked tools this week.`, "week", weekTools.size, MEASURED_TOOLS.length),
     quest(
       "beat-last-week",
       "Beat last week",
@@ -143,7 +143,7 @@ export function badgesFrom(rows: DayRow[], podium: { top3: boolean; bestTier: st
   const active = new Set([...days.entries()].filter(([, entry]) => entry.tokens > 0).map(([day]) => day));
   const { longest } = streaks(active, reference);
   const allTime = [...days.values()].reduce((sum, entry) => sum + entry.tokens, 0);
-  const allTools = [...days.entries()].find(([, entry]) => entry.tools.size === TOOLS.length);
+  const allTools = [...days.entries()].find(([, entry]) => entry.tools.size === MEASURED_TOOLS.length);
   const biggest = [...days.entries()].sort(([, a], [, b]) => b.tokens - a.tokens)[0];
   const firstDay = [...active].sort()[0];
 

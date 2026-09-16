@@ -13,7 +13,7 @@ export function landingPage(): Html {
       <div class="hero-copy">
         <span class="landing-kicker">Free and open source</span>
         <h1>Every account.<br><span>One hop away.</span></h1>
-        <p>Switch Claude Code, Cursor, Codex and Gemini CLI accounts without breaking flow. Keyhop keeps supported limits, local usage and budgets in one quiet app.</p>
+        <p>Switch accounts across six AI tools without breaking flow. Keyhop keeps supported limits, local usage and budgets in one quiet app.</p>
         <div class="hero-actions">
           <a class="btn" href="/download">Download Keyhop ${arrow()}</a>
           <a class="btn secondary" href="#install">Install from the terminal</a>
@@ -186,11 +186,11 @@ export function landingPage(): Html {
         <article class="future-card future-extend">
           <div class="future-label"><span>04 · Native integrations</span><em>Expanding</em></div>
           <h3>More tools, one trusted core.</h3>
-          <p>Gemini CLI joins Claude Code, Cursor and Codex with first-party switching and local usage support. More tools will follow natively when Keyhop can integrate their credentials safely.</p>
+          <p>GitHub Copilot and Windsurf join Claude Code, Cursor, Codex and Gemini CLI with first-party account switching. Neither writes usage Keyhop can count or publishes a quota it can read, so Keyhop switches them and says nothing about what they used.</p>
           <div class="future-preview rules-preview" aria-hidden="true">
-            <span>CORE <b>account switching</b></span>
-            <span>CORE <b>limits + local usage</b></span>
-            <div><i>Gemini</i><i>Windsurf next</i><i>Copilot next</i></div>
+            <span>SIX TOOLS <b>account switching</b></span>
+            <span>FOUR TOOLS <b>limits + local usage</b></span>
+            <div><i>Copilot</i><i>Windsurf</i><i>switching only</i></div>
           </div>
         </article>
       </div>
@@ -272,8 +272,8 @@ export function landingPage(): Html {
         <details><summary>Where are my provider tokens stored?</summary><p>In Login Keychain on macOS, Secret Service or private files on Linux, and DPAPI-encrypted files on Windows. Provider tokens are never sent to keyhop.app.</p></details>
         <details><summary>Do I have to use the leaderboard?</summary><p>No. The desktop app, account switching, limits, history, budgets and alerts all work without a Keyhop cloud account. Leaderboards and teams are opt-in.</p></details>
         <details><summary>What does “API value” mean?</summary><p>Keyhop prices the tokens you used at each provider’s standard API rates. It shows the value of your usage, not a bill from your subscription.</p></details>
-        <details><summary>Which AI tools work with Keyhop?</summary><p>Claude Code, Cursor, Codex and Gemini CLI have native account switching and usage support. Windsurf and GitHub Copilot are next on the research list, but Keyhop will only claim support once their account state can be handled safely.</p></details>
-        <details><summary>Are Smart Hop, MCP and the mobile app available now?</summary><p>Smart Hop, the read-only MCP server and Gemini CLI support ship in Keyhop. The iOS companion builds from source with seasons, standings, quests and badges; it is not in the App Store yet. Android, mobile alerts and automations remain planned.</p></details>
+        <details><summary>Which AI tools work with Keyhop?</summary><p>Six have native account switching: Claude Code, Cursor, Codex, Gemini CLI, GitHub Copilot and Windsurf. Four of those also have usage and limit tracking: Claude Code, Cursor, Codex and Gemini CLI. Copilot and Windsurf write no local usage Keyhop can count and publish no allowance it can read, so Keyhop switches their accounts and claims nothing further. Copilot is switched through the GitHub CLI, which is where its login already lives.</p></details>
+        <details><summary>Are Smart Hop, MCP and the mobile app available now?</summary><p>Smart Hop, the read-only MCP server and native Copilot and Windsurf switching ship in Keyhop. The iOS companion builds from source with seasons, standings, quests, badges, shared limits and local alerts when a limit comes back; it is not in the App Store yet. Android and automations remain planned.</p></details>
         <details><summary>Can I inspect or build Keyhop myself?</summary><p>Yes. Keyhop is MIT licensed, its installers are readable shell scripts, and the application, cloud service, packaging and tests are all in the public repository.</p></details>
       </div>
     </section>
@@ -281,7 +281,7 @@ export function landingPage(): Html {
     <section class="closing">
       ${raw(PIXEL_MARK)}
       <h2>Less account admin. More building.</h2>
-      <p>Bring every Claude Code, Cursor, Codex and Gemini CLI account into one calm place.</p>
+      <p>Bring every Claude Code, Cursor, Codex, Gemini CLI, Copilot and Windsurf account into one calm place.</p>
       <div class="closing-actions">
         <a class="btn" href="/download">Download Keyhop ${arrow()}</a>
         <a class="btn secondary" href="/leaderboard">Explore the leaderboard</a>

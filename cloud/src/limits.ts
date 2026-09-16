@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { apiUser, apiWriter } from "./auth";
-import { type AppEnv, type Tool, TOOLS, now } from "./env";
+import { type AppEnv, type Tool, TOOLS, now, toolList } from "./env";
 
 /**
  * Where a person stands against their providers' limits, so a linked phone can count down to the
@@ -48,7 +48,7 @@ export function parseLimits(body: unknown, reference = now()): { limits: LimitRo
     }
     const tool = entry?.tool;
     if (typeof tool !== "string" || !(TOOLS as readonly string[]).includes(tool)) {
-      return { error: "Tool must be claude, cursor, codex or gemini." };
+      return { error: `Tool must be ${toolList()}.` };
     }
     const windowLabel = typeof entry?.windowLabel === "string" ? entry.windowLabel.trim() : "";
     if (!windowLabel || windowLabel.length > MAX_WINDOW) {

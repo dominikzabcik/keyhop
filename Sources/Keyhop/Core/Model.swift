@@ -1,7 +1,7 @@
 import Foundation
 
 enum Provider: String, Codable, CaseIterable, Identifiable {
-    case claude, cursor, codex, gemini
+    case claude, cursor, codex, gemini, copilot, windsurf
 
     var id: String { rawValue }
 
@@ -11,6 +11,8 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .cursor: "Cursor"
         case .codex: "Codex"
         case .gemini: "Gemini CLI"
+        case .copilot: "GitHub Copilot"
+        case .windsurf: "Windsurf"
         }
     }
 
@@ -20,6 +22,8 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .cursor: "Cursor"
         case .codex: "Codex"
         case .gemini: "Gemini"
+        case .copilot: "Copilot"
+        case .windsurf: "Windsurf"
         }
     }
 
@@ -30,6 +34,8 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .cursor: "Sign in to Cursor with the other account. Keyhop saves it automatically."
         case .codex: "Run `codex login` with the other account. Keyhop saves it automatically."
         case .gemini: "Run `gemini`, then sign in with Google using the other account. Keyhop saves it automatically."
+        case .copilot: "Run `gh auth login` and sign in as the other account. Keyhop saves it automatically."
+        case .windsurf: "Sign in to Windsurf with the other account. Keyhop saves it automatically."
         }
     }
 
@@ -42,13 +48,25 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         #endif
         case .codex: "New Codex sessions use this account. Running ones stay on the old login, so reopen them with `codex resume --last`."
         case .gemini: "New Gemini CLI sessions use this account. Restart a running session to move it to the new login."
+        case .copilot: "New Copilot sessions use this account. Restart a running one, and reload your editor, to move it over."
+        case .windsurf: "Restart Windsurf to move open windows to this account."
         case .cursor: nil
         }
+    }
+
+    /// "claude, cursor, codex, gemini, copilot or windsurf", for anything that has to name them all.
+    static var wordList: String {
+        let names = allCases.map(\.rawValue)
+        return names.dropLast().joined(separator: ", ") + " or " + names[names.count - 1]
     }
 
     var limitsNote: String? {
         switch self {
         case .gemini: "Quota stays in Gemini CLI; Keyhop tracks local usage."
+        // Neither writes a local transcript Keyhop can count, and neither publishes an allowance it
+        // can read, so Keyhop switches the account and claims nothing about usage.
+        case .copilot: "Usage and quota stay with GitHub; Keyhop switches the account."
+        case .windsurf: "Usage and quota stay in Windsurf; Keyhop switches the account."
         case .claude, .cursor, .codex: nil
         }
     }

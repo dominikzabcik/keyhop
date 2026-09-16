@@ -517,7 +517,7 @@ enum Commands {
 
     static func tool(_ word: String) throws -> Provider {
         guard let provider = Provider(rawValue: word.lowercased()) else {
-            throw UsageError("Unknown tool '\(word)'. Use claude, cursor, codex or gemini.")
+            throw UsageError("Unknown tool '\(word)'. Use \(Provider.wordList).")
         }
         return provider
     }
@@ -561,6 +561,12 @@ enum ToolDetection {
             return Shell.which("codex") != nil || FileManager.default.fileExists(atPath: Files.home.appendingPathComponent(".codex").path)
         case .gemini:
             return Shell.which("gemini") != nil || FileManager.default.fileExists(atPath: GeminiAdapter.directory.path)
+        case .copilot:
+            // Copilot signs in as a GitHub account, so gh is what Keyhop needs to switch it.
+            return Shell.which("gh") != nil
+                && (Shell.which("copilot") != nil || FileManager.default.fileExists(atPath: CopilotAdapter.cliDirectory.path))
+        case .windsurf:
+            return WindsurfAdapter.isAppInstalled || FileManager.default.fileExists(atPath: WindsurfAdapter.directory.path)
         }
     }
 
@@ -579,6 +585,10 @@ enum ToolDetection {
             return base + "/auth.json"
         case .gemini:
             return GeminiAdapter.credentialsURL.path
+        case .copilot:
+            return "The GitHub CLI's login for \(CopilotAdapter.host), in \(CopilotAdapter.hostsURL.path)"
+        case .windsurf:
+            return WindsurfAdapter.credentialsURL.path
         }
     }
 

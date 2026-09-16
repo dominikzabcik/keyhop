@@ -25,5 +25,7 @@ enum Adapters {
         .cursor: CursorAdapter(),
         .codex: CodexAdapter(),
         .gemini: GeminiAdapter(),
+        .copilot: CopilotAdapter(),
+        .windsurf: WindsurfAdapter(),
     ]
 }

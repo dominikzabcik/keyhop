@@ -52,7 +52,7 @@ export function downloadPage(): Html {
     </section>
     <section class="content-split">
       <div><span class="section-index">02 / FIRST RUN</span><h2>Your existing login is enough.</h2></div>
-      <div class="prose"><p>Open Keyhop and it finds the Claude Code, Cursor, Codex and Gemini CLI logins already on your computer. Add another account by signing in to the tool normally when Keyhop asks.</p><p>No provider API key is required. Codex accounts must use a ChatGPT sign-in, and Gemini CLI accounts must use Sign in with Google.</p></div>
+      <div class="prose"><p>Open Keyhop and it finds the Claude Code, Cursor, Codex, Gemini CLI, Copilot and Windsurf logins already on your computer. Add another account by signing in to the tool normally when Keyhop asks.</p><p>No provider API key is required. Copilot is switched through the GitHub CLI, so gh must be installed and signed in. Codex accounts must use a ChatGPT sign-in, and Gemini CLI accounts must use Sign in with Google.</p></div>
     </section>
     <aside class="page-cta"><div><b>Want to inspect it first?</b><span>Read every line, build from source, or check the latest release notes.</span></div><a class="btn" href="${REPOSITORY}">View on GitHub</a></aside>
   </div>`;

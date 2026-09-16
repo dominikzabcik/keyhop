@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  Move Claude Code, Cursor, Codex or Gemini CLI onto another account in one click,<br>
-  with supported limits, local usage and budgets in view.
+  Move Claude Code, Cursor, Codex, Gemini CLI, GitHub Copilot or Windsurf onto another account<br>
+  in one click, with supported limits, local usage and budgets in view.
 </p>
 
 <p align="center">
@@ -86,6 +86,8 @@ GNOME hides tray icons unless the **AppIndicator and KStatusNotifierItem Support
 | **Rename, remove and budgets** | On macOS, right-click an account in the menu, or use Keyhop's window, which also sets budgets. On Linux and Windows, use the tray's **Accounts** submenu to rename or remove an account, and **Set a budget** for a monthly budget across all accounts. |
 | **Dashboard** | Keyhop's window: Overview, Accounts, Usage (charts, activity, token mix, models), Budgets and Settings, over a live backdrop you can change in **Settings › Appearance**. On macOS, open Keyhop from Applications or choose **Open Keyhop** in the menu. Click the tray icon on Windows, choose **Open Keyhop** in the Linux tray, or run `keyhop dashboard` anywhere. |
 | **Alerts** | A notification when a limit or budget is nearly used, with a **Switch** button for Smart Hop's best available account. |
+
+Keyhop switches six tools and tracks usage for four. Claude Code, Cursor, Codex and Gemini CLI have account switching plus usage and, where the provider publishes one, limits. GitHub Copilot and Windsurf have account switching only: neither writes a local transcript Keyhop can count, and neither publishes an allowance it can read, so Keyhop says nothing about what they used rather than guessing.
 
 Codex logins made with an API key aren't supported, only ChatGPT sign-ins. Gemini CLI account switching supports Sign in with Google; API-key and Vertex AI configurations stay untouched. Gemini quota is not fetched because [Google does not permit third-party apps to call Gemini CLI backend services with its OAuth credentials](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/faq.md#why-cant-i-use-third-party-software-like-claude-code-openclaw-or-opencode-with-gemini-cli).
 
@@ -187,8 +189,10 @@ sequenceDiagram
 | Cursor | `cursorAuth/*` rows in `state.vscdb` (macOS `~/Library/Application Support/Cursor`, Linux `~/.config/Cursor`, Windows `%APPDATA%\Cursor`), plus `authInfo` in `~/.cursor/cli-config.json` | An open Cursor gets the tokens through its own login link (`cursor://cursorAuth`) and switches in place. A closed Cursor has its rows swapped directly. |
 | Codex | `~/.codex/auth.json` (or `$CODEX_HOME`) | New runs use it straight away. A running session keeps its original account, so reopen it with `codex resume --last`. |
 | Gemini CLI | `~/.gemini/oauth_creds.json`, plus the active account in `~/.gemini/google_accounts.json` (under `$GEMINI_CLI_HOME` when set) | New runs use it straight away. Restart a running session to move it to the selected Google login. |
+| GitHub Copilot | The GitHub CLI's own login for `github.com`, listed in `~/.config/gh/hosts.yml` (or `$GH_CONFIG_DIR`) with the token in the system secret store. Keyhop drives `gh auth token`, `gh auth switch` and `gh auth login --with-token` rather than editing gh's files, and never runs `gh auth logout`, which would revoke the token it saved. | New Copilot runs use it straight away. Restart a running one, and reload your editor, to move it over. |
+| Windsurf | `~/.codeium/config.json` (under `$CODEIUM_HOME` when set). Only the login key is swapped; the rest of the file is left as it is. | Restart Windsurf to move open windows to the selected account. |
 
-Tools rotate their tokens on their own, so Keyhop re-saves the in-use login on every refresh. Where providers permit it, limits are fetched with each account's own token and Keyhop refreshes tokens only for accounts that aren't in use. Gemini support stays local: Keyhop switches its login file and reads its transcript usage without calling Google services.
+Tools rotate their tokens on their own, so Keyhop re-saves the in-use login on every refresh. Where providers permit it, limits are fetched with each account's own token and Keyhop refreshes tokens only for accounts that aren't in use. Gemini support stays local: Keyhop switches its login file and reads its transcript usage without calling Google services. Copilot needs the GitHub CLI installed and signed in, because that is where its login already lives. Windsurf support was written without a Windsurf install to test against, so it is built to fail closed: if that file isn't there or doesn't hold a login, Windsurf simply doesn't appear.
 
 ## Settings
 
@@ -282,7 +286,7 @@ The [Release workflow](.github/workflows/release.yml) tests and builds on macOS,
 
 Keyhop moves between accounts you already have, such as a personal login and a work login. It doesn't give any account more usage than its plan includes. Using several accounts to get around one plan's limits can break a provider's terms, so read the terms for each service you use ([Anthropic](https://www.anthropic.com/legal/consumer-terms), [Cursor](https://cursor.com/terms-of-service), [OpenAI](https://openai.com/policies/row-terms-of-use/), [Google](https://policies.google.com/terms)) and use Keyhop within them. Only save accounts that are yours: providers such as Anthropic don't allow sharing a login. If you'd rather Keyhop make no requests on a timer, turn off **Check usage every 5 minutes** on macOS or **Check usage automatically** in the Linux and Windows trays.
 
-Keyhop is an independent project. It isn't affiliated with, endorsed by or sponsored by Anthropic, Anysphere, OpenAI or Google. Claude, Claude Code, Cursor, Codex, OpenAI, Gemini and Google are trademarks of their owners, and their logos appear only to identify each tool.
+Keyhop is an independent project. It isn't affiliated with, endorsed by or sponsored by Anthropic, Anysphere, OpenAI, Google, GitHub or Codeium. Claude, Claude Code, Cursor, Codex, OpenAI, Gemini, Google, GitHub, Copilot and Windsurf are trademarks of their owners, and their logos appear only to identify each tool.
 
 ## License
 

@@ -85,7 +85,7 @@ describe("usage uploads", () => {
     const entry = { day, tool: "claude", tokens: 1, cost: 0, requests: 1 };
     expect(parseUsage({ days: [{ ...entry, day: "2026-02-30" }] }, day)).toHaveProperty("error");
     expect(parseUsage({ days: [{ ...entry, day: addDays(day, -500) }] }, day)).toHaveProperty("error");
-    expect(parseUsage({ days: [{ ...entry, tool: "copilot" }] }, day)).toHaveProperty("error");
+    expect(parseUsage({ days: [{ ...entry, tool: "notepad" }] }, day)).toHaveProperty("error");
     expect(parseUsage({ days: [entry, entry] }, day)).toHaveProperty("error");
     expect(parseUsage({ days: [{ ...entry, tokens: -5 }] }, day)).toHaveProperty("error");
     expect(parseUsage({ days: [{ ...entry, tokens: 1.5 }] }, day)).toHaveProperty("error");
@@ -569,7 +569,7 @@ describe("limit sharing", () => {
   it("refuses unknown tools, impossible percentages, stale or distant resets and duplicates", () => {
     const one = (entry: Record<string, unknown>) => parseLimits({ limits: [{ accountKey: "a1", tool: "claude", windowLabel: "5h", usedPercent: 5, ...entry }] }, reference);
     expect(parseLimits({ days: [] }, reference)).toEqual({ error: "Send { limits: [...] }." });
-    expect(one({ tool: "copilot" })).toEqual({ error: "Tool must be claude, cursor, codex or gemini." });
+    expect(one({ tool: "notepad" })).toEqual({ error: "Tool must be claude, cursor, codex, gemini, copilot or windsurf." });
     expect(one({ accountKey: "has space" })).toHaveProperty("error");
     expect(one({ windowLabel: "" })).toHaveProperty("error");
     expect(one({ usedPercent: 101 })).toHaveProperty("error");

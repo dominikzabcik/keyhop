@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 - Your phone can tell you when a limit comes back. Turn on **Share limits** in Keyhop's window (or `keyhop cloud limits on`) and your computer sends where each account stands, so the iOS companion can show a live countdown and raise a notification the moment a nearly-spent account resets. It also reminds you on the season's last evening and while today's quests are still open. Every alert is scheduled on the phone itself against a moment already known, so nothing is pushed and no push service is involved. Sharing is off until you turn it on, it carries only how full an account is, when it resets and the name you typed for it, never an email or anything about what you asked, it keeps no history, and turning it off takes the readings off the website straight away.
+- GitHub Copilot and Windsurf join the tools Keyhop switches. Copilot moves through the GitHub CLI's own commands, since that is where its login already lives, so Keyhop never edits gh's files and never revokes a token. Windsurf swaps the login in `~/.codeium/config.json` and leaves the rest of that file alone. Neither writes usage Keyhop can count or publishes a quota it can read, so Keyhop switches their accounts and claims nothing about what they used.
+- "Every tool" and the "Full house" badge now count the four tools Keyhop can actually measure, so adding Copilot and Windsurf didn't quietly make either impossible to finish.
 
 ## [0.10.0]
 

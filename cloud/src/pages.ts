@@ -136,7 +136,7 @@ function board(entries: Entry[], metric: Metric, viewer: User | null, emptyText:
 
 pages.get("/", (c) =>
   render(c, "Keyhop · Switch AI coding accounts without breaking flow", landingPage(), {
-    description: "Switch Claude Code, Cursor, Codex and Gemini CLI accounts, watch limits, get Smart Hop recommendations and connect local AI agents through MCP.",
+    description: "Switch Claude Code, Cursor, Codex, Gemini CLI, Copilot and Windsurf accounts, watch limits, get Smart Hop recommendations and connect local AI agents through MCP.",
     mode: "landing",
     softwareSchema: true,
   }),
@@ -144,7 +144,7 @@ pages.get("/", (c) =>
 
 pages.get("/download", (c) =>
   render(c, "Download Keyhop for macOS, Linux and Windows", downloadPage(), {
-    description: "Download Keyhop for macOS, Linux or Windows and switch Claude Code, Cursor, Codex and Gemini CLI accounts without breaking flow.",
+    description: "Download Keyhop for macOS, Linux or Windows and switch Claude Code, Cursor, Codex, Gemini CLI, Copilot and Windsurf accounts without breaking flow.",
     mode: "marketing",
     softwareSchema: true,
   }),

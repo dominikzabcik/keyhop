@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { apiUser, apiWriter } from "./auth";
-import { type AppEnv, type Tool, TOOLS, addDays, now, today } from "./env";
+import { type AppEnv, type Tool, TOOLS, addDays, now, today, toolList } from "./env";
 
 export interface UsageDay {
   day: string;
@@ -34,7 +34,7 @@ export function parseUsage(body: unknown, reference = today()): { days: UsageDay
     }
     if (addDays(day, 0) !== day) return { error: `${day} isn't a real date.` };
     if (day < earliest || day > latest) return { error: `${day} is outside the last ${MAX_DAYS} days.` };
-    if (typeof tool !== "string" || !(TOOLS as readonly string[]).includes(tool)) return { error: "Tool must be claude, cursor, codex or gemini." };
+    if (typeof tool !== "string" || !(TOOLS as readonly string[]).includes(tool)) return { error: `Tool must be ${toolList()}.` };
     const tokens = entry.tokens;
     const cost = entry.cost;
     const requests = entry.requests;

@@ -35,15 +35,28 @@ export type AppEnv = {
   };
 };
 
-export const TOOLS = ["claude", "cursor", "codex", "gemini"] as const;
+export const TOOLS = ["claude", "cursor", "codex", "gemini", "copilot", "windsurf"] as const;
 export type Tool = (typeof TOOLS)[number];
+
+/**
+ * The tools Keyhop can actually count usage for. Copilot and Windsurf are switched by Keyhop but
+ * write no local transcript it can read and publish no allowance it can ask for, so they never
+ * appear in a day's totals. Goals that ask someone to "use every tool" count these, or they would
+ * ask for something no one can do.
+ */
+export const MEASURED_TOOLS = ["claude", "cursor", "codex", "gemini"] as const;
 
 export const TOOL_NAMES: Record<Tool, string> = {
   claude: "Claude Code",
   cursor: "Cursor",
   codex: "Codex",
   gemini: "Gemini CLI",
+  copilot: "GitHub Copilot",
+  windsurf: "Windsurf",
 };
+
+/** "claude, cursor, codex, gemini, copilot or windsurf", so an error never names a stale list. */
+export const toolList = (): string => `${TOOLS.slice(0, -1).join(", ")} or ${TOOLS[TOOLS.length - 1]}`;
 
 export const now = (): number => Math.floor(Date.now() / 1000);
 

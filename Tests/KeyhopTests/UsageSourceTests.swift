@@ -80,16 +80,12 @@ final class LogFeedTests: XCTestCase {
 
 final class GeminiAdapterTests: XCTestCase {
     func testLoginLifecycleStaysLocal() async throws {
-        let variable = "GEMINI_CLI_HOME"
-        let previous = ProcessInfo.processInfo.environment[variable]
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("keyhop-gemini-\(UUID().uuidString)")
-        setenv(variable, root.path, 1)
         defer {
-            if let previous { setenv(variable, previous, 1) } else { unsetenv(variable) }
             try? FileManager.default.removeItem(at: root)
         }
 
-        let directory = root.appendingPathComponent(".gemini")
+        let directory = root.appendingPathComponent(".gemini", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let claims = try JSON.data(["sub": "google-user-1", "email": "me@example.com"])
             .base64EncodedString()
@@ -100,7 +96,7 @@ final class GeminiAdapterTests: XCTestCase {
         try JSON.data(credentials).write(to: directory.appendingPathComponent("oauth_creds.json"))
         try JSON.data(["active": "other@example.com", "old": []]).write(to: directory.appendingPathComponent("google_accounts.json"))
 
-        let adapter = GeminiAdapter()
+        let adapter = GeminiAdapter(directory: directory)
         let live = try await adapter.readLive()
         XCTAssertEqual(live?.identity, "google-user-1")
         XCTAssertEqual(live?.email, "me@example.com")

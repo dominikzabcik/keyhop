@@ -122,7 +122,7 @@ enum MCPServer {
     private static func provider(in arguments: [String: Any]) throws -> Provider? {
         guard let value = arguments["tool"] else { return nil }
         guard let word = value as? String, let provider = Provider(rawValue: word) else {
-            throw UsageError("tool must be claude, cursor or codex")
+            throw UsageError("tool must be claude, cursor, codex or gemini")
         }
         return provider
     }

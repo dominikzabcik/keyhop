@@ -63,6 +63,63 @@ final class LogFeedTests: XCTestCase {
         XCTAssertEqual(result[1].tokens, TokenCounts(input: 100, cacheRead: 100, output: 20))
         XCTAssertEqual(result[2].tokens, TokenCounts(input: 50, output: 5))
     }
+
+    func testGeminiResponseSplitsCachedThoughtAndToolTokens() {
+        let lines = [
+            #"{"sessionId":"session-1","startTime":"2026-09-10T08:00:00Z"}"#,
+            #"{"type":"gemini","id":"response-1","timestamp":"2026-09-10T08:00:01Z","model":"gemini-3.1-pro-preview","tokens":{"input":1200,"output":80,"cached":900,"thoughts":40,"tool":25,"total":2245}}"#,
+        ]
+        let result = records(.geminiCLI, lines)
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].key, "gemini:session-1:response-1")
+        XCTAssertEqual(result[0].provider, .gemini)
+        XCTAssertEqual(result[0].tokens, TokenCounts(input: 325, cacheRead: 900, output: 120, reasoning: 40))
+        XCTAssertGreaterThan(result[0].cost, 0)
+    }
+}
+
+final class GeminiAdapterTests: XCTestCase {
+    func testLoginLifecycleStaysLocal() async throws {
+        let variable = "GEMINI_CLI_HOME"
+        let previous = ProcessInfo.processInfo.environment[variable]
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("keyhop-gemini-\(UUID().uuidString)")
+        setenv(variable, root.path, 1)
+        defer {
+            if let previous { setenv(variable, previous, 1) } else { unsetenv(variable) }
+            try? FileManager.default.removeItem(at: root)
+        }
+
+        let directory = root.appendingPathComponent(".gemini")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let claims = try JSON.data(["sub": "google-user-1", "email": "me@example.com"])
+            .base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        let credentials = ["access_token": "local-token", "id_token": "e30.\(claims).signature"]
+        try JSON.data(credentials).write(to: directory.appendingPathComponent("oauth_creds.json"))
+        try JSON.data(["active": "other@example.com", "old": []]).write(to: directory.appendingPathComponent("google_accounts.json"))
+
+        let adapter = GeminiAdapter()
+        let live = try await adapter.readLive()
+        XCTAssertEqual(live?.identity, "google-user-1")
+        XCTAssertEqual(live?.email, "me@example.com")
+
+        let report = try await adapter.fetchUsage(live?.secret ?? [:], allowRefresh: true) { _ in
+            XCTFail("Local-only Gemini support must not refresh OAuth tokens")
+        }
+        XCTAssertTrue(report.windows.isEmpty)
+
+        try await adapter.apply(live?.secret ?? [:])
+        let selected = JSON.object(try Data(contentsOf: directory.appendingPathComponent("google_accounts.json")))
+        XCTAssertEqual(selected?["active"] as? String, "me@example.com")
+        XCTAssertEqual(selected?["old"] as? [String], ["other@example.com"])
+
+        try await adapter.signOutLocally()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("oauth_creds.json").path))
+        let signedOut = JSON.object(try Data(contentsOf: directory.appendingPathComponent("google_accounts.json")))
+        XCTAssertTrue(signedOut?["active"] is NSNull)
+    }
 }
 
 final class CursorUsageTests: XCTestCase {

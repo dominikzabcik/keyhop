@@ -63,7 +63,7 @@ enum KeyhopCLI {
     }
 
     static let helpText = """
-    Keyhop \(AppVersion.current): switch Claude Code, Cursor and Codex accounts, and track what each one uses.
+    Keyhop \(AppVersion.current): switch Claude Code, Cursor, Codex and Gemini CLI accounts, and track what each one uses.
 
     Usage: keyhop <command> [options]
 
@@ -101,7 +101,7 @@ enum KeyhopCLI {
       version
 
     <account> is an email, a name you gave it, or the start of its ID.
-    <tool> is claude, cursor or codex.
+    <tool> is claude, cursor, codex or gemini.
     """
 }
 

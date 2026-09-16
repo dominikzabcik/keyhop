@@ -163,10 +163,10 @@ struct SampleUsage {
         let accounts = store.accounts
         var today: [UUID: Totals] = [:]
         for (i, account) in accounts.enumerated() {
-            let tokens = [4_200_000, 1_900_000, 2_600_000, 0, 3_100_000][i % 5]
+            let tokens = [4_200_000, 1_900_000, 2_600_000, 0, 3_100_000, 2_300_000][i % 6]
             guard tokens > 0 else { continue }
             today[account.id] = Totals(tokens: TokenCounts(input: tokens / 20, cacheRead: tokens * 3 / 4, output: tokens / 5),
-                                       cost: Double(tokens) / 1_000_000 * [3.1, 2.4, 1.2, 0, 1.6][i % 5], requests: tokens / 9000)
+                                       cost: Double(tokens) / 1_000_000 * [3.1, 2.4, 1.2, 0, 1.6, 2.0][i % 6], requests: tokens / 9000)
         }
         self.today = today
         var budgets = [Budget(scope: Budget.everything, amount: 600, period: .month)]
@@ -190,7 +190,7 @@ struct SampleUsage {
         let interval = range.interval(now: Date())
         let step: TimeInterval = range.bucket == .hour ? 3600 : 86400
         let accounts = store.accounts.filter { provider == nil || $0.provider == provider }
-        let models = ["claude-opus-5", "gpt-5.6-sol", "composer-2", "claude-sonnet-5", "claude-haiku-4-5"]
+        let models = ["claude-opus-5", "gpt-5.6-sol", "composer-2", "claude-sonnet-5", "claude-haiku-4-5", "gemini-3.1-pro-preview"]
         var start = interval.start
         var index = 0.0
         while start < min(interval.end, Date()) {
@@ -198,16 +198,16 @@ struct SampleUsage {
                 let hourOfDay = Double(Calendar.current.component(.hour, from: start))
                 let daily = range.bucket == .hour ? max(0, sin((hourOfDay - 7) / 14 * .pi)) : 1
                 let wave = 0.55 + 0.45 * sin(index * 0.9 + Double(i) * 1.7)
-                let tokens = Int(Double([2_600_000, 1_300_000, 1_900_000, 600_000, 2_200_000][i % 5]) * wave * daily * (range.bucket == .hour ? 0.12 : 1))
+                let tokens = Int(Double([2_600_000, 1_300_000, 1_900_000, 600_000, 2_200_000, 1_700_000][i % 6]) * wave * daily * (range.bucket == .hour ? 0.12 : 1))
                 guard tokens > 0 else { continue }
-                let cost = Double(tokens) / 1_000_000 * [2.9, 2.2, 1.1, 0.8, 1.5][i % 5]
+                let cost = Double(tokens) / 1_000_000 * [2.9, 2.2, 1.1, 0.8, 1.5, 2.0][i % 6]
                 let totals = Totals(tokens: TokenCounts(input: tokens / 20, cacheRead: tokens * 3 / 4, output: tokens / 5), cost: cost,
                                     billed: account.provider == .cursor ? cost * 0.08 : 0, requests: tokens / 9000)
                 let key = AccountKey(provider: account.provider, account: account.id)
                 digest.points.append(UsageDigest.Point(start: start, key: key, totals: totals))
                 digest.byAccount[key, default: Totals()] += totals
                 digest.total += totals
-                let modelIndex = account.provider == .claude ? (Int(index) % 5 == 0 ? 3 : 0) : account.provider == .codex ? 1 : 2
+                let modelIndex = account.provider == .claude ? (Int(index) % 5 == 0 ? 3 : 0) : account.provider == .codex ? 1 : account.provider == .gemini ? 5 : 2
                 digest.byModel[models[modelIndex], default: Totals()] += totals
             }
             start = start.addingTimeInterval(step)

@@ -51,6 +51,7 @@ struct StatusDocument: Encodable {
         let id: String
         let name: String
         let switchNote: String?
+        let limitsNote: String?
         let signInHint: String
         let activeAccount: UUID?
         let accounts: [AccountEntry]
@@ -104,6 +105,7 @@ struct StatusDocument: Encodable {
                 id: provider.rawValue,
                 name: provider.name,
                 switchNote: provider.switchNote.map(Output.plain),
+                limitsNote: provider.limitsNote,
                 signInHint: Output.plain(provider.signInHint),
                 activeAccount: overview.active[provider],
                 accounts: overview.accounts.filter { $0.provider == provider }.map { account in
@@ -266,7 +268,7 @@ enum Reports {
     static func status(_ overview: Overview) -> String {
         var lines = overview.notices
         guard !overview.accounts.isEmpty else {
-            lines.append("No saved accounts yet. Sign in to Claude Code, Cursor or Codex, then run `keyhop refresh`.")
+            lines.append("No saved accounts yet. Sign in to Claude Code, Cursor, Codex or Gemini CLI, then run `keyhop refresh`.")
             return lines.joined(separator: "\n")
         }
         let now = Date()
@@ -295,6 +297,7 @@ enum Reports {
                     lines.append(line)
                 }
                 if let error = snapshot?.error { lines.append("      \(error)") }
+                if snapshot?.windows.isEmpty == true, let note = provider.limitsNote { lines.append("      \(note)") }
                 if snapshot == nil { lines.append("      Limits not read yet.") }
                 if let today = overview.today[account.id], today.requests > 0 {
                     lines.append("      Today  \(Numbers.tokens(today.tokens.total)) tokens, \(Numbers.usd(today.cost)) at API prices")

@@ -22,7 +22,7 @@ enum WelcomeWindow {
     static func show(_ store: AccountStore, canMove: Bool = Relocator.canMove, markSeen: Bool = true) {
         if window == nil {
             let root = WelcomeView(canMove: canMove) { dismiss(store, markSeen: markSeen) }.environmentObject(store)
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 500),
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 540),
                                   styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
@@ -134,7 +134,7 @@ struct WelcomeView: View {
                 .padding(.top, 12)
         }
         .padding(.bottom, 26)
-        .frame(width: 420, height: 500)
+        .frame(width: 420, height: 540)
         .background(Brand.background)
         .environment(\.colorScheme, .dark)
     }
@@ -202,7 +202,7 @@ struct WelcomeView: View {
                 .padding(.top, 12)
         }
         .padding(.bottom, 26)
-        .frame(width: 420, height: 500)
+        .frame(width: 420, height: 540)
         .background(Brand.background)
         .environment(\.colorScheme, .dark)
     }

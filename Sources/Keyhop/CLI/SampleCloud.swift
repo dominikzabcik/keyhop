@@ -4,17 +4,17 @@ extension SampleData {
     /// Made-up people for `keyhop dashboard --sample`, ranked the way the website ranks them.
     static func leaderboard(period: String, metric: String, team: String?) -> DashboardLeaderboard {
         let days: Double = ["today": 1, "week": 7, "month": 30, "all": 180][period] ?? 7
-        // Millions of tokens a day, and the Claude, Cursor and Codex shares.
+        // Millions of tokens a day, and each supported tool's share.
         let people: [(login: String, name: String?, daily: Double, mix: [Double], you: Bool, onTeam: Bool)] = [
-            ("mira", "Mira K.", 9.1, [0.7, 0.2, 0.1], false, true),
-            ("jonas", nil, 7.4, [0.3, 0.6, 0.1], false, true),
-            ("you", "You", 6.2, [0.55, 0.15, 0.3], true, true),
-            ("priya", "Priya", 5.0, [0.5, 0.1, 0.4], false, false),
-            ("tomas", nil, 2.9, [0.1, 0.8, 0.1], false, true),
-            ("alex", nil, 1.6, [0.45, 0.1, 0.45], false, false),
+            ("mira", "Mira K.", 9.1, [0.6, 0.2, 0.1, 0.1], false, true),
+            ("jonas", nil, 7.4, [0.2, 0.55, 0.1, 0.15], false, true),
+            ("you", "You", 6.2, [0.45, 0.15, 0.25, 0.15], true, true),
+            ("priya", "Priya", 5.0, [0.4, 0.1, 0.3, 0.2], false, false),
+            ("tomas", nil, 2.9, [0.1, 0.65, 0.1, 0.15], false, true),
+            ("alex", nil, 1.6, [0.35, 0.1, 0.35, 0.2], false, false),
         ]
-        let prices = [4.2, 2.1, 3.1]
-        let tools = ["claude", "cursor", "codex"]
+        let prices = [4.2, 2.1, 3.1, 2.0]
+        let tools = ["claude", "cursor", "codex", "gemini"]
         let rows = people.filter { team == nil || $0.onTeam }.map { person -> (person: (login: String, name: String?, daily: Double, mix: [Double], you: Bool, onTeam: Bool), tokens: Int, cost: Double, requests: Int, split: [String: Int]) in
             let split = Dictionary(uniqueKeysWithValues: tools.enumerated().map { ($1, Int(person.daily * days * 1_000_000 * person.mix[$0])) })
             let tokens = split.values.reduce(0, +)
@@ -39,7 +39,7 @@ extension SampleData {
                 CloudQuests.Quest(key: "two-tools", name: "Two tools", note: "Use two different tools today.", period: "day", done: 1, target: 2, complete: false),
                 CloudQuests.Quest(key: "beat-yesterday", name: "Beat yesterday", note: "Pass yesterday's 6,200K tokens.", period: "day", done: 4_100_000, target: 6_200_000, complete: false),
                 CloudQuests.Quest(key: "five-days", name: "Five days", note: "Use Keyhop on five days this week.", period: "week", done: 5, target: 5, complete: true),
-                CloudQuests.Quest(key: "every-tool", name: "Every tool", note: "Use all three tools this week.", period: "week", done: 3, target: 3, complete: true),
+                CloudQuests.Quest(key: "every-tool", name: "Every tool", note: "Use all four tools this week.", period: "week", done: 4, target: 4, complete: true),
                 CloudQuests.Quest(key: "beat-last-week", name: "Beat last week", note: "Pass last week's total.", period: "week", done: 38_000_000, target: 44_000_000, complete: false),
             ],
             badges: [])

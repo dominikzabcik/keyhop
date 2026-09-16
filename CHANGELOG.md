@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0]
+
+- Native Gemini CLI support joins Claude Code, Cursor and Codex across account discovery, switching, local token tracking, budgets, the dashboard, cloud leaderboards and MCP status. Keyhop follows Gemini CLI's own Google sign-in files, reads usage only from local transcripts and leaves API-key and Vertex AI setups untouched.
+- The Keyhop website now has a complete product landing page, download guidance, SEO metadata, privacy and terms pages, clearer platform support and an honest roadmap for AI, MCP, mobile and future native integrations.
+- The iOS companion reads your leaderboard, season, quests and badges through a revocable read-only link. It builds and runs from source in the simulator while App Store distribution and mobile alerts remain future work.
+- Profiles can be edited and shared as cards, and the cloud client now has a dedicated request layer used by both desktop and mobile.
+- Budgets use the amount a provider actually charged when an account reports it, rather than always estimating from API prices.
+
 ## [0.9.0]
 
 - Smart Hop names the account with the most runway for each tool. It scores every saved account on the room left on its tightest limit (three quarters of the score), how much of its budget is left (one quarter), a bonus when that limit resets within twelve hours, and a penalty when recent use projects an early run-out. `keyhop recommend [--tool <tool>]` prints it with the reason, the menu and the tray point at it, and a limit alert now names an account that still has room instead of only warning you.

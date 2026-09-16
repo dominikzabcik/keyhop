@@ -13,7 +13,7 @@ export function landingPage(): Html {
       <div class="hero-copy">
         <span class="landing-kicker">Free and open source</span>
         <h1>Every account.<br><span>One hop away.</span></h1>
-        <p>Switch Claude Code, Cursor and Codex accounts before a limit slows you down. Keyhop keeps usage, resets and budgets in one quiet app.</p>
+        <p>Switch Claude Code, Cursor, Codex and Gemini CLI accounts without breaking flow. Keyhop keeps supported limits, local usage and budgets in one quiet app.</p>
         <div class="hero-actions">
           <a class="btn" href="/download">Download Keyhop ${arrow()}</a>
           <a class="btn secondary" href="#install">Install from the terminal</a>
@@ -23,6 +23,7 @@ export function landingPage(): Html {
           <span class="tool-pill">${mark("claude")}Claude Code</span>
           <span class="tool-pill">${mark("cursor")}Cursor</span>
           <span class="tool-pill">${mark("codex")}Codex</span>
+          <span class="tool-pill">${mark("gemini")}Gemini CLI</span>
         </div>
       </div>
 
@@ -65,6 +66,11 @@ export function landingPage(): Html {
                   <div class="limit-line"><span>5-hour</span><b>93%</b><div class="limit-track"><span class="bad" style="width:93%"></span></div></div>
                   <span class="account-action">Accounts</span>
                 </div>
+                <div class="account-line">
+                  <div class="account-name">${mark("gemini")}<span>Gemini CLI<small>Personal · Google</small></span></div>
+                  <div class="limit-line"><span>Local today</span><b>2.3M</b><div class="limit-track"><span style="width:46%"></span></div></div>
+                  <span class="account-action">Accounts</span>
+                </div>
               </div>
             </div>
           </div>
@@ -75,6 +81,7 @@ export function landingPage(): Html {
             <span class="tray-tab active">${mark("claude")}Claude</span>
             <span class="tray-tab">${mark("cursor")}Cursor</span>
             <span class="tray-tab">${mark("codex")}Codex</span>
+            <span class="tray-tab">${mark("gemini")}Gemini</span>
           </div>
           <div class="tray-account">
             <div class="tray-account-head"><span><b>Personal</b><small>me@personal.dev · Max 5x</small></span><span class="in-use">In use</span></div>
@@ -98,7 +105,7 @@ export function landingPage(): Html {
         <article class="feature-card">
           <div class="feature-label">01 · Accounts</div>
           <h3>Switch without signing in again</h3>
-          <p>Save the accounts you already own, then move Claude Code, Cursor or Codex over with one click.</p>
+          <p>Save the accounts you already own, then move Claude Code, Cursor, Codex or Gemini CLI over with one click.</p>
           <div class="feature-visual switch-visual" aria-hidden="true">
             <div class="switch-row">${mark("claude")}<span>Personal<small>me@personal.dev</small></span><em>In use</em></div>
             <div class="switch-row">${mark("claude")}<span>Studio<small>work@studio.dev</small></span><b>72% left</b></div>
@@ -144,7 +151,7 @@ export function landingPage(): Html {
           <span class="landing-kicker">Available now and next</span>
           <h2>One layer between you and every AI tool.</h2>
         </div>
-        <p>Smart Hop and the local MCP server ship in Keyhop 0.9. The iOS companion is already building from source; mobile alerts, automations and more providers are next.</p>
+        <p>Smart Hop, the local MCP server and native Gemini CLI support ship in Keyhop. The iOS companion already builds from source; mobile alerts, automations and more first-party tool integrations are next.</p>
       </div>
       <div class="future-grid">
         <article class="future-card future-ai">
@@ -177,13 +184,13 @@ export function landingPage(): Html {
           </div>
         </article>
         <article class="future-card future-extend">
-          <div class="future-label"><span>04 · Automations</span><em>On the horizon</em></div>
-          <h3>Make Keyhop work the way your team does.</h3>
-          <p>Rules, webhooks and a provider adapter SDK can bring new AI tools into the same view, enforce budget guardrails and trigger the right action before capacity runs dry.</p>
+          <div class="future-label"><span>04 · Native integrations</span><em>Expanding</em></div>
+          <h3>More tools, one trusted core.</h3>
+          <p>Gemini CLI joins Claude Code, Cursor and Codex with first-party switching and local usage support. More tools will follow natively when Keyhop can integrate their credentials safely.</p>
           <div class="future-preview rules-preview" aria-hidden="true">
-            <span>WHEN <b>weekly capacity &lt; 10%</b></span>
-            <span>THEN <b>notify team + suggest hop</b></span>
-            <div><i>CLI</i><i>Webhook</i><i>Your adapter</i></div>
+            <span>CORE <b>account switching</b></span>
+            <span>CORE <b>limits + local usage</b></span>
+            <div><i>Gemini</i><i>Windsurf next</i><i>Copilot next</i></div>
           </div>
         </article>
       </div>
@@ -216,7 +223,7 @@ export function landingPage(): Html {
         <div class="privacy-copy">
           <span class="landing-kicker">Private by default</span>
           <h2>Your prompts never pass through Keyhop. <span>Neither do your account names.</span></h2>
-          <p>Keyhop reads account limits and local usage records so it can help you switch at the right time. It has no analytics and sends nothing to keyhop.app unless you explicitly link the optional leaderboard.</p>
+          <p>Keyhop reads available account limits and local usage records so it can help you switch at the right time. It has no analytics and sends nothing to keyhop.app unless you explicitly link the optional leaderboard.</p>
         </div>
         <div class="privacy-list">
           <div class="privacy-item">
@@ -265,7 +272,8 @@ export function landingPage(): Html {
         <details><summary>Where are my provider tokens stored?</summary><p>In Login Keychain on macOS, Secret Service or private files on Linux, and DPAPI-encrypted files on Windows. Provider tokens are never sent to keyhop.app.</p></details>
         <details><summary>Do I have to use the leaderboard?</summary><p>No. The desktop app, account switching, limits, history, budgets and alerts all work without a Keyhop cloud account. Leaderboards and teams are opt-in.</p></details>
         <details><summary>What does “API value” mean?</summary><p>Keyhop prices the tokens you used at each provider’s standard API rates. It shows the value of your usage, not a bill from your subscription.</p></details>
-        <details><summary>Are Smart Hop, MCP and the mobile app available now?</summary><p>Smart Hop and the read-only MCP server ship in Keyhop 0.9. The iOS companion builds from source with seasons, standings, quests and badges; it is not in the App Store yet. Android, mobile alerts, automations and the provider SDK remain planned.</p></details>
+        <details><summary>Which AI tools work with Keyhop?</summary><p>Claude Code, Cursor, Codex and Gemini CLI have native account switching and usage support. Windsurf and GitHub Copilot are next on the research list, but Keyhop will only claim support once their account state can be handled safely.</p></details>
+        <details><summary>Are Smart Hop, MCP and the mobile app available now?</summary><p>Smart Hop, the read-only MCP server and Gemini CLI support ship in Keyhop. The iOS companion builds from source with seasons, standings, quests and badges; it is not in the App Store yet. Android, mobile alerts and automations remain planned.</p></details>
         <details><summary>Can I inspect or build Keyhop myself?</summary><p>Yes. Keyhop is MIT licensed, its installers are readable shell scripts, and the application, cloud service, packaging and tests are all in the public repository.</p></details>
       </div>
     </section>
@@ -273,7 +281,7 @@ export function landingPage(): Html {
     <section class="closing">
       ${raw(PIXEL_MARK)}
       <h2>Less account admin. More building.</h2>
-      <p>Bring every Claude Code, Cursor and Codex account into one calm place.</p>
+      <p>Bring every Claude Code, Cursor, Codex and Gemini CLI account into one calm place.</p>
       <div class="closing-actions">
         <a class="btn" href="/download">Download Keyhop ${arrow()}</a>
         <a class="btn secondary" href="/leaderboard">Explore the leaderboard</a>

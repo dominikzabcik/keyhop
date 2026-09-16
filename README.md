@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  Move Claude Code, Cursor or Codex onto another account in one click,<br>
-  with every saved account's limits, usage and budget in view.
+  Move Claude Code, Cursor, Codex or Gemini CLI onto another account in one click,<br>
+  with supported limits, local usage and budgets in view.
 </p>
 
 <p align="center">
@@ -61,7 +61,7 @@ Keyhop isn't notarized, so macOS blocks the first launch from the disk image. Op
 On first launch, a welcome window lists the logins Keyhop found and turns on Open at login, then Keyhop's window opens. Opening Keyhop again from Applications, Spotlight or the Dock brings the window back; at login it starts quietly in the menu bar.
 
 <p align="center">
-  <img src="docs/welcome.png" width="420" alt="Keyhop's welcome window listing the Claude Code, Cursor and Codex logins it found">
+  <img src="docs/welcome.png" width="420" alt="Keyhop's welcome window listing the Claude Code, Cursor, Codex and Gemini CLI logins it found">
 </p>
 
 </details>
@@ -81,13 +81,13 @@ GNOME hides tray icons unless the **AppIndicator and KStatusNotifierItem Support
 | | |
 | --- | --- |
 | **Add an account** | Sign in to the tool as usual and Keyhop saves the login. For another account, choose **Add account**: Keyhop signs the tool out on this computer only, so the saved token stays valid, and saves the next login you make. |
-| **Switch** | Click one of a tool's other accounts. Each shows how much of its tightest limit is used. When the account in use runs low, Smart Hop marks the best runway from limits, forecasts, resets and budgets. |
-| **Read the limits** | macOS shows the account in use with a large bar per limit, where a tick marks an even pace. On Linux and Windows, the menu shows each account's tightest limit and the icon shows the busiest account's two nearest limits. |
+| **Switch** | Click one of a tool's other accounts. Where the provider exposes limits, each shows how much of its tightest one is used. Smart Hop weighs available limits, forecasts, resets and budgets. |
+| **Read the limits** | For supported providers, macOS shows the account in use with a large bar per limit, where a tick marks an even pace. On Linux and Windows, the menu shows each account's tightest available limit and the icon shows the busiest account's two nearest limits. |
 | **Rename, remove and budgets** | On macOS, right-click an account in the menu, or use Keyhop's window, which also sets budgets. On Linux and Windows, use the tray's **Accounts** submenu to rename or remove an account, and **Set a budget** for a monthly budget across all accounts. |
 | **Dashboard** | Keyhop's window: Overview, Accounts, Usage (charts, activity, token mix, models), Budgets and Settings, over a live backdrop you can change in **Settings › Appearance**. On macOS, open Keyhop from Applications or choose **Open Keyhop** in the menu. Click the tray icon on Windows, choose **Open Keyhop** in the Linux tray, or run `keyhop dashboard` anywhere. |
 | **Alerts** | A notification when a limit or budget is nearly used, with a **Switch** button for Smart Hop's best available account. |
 
-Codex logins made with an API key aren't supported, only ChatGPT sign-ins.
+Codex logins made with an API key aren't supported, only ChatGPT sign-ins. Gemini CLI account switching supports Sign in with Google; API-key and Vertex AI configurations stay untouched. Gemini quota is not fetched because [Google does not permit third-party apps to call Gemini CLI backend services with its OAuth credentials](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/faq.md#why-cant-i-use-third-party-software-like-claude-code-openclaw-or-opencode-with-gemini-cli).
 
 ### The `keyhop` command
 
@@ -140,6 +140,7 @@ Keyhop keeps its own record of what every account uses.
 | --- | --- |
 | Claude Code | `~/.claude/projects/**/*.jsonl`, one entry per response, with input, cache writes (5-minute and 1-hour), cache reads and output |
 | Codex | `~/.codex/sessions/**/*.jsonl`, per-response usage records, or running totals in older sessions |
+| Gemini CLI | `~/.gemini/tmp/*/chats/*.jsonl`, one entry per model response, with input, cached, output, thought and tool-prompt tokens |
 | Cursor | Each saved account's usage export from cursor.com, at most twice an hour |
 
 - **Per account:** each request is credited to the account that was in use at that moment. Keyhop records every switch, including logins you change outside it. Usage from before Keyhop started goes to the tool's only saved account when there's one.
@@ -171,7 +172,7 @@ sequenceDiagram
     participant You
     participant Keyhop
     participant Store as Keychain, Secret Service or DPAPI
-    participant Tool as Claude Code, Cursor or Codex
+    participant Tool as Claude Code, Cursor, Codex or Gemini CLI
     You->>Keyhop: Click an account
     Keyhop->>Tool: Read the current login
     Keyhop->>Store: Save it first, so no login is ever lost
@@ -185,8 +186,9 @@ sequenceDiagram
 | Claude Code | macOS: Keychain item `Claude Code-credentials`. Linux and Windows: `~/.claude/.credentials.json`. Only `claudeAiOauth` changes, so MCP tokens stay untouched, plus `oauthAccount` in `~/.claude.json`. | On macOS, Claude Code rereads its login every 30 seconds, so open sessions move over without a restart. Elsewhere new sessions use it; restart an open one with `claude --continue` if it stays on the old account. |
 | Cursor | `cursorAuth/*` rows in `state.vscdb` (macOS `~/Library/Application Support/Cursor`, Linux `~/.config/Cursor`, Windows `%APPDATA%\Cursor`), plus `authInfo` in `~/.cursor/cli-config.json` | An open Cursor gets the tokens through its own login link (`cursor://cursorAuth`) and switches in place. A closed Cursor has its rows swapped directly. |
 | Codex | `~/.codex/auth.json` (or `$CODEX_HOME`) | New runs use it straight away. A running session keeps its original account, so reopen it with `codex resume --last`. |
+| Gemini CLI | `~/.gemini/oauth_creds.json`, plus the active account in `~/.gemini/google_accounts.json` (under `$GEMINI_CLI_HOME` when set) | New runs use it straight away. Restart a running session to move it to the selected Google login. |
 
-Tools rotate their tokens on their own, so Keyhop re-saves the in-use login on every refresh. Limits are fetched with each account's own token. Keyhop only refreshes tokens for accounts that aren't in use, so a running session never has its token rotated out from under it.
+Tools rotate their tokens on their own, so Keyhop re-saves the in-use login on every refresh. Where providers permit it, limits are fetched with each account's own token and Keyhop refreshes tokens only for accounts that aren't in use. Gemini support stays local: Keyhop switches its login file and reads its transcript usage without calling Google services.
 
 ## Settings
 
@@ -211,7 +213,7 @@ Keyhop updates from this repository's releases. A release without a checksum, or
 
 There's no analytics and no telemetry. Keyhop's network requests are:
 
-- **Limits:** each provider's usage endpoint, called with that account's own token: `api.anthropic.com`, `chatgpt.com` and `cursor.com`.
+- **Limits:** supported providers' usage endpoints, called with that account's own token: `api.anthropic.com`, `chatgpt.com` and `cursor.com`.
 - **Token refresh:** for accounts that aren't in use, the providers' own sign-in services: `platform.claude.com` and `auth.openai.com`.
 - **Cursor usage export:** `cursor.com`, per saved Cursor account.
 - **Updates:** `api.github.com` and `github.com`, for release information and downloads.
@@ -278,9 +280,9 @@ The [Release workflow](.github/workflows/release.yml) tests and builds on macOS,
 
 ## Terms and trademarks
 
-Keyhop moves between accounts you already have, such as a personal login and a work login. It doesn't give any account more usage than its plan includes. Using several accounts to get around one plan's limits can break a provider's terms, so read the terms for each service you use ([Anthropic](https://www.anthropic.com/legal/consumer-terms), [Cursor](https://cursor.com/terms-of-service), [OpenAI](https://openai.com/policies/row-terms-of-use/)) and use Keyhop within them. Only save accounts that are yours: providers such as Anthropic don't allow sharing a login. If you'd rather Keyhop make no requests on a timer, turn off **Check usage every 5 minutes** on macOS or **Check usage automatically** in the Linux and Windows trays.
+Keyhop moves between accounts you already have, such as a personal login and a work login. It doesn't give any account more usage than its plan includes. Using several accounts to get around one plan's limits can break a provider's terms, so read the terms for each service you use ([Anthropic](https://www.anthropic.com/legal/consumer-terms), [Cursor](https://cursor.com/terms-of-service), [OpenAI](https://openai.com/policies/row-terms-of-use/), [Google](https://policies.google.com/terms)) and use Keyhop within them. Only save accounts that are yours: providers such as Anthropic don't allow sharing a login. If you'd rather Keyhop make no requests on a timer, turn off **Check usage every 5 minutes** on macOS or **Check usage automatically** in the Linux and Windows trays.
 
-Keyhop is an independent project. It isn't affiliated with, endorsed by or sponsored by Anthropic, Anysphere or OpenAI. Claude, Claude Code, Cursor, Codex and OpenAI are trademarks of their owners, and their logos appear only to identify each tool.
+Keyhop is an independent project. It isn't affiliated with, endorsed by or sponsored by Anthropic, Anysphere, OpenAI or Google. Claude, Claude Code, Cursor, Codex, OpenAI, Gemini and Google are trademarks of their owners, and their logos appear only to identify each tool.
 
 ## License
 

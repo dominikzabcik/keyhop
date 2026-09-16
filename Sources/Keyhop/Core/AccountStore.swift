@@ -54,7 +54,7 @@ final class AccountStore: ObservableObject {
     init(preview: Void, focus: Provider = .claude) {
         service = nil
         let now = Date()
-        func account(_ provider: Provider, _ email: String, _ label: String?, _ plan: String) -> Account {
+        func account(_ provider: Provider, _ email: String, _ label: String?, _ plan: String?) -> Account {
             Account(id: UUID(), provider: provider, identity: email, email: email, label: label, plan: plan, addedAt: now)
         }
         func window(_ label: String, _ used: Double, _ resetIn: TimeInterval, _ length: TimeInterval) -> UsageWindow {
@@ -65,14 +65,16 @@ final class AccountStore: ObservableObject {
         let cursorMain = account(.cursor, "me@personal.dev", nil, "Ultra")
         let cursorSpare = account(.cursor, "spare@personal.dev", nil, "Pro")
         let codexMain = account(.codex, "me@personal.dev", nil, "Plus")
-        accounts = [claudeMain, claudeWork, cursorMain, cursorSpare, codexMain]
-        active = [.claude: claudeMain.id, .cursor: cursorMain.id, .codex: codexMain.id]
+        let geminiMain = account(.gemini, "me@personal.dev", nil, nil)
+        accounts = [claudeMain, claudeWork, cursorMain, cursorSpare, codexMain, geminiMain]
+        active = [.claude: claudeMain.id, .cursor: cursorMain.id, .codex: codexMain.id, .gemini: geminiMain.id]
         usage = [
             claudeMain.id: UsageSnapshot(windows: [window("5h", 51, 11_160, 18000), window("Week", 6, 590_000, 604_800)], fetchedAt: now),
             claudeWork.id: UsageSnapshot(windows: [window("5h", 92, 2_400, 18000), window("Week", 41, 300_000, 604_800)], fetchedAt: now),
             cursorMain.id: UsageSnapshot(windows: [window("Auto", 62, 1_140_000, 2_592_000), window("API", 39, 1_140_000, 2_592_000)], fetchedAt: now),
             cursorSpare.id: UsageSnapshot(error: "Login expired. Switch to it and sign in to Cursor again."),
             codexMain.id: UsageSnapshot(windows: [window("5h", 100, 16_440, 18000), window("Week", 62, 421_000, 604_800)], fetchedAt: now),
+            geminiMain.id: UsageSnapshot(windows: [], fetchedAt: now),
         ]
         lastRefresh = now.addingTimeInterval(-120)
         focusProvider = focus

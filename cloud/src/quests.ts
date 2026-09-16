@@ -98,7 +98,7 @@ export function questsFrom(rows: DayRow[], reference = today()): Quest[] {
       Math.max(yesterday.tokens, 1),
     ),
     quest("five-days", "Five days", "Use Keyhop on five days this week.", "week", weekActive, 5),
-    quest("every-tool", "Every tool", "Use all three tools this week.", "week", weekTools.size, TOOLS.length),
+    quest("every-tool", "Every tool", "Use all four tools this week.", "week", weekTools.size, TOOLS.length),
     quest(
       "beat-last-week",
       "Beat last week",
@@ -143,7 +143,7 @@ export function badgesFrom(rows: DayRow[], podium: { top3: boolean; bestTier: st
   const active = new Set([...days.entries()].filter(([, entry]) => entry.tokens > 0).map(([day]) => day));
   const { longest } = streaks(active, reference);
   const allTime = [...days.values()].reduce((sum, entry) => sum + entry.tokens, 0);
-  const allThree = [...days.entries()].find(([, entry]) => entry.tools.size === TOOLS.length);
+  const allTools = [...days.entries()].find(([, entry]) => entry.tools.size === TOOLS.length);
   const biggest = [...days.entries()].sort(([, a], [, b]) => b.tokens - a.tokens)[0];
   const firstDay = [...active].sort()[0];
 
@@ -152,7 +152,7 @@ export function badgesFrom(rows: DayRow[], podium: { top3: boolean; bestTier: st
     badge("streak-7", "Seven in a row", "A seven-day streak.", longest >= 7, dayCompletingStreak(active, 7)),
     badge("streak-30", "Thirty in a row", "A thirty-day streak.", longest >= 30, dayCompletingStreak(active, 30)),
     badge("streak-100", "A hundred in a row", "A hundred-day streak.", longest >= 100, dayCompletingStreak(active, 100)),
-    badge("all-tools", "All three", "Used Claude Code, Cursor and Codex in one day.", !!allThree, allThree?.[0]),
+    badge("all-tools", "Full house", "Used Claude Code, Cursor, Codex and Gemini CLI in one day.", !!allTools, allTools?.[0]),
     badge("big-day", "Big day", "A billion tokens in a single day.", !!biggest && biggest[1].tokens >= 1_000_000_000, biggest?.[0]),
     badge("billion", "Billion", "A billion tokens all told.", allTime >= 1_000_000_000, dayReaching(rows, 1_000_000_000)),
     badge("ten-billion", "Ten billion", "Ten billion tokens all told.", allTime >= 10_000_000_000, dayReaching(rows, 10_000_000_000)),

@@ -52,6 +52,9 @@ describe("usage uploads", () => {
   it("accepts daily totals per tool", () => {
     const result = parseUsage({ days: [{ day, tool: "claude", tokens: 1200, cost: 1.5, requests: 3 }] }, day);
     expect(result).toEqual({ days: [{ day, tool: "claude", tokens: 1200, costMicros: 1_500_000, requests: 3 }] });
+    expect(parseUsage({ days: [{ day, tool: "gemini", tokens: 800, cost: 0.5, requests: 2 }] }, day)).toEqual({
+      days: [{ day, tool: "gemini", tokens: 800, costMicros: 500_000, requests: 2 }],
+    });
   });
 
   it("refuses impossible dates, unknown tools, duplicates and negative numbers", () => {
@@ -408,6 +411,7 @@ describe("quests and badges", () => {
         ["2026-09-11", "claude", 1000],
         ["2026-09-10", "codex", 1000],
         ["2026-09-09", "claude", 1000],
+        ["2026-09-08", "gemini", 1000],
       ]),
       reference,
     );
@@ -416,7 +420,7 @@ describe("quests and badges", () => {
     expect(by["two-tools"]).toMatchObject({ done: 2, target: 2, complete: true });
     expect(by["beat-yesterday"].complete).toBe(true);
     expect(by["five-days"]).toMatchObject({ done: 5, complete: true });
-    expect(by["every-tool"]).toMatchObject({ done: 3, complete: true });
+    expect(by["every-tool"]).toMatchObject({ done: 4, target: 4, complete: true });
   });
 
   it("leaves a goal short when the days do not add up", () => {
@@ -429,7 +433,7 @@ describe("quests and badges", () => {
   it("earns badges from the days themselves", () => {
     const reference = "2026-09-13";
     const entries: [string, string, number][] = Array.from({ length: 7 }, (_, back) => [addDays(reference, -back), "claude", 1000]);
-    entries.push([reference, "cursor", 1], [reference, "codex", 1]);
+    entries.push([reference, "cursor", 1], [reference, "codex", 1], [reference, "gemini", 1]);
     const by = Object.fromEntries(badgesFrom(rows(entries), { top3: false, bestTier: null }, reference).map((entry) => [entry.key, entry]));
     expect(by["first-sync"].earned).toBe(true);
     expect(by["streak-7"]).toMatchObject({ earned: true, day: reference });

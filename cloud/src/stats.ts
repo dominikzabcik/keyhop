@@ -146,7 +146,12 @@ export async function profile(db: D1Database, userId: string, isPublic: boolean,
     .bind(since("month", reference), since("month", reference), since("month", reference), userId)
     .all<{ tool: Tool; tokens: number; cost_micros: number; requests: number; month_tokens: number; month_cost: number; month_requests: number }>();
 
-  const empty = (): Totals => ({ tokens: 0, costMicros: 0, requests: 0, tools: { claude: 0, cursor: 0, codex: 0 } });
+  const empty = (): Totals => ({
+    tokens: 0,
+    costMicros: 0,
+    requests: 0,
+    tools: Object.fromEntries(TOOLS.map((tool) => [tool, 0])) as Record<Tool, number>,
+  });
   const month = empty();
   const allTime = empty();
   for (const row of tools.results) {

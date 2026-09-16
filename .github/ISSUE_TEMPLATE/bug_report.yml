@@ -10,6 +10,7 @@ body:
         - Claude Code
         - Cursor
         - Codex
+        - Gemini CLI
         - Keyhop itself
     validations:
       required: true

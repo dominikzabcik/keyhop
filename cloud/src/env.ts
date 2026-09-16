@@ -35,13 +35,14 @@ export type AppEnv = {
   };
 };
 
-export const TOOLS = ["claude", "cursor", "codex"] as const;
+export const TOOLS = ["claude", "cursor", "codex", "gemini"] as const;
 export type Tool = (typeof TOOLS)[number];
 
 export const TOOL_NAMES: Record<Tool, string> = {
   claude: "Claude Code",
   cursor: "Cursor",
   codex: "Codex",
+  gemini: "Gemini CLI",
 };
 
 export const now = (): number => Math.floor(Date.now() / 1000);

@@ -18,7 +18,7 @@ import pathlib
 import textwrap
 
 REPO = "dominikzabcik/keyhop"
-DESCRIPTION = "Switch Claude Code, Cursor and Codex accounts in one click and track their usage."
+DESCRIPTION = "Switch Claude Code, Cursor, Codex and Gemini CLI accounts in one click and track their usage."
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
@@ -130,7 +130,7 @@ def winget(version, sums):
         + "PackageName: Keyhop\n"
         + f"PackageUrl: https://github.com/{REPO}\nLicense: MIT\nLicenseUrl: https://github.com/{REPO}/blob/main/LICENSE\n"
         + f"ShortDescription: {DESCRIPTION}\n"
-        + "Tags:\n  - claude\n  - cursor\n  - codex\n  - accounts\n  - usage\n"
+        + "Tags:\n  - claude\n  - cursor\n  - codex\n  - gemini\n  - accounts\n  - usage\n"
         + "ManifestType: defaultLocale\nManifestVersion: 1.6.0\n",
     }
 

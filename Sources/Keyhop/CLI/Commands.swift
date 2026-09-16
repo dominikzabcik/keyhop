@@ -244,7 +244,7 @@ enum Commands {
             guard let seconds = Int(value), seconds > 0 else { throw UsageError("--timeout takes a number of seconds.") }
             return seconds
         } ?? 600
-        let provider = try tool(try args.positional("a tool: claude, cursor or codex"))
+        let provider = try tool(try args.positional("a tool: claude, cursor, codex or gemini"))
         try args.finish()
 
         var workspace = try Workspace.open()
@@ -468,7 +468,7 @@ enum Commands {
     /// What Keyhop can see on this computer. Sample data reads no logins.
     static func doctorDocument(sample: Bool) async -> DoctorDocument {
         var tools: [DoctorDocument.Tool] = []
-        let sampleEmails: [Provider: String] = [.claude: "me@personal.dev", .cursor: "me@personal.dev", .codex: "me@personal.dev"]
+        let sampleEmails: [Provider: String] = [.claude: "me@personal.dev", .cursor: "me@personal.dev", .codex: "me@personal.dev", .gemini: "me@personal.dev"]
         for provider in Provider.allCases {
             var email: String?
             var problem: String?
@@ -517,7 +517,7 @@ enum Commands {
 
     static func tool(_ word: String) throws -> Provider {
         guard let provider = Provider(rawValue: word.lowercased()) else {
-            throw UsageError("Unknown tool '\(word)'. Use claude, cursor or codex.")
+            throw UsageError("Unknown tool '\(word)'. Use claude, cursor, codex or gemini.")
         }
         return provider
     }
@@ -559,6 +559,8 @@ enum ToolDetection {
             return CursorApp.isInstalled
         case .codex:
             return Shell.which("codex") != nil || FileManager.default.fileExists(atPath: Files.home.appendingPathComponent(".codex").path)
+        case .gemini:
+            return Shell.which("gemini") != nil || FileManager.default.fileExists(atPath: GeminiAdapter.directory.path)
         }
     }
 
@@ -575,6 +577,8 @@ enum ToolDetection {
         case .codex:
             let base = ProcessInfo.processInfo.environment["CODEX_HOME"] ?? Files.home.appendingPathComponent(".codex").path
             return base + "/auth.json"
+        case .gemini:
+            return GeminiAdapter.credentialsURL.path
         }
     }
 

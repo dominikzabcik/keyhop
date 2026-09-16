@@ -2,14 +2,14 @@
 //   node scripts/seed-local.mjs [http://localhost:8787]
 const base = process.argv[2] ?? "http://localhost:8787";
 const people = [
-  { login: "mira", scale: 9_000_000, tools: [0.7, 0.2, 0.1] },
-  { login: "jonas", scale: 6_500_000, tools: [0.3, 0.6, 0.1] },
-  { login: "priya", scale: 5_200_000, tools: [0.5, 0.1, 0.4] },
-  { login: "tomas", scale: 2_800_000, tools: [0.1, 0.8, 0.1] },
-  { login: "alex", scale: 1_400_000, tools: [0.45, 0.1, 0.45] },
+  { login: "mira", scale: 9_000_000, tools: [0.6, 0.2, 0.1, 0.1] },
+  { login: "jonas", scale: 6_500_000, tools: [0.2, 0.55, 0.1, 0.15] },
+  { login: "priya", scale: 5_200_000, tools: [0.4, 0.1, 0.3, 0.2] },
+  { login: "tomas", scale: 2_800_000, tools: [0.1, 0.65, 0.1, 0.15] },
+  { login: "alex", scale: 1_400_000, tools: [0.35, 0.1, 0.35, 0.2] },
 ];
-const tools = ["claude", "cursor", "codex"];
-const pricePerMillion = { claude: 4.2, cursor: 2.1, codex: 3.1 };
+const tools = ["claude", "cursor", "codex", "gemini"];
+const pricePerMillion = { claude: 4.2, cursor: 2.1, codex: 3.1, gemini: 2 };
 
 async function request(path, init = {}) {
   return fetch(`${base}${path}`, { redirect: "manual", ...init });

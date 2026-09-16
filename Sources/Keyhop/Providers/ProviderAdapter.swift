@@ -24,5 +24,6 @@ enum Adapters {
         .claude: ClaudeAdapter(),
         .cursor: CursorAdapter(),
         .codex: CodexAdapter(),
+        .gemini: GeminiAdapter(),
     ]
 }

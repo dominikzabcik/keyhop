@@ -1,7 +1,7 @@
 import Foundation
 
 enum Provider: String, Codable, CaseIterable, Identifiable {
-    case claude, cursor, codex
+    case claude, cursor, codex, gemini
 
     var id: String { rawValue }
 
@@ -10,6 +10,7 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .claude: "Claude Code"
         case .cursor: "Cursor"
         case .codex: "Codex"
+        case .gemini: "Gemini CLI"
         }
     }
 
@@ -18,6 +19,7 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .claude: "Claude"
         case .cursor: "Cursor"
         case .codex: "Codex"
+        case .gemini: "Gemini"
         }
     }
 
@@ -27,6 +29,7 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .claude: "Run `claude`, then `/login` with the other account. Keyhop saves it automatically."
         case .cursor: "Sign in to Cursor with the other account. Keyhop saves it automatically."
         case .codex: "Run `codex login` with the other account. Keyhop saves it automatically."
+        case .gemini: "Run `gemini`, then sign in with Google using the other account. Keyhop saves it automatically."
         }
     }
 
@@ -38,7 +41,15 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .claude: "New Claude Code sessions use this account. If an open session stays on the old one, restart it with `claude --continue`."
         #endif
         case .codex: "New Codex sessions use this account. Running ones stay on the old login, so reopen them with `codex resume --last`."
+        case .gemini: "New Gemini CLI sessions use this account. Restart a running session to move it to the new login."
         case .cursor: nil
+        }
+    }
+
+    var limitsNote: String? {
+        switch self {
+        case .gemini: "Quota stays in Gemini CLI; Keyhop tracks local usage."
+        case .claude, .cursor, .codex: nil
         }
     }
 }

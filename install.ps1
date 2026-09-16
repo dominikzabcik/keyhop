@@ -141,7 +141,7 @@ try {
     $link.TargetPath = Join-Path $target 'keyhop-tray.exe'
     $link.WorkingDirectory = $target
     $link.IconLocation = (Join-Path $target 'keyhop.ico') + ',0'
-    $link.Description = 'Switch Claude Code, Cursor and Codex accounts'
+    $link.Description = 'Switch Claude Code, Cursor, Codex and Gemini CLI accounts'
     $link.Save()
 
     Set-ItemProperty -Path $runKey -Name 'Keyhop' -Value ('"' + (Join-Path $target 'keyhop-tray.exe') + '"')

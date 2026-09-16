@@ -15,12 +15,13 @@ enum SampleData {
             account(3, .cursor, "me@personal.dev", nil, "Ultra"),
             account(4, .cursor, "spare@personal.dev", nil, "Pro"),
             account(5, .codex, "me@personal.dev", nil, "Plus"),
+            account(6, .gemini, "me@personal.dev", nil, "Standard"),
         ]
     }
 
     static func overview(now: Date = Date()) -> Overview {
         let accounts = accounts(now: now)
-        let active: [Provider: UUID] = [.claude: accounts[0].id, .cursor: accounts[2].id, .codex: accounts[4].id]
+        let active: [Provider: UUID] = [.claude: accounts[0].id, .cursor: accounts[2].id, .codex: accounts[4].id, .gemini: accounts[5].id]
         func window(_ label: String, _ used: Double, _ resetIn: TimeInterval, _ length: TimeInterval) -> UsageWindow {
             UsageWindow(label: label, usedPercent: used, resetsAt: now.addingTimeInterval(resetIn), windowSeconds: length)
         }
@@ -31,15 +32,16 @@ enum SampleData {
             accounts[2].id: UsageSnapshot(windows: [window("Auto", 62, 1_140_000, 2_592_000), window("API", 39, 1_140_000, 2_592_000)], fetchedAt: read),
             accounts[3].id: UsageSnapshot(error: "Login expired. Switch to it and sign in to Cursor again."),
             accounts[4].id: UsageSnapshot(windows: [window("5h", 93, 6_440, 18000), window("Week", 62, 421_000, 604_800)], fetchedAt: read),
+            accounts[5].id: UsageSnapshot(windows: [window("Quota", 28, 51_400, 86400)], fetchedAt: read),
         ]
 
         var today: [UUID: Totals] = [:]
         var todayAll = Totals()
         for (index, account) in accounts.enumerated() {
-            let tokens = [4_200_000, 1_900_000, 2_600_000, 0, 3_100_000][index]
+            let tokens = [4_200_000, 1_900_000, 2_600_000, 0, 3_100_000, 2_300_000][index]
             guard tokens > 0 else { continue }
             let totals = Totals(tokens: TokenCounts(input: tokens / 20, cacheRead: tokens * 3 / 4, output: tokens / 5),
-                                cost: Double(tokens) / 1_000_000 * [3.1, 2.4, 1.2, 0, 1.6][index], requests: tokens / 9000)
+                                cost: Double(tokens) / 1_000_000 * [3.1, 2.4, 1.2, 0, 1.6, 2.0][index], requests: tokens / 9000)
             today[account.id] = totals
             todayAll += totals
         }
@@ -72,7 +74,7 @@ enum SampleData {
         var digest = UsageDigest()
         let calendar = Calendar.current
         let component: Calendar.Component = bucket == .hour ? .hour : .day
-        let models = ["claude-opus-5", "gpt-5.6-sol", "composer-2", "claude-sonnet-5", "claude-haiku-4-5"]
+        let models = ["claude-opus-5", "gpt-5.6-sol", "composer-2", "claude-sonnet-5", "claude-haiku-4-5", "gemini-3.1-pro-preview"]
         var start = interval.start
         var index = 0.0
         // At least one bucket, so even just after midnight there's something to show.
@@ -89,17 +91,17 @@ enum SampleData {
                     daily = Int(index) % 13 == 5 ? 0 : weekday == 1 ? 0.25 : weekday == 7 ? 0.45 : 1
                 }
                 let wave = 0.55 + 0.45 * sin(index * 0.9 + Double(i) * 1.7)
-                let base = Double([2_600_000, 1_300_000, 1_900_000, 600_000, 2_200_000][i % 5])
+                let base = Double([2_600_000, 1_300_000, 1_900_000, 600_000, 2_200_000, 1_700_000][i % 6])
                 let tokens = Int(base * wave * daily * (bucket == .hour ? 0.12 : 1))
                 guard tokens > 0 else { continue }
-                let cost = Double(tokens) / 1_000_000 * [2.9, 2.2, 1.1, 0.8, 1.5][i % 5]
+                let cost = Double(tokens) / 1_000_000 * [2.9, 2.2, 1.1, 0.8, 1.5, 2.0][i % 6]
                 let totals = Totals(tokens: TokenCounts(input: tokens / 20, cacheRead: tokens * 3 / 4, output: tokens / 5), cost: cost,
                                     billed: account.provider == .cursor ? cost * 0.08 : 0, requests: max(1, tokens / 9000))
                 let key = AccountKey(provider: account.provider, account: account.id)
                 digest.points.append(UsageDigest.Point(start: start, key: key, totals: totals))
                 digest.byAccount[key, default: Totals()] += totals
                 digest.total += totals
-                let model = account.provider == .claude ? (Int(index) % 5 == 0 ? 3 : 0) : account.provider == .codex ? 1 : 2
+                let model = account.provider == .claude ? (Int(index) % 5 == 0 ? 3 : 0) : account.provider == .codex ? 1 : account.provider == .gemini ? 5 : 2
                 digest.byModel[models[model], default: Totals()] += totals
             }
             guard let next = calendar.date(byAdding: component, value: 1, to: start) else { break }

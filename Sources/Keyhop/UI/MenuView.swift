@@ -197,7 +197,7 @@ private struct InUseCard: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 } else {
-                    Text(snapshot?.error ?? (snapshot?.fetchedAt == nil ? "Reading limits…" : "This plan reports no limits."))
+                    Text(snapshot?.error ?? account.provider.limitsNote ?? (snapshot?.fetchedAt == nil ? "Reading limits…" : "This plan reports no limits."))
                         .font(.system(size: 12))
                         .foregroundStyle(Brand.muted)
                         .fixedSize(horizontal: false, vertical: true)

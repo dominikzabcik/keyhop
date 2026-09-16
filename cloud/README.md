@@ -9,7 +9,7 @@ Leaderboards, teams and public profiles for Keyhop. It runs as one Cloudflare Wo
 | `users` | GitHub id, login, name and avatar URL, and whether the profile is public (off until the person turns it on) |
 | `sessions` | SHA-256 hashes of browser session tokens and linked-app tokens. Never the tokens |
 | `device_links` | Codes waiting to be approved, for 10 minutes |
-| `daily_usage` | Tokens, API value and requests per day per tool (`claude`, `cursor`, `codex`) |
+| `daily_usage` | Tokens, API value and requests per day per tool (`claude`, `cursor`, `codex`, `gemini`) |
 | `teams`, `team_members`, `team_invites` | Teams, who's in them and invite links, which expire after 7 days |
 
 No prompts, emails, account names, models or GitHub tokens are stored. Deleting an account in Settings removes all of it.

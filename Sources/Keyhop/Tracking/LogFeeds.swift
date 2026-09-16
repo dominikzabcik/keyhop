@@ -8,7 +8,7 @@ struct LogFeed {
     /// `state` persists per file between reads, for parsers that need earlier lines.
     let parse: (_ object: [String: Any], _ file: URL, _ state: inout [String: String]) -> UsageRecord?
 
-    static let all = [claudeCode, codex]
+    static let all = [claudeCode, codex, geminiCLI]
 
     // MARK: Claude Code
 
@@ -121,5 +121,39 @@ struct LogFeed {
     private static func codexSession(_ file: URL) -> String {
         let name = file.deletingPathExtension().lastPathComponent
         return name.count > 36 ? String(name.suffix(36)) : name
+    }
+
+    // MARK: Gemini CLI
+
+    /// `~/.gemini/tmp/*/chats/*.jsonl`. Gemini records one line per model response, including
+    /// cached, thought and tool-prompt tokens in a compact `tokens` object.
+    static let geminiCLI = LogFeed(
+        roots: [GeminiAdapter.directory.appendingPathComponent("tmp")],
+        markers: [Data("\"type\":\"gemini\"".utf8), Data("\"tokens\"".utf8)]
+    ) { object, file, state in
+        if let session = object["sessionId"] as? String ?? object["session_id"] as? String {
+            state["session"] = session
+        }
+        guard object["type"] as? String == "gemini",
+              let usage = object["tokens"] as? [String: Any],
+              let model = object["model"] as? String,
+              let timestamp = Dates.parse(object["timestamp"]) else { return nil }
+
+        func count(_ key: String) -> Int { Int(JSON.number(usage[key]) ?? 0) }
+        let cached = count("cached")
+        let thoughts = count("thoughts")
+        var tokens = TokenCounts()
+        tokens.input = max(count("input") - cached, 0) + count("tool")
+        tokens.cacheRead = cached
+        tokens.output = count("output") + thoughts
+        tokens.reasoning = thoughts
+
+        let session = state["session"] ?? file.deletingPathExtension().lastPathComponent
+        let id = object["id"] as? String ?? String(timestamp.timeIntervalSince1970)
+        return UsageRecord(
+            key: "gemini:\(session):\(id)", provider: .gemini, account: nil, session: session,
+            kind: .request, timestamp: timestamp, model: model, tokens: tokens,
+            cost: Pricing.cost(model: model, tokens: tokens), billed: nil
+        )
     }
 }

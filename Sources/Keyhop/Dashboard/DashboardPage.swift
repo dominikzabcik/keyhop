@@ -382,6 +382,7 @@ select.field option { background: var(--raised); }
   <symbol id="mark-claude" viewBox="0 0 24 24"><path d="{{mark-claude}}"/></symbol>
   <symbol id="mark-cursor" viewBox="0 0 24 24"><path d="{{mark-cursor}}"/></symbol>
   <symbol id="mark-codex" viewBox="0 0 24 24"><path d="{{mark-codex}}"/></symbol>
+  <symbol id="mark-gemini" viewBox="0 0 24 24"><path d="{{mark-gemini}}"/></symbol>
   {{icons}}
 </svg>
 
@@ -594,9 +595,9 @@ select.field option { background: var(--raised); }
     return limit.resetsAt ? `Resets in ${fmt.until(limit.resetsAt)}` : "";
   }
 
-  function limits(account, count = 2) {
+  function limits(account, count = 2, note = null) {
     if (!account.limits?.length) {
-      return account.error ? `<p class="problem">${esc(account.error)}</p>` : `<p class="empty-inline subtle">Limits not read yet</p>`;
+      return account.error ? `<p class="problem">${esc(account.error)}</p>` : `<p class="empty-inline subtle">${esc(note || "Limits not read yet")}</p>`;
     }
     return `<div class="limits">${account.limits.slice(0, count).map((limit) => `
       <div>
@@ -656,7 +657,7 @@ select.field option { background: var(--raised); }
           ? `<div class="who">${mark(tool.id)}<div><b>${esc(tool.name)}</b><small>${esc(account.name)}${account.plan ? ` · ${esc(account.plan)}` : ""}</small></div></div>`
           : `<div class="who">${mark(tool.id)}<div><b>${esc(tool.name)}</b><small>${tool.accounts.length ? "Signed out" : "No saved accounts"}</small></div></div>`;
         const middle = adding ? `<div class="waiting"><span class="pulse"><i></i><i></i><i></i></span>Waiting for the new login</div>`
-          : account ? limits(account) : `<p class="empty-inline subtle">${esc(tool.signInHint)}</p>`;
+          : account ? limits(account, 2, tool.limitsNote) : `<p class="empty-inline subtle">${esc(tool.signInHint)}</p>`;
         const actions = isStatic ? "" : other
           ? `<button class="btn sm secondary" data-action="switch" data-id="${esc(other.id)}">Switch to ${esc(other.name)}</button>`
           : `<button class="btn sm ghost" data-action="goto" data-section="accounts">Accounts</button>`;
@@ -727,7 +728,7 @@ select.field option { background: var(--raised); }
   function accountsPage(tools) {
     const body = tools.map((tool) => {
       const adding = data.state.adding.includes(tool.id);
-      const rows = tool.accounts.map((account) => accountRow(account)).join("");
+      const rows = tool.accounts.map((account) => accountRow(account, tool.limitsNote)).join("");
       const waiting = adding ? `<div class="row"><div class="waiting"><span class="pulse"><i></i><i></i><i></i></span><span>Waiting for a new ${esc(tool.name)} login. ${esc(tool.signInHint)}</span></div></div>` : "";
       const empty = !tool.accounts.length && !adding ? `<p class="empty">${esc(tool.signInHint)}</p>` : "";
       return `<section class="group">
@@ -739,7 +740,7 @@ select.field option { background: var(--raised); }
     return { body: `<p class="lede">Every login Keyhop keeps. Switching saves the login in use first, so none is ever lost.</p>${body}` };
   }
 
-  function accountRow(account) {
+  function accountRow(account, limitsNote) {
     const editing = ui.editing === account.id;
     const confirming = ui.confirming === account.id;
     const name = editing
@@ -755,7 +756,7 @@ select.field option { background: var(--raised); }
     const today = account.today ? `${fmt.tokens(account.today.tokens)} tokens<br>${fmt.usd(account.today.cost)} today` : `<span class="subtle">No usage today</span>`;
     return `<div class="row account-row">
       <div>${name}</div>
-      <div>${limits(account)}</div>
+      <div>${limits(account, 2, limitsNote)}</div>
       <div class="today">${today}</div>
       <div class="row-actions">${actions}</div>
     </div>`;
@@ -780,7 +781,7 @@ select.field option { background: var(--raised); }
     </div>`;
     const heat = heatCard(usage);
     if (!t.requests) {
-      return { toolbar, body: `${stats}<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code and Codex logs on this computer, and Cursor's usage export after a refresh.</p></div>${heat}` };
+      return { toolbar, body: `${stats}<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code, Codex and Gemini CLI logs on this computer, and Cursor's usage export after a refresh.</p></div>${heat}` };
     }
     const legend = `<ul class="legend">${usage.series.map((s) => `<li><span class="swatch" style="background:${s.color}"></span>${esc(s.name)}</li>`).join("")}</ul>`;
     const chart = `<section class="card">
@@ -1217,7 +1218,7 @@ select.field option { background: var(--raised); }
     const avatar = (e, size) => `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px" aria-hidden="true">${esc(e.login.slice(0, 1).toUpperCase())}</span>`;
     const person = (e, size) => `<div class="who">${avatar(e, size)}<div><b>${esc(e.name || e.login)}</b><small>@${esc(e.login)}</small></div></div>`;
     const mix = (e) => {
-      const parts = [["claude", "m1"], ["cursor", "m2"], ["codex", "m3"]].filter(([tool]) => (e.tools[tool] || 0) > 0);
+      const parts = [["claude", "m1"], ["cursor", "m2"], ["codex", "m3"], ["gemini", "m4"]].filter(([tool]) => (e.tools[tool] || 0) > 0);
       const total = parts.reduce((sum, [tool]) => sum + e.tools[tool], 0);
       return `<div class="mix-bar">${parts.map(([tool, tone]) => `<span class="${tone}" style="width:${(e.tools[tool] / total * 100).toFixed(2)}%" title="${esc(toolName(tool))} ${fmt.tokens(e.tools[tool])}"></span>`).join("")}</div>`;
     };

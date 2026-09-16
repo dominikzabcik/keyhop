@@ -101,7 +101,7 @@ final class Store: ObservableObject {
                 CloudQuests.Quest(key: "today", name: "Get going", note: "Use any tool today.", period: "day", done: 1, target: 1, complete: true),
                 CloudQuests.Quest(key: "two-tools", name: "Two tools", note: "Use two different tools today.", period: "day", done: 1, target: 2, complete: false),
                 CloudQuests.Quest(key: "five-days", name: "Five days", note: "Use Keyhop on five days this week.", period: "week", done: 5, target: 5, complete: true),
-                CloudQuests.Quest(key: "every-tool", name: "Every tool", note: "Use all three tools this week.", period: "week", done: 2, target: 3, complete: false),
+                CloudQuests.Quest(key: "every-tool", name: "Every tool", note: "Use all four tools this week.", period: "week", done: 3, target: 4, complete: false),
             ],
             badges: [
                 CloudQuests.Badge(key: "first-hop", name: "First hop", note: "Join your first season.", earned: true, day: "2026-09-01"),
@@ -119,7 +119,7 @@ final class Store: ObservableObject {
         board = CloudBoard(period: "week", metric: "tokens", entries: people.enumerated().map { index, person in
             CloudBoard.Entry(rank: index + 1, login: person.0, name: person.1, avatarUrl: nil, isPublic: true,
                              tokens: person.2, cost: Double(person.2) / 1_000_000 * 3.1, requests: person.2 / 42_000,
-                             activeDays: 6, tools: ["claude": person.2 / 2, "cursor": person.2 / 3, "codex": person.2 / 6],
+                             activeDays: 6, tools: ["claude": person.2 * 5 / 12, "cursor": person.2 / 4, "codex": person.2 / 6, "gemini": person.2 / 6],
                              isYou: person.3)
         })
     }

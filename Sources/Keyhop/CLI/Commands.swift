@@ -151,7 +151,7 @@ enum Commands {
             workspace.state.sentAlerts = workspace.state.sentAlerts.filter { now.timeIntervalSince($0.value) < 40 * 86400 }
         }
         workspace.state.save()
-        await CloudSync.syncIfDue(tracker: tracker, now: now)
+        await CloudSync.syncIfDue(tracker: tracker, accounts: accounts, usage: usage, now: now)
         return overview
     }
 

@@ -58,6 +58,52 @@ final class CloudTests: XCTestCase {
         ])
     }
 
+    func testSharedLimitsCarryLabelsButNeverEmails() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        func account(_ provider: Provider, _ email: String, label: String?) -> Account {
+            Account(id: UUID(), provider: provider, identity: email, email: email, label: label, plan: nil, addedAt: now)
+        }
+        let named = account(.codex, "me@example.com", label: " Work ")
+        let unnamed = account(.claude, "personal@example.com", label: nil)
+        let blank = account(.cursor, "blank@example.com", label: "   ")
+        let broken = account(.gemini, "broken@example.com", label: "Broken")
+        let usage: [UUID: UsageSnapshot] = [
+            named.id: UsageSnapshot(windows: [
+                UsageWindow(label: "5h", usedPercent: 96.4, resetsAt: now.addingTimeInterval(1500), windowSeconds: 18000),
+                // Already turned over: a reading waiting to be refreshed, not a countdown.
+                UsageWindow(label: "Week", usedPercent: 40, resetsAt: now.addingTimeInterval(-60), windowSeconds: 604_800),
+            ], fetchedAt: now),
+            unnamed.id: UsageSnapshot(windows: [UsageWindow(label: "5h", usedPercent: 12, resetsAt: nil, windowSeconds: nil)], fetchedAt: now),
+            blank.id: UsageSnapshot(windows: [UsageWindow(label: "Auto", usedPercent: 3, resetsAt: nil, windowSeconds: nil)], fetchedAt: now),
+            broken.id: UsageSnapshot(windows: [UsageWindow(label: "Day", usedPercent: 50, resetsAt: nil, windowSeconds: nil)],
+                                     error: "The saved login is missing.", fetchedAt: now),
+        ]
+
+        let limits = CloudSync.limits(accounts: [named, unnamed, blank, broken], usage: usage, now: now)
+        XCTAssertEqual(limits.count, 4)
+        XCTAssertEqual(limits.first, CloudLimit(accountKey: named.id.uuidString, tool: "codex", label: "Work",
+                                                windowLabel: "5h", usedPercent: 96.4, resetsAt: 1_800_001_500))
+        XCTAssertNil(limits.first { $0.windowLabel == "Week" }?.resetsAt)
+        XCTAssertNil(limits.first { $0.accountKey == unnamed.id.uuidString }?.label)
+        XCTAssertNil(limits.first { $0.accountKey == blank.id.uuidString }?.label)
+        // An account Keyhop couldn't read sends nothing rather than a stale guess.
+        XCTAssertFalse(limits.contains { $0.accountKey == broken.id.uuidString })
+        let sent = String(decoding: try! JSONEncoder().encode(limits), as: UTF8.self)
+        for account in [named, unnamed, blank, broken] {
+            XCTAssertFalse(sent.contains(account.email), "\(account.email) must never be sent")
+        }
+    }
+
+    func testLimitSharingStaysOffUntilItIsTurnedOn() throws {
+        let json = #"{"server":"https://keyhop.example","login":"mira","isPublic":false,"linkedAt":"2027-01-15T08:00:00Z"}"#
+        var link = try DashboardJSON.decoder.decode(CloudLink.self, from: Data(json.utf8))
+        XCTAssertFalse(link.sharesLimits)
+        XCTAssertNil(link.lastLimitSync)
+        link.sharesLimits = true
+        let round = try DashboardJSON.decoder.decode(CloudLink.self, from: DashboardJSON.encoder.encode(link))
+        XCTAssertTrue(round.sharesLimits)
+    }
+
     func testTheLinkKeepsItsTokenInTheSecretStore() throws {
         #if os(Windows)
         throw XCTSkip("Uses setenv to move the data folder, which Windows doesn't have.")

@@ -1147,12 +1147,20 @@ select.field option { background: var(--raised); }
           <button class="btn sm" data-action="cloud-link">Link with GitHub</button></div></section>`;
     }
     const synced = cloud.lastSyncError ? `The last sync failed: ${esc(cloud.lastSyncError)}` : cloud.lastSync ? `Synced ${esc(ago(cloud.lastSync))}` : "Not synced yet";
+    const limits = cloud.sharesLimits
+      ? `<div class="card-body setting-row"><div><b>Your phone can see your limits</b>
+          <p>How full each account is, when it comes back, and the name you gave it. No emails, and nothing about what you asked.</p></div>
+          <button class="btn sm ghost danger" data-action="cloud-limits-off">Stop sharing</button></div>`
+      : `<div class="card-body setting-row"><div><b>Let your phone see your limits</b>
+          <p>The Keyhop app on your phone can then tell you when an account comes back. It sends how full each account is and the name you gave it, never an email.</p></div>
+          <button class="btn sm secondary" data-action="cloud-limits-on">Share limits</button></div>`;
     return `<section class="card"><div class="card-head"><h2>Leaderboard</h2><span class="badge live">Linked</span></div>
       <div class="card-body setting-row"><div><b>@${esc(cloud.login)}${cloud.isPublic ? "" : " · private profile"}</b>
         <p>${synced}. Daily totals go out hourly, after a refresh.</p></div>
         <div class="row-actions"><a class="btn sm secondary" href="${esc(cloud.profile)}" target="_blank" rel="noopener">Open profile</a>
         <button class="btn sm secondary" data-action="cloud-sync">Sync now</button>
-        <button class="btn sm ghost danger" data-action="cloud-unlink">Unlink</button></div></div></section>`;
+        <button class="btn sm ghost danger" data-action="cloud-unlink">Unlink</button></div></div>
+      ${limits}</section>`;
   }
 
   // Six squares climbing to the right, lit as far as the tier has come.
@@ -1275,7 +1283,7 @@ select.field option { background: var(--raised); }
           <div class="list">
             <div class="row kv"><span>Data folder</span><span class="mono">${esc(doctor?.dataDirectory || state.dataDirectory)}</span></div>
             <div class="row kv"><span>Saved logins</span><span>${esc(doctor ? `${doctor.savedAccounts} in ${doctor.secretStore}` : state.status.secretStore)}</span></div>
-            <div class="row kv"><span>Network</span><span>The providers' own usage and sign-in services, GitHub for updates${state.cloud?.linked ? ", and Keyhop cloud for your daily totals" : ""}. No analytics.</span></div>
+            <div class="row kv"><span>Network</span><span>The providers' own usage and sign-in services, GitHub for updates${state.cloud?.linked ? `, and Keyhop cloud for your daily totals${state.cloud.sharesLimits ? " and current limits" : ""}` : ""}. No analytics.</span></div>
             <div class="row kv"><span>This window</span><span>Served by keyhop on 127.0.0.1 only, with a private session key.</span></div>
           </div>
         </section>
@@ -1373,6 +1381,8 @@ select.field option { background: var(--raised); }
       case "cloud-link": act(el, () => api("/api/cloud/link", {})); break;
       case "cloud-sync": act(el, () => api("/api/cloud/sync", {})); break;
       case "cloud-unlink": data.board = null; act(el, () => api("/api/cloud/unlink", {})); break;
+      case "cloud-limits-on": act(el, () => api("/api/cloud/limits", { on: true })); break;
+      case "cloud-limits-off": act(el, () => api("/api/cloud/limits", { on: false })); break;
       case "appearance": setAppearance({ [el.dataset.key]: el.dataset.value }); break;
       case "appearance-clear": setAppearance({ image: "" }); break;
       case "board-period": case "board-metric":

@@ -100,7 +100,7 @@ final class UsageTracker: ObservableObject {
             budgetSpend = try await engine.budgetSpend(for: budgets, now: now, sole: sole)
             lastUpdate = now
             problem = nil
-            await CloudSync.syncIfDue(tracker: engine, now: now)
+            await CloudSync.syncIfDue(tracker: engine, accounts: accounts, usage: usage, now: now)
         } catch {
             problem = error.localizedDescription
         }

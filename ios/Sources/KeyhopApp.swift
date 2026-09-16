@@ -104,12 +104,14 @@ struct LinkView: View {
 /// Once linked: where this season stands, then the board, the quests and the badges.
 struct SeasonView: View {
     @EnvironmentObject private var store: Store
+    @State private var showingAlerts = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
                     problem
+                    limits
                     standing
                     quests
                     badges
@@ -124,6 +126,7 @@ struct SeasonView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
+                        Button("Alerts") { showingAlerts = true }
                         if let url = store.link?.profileURL {
                             Link("Open my profile", destination: url)
                         }
@@ -133,8 +136,12 @@ struct SeasonView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingAlerts) { AlertsView() }
             .refreshable { await store.refresh() }
-            .task { await store.refresh() }
+            .task {
+                await store.readAlertPermission()
+                await store.refresh()
+            }
         }
     }
 
@@ -143,12 +150,72 @@ struct SeasonView: View {
             Card {
                 Text(message)
                     .font(.system(size: 13))
-                    .foregroundStyle(Color(red: 0.93, green: 0.48, blue: 0.41))
+                    .foregroundStyle(Brand.wrong)
                     .padding(16)
             }
         }
     }
 
+    /// Where the accounts stand, when the computer is sharing it. The two arms of the mark carry the
+    /// two nearest limits, the same way they do in the Mac's menu bar.
+    @ViewBuilder private var limits: some View {
+        let accounts = store.limitAccounts
+        if accounts.isEmpty {
+            if store.season != nil || store.board != nil {
+                Card {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("See your limits here")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Brand.text)
+                        Text("In Keyhop on your computer, open Settings and choose Share limits. This phone can then tell you when an account comes back.")
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(Brand.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(18)
+                }
+            }
+        } else {
+            Card {
+                // Ticks with the clock, so a countdown on screen is never a stale number.
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(spacing: 10) {
+                            KeyhopMark(size: 18, arms: nearest(accounts))
+                            Text("Limits")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Brand.text)
+                            Spacer(minLength: 8)
+                            if let updated = store.limits.updated {
+                                Text(sent(updated, at: context.date))
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Brand.subtle)
+                            }
+                        }
+                        .padding(.bottom, 14)
+
+                        ForEach(Array(accounts.enumerated()), id: \.element.id) { index, account in
+                            if index > 0 { Divider().overlay(Brand.border).padding(.vertical, 12) }
+                            LimitRows(account: account, now: context.date)
+                        }
+                    }
+                    .padding(18)
+                }
+            }
+        }
+    }
+
+    /// The two limits closest to being spent, for the mark's arms.
+    private func nearest(_ accounts: [LimitAccount]) -> [Double] {
+        let sorted = accounts.flatMap(\.windows).map(\.usedPercent).sorted(by: >)
+        return (0..<2).map { $0 < sorted.count ? sorted[$0] / 100 : 0 }
+    }
+
+    private func sent(_ updated: Date, at now: Date) -> String {
+        let seconds = Int(now.timeIntervalSince(updated))
+        if seconds < 90 { return "just now" }
+        return "\(Format.until(now, from: updated)) ago"
+    }
     private var standing: some View {
         Card {
             VStack(alignment: .leading, spacing: 12) {
@@ -284,6 +351,144 @@ struct SeasonView: View {
                 }
                 .padding(18)
             }
+        }
+    }
+}
+
+/// One account's windows. Every row sits on the same columns, so the measures and the countdowns
+/// line up down the card however long a window's name happens to be.
+struct LimitRows: View {
+    let account: LimitAccount
+    let now: Date
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text(account.name)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Brand.text)
+                Spacer(minLength: 8)
+                // Only while the account is actually spent: with room left this repeated a number
+                // the rows below already carry.
+                if let tightest = account.tightest, tightest.usedPercent >= AlertPlan.fullEnough,
+                   let reset = tightest.resetDate, reset > now {
+                    Text("back in \(Format.until(reset, from: now))")
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(Brand.subtle)
+                        .fixedSize()
+                }
+            }
+            ForEach(account.windows) { window in
+                HStack(spacing: 12) {
+                    Text(window.windowLabel)
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(Brand.muted)
+                        .frame(width: 46, alignment: .leading)
+                    CapacityTrack(usedPercent: window.usedPercent)
+                    Text("\(Int(window.usedPercent.rounded()))%")
+                        .font(.system(size: 12.5, design: .monospaced))
+                        .foregroundStyle(window.usedPercent >= 95 ? Brand.spent : Brand.muted)
+                        .fixedSize()
+                        .frame(width: 44, alignment: .trailing)
+                    Text(window.resetDate.map { $0 > now ? Format.until($0, from: now) : "now" } ?? "")
+                        .font(.system(size: 12.5, design: .monospaced))
+                        .foregroundStyle(Brand.subtle)
+                        // Wide enough for the longest countdown ("4d 15h") at its natural width, so
+                        // nothing is ever squeezed to fit.
+                        .fixedSize()
+                        .frame(width: 64, alignment: .trailing)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(reading(window))
+            }
+        }
+    }
+
+    private func reading(_ window: CloudLimit) -> String {
+        var text = "\(account.name), \(window.windowLabel) limit \(Int(window.usedPercent.rounded())) percent used"
+        if let reset = window.resetDate, reset > now { text += ", back in \(Format.until(reset, from: now))" }
+        return text
+    }
+}
+
+/// What the phone may say, and whether iOS is letting it.
+struct AlertsView: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 14) {
+                    Card {
+                        VStack(alignment: .leading, spacing: 0) {
+                            row(title: "When a limit comes back",
+                                note: "Only for an account that is nearly spent, at the moment it resets.",
+                                on: $store.alertsForLimits)
+                            Divider().overlay(Brand.border).padding(.vertical, 12)
+                            row(title: "Seasons and quests",
+                                note: "The season's last evening, and tonight if today's goals are still open.",
+                                on: $store.alertsForSeason)
+                        }
+                        .padding(18)
+                    }
+
+                    if store.notificationsAllowed == false {
+                        Card {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Notifications are off for Keyhop")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(Brand.text)
+                                Text("Turn them on in iOS Settings and these come back.")
+                                    .font(.system(size: 12.5))
+                                    .foregroundStyle(Brand.muted)
+                            }
+                            .padding(18)
+                        }
+                    }
+
+                    Text("Every alert is set on this phone, against a moment Keyhop already knows. Nothing is pushed to you, and nothing about what you asked or wrote ever leaves your computer.")
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(Brand.subtle)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 4)
+                        .padding(.top, 2)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .background(Brand.background)
+            .navigationTitle("Alerts")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }.foregroundStyle(Brand.text)
+                }
+            }
+        }
+        .task { await store.readAlertPermission() }
+    }
+
+    private func row(title: String, note: String, on: Binding<Bool>) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Brand.text)
+                Text(note)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Brand.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Toggle("", isOn: Binding(get: { on.wrappedValue }, set: { asked in
+                on.wrappedValue = asked
+                // The prompt arrives with a reason attached: they just asked for this alert.
+                if asked { Task { await store.allowAlerts() } }
+            }))
+            .labelsHidden()
+            .tint(Brand.good)
+            .accessibilityLabel(title)
         }
     }
 }

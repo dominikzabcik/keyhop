@@ -26,6 +26,44 @@ struct CloudDay: Codable, Equatable {
     let requests: Int
 }
 
+/// One window of one account's limits, as a linked phone reads them. Sent only while limit sharing
+/// is on, and only ever the current reading: the website keeps no history of these.
+struct CloudLimit: Codable, Equatable, Identifiable {
+    /// Opaque per-account key from the computer. Stable across uploads, meaningless off this row.
+    let accountKey: String
+    let tool: String
+    /// Only a label a person typed for the account. Emails and account names are never sent.
+    let label: String?
+    /// The window's own name, as the provider draws it: "5h", "Week", "Auto".
+    let windowLabel: String
+    let usedPercent: Double
+    /// Unix seconds, or nil for a window whose provider doesn't say when it turns over.
+    let resetsAt: Int?
+
+    var id: String { "\(accountKey)|\(windowLabel)" }
+
+    var resetDate: Date? { resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) } }
+
+    init(accountKey: String, tool: String, label: String?, windowLabel: String, usedPercent: Double, resetsAt: Int?) {
+        self.accountKey = accountKey
+        self.tool = tool
+        self.label = label
+        self.windowLabel = windowLabel
+        self.usedPercent = usedPercent
+        self.resetsAt = resetsAt
+    }
+}
+
+/// Every current reading, soonest reset first, with when the computer last sent them.
+struct CloudLimits: Codable, Equatable {
+    let limits: [CloudLimit]
+    let updatedAt: Int?
+
+    var updated: Date? { updatedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) } }
+
+    static let none = CloudLimits(limits: [], updatedAt: nil)
+}
+
 /// A leaderboard as the website ranks it.
 struct CloudBoard: Codable {
     struct Entry: Codable {
@@ -185,6 +223,28 @@ struct CloudClient {
             saved += try JSONDecoder().decode(Response.self, from: data).saved
         }
         return saved
+    }
+
+    /// Replaces the readings the website holds for this person with these.
+    @discardableResult
+    func upload(_ limits: [CloudLimit]) async throws -> Int {
+        struct Response: Decodable { let saved: Int }
+        let (data, status) = try await send("POST", "/api/limits", body: ["limits": limits])
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(Response.self, from: data).saved
+    }
+
+    /// Every current reading, for a linked phone.
+    func limits() async throws -> CloudLimits {
+        let (data, status) = try await send("GET", "/api/limits")
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(CloudLimits.self, from: data)
+    }
+
+    /// Takes the readings down, for when limit sharing is turned off.
+    func clearLimits() async throws {
+        let (data, status) = try await send("DELETE", "/api/limits")
+        guard status == 204 || status == 401 else { throw problem(data, status) }
     }
 
     func unlink() async throws {

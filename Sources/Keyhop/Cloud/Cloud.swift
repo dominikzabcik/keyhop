@@ -6,6 +6,10 @@ import FoundationNetworking
 /// Keyhop cloud: leaderboards, teams and public profiles. Linking signs in with GitHub in the
 /// browser; after that Keyhop sends daily totals per tool (tokens, API value and requests) and
 /// nothing else: no prompts, emails, account names or models.
+///
+/// Turning limit sharing on adds one thing to that, for people who want a phone to tell them when a
+/// limit comes back: where each account stands right now against its limits, with the label they
+/// typed for it. Still no emails, and still nothing about what was asked or written.
 enum Cloud {
     /// The deployed service. `KEYHOP_CLOUD_URL` points Keyhop at another one, like a local
     /// `npm run dev` in cloud/.
@@ -39,13 +43,17 @@ struct CloudLink: Codable, Equatable {
     var linkedAt: Date
     var lastSync: Date?
     var lastSyncError: String?
+    /// Off until it is turned on. While it is on, Keyhop also sends where each account stands
+    /// against its limits, so a linked phone can count down to the next reset.
+    var sharesLimits: Bool
+    var lastLimitSync: Date?
 
     static var url: URL { Platform.dataDirectory.appendingPathComponent("cloud.json") }
 
     var profileURL: String { "\(server)/u/\(login)" }
 
     init(server: String, token: String, login: String, name: String?, isPublic: Bool, linkedAt: Date,
-         lastSync: Date? = nil, lastSyncError: String? = nil) {
+         lastSync: Date? = nil, lastSyncError: String? = nil, sharesLimits: Bool = false, lastLimitSync: Date? = nil) {
         self.server = server
         self.token = token
         self.login = login
@@ -54,10 +62,12 @@ struct CloudLink: Codable, Equatable {
         self.linkedAt = linkedAt
         self.lastSync = lastSync
         self.lastSyncError = lastSyncError
+        self.sharesLimits = sharesLimits
+        self.lastLimitSync = lastLimitSync
     }
 
     private enum CodingKeys: String, CodingKey {
-        case server, token, login, name, isPublic, linkedAt, lastSync, lastSyncError
+        case server, token, login, name, isPublic, linkedAt, lastSync, lastSyncError, sharesLimits, lastLimitSync
     }
 
     init(from decoder: Decoder) throws {
@@ -70,6 +80,8 @@ struct CloudLink: Codable, Equatable {
         linkedAt = try values.decode(Date.self, forKey: .linkedAt)
         lastSync = try values.decodeIfPresent(Date.self, forKey: .lastSync)
         lastSyncError = try values.decodeIfPresent(String.self, forKey: .lastSyncError)
+        sharesLimits = try values.decodeIfPresent(Bool.self, forKey: .sharesLimits) ?? false
+        lastLimitSync = try values.decodeIfPresent(Date.self, forKey: .lastLimitSync)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -81,6 +93,8 @@ struct CloudLink: Codable, Equatable {
         try values.encode(linkedAt, forKey: .linkedAt)
         try values.encodeIfPresent(lastSync, forKey: .lastSync)
         try values.encodeIfPresent(lastSyncError, forKey: .lastSyncError)
+        try values.encode(sharesLimits, forKey: .sharesLimits)
+        try values.encodeIfPresent(lastLimitSync, forKey: .lastLimitSync)
     }
 
     static func load(store: (any SecretStore)? = nil) -> CloudLink? {
@@ -162,17 +176,54 @@ enum CloudSync {
         return saved
     }
 
-    /// After a refresh: at most once an hour, and never in the way of the refresh itself.
-    static func syncIfDue(tracker: TrackerEngine, now: Date = Date()) async {
+    /// Where each account stands right now, as a phone would read it. A window is worth sending when
+    /// its provider reported it; an account that failed to read is left out rather than guessed at.
+    ///
+    /// Only the label a person typed travels. An account they never named sends no label at all,
+    /// because the fallback on this computer is the email address, and that never leaves it.
+    static func limits(accounts: [Account], usage: [UUID: UsageSnapshot], now: Date = Date()) -> [CloudLimit] {
+        accounts.flatMap { account -> [CloudLimit] in
+            guard let snapshot = usage[account.id], snapshot.error == nil else { return [] }
+            let label = account.label.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 }
+            return snapshot.windows.compactMap { window in
+                // A reset already in the past is a reading waiting to be refreshed, not a countdown.
+                let resetsAt = window.resetsAt.flatMap { $0 > now ? Int($0.timeIntervalSince1970.rounded()) : nil }
+                return CloudLimit(accountKey: account.id.uuidString, tool: account.provider.rawValue, label: label,
+                                  windowLabel: window.label, usedPercent: min(max(window.usedPercent, 0), 100), resetsAt: resetsAt)
+            }
+        }
+    }
+
+    /// After a refresh: at most once an hour, and never in the way of the refresh itself. Limits go
+    /// more often, because a countdown that is an hour old is no longer a countdown.
+    static func syncIfDue(tracker: TrackerEngine, accounts: [Account] = [], usage: [UUID: UsageSnapshot] = [:],
+                          now: Date = Date()) async {
         guard var link = CloudLink.load() else { return }
-        if let last = link.lastSync, now.timeIntervalSince(last) < 3600 { return }
+        var changed = false
         do {
-            try await run(&link, tracker: tracker, now: now)
+            if link.sharesLimits, link.lastLimitSync.map({ now.timeIntervalSince($0) >= 300 }) ?? true {
+                try await CloudClient(server: link.server, token: link.token).upload(limits(accounts: accounts, usage: usage, now: now))
+                link.lastLimitSync = now
+                changed = true
+            }
+            if link.lastSync.map({ now.timeIntervalSince($0) >= 3600 }) ?? true {
+                try await run(&link, tracker: tracker, now: now)
+                changed = false
+            }
+            if changed { try link.save() }
         } catch let error as CloudError where error.kind == .unlinked {
             CloudLink.remove()
         } catch {
             link.lastSyncError = error.localizedDescription
             try? link.save()
         }
+    }
+
+    /// Turning limit sharing off takes the readings off the website too, right away.
+    static func stopSharingLimits(_ link: inout CloudLink) async throws {
+        link.sharesLimits = false
+        link.lastLimitSync = nil
+        try link.save()
+        try await CloudClient(server: link.server, token: link.token).clearLimits()
     }
 }

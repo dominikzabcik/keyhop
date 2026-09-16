@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Your phone can tell you when a limit comes back. Turn on **Share limits** in Keyhop's window (or `keyhop cloud limits on`) and your computer sends where each account stands, so the iOS companion can show a live countdown and raise a notification the moment a nearly-spent account resets. It also reminds you on the season's last evening and while today's quests are still open. Every alert is scheduled on the phone itself against a moment already known, so nothing is pushed and no push service is involved. Sharing is off until you turn it on, it carries only how full an account is, when it resets and the name you typed for it, never an email or anything about what you asked, it keeps no history, and turning it off takes the readings off the website straight away.
+
 ## [0.10.0]
 
 - Native Gemini CLI support joins Claude Code, Cursor and Codex across account discovery, switching, local token tracking, budgets, the dashboard, cloud leaderboards and MCP status. Keyhop follows Gemini CLI's own Google sign-in files, reads usage only from local transcripts and leaves API-key and Vertex AI setups untouched.

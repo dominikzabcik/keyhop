@@ -266,6 +266,8 @@ struct DashboardCloud: Encodable {
     let isPublic: Bool?
     let lastSync: Date?
     let lastSyncError: String?
+    /// Whether a linked phone may see how full each account is and when it comes back.
+    let sharesLimits: Bool
     let linking: Linking?
 }
 
@@ -607,6 +609,8 @@ actor DashboardSession {
                 return .json(try await cloudLink())
             case ("POST", "/api/cloud/sync"):
                 return .json(try await cloudSync())
+            case ("POST", "/api/cloud/limits"):
+                return .json(try await cloudLimitSharing(on: try Self.decode(CloudLimitsBody.self, request).on))
             case ("POST", "/api/cloud/unlink"):
                 return .json(try await cloudUnlink())
             case ("GET", "/api/cloud/leaderboard"):
@@ -901,13 +905,13 @@ actor DashboardSession {
         if sample {
             return DashboardCloud(available: true, linked: true, server: "https://keyhop.example", login: "you",
                                   profile: "https://keyhop.example/u/you", isPublic: true, lastSync: Date().addingTimeInterval(-600),
-                                  lastSyncError: nil, linking: nil)
+                                  lastSyncError: nil, sharesLimits: true, linking: nil)
         }
         let link = CloudLink.load()
         let linking = cloudLinking.flatMap { $0.expires > Date() ? DashboardCloud.Linking(userCode: $0.start.userCode, verifyUrl: $0.start.verifyUrl) : nil }
         return DashboardCloud(available: link != nil || Cloud.server != nil, linked: link != nil, server: link?.server ?? Cloud.server,
                               login: link?.login, profile: link?.profileURL, isPublic: link?.isPublic, lastSync: link?.lastSync,
-                              lastSyncError: link?.lastSyncError, linking: linking)
+                              lastSyncError: link?.lastSyncError, sharesLimits: link?.sharesLimits ?? false, linking: linking)
     }
 
     /// Starts linking in the browser and keeps asking the website until someone approves the code.
@@ -978,6 +982,35 @@ actor DashboardSession {
             CloudLink.remove()
             throw error
         }
+    }
+
+    private struct CloudLimitsBody: Decodable {
+        let on: Bool
+    }
+
+    /// Turns limit sharing on or off. On sends where the accounts stand at once, so a phone has
+    /// something to count down from; off takes the readings off the website in the same breath.
+    private func cloudLimitSharing(on: Bool) async throws -> DashboardAction {
+        try refuseInSample()
+        guard var link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud first.") }
+        guard on else {
+            try await CloudSync.stopSharingLimits(&link)
+            changed()
+            return DashboardAction(message: "Limit sharing is off, and the readings are off the website.", note: nil)
+        }
+        let workspace = try openWorkspace()
+        let sent = CloudSync.limits(accounts: await workspace.service.accounts, usage: workspace.state.usageByID)
+        link.sharesLimits = true
+        link.lastLimitSync = Date()
+        try link.save()
+        do {
+            try await CloudClient(server: link.server, token: link.token).upload(sent)
+        } catch let error as CloudError where error.kind == .unlinked {
+            CloudLink.remove()
+            throw error
+        }
+        changed()
+        return DashboardAction(message: "A linked phone can now see how full each account is.", note: nil)
     }
 
     private func cloudUnlink() async throws -> DashboardAction {

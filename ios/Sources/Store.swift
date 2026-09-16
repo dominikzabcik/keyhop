@@ -69,13 +69,26 @@ final class Store: ObservableObject {
     @Published private(set) var season: CloudSeason?
     @Published private(set) var board: CloudBoard?
     @Published private(set) var quests: CloudQuests?
+    @Published private(set) var limits: CloudLimits = .none
     @Published private(set) var loading = false
     @Published var problem: String?
+
+    /// What the phone may announce. Both off until someone turns them on and iOS agrees.
+    @Published var alertsForLimits = UserDefaults.standard.bool(forKey: Store.limitAlertsKey) {
+        didSet { UserDefaults.standard.set(alertsForLimits, forKey: Self.limitAlertsKey); rescheduleAlerts() }
+    }
+    @Published var alertsForSeason = UserDefaults.standard.bool(forKey: Store.seasonAlertsKey) {
+        didSet { UserDefaults.standard.set(alertsForSeason, forKey: Self.seasonAlertsKey); rescheduleAlerts() }
+    }
+    /// Nil until iOS has been asked.
+    @Published private(set) var notificationsAllowed: Bool?
 
     /// While a link is being approved in the browser.
     @Published private(set) var pending: CloudClient.LinkStart?
 
     private static let linkKey = "phoneLink"
+    private static let limitAlertsKey = "alertsForLimits"
+    private static let seasonAlertsKey = "alertsForSeason"
     private var pollTask: Task<Void, Never>?
 
     init() {
@@ -108,6 +121,14 @@ final class Store: ObservableObject {
                 CloudQuests.Badge(key: "billion", name: "One billion", note: "Use one billion tokens in a season.", earned: true, day: "2026-09-08"),
                 CloudQuests.Badge(key: "podium", name: "Podium", note: "Finish a week in the top three.", earned: false, day: nil),
             ])
+        let soon = Int(Date().timeIntervalSince1970)
+        limits = CloudLimits(limits: [
+            CloudLimit(accountKey: "codex-work", tool: "codex", label: "Work", windowLabel: "5h", usedPercent: 96, resetsAt: soon + 1440),
+            CloudLimit(accountKey: "codex-work", tool: "codex", label: "Work", windowLabel: "Week", usedPercent: 62, resetsAt: soon + 190_000),
+            CloudLimit(accountKey: "claude-studio", tool: "claude", label: "Studio", windowLabel: "5h", usedPercent: 18, resetsAt: soon + 9_600),
+            CloudLimit(accountKey: "claude-studio", tool: "claude", label: "Studio", windowLabel: "Week", usedPercent: 41, resetsAt: soon + 402_000),
+            CloudLimit(accountKey: "cursor-spare", tool: "cursor", label: nil, windowLabel: "Auto", usedPercent: 12, resetsAt: nil),
+        ], updatedAt: soon - 240)
         let people: [(String, String?, Int, Bool)] = [
             ("mira", "Mira K.", 6_370_000_000, false),
             ("jonas", nil, 5_180_000_000, false),
@@ -140,6 +161,8 @@ final class Store: ObservableObject {
             async let season = client.season(team: nil)
             async let board = client.leaderboard(period: "week", metric: "tokens", team: nil)
             async let quests = try? await client.quests()
+            // A website without limit sharing on still serves everything else, so this one is optional.
+            async let limits = try? await client.limits()
             let (updatedProfile, updatedSeason, updatedBoard) = try await (profile, season, board)
             if var saved = link {
                 saved.login = updatedProfile.login
@@ -150,13 +173,39 @@ final class Store: ObservableObject {
             self.season = updatedSeason
             self.board = updatedBoard
             self.quests = await quests
+            self.limits = await limits ?? .none
             problem = nil
+            rescheduleAlerts()
         } catch let error as CloudError where error.kind == .unlinked {
             try? clearLocalLink()
             problem = "This phone isn't linked anymore. Link it again."
         } catch {
             problem = error.localizedDescription
         }
+    }
+
+    /// Accounts as the screen shows them, fullest first.
+    var limitAccounts: [LimitAccount] { LimitAccount.group(limits.limits) }
+
+    // MARK: Alerts
+
+    /// Turning an alert on is the moment to ask iOS, so the prompt arrives with a reason attached.
+    func allowAlerts() async {
+        notificationsAllowed = await Notifier.authorize()
+        rescheduleAlerts()
+    }
+
+    func readAlertPermission() async {
+        let status = await Notifier.status()
+        notificationsAllowed = status == .authorized ? true : status == .notDetermined ? nil : false
+    }
+
+    /// Works out everything the phone should say and hands the whole plan to iOS. Called after every
+    /// refresh and every change of mind, so a countdown that has moved never fires against the old one.
+    func rescheduleAlerts() {
+        let plan = AlertPlan.alerts(limits: limits.limits, season: season, quests: quests,
+                                    wantsLimits: alertsForLimits, wantsSeason: alertsForSeason)
+        Task { await Notifier.apply(plan) }
     }
 
     /// The same flow the Mac uses: ask for a code, send it to the browser, then wait for approval.
@@ -240,6 +289,9 @@ final class Store: ObservableObject {
         season = nil
         board = nil
         quests = nil
+        limits = .none
+        // Nothing left to count down to: an unlinked phone should stay quiet.
+        Notifier.clear()
         if let keychainError { throw keychainError }
     }
 

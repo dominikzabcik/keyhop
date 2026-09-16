@@ -1,13 +1,14 @@
 import Foundation
 
 extension Commands {
-    /// `keyhop cloud login|status|sync|open|logout`
+    /// `keyhop cloud login|status|sync|limits|open|logout`
     static func cloud(_ args: inout Arguments) async throws {
         let action = args.nextPositional() ?? "status"
         switch action {
         case "login": try await cloudLogin(&args)
         case "status": try cloudStatus(&args)
         case "sync": try await cloudSync(&args)
+        case "limits": try await cloudLimits(&args)
         case "open":
             try args.finish()
             guard let link = CloudLink.load() else { throw KeyhopError("Not linked yet. Run keyhop cloud login.") }
@@ -20,7 +21,7 @@ extension Commands {
             CloudLink.remove()
             print("Unlinked @\(link.login). Nothing more is sent from this computer.")
         default:
-            throw UsageError("Unknown cloud command '\(action)'. Use login, status, sync, open or logout.")
+            throw UsageError("Unknown cloud command '\(action)'. Use login, status, sync, limits, open or logout.")
         }
     }
 
@@ -81,9 +82,12 @@ extension Commands {
                 let profile: String?
                 let lastSync: Date?
                 let lastSyncError: String?
+                let sharesLimits: Bool
+                let lastLimitSync: Date?
             }
             return try Output.json(Document(linked: link != nil, server: link?.server ?? Cloud.server, login: link?.login,
-                                            profile: link?.profileURL, lastSync: link?.lastSync, lastSyncError: link?.lastSyncError))
+                                            profile: link?.profileURL, lastSync: link?.lastSync, lastSyncError: link?.lastSyncError,
+                                            sharesLimits: link?.sharesLimits ?? false, lastLimitSync: link?.lastLimitSync))
         }
         guard let link else {
             return print(Cloud.server == nil ? "Keyhop cloud isn't available in this version yet." : "Not linked. Run keyhop cloud login.")
@@ -92,6 +96,42 @@ extension Commands {
         print("Profile: \(link.profileURL)")
         if let lastSync = link.lastSync { print("Last sync: \(Output.relative(lastSync))") } else { print("Not synced yet") }
         if let problem = link.lastSyncError { print("Last sync failed: \(problem)") }
+        print("Limit sharing: \(link.sharesLimits ? "on" : "off")")
+    }
+
+    /// `keyhop cloud limits [on|off]`: whether a linked phone can see where accounts stand.
+    private static func cloudLimits(_ args: inout Arguments) async throws {
+        let choice = args.nextPositional()
+        try args.finish()
+        guard var link = CloudLink.load() else { throw KeyhopError("Not linked yet. Run keyhop cloud login.") }
+        switch choice {
+        case nil, "status":
+            print("Limit sharing is \(link.sharesLimits ? "on" : "off").")
+            if link.sharesLimits, let last = link.lastLimitSync { print("Last sent: \(Output.relative(last))") }
+            if !link.sharesLimits { print("Turn it on with keyhop cloud limits on, to let a linked phone count down to a reset.") }
+        case "on":
+            let workspace = try Workspace.open()
+            let accounts = await workspace.service.accounts
+            let usage = workspace.state.usageByID
+            link.sharesLimits = true
+            link.lastLimitSync = Date()
+            try link.save()
+            let sent = CloudSync.limits(accounts: accounts, usage: usage)
+            do {
+                try await CloudClient(server: link.server, token: link.token).upload(sent)
+            } catch let error as CloudError where error.kind == .unlinked {
+                CloudLink.remove()
+                throw error
+            }
+            print("Limit sharing is on. Sent \(sent.count) \(sent.count == 1 ? "reading" : "readings") to @\(link.login).")
+            print("A linked phone can now see how full each account is and when it comes back. Your prompts, emails and account names still never leave this computer.")
+        case "off":
+            guard link.sharesLimits else { return print("Limit sharing is already off.") }
+            try await CloudSync.stopSharingLimits(&link)
+            print("Limit sharing is off, and the readings are off the website.")
+        case let other?:
+            throw UsageError("Unknown limits command '\(other)'. Use on, off or status.")
+        }
     }
 
     private static func cloudSync(_ args: inout Arguments) async throws {

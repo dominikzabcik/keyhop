@@ -4,6 +4,7 @@ import { addDays, today } from "../src/env";
 import { streaks } from "../src/stats";
 import { currentSeason, daysLeft, nextStep, seasonRange, tierFor } from "../src/seasons";
 import { parseUsage } from "../src/usage";
+import { LIMIT_TTL_SECONDS, parseLimits } from "../src/limits";
 import { badgesFrom, questsFrom } from "../src/quests";
 import { webLink } from "../src/account";
 
@@ -44,6 +45,29 @@ async function linkApp(cookie: string): Promise<string> {
 
 function upload(token: string, days: unknown[]): Promise<Response> {
   return call("/api/usage", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ days }) });
+}
+
+/** Links a read-only companion the way the phone does, and returns its bearer token. */
+async function linkPhone(cookie: string): Promise<string> {
+  const from = { "cf-connecting-ip": `10.0.2.${++linkedApps}` };
+  const start = await call("/api/device/start", {
+    method: "POST",
+    headers: from,
+    body: JSON.stringify({ label: "Test phone", access: "read" }),
+  });
+  const { deviceCode, userCode } = (await start.json()) as { deviceCode: string; userCode: string };
+  await form("/link", cookie, { code: userCode });
+  const grant = await call("/api/device/token", { method: "POST", headers: from, body: JSON.stringify({ deviceCode }) });
+  expect(grant.status).toBe(200);
+  return ((await grant.json()) as { token: string }).token;
+}
+
+function sendLimits(token: string, list: unknown[]): Promise<Response> {
+  return call("/api/limits", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ limits: list }) });
+}
+
+function readLimits(token: string): Promise<Response> {
+  return call("/api/limits", { headers: { authorization: `Bearer ${token}` } });
 }
 
 describe("usage uploads", () => {
@@ -521,5 +545,112 @@ describe("profiles", () => {
     const svg = await (await call("/u/rex/card.svg")).text();
     expect(svg).not.toContain("<script>");
     expect(svg).toContain("&lt;script&gt;");
+  });
+});
+
+describe("limit sharing", () => {
+  const reference = 1_800_000_000;
+
+  it("accepts one reading per account and window", () => {
+    const result = parseLimits(
+      { limits: [{ accountKey: "a1", tool: "codex", label: " Personal ", windowLabel: " 5h ", usedPercent: 91.27, resetsAt: reference + 1440 }] },
+      reference,
+    );
+    expect(result).toEqual({
+      limits: [{ accountKey: "a1", tool: "codex", label: "Personal", windowLabel: "5h", usedPercent: 91.3, resetsAt: reference + 1440 }],
+    });
+  });
+
+  it("takes a window with no reset and an account with no label", () => {
+    const result = parseLimits({ limits: [{ accountKey: "a1", tool: "cursor", windowLabel: "Auto", usedPercent: 12 }] }, reference);
+    expect(result).toEqual({ limits: [{ accountKey: "a1", tool: "cursor", label: null, windowLabel: "Auto", usedPercent: 12, resetsAt: null }] });
+  });
+
+  it("refuses unknown tools, impossible percentages, stale or distant resets and duplicates", () => {
+    const one = (entry: Record<string, unknown>) => parseLimits({ limits: [{ accountKey: "a1", tool: "claude", windowLabel: "5h", usedPercent: 5, ...entry }] }, reference);
+    expect(parseLimits({ days: [] }, reference)).toEqual({ error: "Send { limits: [...] }." });
+    expect(one({ tool: "copilot" })).toEqual({ error: "Tool must be claude, cursor, codex or gemini." });
+    expect(one({ accountKey: "has space" })).toHaveProperty("error");
+    expect(one({ windowLabel: "" })).toHaveProperty("error");
+    expect(one({ usedPercent: 101 })).toHaveProperty("error");
+    expect(one({ usedPercent: -1 })).toHaveProperty("error");
+    expect(one({ usedPercent: "high" })).toHaveProperty("error");
+    expect(one({ resetsAt: reference - LIMIT_TTL_SECONDS - 60 })).toHaveProperty("error");
+    expect(one({ resetsAt: reference + 400 * 86400 })).toHaveProperty("error");
+    expect(one({ resetsAt: reference + 0.5 })).toHaveProperty("error");
+    expect(
+      parseLimits(
+        {
+          limits: [
+            { accountKey: "a1", tool: "claude", windowLabel: "5h", usedPercent: 5 },
+            { accountKey: "a1", tool: "claude", windowLabel: "5h", usedPercent: 6 },
+          ],
+        },
+        reference,
+      ),
+    ).toEqual({ error: "5h appears twice for one account." });
+  });
+
+  it("keeps a long label to a readable length and drops an empty one", () => {
+    const result = parseLimits({ limits: [{ accountKey: "a1", tool: "claude", label: "x".repeat(80), windowLabel: "5h", usedPercent: 5 }] }, reference);
+    expect("limits" in result && result.limits[0].label).toBe("x".repeat(40));
+    const blank = parseLimits({ limits: [{ accountKey: "a1", tool: "claude", label: "   ", windowLabel: "5h", usedPercent: 5 }] }, reference);
+    expect("limits" in blank && blank.limits[0].label).toBeNull();
+  });
+
+  it("lets a computer publish limits and a read-only phone read them back", async () => {
+    const cookie = await signIn("sasha");
+    const mac = await linkApp(cookie);
+    const phone = await linkPhone(cookie);
+    const soon = Math.floor(Date.now() / 1000) + 1500;
+
+    expect((await sendLimits(mac, [
+      { accountKey: "work", tool: "codex", label: "Work", windowLabel: "Week", usedPercent: 62, resetsAt: soon + 90_000 },
+      { accountKey: "work", tool: "codex", label: "Work", windowLabel: "5h", usedPercent: 96, resetsAt: soon },
+      { accountKey: "spare", tool: "cursor", label: null, windowLabel: "Auto", usedPercent: 12 },
+    ])).status).toBe(200);
+
+    const read = await readLimits(phone);
+    expect(read.status).toBe(200);
+    const body = (await read.json()) as { limits: { windowLabel: string; usedPercent: number }[]; updatedAt: number };
+    // Soonest reset first, and the window that never says when it turns over last.
+    expect(body.limits.map((entry) => entry.windowLabel)).toEqual(["5h", "Week", "Auto"]);
+    expect(body.limits[0].usedPercent).toBe(96);
+    expect(body.updatedAt).toBeGreaterThan(0);
+  });
+
+  it("replaces the last reading rather than piling readings up", async () => {
+    const cookie = await signIn("tariq");
+    const mac = await linkApp(cookie);
+    await sendLimits(mac, [
+      { accountKey: "one", tool: "claude", windowLabel: "5h", usedPercent: 80 },
+      { accountKey: "two", tool: "claude", windowLabel: "5h", usedPercent: 40 },
+    ]);
+    await sendLimits(mac, [{ accountKey: "one", tool: "claude", windowLabel: "5h", usedPercent: 10 }]);
+    const body = (await (await readLimits(mac)).json()) as { limits: { accountKey: string; usedPercent: number }[] };
+    expect(body.limits).toHaveLength(1);
+    expect(body.limits[0]).toMatchObject({ accountKey: "one", usedPercent: 10 });
+  });
+
+  it("refuses an upload from a read-only phone, and clears on request", async () => {
+    const cookie = await signIn("ursula");
+    const mac = await linkApp(cookie);
+    const phone = await linkPhone(cookie);
+    await sendLimits(mac, [{ accountKey: "one", tool: "gemini", windowLabel: "Day", usedPercent: 30 }]);
+
+    expect((await sendLimits(phone, [{ accountKey: "one", tool: "gemini", windowLabel: "Day", usedPercent: 99 }])).status).toBe(403);
+    expect((await call("/api/limits", { method: "DELETE", headers: { authorization: `Bearer ${phone}` } })).status).toBe(403);
+
+    expect((await call("/api/limits", { method: "DELETE", headers: { authorization: `Bearer ${mac}` } })).status).toBe(204);
+    const body = (await (await readLimits(phone)).json()) as { limits: unknown[]; updatedAt: number | null };
+    expect(body).toEqual({ limits: [], updatedAt: null });
+  });
+
+  it("keeps one person's limits away from another's, and away from anyone unlinked", async () => {
+    const mac = await linkApp(await signIn("vera"));
+    await sendLimits(mac, [{ accountKey: "one", tool: "claude", windowLabel: "5h", usedPercent: 77 }]);
+    const stranger = await linkApp(await signIn("wesley"));
+    expect((await (await readLimits(stranger)).json()) as unknown).toEqual({ limits: [], updatedAt: null });
+    expect((await call("/api/limits")).status).toBe(401);
   });
 });

@@ -50,6 +50,51 @@ final class AuthProfileAdapterTests: XCTestCase {
         XCTAssertEqual(JSON.object(try Data(contentsOf: file))?.count, 0)
     }
 
+    /// An Anthropic sign-in in OpenCode or Pi is nothing but rotating tokens. Refreshed, it is still
+    /// the same account, and Keyhop keeps one profile for it rather than a new one per refresh.
+    func testAnthropicSignInKeepsOneProfileAcrossTokenRefreshes() async throws {
+        let directory = try folder("opencode-anthropic")
+        let file = directory.appendingPathComponent("auth.json")
+        let owners = ["access-one": "account-a", "access-two": "account-a", "access-other": "account-b"]
+        let lookup: AnthropicLookup = { token in
+            guard let owner = owners[token] else { throw KeyhopError("unknown token") }
+            return AnthropicAccount(uuid: owner, email: "\(owner)@example.com")
+        }
+        func write(access: String, refresh: String) throws {
+            try Data(JSON.string(["anthropic": ["type": "oauth", "access": access, "refresh": refresh, "expires": 1] as [String: Any]]).utf8)
+                .write(to: file)
+        }
+        let adapter = OpenCodeAdapter(directory: directory, lookup: lookup)
+        let service = AccountService(directory: directory, adapters: [.opencode: adapter], vault: Vault(store: MemorySecretStore()))
+
+        try write(access: "access-one", refresh: "refresh-one")
+        guard case .saved(let id) = await service.syncLive(.opencode) else { return XCTFail("the first sign-in is saved") }
+        let read = try await adapter.readLive()
+        let first = try XCTUnwrap(read)
+        XCTAssertEqual(first.email, "account-a@example.com")
+        XCTAssertFalse(first.identity.contains("account-a"), "the identity is a digest, not the account id")
+
+        // OpenCode refreshed both tokens.
+        try write(access: "access-two", refresh: "refresh-two")
+        let refreshed = await service.syncLive(.opencode)
+        XCTAssertEqual(refreshed, .current(id))
+        let accounts = await service.accounts
+        XCTAssertEqual(accounts.count, 1)
+        let saved = await service.secret(for: id)
+        XCTAssertTrue(saved?["credentials"]?.contains("refresh-two") == true, "the saved copy follows the refresh")
+
+        // A different Anthropic account is a different profile.
+        try write(access: "access-other", refresh: "refresh-three")
+        guard case .saved(let other) = await service.syncLive(.opencode) else { return XCTFail("another account is saved") }
+        XCTAssertNotEqual(other, id)
+
+        // When Anthropic can't be asked, Keyhop says so and saves nothing.
+        try write(access: "access-unknown", refresh: "refresh-four")
+        guard case .failed = await service.syncLive(.opencode) else { return XCTFail("an unidentified login is not saved") }
+        let afterFailure = await service.accounts
+        XCTAssertEqual(afterFailure.count, 2)
+    }
+
     func testPiRejectsMalformedOrEmptyProfiles() async throws {
         let directory = try folder("pi-profile")
         let file = directory.appendingPathComponent("auth.json")

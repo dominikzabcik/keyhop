@@ -1,18 +1,80 @@
 import Foundation
 
+/// The Anthropic account behind an OAuth access token.
+struct AnthropicAccount: Equatable, Sendable {
+    let uuid: String
+    let email: String?
+}
+
+typealias AnthropicLookup = @Sendable (_ accessToken: String) async throws -> AnthropicAccount
+
+/// Asks Anthropic which account a token belongs to, the way Claude Code's own login is identified.
+/// Answers are kept per token for the life of the process, so a sync every few minutes asks once
+/// per token rather than every time.
+enum AnthropicProfile {
+    private static let cache = LookupCache()
+
+    static let lookup: AnthropicLookup = { token in
+        if let known = cache.get(token) { return known }
+        let (data, status) = try await HTTP.get("https://api.anthropic.com/api/oauth/profile", headers: [
+            "Authorization": "Bearer \(token)", "anthropic-beta": "oauth-2025-04-20", "Accept": "application/json",
+        ])
+        guard status == 200, let body = JSON.object(data), let account = body["account"] as? [String: Any],
+              let uuid = account["uuid"] as? String, !uuid.isEmpty else {
+            throw KeyhopError("Couldn't identify the Anthropic login (\(status)).")
+        }
+        let found = AnthropicAccount(uuid: uuid, email: account["email"] as? String)
+        cache.set(token, found)
+        return found
+    }
+
+    private final class LookupCache: @unchecked Sendable {
+        private var accounts: [String: AnthropicAccount] = [:]
+        private let lock = NSLock()
+
+        func get(_ token: String) -> AnthropicAccount? {
+            lock.lock()
+            defer { lock.unlock() }
+            return accounts[token]
+        }
+
+        func set(_ token: String, _ account: AnthropicAccount) {
+            lock.lock()
+            defer { lock.unlock() }
+            accounts[token] = account
+        }
+    }
+}
+
 /// Pi and OpenCode can hold credentials for several model providers at once. Keyhop treats that
 /// complete `auth.json` as one profile: it never edits an individual provider entry, and a switch
 /// restores the exact document the tool wrote.
 private struct AuthProfileFile {
     let provider: Provider
     let url: URL
+    let lookup: AnthropicLookup
 
-    func readLive() throws -> LiveLogin? {
+    func readLive() async throws -> LiveLogin? {
         guard let data = try? Data(contentsOf: url), let root = JSON.object(data), !root.isEmpty,
               root.values.allSatisfy({ $0 is [String: Any] }) else { return nil }
 
-        let identity = Self.identity(provider: provider, root: root)
-        let email = Self.email(in: root)
+        // An Anthropic sign-in carries nothing but tokens, and both rotate as the tool refreshes
+        // them. Named by its tokens, the same account would turn into a new profile every few
+        // hours, so it is named by the account Anthropic reports instead. When that can't be
+        // asked, the read fails rather than guess: a guess is how duplicates start.
+        var accounts: [String: AnthropicAccount] = [:]
+        for (key, value) in root {
+            guard let credential = value as? [String: Any], Self.stableValue(in: credential) == nil,
+                  let token = Self.anthropicAccessToken(key: key, credential: credential) else { continue }
+            do {
+                accounts[key] = try await lookup(token)
+            } catch {
+                throw KeyhopError("Couldn't tell which Anthropic account the \(provider.name) profile uses. \(error.localizedDescription)")
+            }
+        }
+
+        let identity = Self.identity(provider: provider, root: root, accounts: accounts)
+        let email = Self.email(in: root) ?? accounts.values.compactMap(\.email).sorted().first
         return LiveLogin(
             identity: identity,
             email: email ?? "\(provider.name) profile",
@@ -37,12 +99,14 @@ private struct AuthProfileFile {
 
     /// Prefer an account id or JWT subject, which survives token renewal. API-key-only entries use
     /// a digest of the key; the actual credential is never used as a label or stored in metadata.
-    private static func identity(provider: Provider, root: [String: Any]) -> String {
+    static func identity(provider: Provider, root: [String: Any], accounts: [String: AnthropicAccount] = [:]) -> String {
         var parts: [String] = []
         for key in root.keys.sorted() {
             guard let credential = root[key] as? [String: Any] else { continue }
             if let stable = stableValue(in: credential) {
                 parts.append("\(key):\(stable)")
+            } else if let account = accounts[key] {
+                parts.append("\(key):\(account.uuid)")
             } else if let token = tokenIdentity(in: credential) {
                 parts.append("\(key):\(token)")
             } else if let data = try? JSONSerialization.data(withJSONObject: credential, options: [.sortedKeys]) {
@@ -50,6 +114,13 @@ private struct AuthProfileFile {
             }
         }
         return "\(provider.rawValue)-" + SHA256Digest.hex(Data(parts.joined(separator: "|").utf8)).prefix(16)
+    }
+
+    /// OpenCode and Pi both keep an Anthropic sign-in as `{"type": "oauth", "access", "refresh", "expires"}`.
+    static func anthropicAccessToken(key: String, credential: [String: Any]) -> String? {
+        guard key == "anthropic", credential["type"] as? String == "oauth",
+              let token = credential["access"] as? String, !token.isEmpty else { return nil }
+        return token
     }
 
     private static func stableValue(in credential: [String: Any]) -> String? {
@@ -91,8 +162,12 @@ private struct AuthProfileFile {
 struct OpenCodeAdapter: ProviderAdapter {
     let provider = Provider.opencode
     private let customDirectory: URL?
+    private let lookup: AnthropicLookup
 
-    init(directory: URL? = nil) { customDirectory = directory }
+    init(directory: URL? = nil, lookup: @escaping AnthropicLookup = AnthropicProfile.lookup) {
+        customDirectory = directory
+        self.lookup = lookup
+    }
 
     static var directory: URL {
         let environment = ProcessInfo.processInfo.environment
@@ -113,10 +188,10 @@ struct OpenCodeAdapter: ProviderAdapter {
         return directory.appendingPathComponent(configured)
     }
     private var file: AuthProfileFile {
-        AuthProfileFile(provider: provider, url: (customDirectory ?? Self.directory).appendingPathComponent("auth.json"))
+        AuthProfileFile(provider: provider, url: (customDirectory ?? Self.directory).appendingPathComponent("auth.json"), lookup: lookup)
     }
 
-    func readLive() async throws -> LiveLogin? { try file.readLive() }
+    func readLive() async throws -> LiveLogin? { try await file.readLive() }
     func apply(_ secret: Secret) async throws { try file.apply(secret) }
     func signOutLocally() async throws { try file.signOutLocally() }
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
@@ -128,8 +203,12 @@ struct OpenCodeAdapter: ProviderAdapter {
 struct PiAdapter: ProviderAdapter {
     let provider = Provider.pi
     private let customDirectory: URL?
+    private let lookup: AnthropicLookup
 
-    init(directory: URL? = nil) { customDirectory = directory }
+    init(directory: URL? = nil, lookup: @escaping AnthropicLookup = AnthropicProfile.lookup) {
+        customDirectory = directory
+        self.lookup = lookup
+    }
 
     static var directory: URL {
         let environment = ProcessInfo.processInfo.environment
@@ -146,10 +225,10 @@ struct PiAdapter: ProviderAdapter {
         return directory.appendingPathComponent("sessions", isDirectory: true)
     }
     private var file: AuthProfileFile {
-        AuthProfileFile(provider: provider, url: (customDirectory ?? Self.directory).appendingPathComponent("auth.json"))
+        AuthProfileFile(provider: provider, url: (customDirectory ?? Self.directory).appendingPathComponent("auth.json"), lookup: lookup)
     }
 
-    func readLive() async throws -> LiveLogin? { try file.readLive() }
+    func readLive() async throws -> LiveLogin? { try await file.readLive() }
     func apply(_ secret: Secret) async throws { try file.apply(secret) }
     func signOutLocally() async throws { try file.signOutLocally() }
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {

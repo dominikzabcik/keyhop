@@ -2,7 +2,7 @@ import { type Context, Hono } from "hono";
 import { html, raw } from "hono/html";
 import { pageUser, safeNext } from "./auth";
 import { type AppEnv, type User, now, today } from "./env";
-import { landingPage } from "./landing";
+import { LANDING_CSS, landingPage } from "./landing";
 import { downloadPage, privacyPage, securityPage, termsPage } from "./marketing";
 import { profileBadges, questsFor } from "./quests";
 import { TIERS, currentSeason, daysLeft, isSeason, nextStep, seasonBoard, seasonLabel, seasonList, seasonRange, tierFor } from "./seasons";
@@ -43,6 +43,7 @@ function render(
     index?: boolean;
     softwareSchema?: boolean;
     canonicalPath?: string;
+    css?: string;
     status?: 200 | 404;
   } = {},
 ) {
@@ -59,6 +60,7 @@ function render(
       index: options.index,
       softwareSchema: options.softwareSchema,
       canonicalPath: options.canonicalPath,
+      css: options.css,
       body,
       nonce: c.get("nonce"),
     }),
@@ -139,6 +141,7 @@ pages.get("/", (c) =>
     description: "Switch Claude Code, Cursor, Codex, Gemini CLI, OpenCode, Pi, Copilot, Windsurf and Codebuff accounts, watch limits and track exact local usage.",
     mode: "landing",
     softwareSchema: true,
+    css: LANDING_CSS,
   }),
 );
 

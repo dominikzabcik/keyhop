@@ -209,11 +209,13 @@ describe("leaderboards", () => {
     const body = await page.text();
     expect(body).toContain("Every account.");
     expect(body).toContain("Download Keyhop");
-    expect(body).toContain("Your prompts never pass through Keyhop.");
-    expect(body).toContain("Available now and next");
-    expect(body).toContain("01 · Smart Hop");
-    expect(body).toContain("02 · MCP");
-    expect(body).toContain("03 · Mobile companion");
+    expect(body).toContain("Your work never leaves your computer.");
+    expect(body).toContain('id="product"');
+    // The tools table names every tool Keyhop ships.
+    for (const name of ["Claude Code", "Cursor", "Codex", "Gemini CLI", "OpenCode", "Pi", "GitHub Copilot", "Windsurf", "Codebuff"]) {
+      expect(body).toContain(`${name}</th>`);
+    }
+    expect(body).toContain("keyhop_recommendation");
     expect(body).toContain('<link rel="canonical" href="https://keyhop.app/">');
     expect(body).toContain('<meta name="robots" content="index, follow, max-image-preview:large">');
     expect(body).toContain('<script type="application/ld+json"');

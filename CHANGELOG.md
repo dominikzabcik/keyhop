@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.11.0]
 
 - Your phone can tell you when a limit comes back. Turn on **Share limits** in Keyhop's window (or `keyhop cloud limits on`) and your computer sends where each account stands, so the iOS companion can show a live countdown and raise a notification the moment a nearly-spent account resets. It also reminds you on the season's last evening and while today's quests are still open. Every alert is scheduled on the phone itself against a moment already known, so nothing is pushed and no push service is involved. Sharing is off until you turn it on, it carries only how full an account is, when it resets and the name you typed for it, never an email or anything about what you asked, it keeps no history, and turning it off takes the readings off the website straight away.
 - OpenCode and Pi join the tools Keyhop switches and the tools it can measure. Keyhop snapshots each tool's complete multi-provider `auth.json`, reads OpenCode's SQLite ledger without writing to it, and reads Pi's local JSONL sessions, including compaction and branch-summary usage. Exact provider-reported costs win over estimates, and copied Pi session branches are deduplicated.

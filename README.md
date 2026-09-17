@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  Move Claude Code, Cursor, Codex, Gemini CLI, GitHub Copilot or Windsurf onto another account<br>
+  Move Claude Code, Cursor, Codex, Gemini CLI, OpenCode, Pi, GitHub Copilot, Windsurf or Codebuff onto another account<br>
   in one click, with supported limits, local usage and budgets in view.
 </p>
 
@@ -61,7 +61,7 @@ Keyhop isn't notarized, so macOS blocks the first launch from the disk image. Op
 On first launch, a welcome window lists the logins Keyhop found and turns on Open at login, then Keyhop's window opens. Opening Keyhop again from Applications, Spotlight or the Dock brings the window back; at login it starts quietly in the menu bar.
 
 <p align="center">
-  <img src="docs/welcome.png" width="420" alt="Keyhop's welcome window listing the Claude Code, Cursor, Codex and Gemini CLI logins it found">
+  <img src="docs/welcome.png" width="420" alt="Keyhop's welcome window listing the supported AI-tool logins it found">
 </p>
 
 </details>
@@ -87,7 +87,7 @@ GNOME hides tray icons unless the **AppIndicator and KStatusNotifierItem Support
 | **Dashboard** | Keyhop's window: Overview, Accounts, Usage (charts, activity, token mix, models), Budgets and Settings, over a live backdrop you can change in **Settings › Appearance**. On macOS, open Keyhop from Applications or choose **Open Keyhop** in the menu. Click the tray icon on Windows, choose **Open Keyhop** in the Linux tray, or run `keyhop dashboard` anywhere. |
 | **Alerts** | A notification when a limit or budget is nearly used, with a **Switch** button for Smart Hop's best available account. |
 
-Keyhop switches six tools and tracks usage for four. Claude Code, Cursor, Codex and Gemini CLI have account switching plus usage and, where the provider publishes one, limits. GitHub Copilot and Windsurf have account switching only: neither writes a local transcript Keyhop can count, and neither publishes an allowance it can read, so Keyhop says nothing about what they used rather than guessing.
+Keyhop switches nine tools and tracks exact token usage for six. Claude Code, Cursor, Codex, Gemini CLI, OpenCode and Pi have account switching plus usage history. GitHub Copilot, Windsurf and Codebuff do not write complete model-token transcripts Keyhop can count, so they intentionally have no token history; Keyhop still reads Copilot's reported quotas, the active Windsurf profile's local limit cache, and Codebuff's credit and subscription limits instead of estimating any of them.
 
 Codex logins made with an API key aren't supported, only ChatGPT sign-ins. Gemini CLI account switching supports Sign in with Google; API-key and Vertex AI configurations stay untouched. Gemini quota is not fetched because [Google does not permit third-party apps to call Gemini CLI backend services with its OAuth credentials](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/faq.md#why-cant-i-use-third-party-software-like-claude-code-openclaw-or-opencode-with-gemini-cli).
 
@@ -144,6 +144,8 @@ Keyhop keeps its own record of what every account uses.
 | Codex | `~/.codex/sessions/**/*.jsonl`, per-response usage records, or running totals in older sessions |
 | Gemini CLI | `~/.gemini/tmp/*/chats/*.jsonl`, one entry per model response, with input, cached, output, thought and tool-prompt tokens |
 | Cursor | Each saved account's usage export from cursor.com, at most twice an hour |
+| OpenCode | `~/.local/share/opencode/opencode.db` (or `$XDG_DATA_HOME/opencode/opencode.db`, with `$OPENCODE_DB` honored), read-only assistant-message rows with input, cache writes, cache reads, output, reasoning and reported cost |
+| Pi | `~/.pi/agent/sessions/**/*.jsonl` (or `$PI_CODING_AGENT_SESSION_DIR`), assistant responses plus compaction and branch summaries, with exact token buckets and reported cost |
 
 - **Per account:** each request is credited to the account that was in use at that moment. Keyhop records every switch, including logins you change outside it. Usage from before Keyhop started goes to the tool's only saved account when there's one.
 - **API value:** requests are priced at each provider's standard API rates, from a table generated from [models.dev](https://models.dev). Subscriptions don't bill per token, so API value measures how much use you get, not what you pay. Cursor's on-demand charges are shown separately as billed.
@@ -174,7 +176,7 @@ sequenceDiagram
     participant You
     participant Keyhop
     participant Store as Keychain, Secret Service or DPAPI
-    participant Tool as Claude Code, Cursor, Codex or Gemini CLI
+    participant Tool as Any supported AI tool
     You->>Keyhop: Click an account
     Keyhop->>Tool: Read the current login
     Keyhop->>Store: Save it first, so no login is ever lost
@@ -189,10 +191,13 @@ sequenceDiagram
 | Cursor | `cursorAuth/*` rows in `state.vscdb` (macOS `~/Library/Application Support/Cursor`, Linux `~/.config/Cursor`, Windows `%APPDATA%\Cursor`), plus `authInfo` in `~/.cursor/cli-config.json` | An open Cursor gets the tokens through its own login link (`cursor://cursorAuth`) and switches in place. A closed Cursor has its rows swapped directly. |
 | Codex | `~/.codex/auth.json` (or `$CODEX_HOME`) | New runs use it straight away. A running session keeps its original account, so reopen it with `codex resume --last`. |
 | Gemini CLI | `~/.gemini/oauth_creds.json`, plus the active account in `~/.gemini/google_accounts.json` (under `$GEMINI_CLI_HOME` when set) | New runs use it straight away. Restart a running session to move it to the selected Google login. |
+| OpenCode | `~/.local/share/opencode/auth.json` (or `$XDG_DATA_HOME/opencode/auth.json`). Because one file may hold several model providers, Keyhop saves and restores the complete profile exactly. | New runs use the restored provider set. Restart a running session if it retains the old profile. |
+| Pi | `~/.pi/agent/auth.json` (or `$PI_CODING_AGENT_DIR/auth.json`). Because one file may hold several model providers, Keyhop saves and restores the complete profile exactly. | New runs use the restored provider set. Restart a running session if it retains the old profile. |
 | GitHub Copilot | The GitHub CLI's own login for `github.com`, listed in `~/.config/gh/hosts.yml` (or `$GH_CONFIG_DIR`) with the token in the system secret store. Keyhop drives `gh auth token`, `gh auth switch` and `gh auth login --with-token` rather than editing gh's files, and never runs `gh auth logout`, which would revoke the token it saved. | New Copilot runs use it straight away. Restart a running one, and reload your editor, to move it over. |
 | Windsurf | `~/.codeium/config.json` (under `$CODEIUM_HOME` when set). Only the login key is swapped; the rest of the file is left as it is. | Restart Windsurf to move open windows to the selected account. |
+| Codebuff | `~/.config/manicode/credentials.json` (or `$FREEBUFF_CONFIG_DIR/credentials.json`; the folder retains Codebuff's former Manicode name). Only the official `default` profile is swapped, so unrelated settings survive. | New runs use it straight away. Restart a running session to move it to the selected login. |
 
-Tools rotate their tokens on their own, so Keyhop re-saves the in-use login on every refresh. Where providers permit it, limits are fetched with each account's own token and Keyhop refreshes tokens only for accounts that aren't in use. Gemini support stays local: Keyhop switches its login file and reads its transcript usage without calling Google services. Copilot needs the GitHub CLI installed and signed in, because that is where its login already lives. Windsurf support was written without a Windsurf install to test against, so it is built to fail closed: if that file isn't there or doesn't hold a login, Windsurf simply doesn't appear.
+Tools rotate their tokens on their own, so Keyhop re-saves the in-use login on every refresh. Where providers permit it, limits are fetched with each account's own token and Keyhop refreshes tokens only for accounts that aren't in use. Gemini, OpenCode and Pi tracking stays local. Copilot needs the GitHub CLI installed and signed in, because that is where its login already lives. Windsurf is built to fail closed: if its login file or active profile's local limit cache is absent or changes format, Keyhop shows no invented data and preserves the last valid reading. Codebuff limits come from its own usage and subscription endpoints; its saved chats expose credits rather than complete model-token counts, so Keyhop does not turn them into token history.
 
 ## Settings
 
@@ -217,7 +222,7 @@ Keyhop updates from this repository's releases. A release without a checksum, or
 
 There's no analytics and no telemetry. Keyhop's network requests are:
 
-- **Limits:** supported providers' usage endpoints, called with that account's own token: `api.anthropic.com`, `chatgpt.com` and `cursor.com`.
+- **Limits:** supported providers' usage endpoints, called with that account's own token: `api.anthropic.com`, `chatgpt.com`, `cursor.com`, `api.github.com` for Copilot and `codebuff.com`. Windsurf limits come from its local active-profile cache.
 - **Token refresh:** for accounts that aren't in use, the providers' own sign-in services: `platform.claude.com` and `auth.openai.com`.
 - **Cursor usage export:** `cursor.com`, per saved Cursor account.
 - **Updates:** `api.github.com` and `github.com`, for release information and downloads.
@@ -286,8 +291,8 @@ The [Release workflow](.github/workflows/release.yml) tests and builds on macOS,
 
 Keyhop moves between accounts you already have, such as a personal login and a work login. It doesn't give any account more usage than its plan includes. Using several accounts to get around one plan's limits can break a provider's terms, so read the terms for each service you use ([Anthropic](https://www.anthropic.com/legal/consumer-terms), [Cursor](https://cursor.com/terms-of-service), [OpenAI](https://openai.com/policies/row-terms-of-use/), [Google](https://policies.google.com/terms)) and use Keyhop within them. Only save accounts that are yours: providers such as Anthropic don't allow sharing a login. If you'd rather Keyhop make no requests on a timer, turn off **Check usage every 5 minutes** on macOS or **Check usage automatically** in the Linux and Windows trays.
 
-Keyhop is an independent project. It isn't affiliated with, endorsed by or sponsored by Anthropic, Anysphere, OpenAI, Google, GitHub or Codeium. Claude, Claude Code, Cursor, Codex, OpenAI, Gemini, Google, GitHub, Copilot and Windsurf are trademarks of their owners, and their logos appear only to identify each tool.
+Keyhop is an independent project. It isn't affiliated with, endorsed by or sponsored by any compatible tool or model provider. Claude, Claude Code, Cursor, Codex, OpenAI, Gemini, Google, OpenCode, Pi, GitHub, Copilot, Codeium, Windsurf and Codebuff are trademarks of their owners, and their logos appear only to identify each tool.
 
 ## License
 
-[MIT](LICENSE). Provider marks come from [Simple Icons](https://simpleicons.org), model prices from [models.dev](https://models.dev), and Linux and Windows builds include [SQLite](https://sqlite.org), which is in the public domain. See [`NOTICE`](NOTICE).
+[MIT](LICENSE). Provider marks come from [Simple Icons](https://simpleicons.org) where available, model prices from [models.dev](https://models.dev), and Linux and Windows builds include [SQLite](https://sqlite.org), which is in the public domain. See [`NOTICE`](NOTICE).

@@ -566,12 +566,19 @@ enum ToolDetection {
             return Shell.which("codex") != nil || FileManager.default.fileExists(atPath: Files.home.appendingPathComponent(".codex").path)
         case .gemini:
             return Shell.which("gemini") != nil || FileManager.default.fileExists(atPath: GeminiAdapter.directory.path)
+        case .opencode:
+            return Shell.which("opencode") != nil || FileManager.default.fileExists(atPath: OpenCodeAdapter.directory.path)
+        case .pi:
+            return Shell.which("pi") != nil || FileManager.default.fileExists(atPath: PiAdapter.directory.path)
         case .copilot:
             // Copilot signs in as a GitHub account, so gh is what Keyhop needs to switch it.
             return Shell.which("copilot") != nil || Shell.which("gh") != nil
                 || FileManager.default.fileExists(atPath: CopilotAdapter.cliDirectory.path)
         case .windsurf:
             return WindsurfAdapter.isAppInstalled || FileManager.default.fileExists(atPath: WindsurfAdapter.directory.path)
+        case .codebuff:
+            return Shell.which("codebuff") != nil || Shell.which("manicode") != nil
+                || FileManager.default.fileExists(atPath: CodebuffAdapter.directory.path)
         }
     }
 
@@ -581,6 +588,8 @@ enum ToolDetection {
         case .windsurf:
             // Honest about the one adapter Keyhop couldn't test: an empty result may be its miss.
             "No login found in \(WindsurfAdapter.credentialsURL.path). If Windsurf is signed in, it keeps its login somewhere this version of Keyhop doesn't read yet."
+        case .codebuff where ProcessInfo.processInfo.environment["CODEBUFF_API_KEY"]?.isEmpty == false:
+            "CODEBUFF_API_KEY is set. Environment-only credentials cannot be switched; run `codebuff login` to create a saved account."
         default:
             nil
         }
@@ -601,10 +610,16 @@ enum ToolDetection {
             return base + "/auth.json"
         case .gemini:
             return GeminiAdapter.credentialsURL.path
+        case .opencode:
+            return OpenCodeAdapter.credentialsURL.path
+        case .pi:
+            return PiAdapter.credentialsURL.path
         case .copilot:
             return "The GitHub CLI's login for \(CopilotAdapter.host), in \(CopilotAdapter.hostsURL.path)"
         case .windsurf:
             return WindsurfAdapter.credentialsURL.path
+        case .codebuff:
+            return CodebuffAdapter.credentialsURL.path
         }
     }
 

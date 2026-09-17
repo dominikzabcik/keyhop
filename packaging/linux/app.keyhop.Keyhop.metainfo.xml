@@ -10,13 +10,13 @@
   </developer>
   <description>
     <p>
-      Keyhop keeps several Claude Code, Cursor, Codex and Gemini CLI accounts on one computer and
+      Keyhop keeps accounts for nine supported AI coding tools on one computer and
       moves a tool to another account in one click, so you can keep working when one account's limit
       runs out.
     </p>
     <p>
-      It reads each account's limits with that account's own login, tracks tokens and their value at
-      API prices from the tools' local logs, and warns before a limit or budget runs out.
+      It reads supported limits with each account's own login, tracks exact token records for six
+      tools and their value at API prices, and warns before a limit or budget runs out.
     </p>
   </description>
   <launchable type="desktop-id">app.keyhop.Keyhop.desktop</launchable>

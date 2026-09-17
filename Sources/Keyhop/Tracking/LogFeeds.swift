@@ -8,7 +8,7 @@ struct LogFeed {
     /// `state` persists per file between reads, for parsers that need earlier lines.
     let parse: (_ object: [String: Any], _ file: URL, _ state: inout [String: String]) -> UsageRecord?
 
-    static let all = [claudeCode, codex, geminiCLI]
+    static let all = [claudeCode, codex, geminiCLI, pi]
 
     // MARK: Claude Code
 
@@ -155,5 +155,117 @@ struct LogFeed {
             kind: .request, timestamp: timestamp, model: model, tokens: tokens,
             cost: Pricing.cost(model: model, tokens: tokens), billed: nil
         )
+    }
+
+    // MARK: Pi
+
+    /// `~/.pi/agent/sessions/**/*.jsonl`. Pi records exact usage and cost on assistant messages,
+    /// compactions and branch summaries. Entry id plus timestamp stays the same when a session is
+    /// forked, so the database key also prevents copied history from being counted twice.
+    static let pi = LogFeed(
+        roots: [PiAdapter.sessionsDirectory],
+        markers: [Data("\"usage\"".utf8), Data("\"model_change\"".utf8), Data("\"type\":\"session\"".utf8)]
+    ) { object, file, state in
+        let type = object["type"] as? String
+        if type == "session" {
+            if let session = object["id"] as? String { state["session"] = session }
+            return nil
+        }
+        if type == "model_change" {
+            if let provider = object["provider"] as? String, let model = object["modelId"] as? String {
+                state["model"] = "\(provider)/\(model)"
+            }
+            return nil
+        }
+
+        let usage: [String: Any]
+        var timestamp = Dates.parse(object["timestamp"])
+        if type == "message" {
+            guard let message = object["message"] as? [String: Any], message["role"] as? String == "assistant",
+                  let found = message["usage"] as? [String: Any] else { return nil }
+            usage = found
+            if let provider = message["provider"] as? String, let model = message["model"] as? String {
+                state["model"] = "\(provider)/\(model)"
+            }
+            timestamp = Dates.parse(message["timestamp"]) ?? timestamp
+        } else if type == "compaction" || type == "branch_summary" {
+            guard let found = object["usage"] as? [String: Any] else { return nil }
+            usage = found
+        } else {
+            return nil
+        }
+
+        guard let id = object["id"] as? String,
+              let timestamp,
+              let session = state["session"] ?? piSession(file) else { return nil }
+        func count(_ key: String) -> Int { Int(JSON.number(usage[key]) ?? 0) }
+        let tokens = TokenCounts(input: count("input"), cacheWrite: count("cacheWrite"),
+                                 cacheRead: count("cacheRead"), output: count("output"))
+        let logged = JSON.number((usage["cost"] as? [String: Any])?["total"]) ?? 0
+        guard tokens.total > 0 || logged > 0 else { return nil }
+        let model = state["model"] ?? "unknown/unknown"
+        let stamp = object["timestamp"] as? String ?? String(timestamp.timeIntervalSince1970)
+        return UsageRecord(
+            key: "pi:\(id):\(stamp)", provider: .pi, account: nil, session: session,
+            kind: .request, timestamp: timestamp, model: model, tokens: tokens,
+            cost: logged > 0 ? logged : Pricing.cost(model: model, tokens: tokens), billed: nil
+        )
+    }
+
+    private static func piSession(_ file: URL) -> String? {
+        let name = file.deletingPathExtension().lastPathComponent
+        return name.range(of: #"[0-9a-fA-F]{8}-[0-9a-fA-F-]{27}$"#, options: .regularExpression)
+            .map { String(name[$0]) }
+    }
+}
+
+/// OpenCode's CLI and desktop app share a WAL-mode SQLite ledger. It already contains one row per
+/// assistant response with exact token buckets and the provider-reported cost, so this reader opens
+/// it read-only and turns only those rows into Keyhop records.
+///
+/// OpenCode writes an assistant row when a response starts and fills its tokens in when it finishes,
+/// often many seconds later, while other sessions keep writing. So the watermark follows
+/// `time_updated`, not creation time, and a row counts only once it is complete: a row read
+/// mid-response would otherwise be stored with partial counts that are never corrected.
+enum OpenCodeFeed {
+    static func records(databaseURL: URL, since: Int64) throws -> (records: [UsageRecord], watermark: Int64) {
+        guard FileManager.default.fileExists(atPath: databaseURL.path) else { return ([], since) }
+        let source = try Database(url: databaseURL, readOnly: true)
+        var records: [UsageRecord] = []
+        var watermark = since
+        try source.query("""
+            SELECT id, session_id, time_created, time_updated, data
+            FROM message
+            WHERE time_updated >= ?
+            ORDER BY time_updated, id
+            """, [.int(since)]) { row in
+            guard let id = row.text(0), let session = row.text(1), let raw = row.text(4),
+                  let message = JSON.object(raw), message["role"] as? String == "assistant",
+                  let usage = message["tokens"] as? [String: Any] else { return }
+            // Still streaming: leave the watermark where it is so this row is read again once done.
+            guard (message["time"] as? [String: Any])?["completed"] != nil else { return }
+            let created = row.int(2)
+            watermark = max(watermark, row.int(3))
+            func count(_ key: String, in object: [String: Any]? = nil) -> Int {
+                Int(JSON.number((object ?? usage)[key]) ?? 0)
+            }
+            let cache = usage["cache"] as? [String: Any]
+            let reasoning = count("reasoning")
+            let tokens = TokenCounts(input: count("input"), cacheWrite: count("write", in: cache),
+                                     cacheRead: count("read", in: cache),
+                                     output: count("output") + reasoning, reasoning: reasoning)
+            let logged = JSON.number(message["cost"]) ?? 0
+            guard tokens.total > 0 || logged > 0 else { return }
+            let provider = message["providerID"] as? String
+            let modelID = message["modelID"] as? String
+            let model = provider.flatMap { p in modelID.map { "\(p)/\($0)" } } ?? modelID ?? "unknown/unknown"
+            records.append(UsageRecord(
+                key: "opencode:\(id)", provider: .opencode, account: nil, session: session,
+                kind: .request, timestamp: Date(timeIntervalSince1970: Double(created) / 1000),
+                model: model, tokens: tokens,
+                cost: logged > 0 ? logged : Pricing.cost(model: model, tokens: tokens), billed: nil
+            ))
+        }
+        return (records, watermark)
     }
 }

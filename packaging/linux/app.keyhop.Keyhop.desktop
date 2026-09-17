@@ -2,7 +2,7 @@
 Type=Application
 Name=Keyhop
 GenericName=AI account switcher
-Comment=Switch Claude Code, Cursor, Codex and Gemini CLI accounts and track their usage
+Comment=Switch AI coding accounts and track exact usage where available
 Exec=keyhop-tray
 Icon=app.keyhop.Keyhop
 Terminal=false

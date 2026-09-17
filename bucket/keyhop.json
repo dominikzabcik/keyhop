@@ -1,6 +1,6 @@
 {
     "version": "0.10.0",
-    "description": "Switch Claude Code, Cursor, Codex and Gemini CLI accounts in one click and track their usage.",
+    "description": "Switch AI coding accounts in one click and track exact usage where available.",
     "homepage": "https://github.com/dominikzabcik/keyhop",
     "license": "MIT",
     "architecture": {

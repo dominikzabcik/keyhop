@@ -3,7 +3,7 @@
 pkgname=keyhop-bin
 pkgver=0.10.0
 pkgrel=1
-pkgdesc="Switch Claude Code, Cursor, Codex and Gemini CLI accounts in one click and track their usage."
+pkgdesc="Switch AI coding accounts in one click and track exact usage where available."
 arch=('x86_64' 'aarch64')
 url="https://github.com/dominikzabcik/keyhop"
 license=('MIT')

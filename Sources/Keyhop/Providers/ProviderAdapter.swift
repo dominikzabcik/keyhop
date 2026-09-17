@@ -49,7 +49,10 @@ enum Adapters {
         .cursor: CursorAdapter(),
         .codex: CodexAdapter(),
         .gemini: GeminiAdapter(),
+        .opencode: OpenCodeAdapter(),
+        .pi: PiAdapter(),
         .copilot: CopilotAdapter(),
         .windsurf: WindsurfAdapter(),
+        .codebuff: CodebuffAdapter(),
     ]
 }

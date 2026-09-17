@@ -51,7 +51,31 @@ actor TrackerEngine {
                 }
             }
         }
+        added += try ingestOpenCode()
         return added
+    }
+
+    /// OpenCode stores messages in SQLite instead of JSONL. The source row reuses `offset` as a
+    /// millisecond `time_updated` watermark; querying `>=` plus event primary keys makes equal-time
+    /// writes safe and idempotent.
+    private func ingestOpenCode() throws -> Int {
+        let url = OpenCodeAdapter.databaseURL
+        guard FileManager.default.fileExists(atPath: url.path) else { return 0 }
+        let size = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+        var previousSize: Int64 = 0
+        var watermark: Int64 = 0
+        try db.query("SELECT size, offset FROM sources WHERE path = ?", [.text(url.path)]) { row in
+            previousSize = row.int(0)
+            watermark = row.int(1)
+        }
+        if size < previousSize { watermark = 0 }
+        let result = try OpenCodeFeed.records(databaseURL: url, since: watermark)
+        try db.transaction {
+            for record in result.records { try insert(record) }
+            try db.execute("INSERT OR REPLACE INTO sources (path, size, offset, state) VALUES (?, ?, ?, ?)",
+                           [.text(url.path), .int(size), .int(result.watermark), .text("{}")])
+        }
+        return result.records.count
     }
 
     func store(_ records: [UsageRecord]) throws {

@@ -18,7 +18,7 @@ import pathlib
 import textwrap
 
 REPO = "dominikzabcik/keyhop"
-DESCRIPTION = "Switch Claude Code, Cursor, Codex and Gemini CLI accounts in one click and track their usage."
+DESCRIPTION = "Switch AI coding accounts in one click and track exact usage where available."
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 

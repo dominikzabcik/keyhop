@@ -268,7 +268,7 @@ enum Reports {
     static func status(_ overview: Overview) -> String {
         var lines = overview.notices
         guard !overview.accounts.isEmpty else {
-            lines.append("No saved accounts yet. Sign in to Claude Code, Cursor, Codex or Gemini CLI, then run `keyhop refresh`.")
+            lines.append("No saved accounts yet. Sign in to a supported AI tool, then run `keyhop refresh`.")
             return lines.joined(separator: "\n")
         }
         let now = Date()

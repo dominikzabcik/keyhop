@@ -114,7 +114,7 @@ final class Store: ObservableObject {
                 CloudQuests.Quest(key: "today", name: "Get going", note: "Use any tool today.", period: "day", done: 1, target: 1, complete: true),
                 CloudQuests.Quest(key: "two-tools", name: "Two tools", note: "Use two different tools today.", period: "day", done: 1, target: 2, complete: false),
                 CloudQuests.Quest(key: "five-days", name: "Five days", note: "Use Keyhop on five days this week.", period: "week", done: 5, target: 5, complete: true),
-                CloudQuests.Quest(key: "every-tool", name: "Every tool", note: "Use all 4 tracked tools this week.", period: "week", done: 3, target: 4, complete: false),
+                CloudQuests.Quest(key: "every-tool", name: "Every tool", note: "Use all 6 tracked tools this week.", period: "week", done: 3, target: 6, complete: false),
             ],
             badges: [
                 CloudQuests.Badge(key: "first-hop", name: "First hop", note: "Join your first season.", earned: true, day: "2026-09-01"),

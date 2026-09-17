@@ -11,9 +11,11 @@ import Foundation
 struct WindsurfAdapter: ProviderAdapter {
     let provider = Provider.windsurf
     private let customDirectory: URL?
+    private let customStateDatabase: URL?
 
-    init(directory: URL? = nil) {
+    init(directory: URL? = nil, stateDatabase: URL? = nil) {
         customDirectory = directory
+        customStateDatabase = stateDatabase
     }
 
     static var directory: URL {
@@ -23,6 +25,20 @@ struct WindsurfAdapter: ProviderAdapter {
 
     static var credentialsURL: URL { directory.appendingPathComponent("config.json") }
     private var credentialsURL: URL { (customDirectory ?? Self.directory).appendingPathComponent("config.json") }
+
+    static var stateDatabaseURL: URL {
+        #if os(macOS)
+        return Files.home.appendingPathComponent("Library/Application Support/Windsurf/User/globalStorage/state.vscdb")
+        #elseif os(Windows)
+        let base = ProcessInfo.processInfo.environment["APPDATA"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+            ?? Files.home.appendingPathComponent("AppData/Roaming", isDirectory: true)
+        return base.appendingPathComponent("Windsurf/User/globalStorage/state.vscdb")
+        #else
+        let base = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+            ?? Files.home.appendingPathComponent(".config", isDirectory: true)
+        return base.appendingPathComponent("Windsurf/User/globalStorage/state.vscdb")
+        #endif
+    }
 
     /// The key the login is held under. Nothing is read from the file unless this is present.
     private static let apiKey = "apiKey"
@@ -66,9 +82,54 @@ struct WindsurfAdapter: ProviderAdapter {
 
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
         guard secret[Self.apiKey]?.isEmpty == false else { throw KeyhopError("Saved Windsurf login is damaged") }
-        // Windsurf publishes no allowance Keyhop can read without guessing at a private endpoint,
-        // so it reports none. Local usage is still counted from this computer's own logs.
-        return LimitReport(windows: [], plan: secret["plan"])
+        // The SQLite cache belongs to the profile currently open in Windsurf. Reusing it for an
+        // inactive saved profile would be worse than no data, so keep its last reading with an error.
+        guard !allowRefresh else { throw KeyhopError("Switch to this Windsurf profile to refresh its limits.") }
+        let url = customStateDatabase ?? Self.stateDatabaseURL
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw KeyhopError("No Windsurf limit cache was found. Open Windsurf once while signed in.")
+        }
+        let source = try Database(url: url, readOnly: true)
+        var raw: Data?
+        try source.query("SELECT value FROM ItemTable WHERE key = 'windsurf.settings.cachedPlanInfo' LIMIT 1") { row in
+            raw = row.data(0)
+        }
+        guard let raw, let body = Self.cachedPlanObject(raw) else {
+            throw KeyhopError("Windsurf's limit cache is empty or has changed format.")
+        }
+        return Self.limitReport(body)
+    }
+
+    private static func cachedPlanObject(_ data: Data) -> [String: Any]? {
+        if let direct = JSON.object(data) { return direct }
+        guard let string = String(data: data, encoding: .utf16LittleEndian) else { return nil }
+        return JSON.object(string.trimmingCharacters(in: .controlCharacters))
+    }
+
+    static func limitReport(_ body: [String: Any]) -> LimitReport {
+        var windows: [UsageWindow] = []
+        if let quota = body["quotaUsage"] as? [String: Any] {
+            if let remaining = JSON.number(quota["dailyRemainingPercent"]) {
+                windows.append(UsageWindow(label: "Day", usedPercent: min(max(100 - remaining, 0), 100),
+                                           resetsAt: Dates.parse(quota["dailyResetAtUnix"]), windowSeconds: 86400))
+            }
+            if let remaining = JSON.number(quota["weeklyRemainingPercent"]) {
+                windows.append(UsageWindow(label: "Week", usedPercent: min(max(100 - remaining, 0), 100),
+                                           resetsAt: Dates.parse(quota["weeklyResetAtUnix"]), windowSeconds: 604_800))
+            }
+        }
+        if windows.isEmpty, let usage = body["usage"] as? [String: Any] {
+            func add(_ label: String, totalKey: String, usedKey: String, remainingKey: String) {
+                guard let total = JSON.number(usage[totalKey]), total > 0 else { return }
+                let used = JSON.number(usage[usedKey]) ?? JSON.number(usage[remainingKey]).map { max(total - $0, 0) }
+                guard let used else { return }
+                windows.append(UsageWindow(label: label, usedPercent: min(max(used / total * 100, 0), 100),
+                                           resetsAt: Dates.parse(body["endTimestamp"]), windowSeconds: nil))
+            }
+            add("Messages", totalKey: "messages", usedKey: "usedMessages", remainingKey: "remainingMessages")
+            add("Flow actions", totalKey: "flowActions", usedKey: "usedFlowActions", remainingKey: "remainingFlowActions")
+        }
+        return LimitReport(windows: windows, plan: body["planName"] as? String)
     }
 
     /// Whether Windsurf is on this computer. Checked by the name it installs under rather than by a

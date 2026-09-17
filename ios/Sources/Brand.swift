@@ -138,7 +138,8 @@ enum Format {
     }
 
     static let toolNames = ["claude": "Claude Code", "cursor": "Cursor", "codex": "Codex",
-                            "gemini": "Gemini CLI", "copilot": "GitHub Copilot", "windsurf": "Windsurf"]
+                            "gemini": "Gemini CLI", "opencode": "OpenCode", "pi": "Pi",
+                            "copilot": "GitHub Copilot", "windsurf": "Windsurf", "codebuff": "Codebuff"]
 
     static func tool(_ id: String) -> String { toolNames[id] ?? id.capitalized }
 

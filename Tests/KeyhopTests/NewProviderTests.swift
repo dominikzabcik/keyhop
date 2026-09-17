@@ -1,7 +1,7 @@
 import XCTest
 @testable import Keyhop
 
-/// Copilot and Windsurf, the two tools Keyhop switches without counting their usage.
+/// Copilot and Windsurf, two tools Keyhop switches without local token transcripts.
 ///
 /// Neither is driven by a real install here: Copilot runs against a stand-in `gh` so no real login
 /// is touched, and Windsurf runs against a temporary `.codeium` folder. Both are checked hardest on
@@ -119,12 +119,15 @@ final class NewProviderTests: XCTestCase {
         }
     }
 
-    func testCopilotReportsNoLimitsRatherThanGuessingAtOne() async throws {
-        let report = try await CopilotAdapter(gh: FakeGH().run)
-            .fetchUsage(["token": "gho_example"], allowRefresh: true) { _ in }
-        XCTAssertTrue(report.windows.isEmpty)
-        XCTAssertNil(report.plan)
-        XCTAssertEqual(Provider.copilot.limitsNote, "Usage and quota stay with GitHub; Keyhop switches the account.")
+    func testCopilotReadsReportedQuotaWithoutInventingMissingLanes() async throws {
+        let body = #"{"copilot_plan":"pro","quota_reset_date":"2026-10-01","quota_snapshots":{"premium_interactions":{"entitlement":300,"remaining":225,"percent_remaining":75,"quota_id":"premium_interactions"},"chat":{"unlimited":true}}}"#
+        let adapter = CopilotAdapter(gh: FakeGH().run, request: { _ in (Data(body.utf8), 200) })
+        let report = try await adapter.fetchUsage(["token": "gho_example"], allowRefresh: true) { _ in }
+        XCTAssertEqual(report.windows.map(\.label), ["Premium"])
+        XCTAssertEqual(report.windows.first?.usedPercent, 25)
+        XCTAssertNotNil(report.windows.first?.resetsAt)
+        XCTAssertEqual(report.plan, "pro")
+        XCTAssertEqual(Provider.copilot.limitsNote, "Token history stays with GitHub; Keyhop reads available plan quotas.")
     }
 
     // MARK: Windsurf

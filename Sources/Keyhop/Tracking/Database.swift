@@ -19,15 +19,18 @@ final class Database {
     private var handle: OpaquePointer?
     private static let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
-    init(url: URL) throws {
-        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        guard sqlite3_open_v2(url.path, &handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil) == SQLITE_OK else {
+    init(url: URL, readOnly: Bool = false) throws {
+        if !readOnly {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        }
+        let flags = readOnly ? SQLITE_OPEN_READONLY : SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+        guard sqlite3_open_v2(url.path, &handle, flags, nil) == SQLITE_OK else {
             let message = handle.map { String(cString: sqlite3_errmsg($0)) } ?? "unknown error"
             sqlite3_close(handle)
             throw KeyhopError("Couldn't open the usage database: \(message)")
         }
         sqlite3_busy_timeout(handle, 5000)
-        try script("PRAGMA journal_mode = WAL")
+        if !readOnly { try script("PRAGMA journal_mode = WAL") }
     }
 
     deinit {
@@ -94,4 +97,9 @@ struct DBRow {
     func int(_ column: Int32) -> Int64 { sqlite3_column_int64(statement, column) }
     func double(_ column: Int32) -> Double { sqlite3_column_double(statement, column) }
     func text(_ column: Int32) -> String? { sqlite3_column_text(statement, column).map { String(cString: $0) } }
+    func data(_ column: Int32) -> Data? {
+        guard sqlite3_column_type(statement, column) != SQLITE_NULL,
+              let bytes = sqlite3_column_blob(statement, column) else { return nil }
+        return Data(bytes: bytes, count: Int(sqlite3_column_bytes(statement, column)))
+    }
 }

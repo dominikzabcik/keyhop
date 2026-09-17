@@ -1,6 +1,6 @@
 # Security
 
-Keyhop handles login tokens for Claude Code, Cursor, Codex and Gemini CLI, so security reports are welcome.
+Keyhop handles login tokens for supported AI coding tools, so security reports are welcome.
 
 ## Reporting
 

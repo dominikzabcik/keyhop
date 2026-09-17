@@ -8,7 +8,7 @@ cask "keyhop" do
 
   url "https://github.com/dominikzabcik/keyhop/releases/latest/download/Keyhop.dmg"
   name "Keyhop"
-  desc "Switch Claude Code, Cursor, Codex and Gemini CLI accounts from the menu bar"
+  desc "Switch AI coding accounts and track exact usage where available"
   homepage "https://github.com/dominikzabcik/keyhop"
 
   auto_updates true

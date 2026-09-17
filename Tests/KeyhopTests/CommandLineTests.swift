@@ -152,10 +152,16 @@ final class TrayContractTests: XCTestCase {
 
     func testSampleDataFillsEveryRangeWithoutRealLogins() {
         let now = Date()
+        let accounts = SampleData.accounts(now: now)
         for range in InsightsRange.allCases {
-            XCTAssertGreaterThan(SampleData.digest(range: range, accounts: SampleData.accounts(now: now), now: now).total.requests, 0, range.title)
+            XCTAssertGreaterThan(SampleData.digest(range: range, accounts: accounts, now: now).total.requests, 0, range.title)
         }
-        XCTAssertTrue(SampleData.accounts().allSatisfy { $0.email.hasSuffix(".dev") })
+        XCTAssertEqual(Set(accounts.map(\.provider)), Set(Provider.allCases))
+        XCTAssertTrue(accounts.allSatisfy { $0.email.hasSuffix(".dev") })
+        let overview = SampleData.overview(now: now)
+        XCTAssertNil(overview.today[accounts.first { $0.provider == .copilot }!.id])
+        XCTAssertNil(overview.today[accounts.first { $0.provider == .windsurf }!.id])
+        XCTAssertNil(overview.today[accounts.first { $0.provider == .codebuff }!.id])
     }
 
     func testSampleDataIsNeverEmptyEarlyInTheDay() {

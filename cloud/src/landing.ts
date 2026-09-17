@@ -105,7 +105,7 @@ export function landingPage(): Html {
         <article class="feature-card">
           <div class="feature-label">01 · Accounts</div>
           <h3>Switch without signing in again</h3>
-          <p>Save the accounts you already own, then move Claude Code, Cursor, Codex or Gemini CLI over with one click.</p>
+          <p>Save the accounts you already own, then move any supported tool to another profile with one click.</p>
           <div class="feature-visual switch-visual" aria-hidden="true">
             <div class="switch-row">${mark("claude")}<span>Personal<small>me@personal.dev</small></span><em>In use</em></div>
             <div class="switch-row">${mark("claude")}<span>Studio<small>work@studio.dev</small></span><b>72% left</b></div>
@@ -186,11 +186,11 @@ export function landingPage(): Html {
         <article class="future-card future-extend">
           <div class="future-label"><span>04 · Native integrations</span><em>Expanding</em></div>
           <h3>More tools, one trusted core.</h3>
-          <p>GitHub Copilot and Windsurf join Claude Code, Cursor, Codex and Gemini CLI with first-party account switching. Neither writes usage Keyhop can count or publishes a quota it can read, so Keyhop switches them and says nothing about what they used.</p>
+          <p>OpenCode and Pi add exact local token history. Copilot, Windsurf and Codebuff add reported limit data while staying honest about the complete token history their clients do not expose.</p>
           <div class="future-preview rules-preview" aria-hidden="true">
-            <span>SIX TOOLS <b>account switching</b></span>
-            <span>FOUR TOOLS <b>limits + local usage</b></span>
-            <div><i>Copilot</i><i>Windsurf</i><i>switching only</i></div>
+            <span>NINE TOOLS <b>account switching</b></span>
+            <span>SIX TOOLS <b>counted token history</b></span>
+            <div><i>Copilot</i><i>Windsurf</i><i>Codebuff quotas</i></div>
           </div>
         </article>
       </div>
@@ -272,8 +272,8 @@ export function landingPage(): Html {
         <details><summary>Where are my provider tokens stored?</summary><p>In Login Keychain on macOS, Secret Service or private files on Linux, and DPAPI-encrypted files on Windows. Provider tokens are never sent to keyhop.app.</p></details>
         <details><summary>Do I have to use the leaderboard?</summary><p>No. The desktop app, account switching, limits, history, budgets and alerts all work without a Keyhop cloud account. Leaderboards and teams are opt-in.</p></details>
         <details><summary>What does “API value” mean?</summary><p>Keyhop prices the tokens you used at each provider’s standard API rates. It shows the value of your usage, not a bill from your subscription.</p></details>
-        <details><summary>Which AI tools work with Keyhop?</summary><p>Six have native account switching: Claude Code, Cursor, Codex, Gemini CLI, GitHub Copilot and Windsurf. Four of those also have usage and limit tracking: Claude Code, Cursor, Codex and Gemini CLI. Copilot and Windsurf write no local usage Keyhop can count and publish no allowance it can read, so Keyhop switches their accounts and claims nothing further. Copilot is switched through the GitHub CLI, which is where its login already lives.</p></details>
-        <details><summary>Are Smart Hop, MCP and the mobile app available now?</summary><p>Smart Hop, the read-only MCP server and native Copilot and Windsurf switching ship in Keyhop. The iOS companion builds from source with seasons, standings, quests, badges, shared limits and local alerts when a limit comes back; it is not in the App Store yet. Android and automations remain planned.</p></details>
+        <details><summary>Which AI tools work with Keyhop?</summary><p>Nine have native account switching: Claude Code, Cursor, Codex, Gemini CLI, OpenCode, Pi, GitHub Copilot, Windsurf and Codebuff. The first six also have counted token history. Copilot, Windsurf and Codebuff do not expose complete model-token transcripts, so Keyhop shows their reported limits without inventing token totals. Copilot is switched through the GitHub CLI, which is where its login already lives.</p></details>
+        <details><summary>Are Smart Hop, MCP and the mobile app available now?</summary><p>Smart Hop, the read-only MCP server and native Copilot, Windsurf and Codebuff switching ship in Keyhop. The iOS companion builds from source with seasons, standings, quests, badges, shared limits and local alerts when a limit comes back; it is not in the App Store yet. Android and automations remain planned.</p></details>
         <details><summary>Can I inspect or build Keyhop myself?</summary><p>Yes. Keyhop is MIT licensed, its installers are readable shell scripts, and the application, cloud service, packaging and tests are all in the public repository.</p></details>
       </div>
     </section>
@@ -281,7 +281,7 @@ export function landingPage(): Html {
     <section class="closing">
       ${raw(PIXEL_MARK)}
       <h2>Less account admin. More building.</h2>
-      <p>Bring every Claude Code, Cursor, Codex, Gemini CLI, Copilot and Windsurf account into one calm place.</p>
+      <p>Bring every Claude Code, Cursor, Codex, Gemini CLI, OpenCode, Pi, Copilot, Windsurf and Codebuff account into one calm place.</p>
       <div class="closing-actions">
         <a class="btn" href="/download">Download Keyhop ${arrow()}</a>
         <a class="btn secondary" href="/leaderboard">Explore the leaderboard</a>

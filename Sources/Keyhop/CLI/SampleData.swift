@@ -16,12 +16,21 @@ enum SampleData {
             account(4, .cursor, "spare@personal.dev", nil, "Pro"),
             account(5, .codex, "me@personal.dev", nil, "Plus"),
             account(6, .gemini, "me@personal.dev", nil, "Standard"),
+            account(7, .opencode, "profile@opencode.dev", "Multi-provider", "Local"),
+            account(8, .pi, "profile@pi.dev", "Multi-provider", "Local"),
+            account(9, .copilot, "octocat@github.dev", "Personal", "Pro"),
+            account(10, .windsurf, "me@windsurf.dev", nil, "Pro"),
+            account(11, .codebuff, "me@codebuff.dev", nil, "Strong"),
         ]
     }
 
     static func overview(now: Date = Date()) -> Overview {
         let accounts = accounts(now: now)
-        let active: [Provider: UUID] = [.claude: accounts[0].id, .cursor: accounts[2].id, .codex: accounts[4].id, .gemini: accounts[5].id]
+        let active: [Provider: UUID] = [
+            .claude: accounts[0].id, .cursor: accounts[2].id, .codex: accounts[4].id, .gemini: accounts[5].id,
+            .opencode: accounts[6].id, .pi: accounts[7].id, .copilot: accounts[8].id, .windsurf: accounts[9].id,
+            .codebuff: accounts[10].id,
+        ]
         func window(_ label: String, _ used: Double, _ resetIn: TimeInterval, _ length: TimeInterval) -> UsageWindow {
             UsageWindow(label: label, usedPercent: used, resetsAt: now.addingTimeInterval(resetIn), windowSeconds: length)
         }
@@ -33,15 +42,19 @@ enum SampleData {
             accounts[3].id: UsageSnapshot(error: "Login expired. Switch to it and sign in to Cursor again."),
             accounts[4].id: UsageSnapshot(windows: [window("5h", 93, 6_440, 18000), window("Week", 62, 421_000, 604_800)], fetchedAt: read),
             accounts[5].id: UsageSnapshot(windows: [window("Quota", 28, 51_400, 86400)], fetchedAt: read),
+            accounts[8].id: UsageSnapshot(windows: [window("Premium", 47, 1_140_000, 2_592_000)], fetchedAt: read),
+            accounts[9].id: UsageSnapshot(windows: [window("Day", 33, 51_400, 86400), window("Week", 18, 421_000, 604_800)], fetchedAt: read),
+            accounts[10].id: UsageSnapshot(windows: [window("Credits", 25, 1_140_000, 2_592_000), window("Week", 30, 421_000, 604_800)], fetchedAt: read),
         ]
 
         var today: [UUID: Totals] = [:]
         var todayAll = Totals()
         for (index, account) in accounts.enumerated() {
-            let tokens = [4_200_000, 1_900_000, 2_600_000, 0, 3_100_000, 2_300_000][index]
+            let tokens = [4_200_000, 1_900_000, 2_600_000, 0, 3_100_000, 2_300_000, 1_700_000, 1_400_000, 0, 0, 0][index]
             guard tokens > 0 else { continue }
             let totals = Totals(tokens: TokenCounts(input: tokens / 20, cacheRead: tokens * 3 / 4, output: tokens / 5),
-                                cost: Double(tokens) / 1_000_000 * [3.1, 2.4, 1.2, 0, 1.6, 2.0][index], requests: tokens / 9000)
+                                cost: Double(tokens) / 1_000_000 * [3.1, 2.4, 1.2, 0, 1.6, 2.0, 1.7, 2.2, 0, 0, 0][index],
+                                requests: tokens / 9000)
             today[account.id] = totals
             todayAll += totals
         }
@@ -74,13 +87,16 @@ enum SampleData {
         var digest = UsageDigest()
         let calendar = Calendar.current
         let component: Calendar.Component = bucket == .hour ? .hour : .day
-        let models = ["claude-opus-5", "gpt-5.6-sol", "composer-2", "claude-sonnet-5", "claude-haiku-4-5", "gemini-3.1-pro-preview"]
+        let models = ["claude-opus-5", "gpt-5.6-sol", "composer-2", "claude-sonnet-5", "claude-haiku-4-5",
+                      "gemini-3.1-pro-preview", "openai/gpt-5.6-sol", "anthropic/claude-sonnet-5"]
         var start = interval.start
         var index = 0.0
         // At least one bucket, so even just after midnight there's something to show.
         let end = min(interval.end, max(now, calendar.date(byAdding: component, value: 1, to: interval.start) ?? now))
         while start < end {
             for (i, account) in accounts.enumerated() {
+                // Copilot, Windsurf and Codebuff expose limits, not a complete token ledger.
+                guard account.provider != .copilot, account.provider != .windsurf, account.provider != .codebuff else { continue }
                 let hour = Double(calendar.component(.hour, from: start))
                 let daily: Double
                 if bucket == .hour {
@@ -101,7 +117,14 @@ enum SampleData {
                 digest.points.append(UsageDigest.Point(start: start, key: key, totals: totals))
                 digest.byAccount[key, default: Totals()] += totals
                 digest.total += totals
-                let model = account.provider == .claude ? (Int(index) % 5 == 0 ? 3 : 0) : account.provider == .codex ? 1 : account.provider == .gemini ? 5 : 2
+                let model = switch account.provider {
+                case .claude: Int(index) % 5 == 0 ? 3 : 0
+                case .codex: 1
+                case .gemini: 5
+                case .opencode: 6
+                case .pi: 7
+                case .cursor, .copilot, .windsurf, .codebuff: 2
+                }
                 digest.byModel[models[model], default: Totals()] += totals
             }
             guard let next = calendar.date(byAdding: component, value: 1, to: start) else { break }

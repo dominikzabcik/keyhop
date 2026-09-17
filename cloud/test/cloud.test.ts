@@ -436,6 +436,8 @@ describe("quests and badges", () => {
         ["2026-09-10", "codex", 1000],
         ["2026-09-09", "claude", 1000],
         ["2026-09-08", "gemini", 1000],
+        [reference, "opencode", 1000],
+        [reference, "pi", 1000],
       ]),
       reference,
     );
@@ -444,7 +446,7 @@ describe("quests and badges", () => {
     expect(by["two-tools"]).toMatchObject({ done: 2, target: 2, complete: true });
     expect(by["beat-yesterday"].complete).toBe(true);
     expect(by["five-days"]).toMatchObject({ done: 5, complete: true });
-    expect(by["every-tool"]).toMatchObject({ done: 4, target: 4, complete: true });
+    expect(by["every-tool"]).toMatchObject({ done: 6, target: 6, complete: true });
   });
 
   it("leaves a goal short when the days do not add up", () => {
@@ -454,10 +456,31 @@ describe("quests and badges", () => {
     expect(by["five-days"]).toMatchObject({ done: 1, complete: false });
   });
 
+  it("does not let quota-only tools distort tracked-tool goals", () => {
+    const reference = "2026-09-13";
+    const tracked: [string, string, number][] = ["claude", "cursor", "codex", "gemini", "opencode", "pi"].map((tool) => [
+      reference,
+      tool,
+      1,
+    ]);
+    tracked.push([reference, "copilot", 1], [reference, "windsurf", 1], [reference, "codebuff", 1]);
+    const data = rows(tracked);
+    const quests = Object.fromEntries(questsFrom(data, reference).map((entry) => [entry.key, entry]));
+    const badges = Object.fromEntries(badgesFrom(data, { top3: false, bestTier: null }, reference).map((entry) => [entry.key, entry]));
+    expect(quests["every-tool"]).toMatchObject({ done: 6, target: 6, complete: true });
+    expect(badges["all-tools"].earned).toBe(true);
+  });
+
   it("earns badges from the days themselves", () => {
     const reference = "2026-09-13";
     const entries: [string, string, number][] = Array.from({ length: 7 }, (_, back) => [addDays(reference, -back), "claude", 1000]);
-    entries.push([reference, "cursor", 1], [reference, "codex", 1], [reference, "gemini", 1]);
+    entries.push(
+      [reference, "cursor", 1],
+      [reference, "codex", 1],
+      [reference, "gemini", 1],
+      [reference, "opencode", 1],
+      [reference, "pi", 1],
+    );
     const by = Object.fromEntries(badgesFrom(rows(entries), { top3: false, bestTier: null }, reference).map((entry) => [entry.key, entry]));
     expect(by["first-sync"].earned).toBe(true);
     expect(by["streak-7"]).toMatchObject({ earned: true, day: reference });
@@ -569,7 +592,7 @@ describe("limit sharing", () => {
   it("refuses unknown tools, impossible percentages, stale or distant resets and duplicates", () => {
     const one = (entry: Record<string, unknown>) => parseLimits({ limits: [{ accountKey: "a1", tool: "claude", windowLabel: "5h", usedPercent: 5, ...entry }] }, reference);
     expect(parseLimits({ days: [] }, reference)).toEqual({ error: "Send { limits: [...] }." });
-    expect(one({ tool: "notepad" })).toEqual({ error: "Tool must be claude, cursor, codex, gemini, copilot or windsurf." });
+    expect(one({ tool: "notepad" })).toEqual({ error: "Tool must be claude, cursor, codex, gemini, opencode, pi, copilot, windsurf or codebuff." });
     expect(one({ accountKey: "has space" })).toHaveProperty("error");
     expect(one({ windowLabel: "" })).toHaveProperty("error");
     expect(one({ usedPercent: 101 })).toHaveProperty("error");

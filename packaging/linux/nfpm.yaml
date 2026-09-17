@@ -9,7 +9,7 @@ section: devel
 priority: optional
 maintainer: dominikzabcik <35886301+dominikzabcik@users.noreply.github.com>
 description: |
-  Switch Claude Code, Cursor, Codex and Gemini CLI accounts in one click and track their usage.
+  Switch AI coding accounts in one click and track exact usage where available.
   Includes the keyhop command and a tray menu with limits, alerts and Insights.
 vendor: Keyhop
 homepage: https://github.com/dominikzabcik/keyhop

@@ -56,6 +56,10 @@ const byDay = (rows: DayRow[]) => {
   return days;
 };
 
+const measuredTools = new Set<Tool>(MEASURED_TOOLS);
+const measuredCount = (tools: Set<Tool>): number => [...tools].filter((tool) => measuredTools.has(tool)).length;
+const hasEveryMeasuredTool = (tools: Set<Tool>): boolean => MEASURED_TOOLS.every((tool) => tools.has(tool));
+
 const quest = (key: string, name: string, note: string, period: "day" | "week", done: number, target: number): Quest => ({
   key,
   name,
@@ -82,13 +86,13 @@ export function questsFrom(rows: DayRow[], reference = today()): Quest[] {
     const entry = on(day);
     weekTokens += entry.tokens;
     if (entry.tokens > 0) weekActive++;
-    for (const tool of entry.tools) weekTools.add(tool);
+    for (const tool of entry.tools) if (measuredTools.has(tool)) weekTools.add(tool);
   }
   const lastWeekTokens = lastWeek.reduce((sum, day) => sum + on(day).tokens, 0);
 
   return [
     quest("today", "Get going", "Use any tool today.", "day", todayEntry.tokens > 0 ? 1 : 0, 1),
-    quest("two-tools", "Two tools", "Use two different tools today.", "day", todayEntry.tools.size, 2),
+    quest("two-tools", "Two tools", "Use two different tools today.", "day", measuredCount(todayEntry.tools), 2),
     quest(
       "beat-yesterday",
       "Beat yesterday",
@@ -143,7 +147,7 @@ export function badgesFrom(rows: DayRow[], podium: { top3: boolean; bestTier: st
   const active = new Set([...days.entries()].filter(([, entry]) => entry.tokens > 0).map(([day]) => day));
   const { longest } = streaks(active, reference);
   const allTime = [...days.values()].reduce((sum, entry) => sum + entry.tokens, 0);
-  const allTools = [...days.entries()].find(([, entry]) => entry.tools.size === MEASURED_TOOLS.length);
+  const allTools = [...days.entries()].find(([, entry]) => hasEveryMeasuredTool(entry.tools));
   const biggest = [...days.entries()].sort(([, a], [, b]) => b.tokens - a.tokens)[0];
   const firstDay = [...active].sort()[0];
 
@@ -152,7 +156,7 @@ export function badgesFrom(rows: DayRow[], podium: { top3: boolean; bestTier: st
     badge("streak-7", "Seven in a row", "A seven-day streak.", longest >= 7, dayCompletingStreak(active, 7)),
     badge("streak-30", "Thirty in a row", "A thirty-day streak.", longest >= 30, dayCompletingStreak(active, 30)),
     badge("streak-100", "A hundred in a row", "A hundred-day streak.", longest >= 100, dayCompletingStreak(active, 100)),
-    badge("all-tools", "Full house", "Used Claude Code, Cursor, Codex and Gemini CLI in one day.", !!allTools, allTools?.[0]),
+    badge("all-tools", "Full house", "Used all six token-tracked tools in one day.", !!allTools, allTools?.[0]),
     badge("big-day", "Big day", "A billion tokens in a single day.", !!biggest && biggest[1].tokens >= 1_000_000_000, biggest?.[0]),
     badge("billion", "Billion", "A billion tokens all told.", allTime >= 1_000_000_000, dayReaching(rows, 1_000_000_000)),
     badge("ten-billion", "Ten billion", "Ten billion tokens all told.", allTime >= 10_000_000_000, dayReaching(rows, 10_000_000_000)),

@@ -4,12 +4,14 @@ import Foundation
 /// `keyhop dashboard`, or saved with its data inside by `keyhop insights --output`.
 enum DashboardPage {
     static func render(boot: String?) -> String {
-        var page = template
+        // One symbol per tool, from the tool list itself, so a newly added tool always has its mark.
+        let marks = Provider.allCases.map { provider in
+            #"<symbol id="mark-\#(provider.rawValue)" viewBox="0 0 24 24"><path d="\#(ProviderMarks.path(for: provider))"/></symbol>"#
+        }.joined(separator: "\n  ")
+        let page = template
+            .replacingOccurrences(of: "{{marks}}", with: marks)
             .replacingOccurrences(of: "{{icons}}", with: InterfaceIcons.symbols)
             .replacingOccurrences(of: "{{backdrop}}", with: Backdrop.script)
-        for provider in Provider.allCases {
-            page = page.replacingOccurrences(of: "{{mark-\(provider.rawValue)}}", with: ProviderMarks.path(for: provider))
-        }
         // Inside a script element, "<" could close it early; JSON allows it escaped.
         let data = boot.map { $0.replacingOccurrences(of: "<", with: "\\u003c") } ?? "null"
         return page.replacingOccurrences(of: "{{boot}}", with: data)
@@ -379,10 +381,7 @@ select.field option { background: var(--raised); }
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="mark-claude" viewBox="0 0 24 24"><path d="{{mark-claude}}"/></symbol>
-  <symbol id="mark-cursor" viewBox="0 0 24 24"><path d="{{mark-cursor}}"/></symbol>
-  <symbol id="mark-codex" viewBox="0 0 24 24"><path d="{{mark-codex}}"/></symbol>
-  <symbol id="mark-gemini" viewBox="0 0 24 24"><path d="{{mark-gemini}}"/></symbol>
+  {{marks}}
   {{icons}}
 </svg>
 

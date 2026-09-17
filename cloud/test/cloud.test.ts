@@ -1,10 +1,10 @@
-import { exports } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { addDays, today } from "../src/env";
 import { streaks } from "../src/stats";
 import { currentSeason, daysLeft, nextStep, seasonRange, tierFor } from "../src/seasons";
 import { parseUsage } from "../src/usage";
-import { LIMIT_TTL_SECONDS, parseLimits } from "../src/limits";
+import { LIMIT_TTL_SECONDS, clean, parseLimits, sweepLimits } from "../src/limits";
 import { badgesFrom, questsFrom } from "../src/quests";
 import { webLink } from "../src/account";
 
@@ -591,6 +591,29 @@ describe("limit sharing", () => {
     ).toEqual({ error: "5h appears twice for one account." });
   });
 
+  it("strips anything that would let a label lie about itself", () => {
+    const ch = (code: number) => String.fromCharCode(code);
+    // A label and a window name both end up in a notification on someone's phone.
+    const labelled = (value: string) => {
+      const result = parseLimits({ limits: [{ accountKey: "a1", tool: "claude", label: value, windowLabel: "5h", usedPercent: 5 }] }, reference);
+      return "limits" in result ? result.limits[0].label : result.error;
+    };
+    // A newline would fake a second line in a notification title.
+    expect(labelled("Work" + ch(10) + "Injected")).toBe("Work Injected");
+    expect(labelled("Work" + ch(0) + "x")).toBe("Work x");
+    // An escape sequence would colour a terminal that printed it.
+    expect(labelled("Work" + ch(27) + "[31m")).toBe("Work [31m");
+    // A bidi override would reverse what the words appear to say.
+    expect(labelled("a" + ch(0x202e) + "b")).toBe("a b");
+    expect(labelled("  spaced   out  ")).toBe("spaced out");
+    // Markup is left alone: it is data, and nothing renders a label as HTML.
+    expect(labelled("<b>Work</b>")).toBe("<b>Work</b>");
+
+    const windows = parseLimits({ limits: [{ accountKey: "a1", tool: "claude", windowLabel: "5h" + ch(10) + "evil", usedPercent: 5 }] }, reference);
+    expect("limits" in windows && windows.limits[0].windowLabel).toBe("5h evil");
+    expect(clean(ch(10) + ch(9) + " ")).toBe("");
+  });
+
   it("keeps a long label to a readable length and drops an empty one", () => {
     const result = parseLimits({ limits: [{ accountKey: "a1", tool: "claude", label: "x".repeat(80), windowLabel: "5h", usedPercent: 5 }] }, reference);
     expect("limits" in result && result.limits[0].label).toBe("x".repeat(40));
@@ -652,5 +675,35 @@ describe("limit sharing", () => {
     const stranger = await linkApp(await signIn("wesley"));
     expect((await (await readLimits(stranger)).json()) as unknown).toEqual({ limits: [], updatedAt: null });
     expect((await call("/api/limits")).status).toBe(401);
+  });
+  it("sweeps readings nobody refreshed, and only those", async () => {
+    const mac = await linkApp(await signIn("yara"));
+    await sendLimits(mac, [{ accountKey: "old", tool: "claude", windowLabel: "5h", usedPercent: 10 }]);
+    const fresh = await linkApp(await signIn("zane"));
+    await sendLimits(fresh, [{ accountKey: "new", tool: "claude", windowLabel: "5h", usedPercent: 20 }]);
+    // Age only yara's row past the TTL, as if that computer went quiet a day ago.
+    await env.DB.prepare("UPDATE account_limits SET updated_at = updated_at - ? WHERE account_key = 'old'").bind(LIMIT_TTL_SECONDS + 60).run();
+
+    expect(await sweepLimits(env.DB)).toBeGreaterThanOrEqual(1);
+    const left = await env.DB.prepare("SELECT account_key FROM account_limits WHERE account_key IN ('old', 'new')").all<{ account_key: string }>();
+    expect(left.results.map((row) => row.account_key)).toEqual(["new"]);
+  });
+
+  it("limits how fast one account can upload, without slowing anyone else", async () => {
+    const busy = await linkApp(await signIn("runaway"));
+    const calm = await linkApp(await signIn("steady"));
+    const statuses: number[] = [];
+    for (let attempt = 0; attempt < 65; attempt++) {
+      statuses.push((await sendLimits(busy, [{ accountKey: "a", tool: "claude", windowLabel: "5h", usedPercent: 1 }])).status);
+    }
+    expect(statuses.slice(0, 60).every((status) => status === 200)).toBe(true);
+    const refused = await sendLimits(busy, []);
+    expect(refused.status).toBe(429);
+    expect(refused.headers.get("retry-after")).toBe("60");
+    // The same allowance covers daily totals, so switching endpoints doesn't get around it.
+    expect((await upload(busy, [])).status).toBe(429);
+    expect((await sendLimits(calm, [])).status).toBe(200);
+    // Reading is never throttled by writing.
+    expect((await readLimits(busy)).status).toBe(200);
   });
 });

@@ -61,6 +61,16 @@ export const apiWriter: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next();
 };
 
+/** Bounds how fast one account can write, whichever of its computers is doing the writing. */
+export const uploadLimit: MiddlewareHandler<AppEnv> = async (c, next) => {
+  const user = c.get("user");
+  if (user && !(await c.env.UPLOAD_LIMITER.limit({ key: user.id })).success) {
+    c.header("Retry-After", "60");
+    return c.json({ error: "Too many uploads. Wait a minute and try again." }, 429);
+  }
+  await next();
+};
+
 export const pageUser: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (!c.get("user")) {
     const url = new URL(c.req.url);

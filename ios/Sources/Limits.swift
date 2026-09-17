@@ -11,9 +11,26 @@ struct LimitAccount: Identifiable, Equatable {
 
     /// "Codex · Work" when the account was named on the computer, "Codex" when it wasn't. The email
     /// the Mac falls back to never leaves it, so there is nothing else to fall back to here.
+    ///
+    /// The label is cleaned again here even though the website already cleans it. It arrives over
+    /// the network and goes straight into a notification, where a newline would fake a second line
+    /// and a bidi override would reverse what the words appear to say. Whatever reaches this phone,
+    /// it is shown as one plain line.
     var name: String {
-        guard let label, !label.isEmpty else { return Format.tool(tool) }
-        return "\(Format.tool(tool)) · \(label)"
+        guard let label, case let safe = LimitAccount.oneLine(label), !safe.isEmpty else { return Format.tool(tool) }
+        return "\(Format.tool(tool)) · \(safe)"
+    }
+
+    /// One line of plain text: no controls, no bidi overrides, no runs of blank space.
+    ///
+    /// A removed character becomes a space rather than nothing, so a newline between two words
+    /// leaves two words rather than welding them into one. The website cleans these the same way.
+    static func oneLine(_ value: String) -> String {
+        let spaced = value.unicodeScalars.map { scalar -> Character in
+            let category = scalar.properties.generalCategory
+            return category == .control || category == .format ? " " : Character(scalar)
+        }
+        return String(spaced).split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 
     /// The window with least room left: the one that decides whether this account can be used.
@@ -79,7 +96,7 @@ enum AlertPlan {
                 guard reset > now.addingTimeInterval(60), reset < now.addingTimeInterval(horizon) else { return nil }
                 return PlannedAlert(id: "limit|\(window.id)|\(Int(reset.timeIntervalSince1970))",
                                     title: "\(account.name) is ready",
-                                    body: "The \(window.windowLabel) limit just reset.", at: reset)
+                                    body: "The \(LimitAccount.oneLine(window.windowLabel)) limit just reset.", at: reset)
             }
         }
     }

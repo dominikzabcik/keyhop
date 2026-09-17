@@ -244,14 +244,16 @@ enum Commands {
             guard let seconds = Int(value), seconds > 0 else { throw UsageError("--timeout takes a number of seconds.") }
             return seconds
         } ?? 600
-        let provider = try tool(try args.positional("a tool: claude, cursor, codex or gemini"))
+        let provider = try tool(try args.positional("a tool: \(Provider.wordList)"))
         try args.finish()
 
         var workspace = try Workspace.open()
         let previous = try await workspace.service.signOutForAdding(provider)
         workspace.state.active[provider.rawValue] = nil
         workspace.state.save()
-        let signedOut = "Signed \(provider.name) out on this computer\(previous == nil ? "" : ", after saving the login in use")."
+        let signedOut = await workspace.service.holdsManyLogins(provider)
+            ? "\(provider.name) keeps every account you sign in to, so nothing was signed out."
+            : "Signed \(provider.name) out on this computer\(previous == nil ? "" : ", after saving the login in use")."
 
         if noWait {
             let message = "\(signedOut) Sign in with the other account, then run `keyhop refresh` to save it."
@@ -480,6 +482,9 @@ enum Commands {
                 } catch {
                     problem = error.localizedDescription
                 }
+                if email == nil, problem == nil, ToolDetection.installed(provider) {
+                    problem = adapter.blocker().map(Output.plain) ?? ToolDetection.note(provider)
+                }
             }
             tools.append(DoctorDocument.Tool(id: provider.rawValue, name: provider.name, installed: sample || ToolDetection.installed(provider),
                                              signedInAs: email, problem: problem, loginLocation: ToolDetection.loginLocation(provider)))
@@ -563,10 +568,21 @@ enum ToolDetection {
             return Shell.which("gemini") != nil || FileManager.default.fileExists(atPath: GeminiAdapter.directory.path)
         case .copilot:
             // Copilot signs in as a GitHub account, so gh is what Keyhop needs to switch it.
-            return Shell.which("gh") != nil
-                && (Shell.which("copilot") != nil || FileManager.default.fileExists(atPath: CopilotAdapter.cliDirectory.path))
+            return Shell.which("copilot") != nil || Shell.which("gh") != nil
+                || FileManager.default.fileExists(atPath: CopilotAdapter.cliDirectory.path)
         case .windsurf:
             return WindsurfAdapter.isAppInstalled || FileManager.default.fileExists(atPath: WindsurfAdapter.directory.path)
+        }
+    }
+
+    /// What to tell someone whose tool is here but shows no login, when that could be Keyhop's doing.
+    static func note(_ provider: Provider) -> String? {
+        switch provider {
+        case .windsurf:
+            // Honest about the one adapter Keyhop couldn't test: an empty result may be its miss.
+            "No login found in \(WindsurfAdapter.credentialsURL.path). If Windsurf is signed in, it keeps its login somewhere this version of Keyhop doesn't read yet."
+        default:
+            nil
         }
     }
 

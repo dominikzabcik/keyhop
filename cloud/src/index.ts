@@ -4,7 +4,7 @@ import { auth, sameOrigin, session } from "./auth";
 import { card } from "./card";
 import { randomToken } from "./crypto";
 import type { AppEnv } from "./env";
-import { limits } from "./limits";
+import { limits, sweepLimits } from "./limits";
 import { notFound, pages } from "./pages";
 import { quests } from "./quests";
 import { seasons } from "./seasons";
@@ -46,4 +46,10 @@ app.onError((error, c) => {
   return c.req.path.startsWith("/api/") ? c.json({ error: "Something went wrong." }, 500) : c.text("Something went wrong.", 500);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  /** The hourly trigger in wrangler.jsonc. */
+  async scheduled(_controller: ScheduledController, env: AppEnv["Bindings"], ctx: ExecutionContext) {
+    ctx.waitUntil(sweepLimits(env.DB));
+  },
+} satisfies ExportedHandler<AppEnv["Bindings"]>;

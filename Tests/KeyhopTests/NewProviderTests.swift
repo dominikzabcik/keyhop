@@ -224,3 +224,187 @@ final class NewProviderTests: XCTestCase {
         }
     }
 }
+
+// MARK: Tools that hold several logins at once
+
+/// A stand-in for gh: several logins held together, one of them active, and signing out does nothing.
+final class ManyLogins: @unchecked Sendable {
+    private let lock = NSLock()
+    private var held: [String] = []
+    private var current: String?
+
+    func add(_ user: String, active: Bool = true) {
+        lock.lock(); held.append(user); if active { current = user }; lock.unlock()
+    }
+
+    func snapshot() -> (held: [String], active: String?) {
+        lock.lock(); defer { lock.unlock() }
+        return (held, current)
+    }
+
+    func activate(_ user: String) {
+        lock.lock(); current = user; lock.unlock()
+    }
+}
+
+struct ManyLoginsAdapter: ProviderAdapter {
+    let provider = Provider.copilot
+    let tool: ManyLogins
+
+    private func live(_ user: String) -> LiveLogin {
+        LiveLogin(identity: user, email: "@\(user)", plan: nil, secret: ["login": user, "token": "t-\(user)"])
+    }
+
+    func readLive() async throws -> LiveLogin? { tool.snapshot().active.map(live) }
+    func readAllLogins() async throws -> [LiveLogin] { tool.snapshot().held.map(live) }
+    func apply(_ secret: Secret) async throws { if let user = secret["login"] { tool.activate(user) } }
+    func signOutLocally() async throws {}
+    func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
+        LimitReport(windows: [], plan: nil)
+    }
+}
+
+final class ManyLoginsServiceTests: XCTestCase {
+    private func service(_ tool: ManyLogins) throws -> AccountService {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("keyhop-many-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        return AccountService(directory: directory, adapters: [.copilot: ManyLoginsAdapter(tool: tool)],
+                              vault: Vault(store: MemorySecretStore()))
+    }
+
+    func testEveryLoginTheToolHoldsIsSavedWithoutChangingTheActiveOne() async throws {
+        let tool = ManyLogins()
+        tool.add("octocat", active: false)
+        tool.add("hubot")
+        let service = try service(tool)
+
+        _ = await service.syncLive(.copilot)
+        let saved = await service.accounts.map(\.identity).sorted()
+        XCTAssertEqual(saved, ["hubot", "octocat"])
+        let activeID = await service.active[.copilot]
+        let active = await service.accounts.first { $0.id == activeID }
+        XCTAssertEqual(active?.identity, "hubot")
+
+        // A second refresh finds nothing new and saves nothing twice.
+        _ = await service.syncLive(.copilot)
+        let count = await service.accounts.count
+        XCTAssertEqual(count, 2)
+    }
+
+    func testAddingWaitsForANewLoginRatherThanReturningTheOneAlreadyInUse() async throws {
+        let tool = ManyLogins()
+        tool.add("hubot")
+        let service = try service(tool)
+        _ = await service.syncLive(.copilot)
+
+        // gh keeps hubot active the whole time, so "signing out" changes nothing here.
+        _ = try await service.signOutForAdding(.copilot)
+        let waiting = Task { await service.waitForLogin(.copilot, attempts: 50, interval: .milliseconds(20)) }
+        try await Task.sleep(for: .milliseconds(100))
+        tool.add("octocat")   // what `gh auth login` does: a new account, now active
+        let result = await waiting.value
+
+        guard case .saved(let id)? = result?.outcome else { return XCTFail("expected the new login, got \(String(describing: result))") }
+        let account = await service.accounts.first { $0.id == id }
+        XCTAssertEqual(account?.identity, "octocat")
+        XCTAssertEqual(result?.alreadySaved, false)
+    }
+
+    func testAddingGivesUpQuietlyWhenNoNewLoginArrives() async throws {
+        let tool = ManyLogins()
+        tool.add("hubot")
+        let service = try service(tool)
+        _ = await service.syncLive(.copilot)
+        let result = await service.waitForLogin(.copilot, attempts: 3, interval: .milliseconds(10))
+        XCTAssertNil(result, "the account already in use must not be reported as the one just added")
+    }
+}
+
+final class CopilotParsingTests: XCTestCase {
+    func testEveryGitHubAccountIsListedWithTheActiveOneMarked() {
+        let status = """
+        github.com
+          ✓ Logged in to github.com account octocat (keyring)
+          - Active account: false
+          ✓ Logged in to github.com account hubot (keyring)
+          - Active account: true
+        """
+        let logins = CopilotAdapter.logins(in: status)
+        XCTAssertEqual(logins.map(\.login), ["octocat", "hubot"])
+        XCTAssertEqual(logins.map(\.active), [false, true])
+    }
+
+    func testOnlyRealGitHubNamesAreEverHandedToGh() {
+        for good in ["hubot", "octo-cat", "a", "A1", String(repeating: "x", count: 39)] {
+            XCTAssertTrue(CopilotAdapter.isGitHubLogin(good), good)
+        }
+        // A leading dash would read as an option on gh's command line.
+        for bad in ["", "-rf", "--user", "trail-", "has space", "semi;colon", "dot.name", "ünïcode",
+                    String(repeating: "x", count: 40), "a\nb"] {
+            XCTAssertFalse(CopilotAdapter.isGitHubLogin(bad), bad)
+        }
+        let status = "  ✓ Logged in to github.com account --user (keyring)\n  - Active account: true"
+        XCTAssertTrue(CopilotAdapter.logins(in: status).isEmpty, "a name gh could misread must be dropped")
+    }
+
+    func testAnOptionShapedLoginIsRefusedBeforeGhRuns() async {
+        var ran = false
+        let adapter = CopilotAdapter(gh: { _, _ in ran = true; return ShellResult(status: 0, stdout: Data(), stderr: "") })
+        do {
+            try await adapter.apply(["login": "--help", "token": "t"])
+            XCTFail("should have been refused")
+        } catch {}
+        XCTAssertFalse(ran)
+    }
+
+    func testSigningOutOfCopilotTouchesNothing() async throws {
+        var calls = 0
+        let adapter = CopilotAdapter(gh: { _, _ in calls += 1; return ShellResult(status: 0, stdout: Data(), stderr: "") })
+        try await adapter.signOutLocally()
+        XCTAssertEqual(calls, 0, "gh auth logout would revoke the saved token")
+    }
+}
+
+final class BlockerTests: XCTestCase {
+    private struct BlockedAdapter: ProviderAdapter {
+        let provider = Provider.copilot
+        func readLive() async throws -> LiveLogin? { nil }
+        func apply(_ secret: Secret) async throws {}
+        func signOutLocally() async throws {}
+        func blocker() -> String? { "Install gh, then run `gh auth login`." }
+        func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
+            LimitReport(windows: [], plan: nil)
+        }
+    }
+
+    func testAddingAToolThatCannotWorkFailsAtOnceAndSaysWhy() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("keyhop-blocked-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let service = AccountService(directory: directory, adapters: [.copilot: BlockedAdapter()], vault: Vault(store: MemorySecretStore()))
+        do {
+            _ = try await service.signOutForAdding(.copilot)
+            XCTFail("a blocked tool must not start a ten-minute wait")
+        } catch {
+            // Backticks are for Markdown; a plain message reads cleanly in a terminal and a notice.
+            XCTAssertEqual(error.localizedDescription, "Install gh, then run gh auth login.")
+        }
+    }
+
+    func testOnlyToolsThatHoldManyLoginsSaySo() async {
+        XCTAssertTrue(CopilotAdapter().holdsManyLogins)
+        XCTAssertFalse(WindsurfAdapter().holdsManyLogins)
+        XCTAssertFalse(GeminiAdapter().holdsManyLogins)
+        // A stand-in gh is never "missing".
+        XCTAssertNil(CopilotAdapter(gh: { _, _ in ShellResult(status: 0, stdout: Data(), stderr: "") }).blocker())
+        XCTAssertNil(WindsurfAdapter().blocker())
+    }
+
+    func testDoctorOwnsUpWhenWindsurfMayBeKeyhopsMiss() {
+        XCTAssertTrue(ToolDetection.note(.windsurf)?.contains("doesn't read yet") == true)
+        for provider in Provider.allCases where provider != .windsurf {
+            XCTAssertNil(ToolDetection.note(provider))
+        }
+    }
+}

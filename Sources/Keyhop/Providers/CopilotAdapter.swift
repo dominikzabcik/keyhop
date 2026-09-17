@@ -62,19 +62,32 @@ struct CopilotAdapter: ProviderAdapter {
         return Self.activeLogin(in: text(result))
     }
 
-    /// Reads the login `gh auth status` marks as active. Kept apart so the parsing is testable.
-    static func activeLogin(in status: String) -> String? {
-        var candidate: String?
+    /// Every account `gh auth status` lists, and which one is in use. Kept apart to be testable.
+    static func logins(in status: String) -> [(login: String, active: Bool)] {
+        var found: [(login: String, active: Bool)] = []
         for line in status.split(separator: "\n", omittingEmptySubsequences: false) {
             // gh bullets each line with a tick or a dash, so those go before anything is read.
             let text = line.trimmingCharacters(in: CharacterSet(charactersIn: " \t-•✓✗*"))
-            if let range = text.range(of: "Logged in to \(host) account ") {
-                candidate = text[range.upperBound...].split(separator: " ").first.map(String.init)
-            } else if text.hasPrefix("Active account: true"), let candidate {
-                return candidate
+            if let range = text.range(of: "Logged in to \(host) account "),
+               let login = text[range.upperBound...].split(separator: " ").first.map(String.init),
+               isGitHubLogin(login) {
+                found.append((login, false))
+            } else if text.hasPrefix("Active account: true"), !found.isEmpty {
+                found[found.count - 1].active = true
             }
         }
-        return nil
+        return found
+    }
+
+    static func activeLogin(in status: String) -> String? {
+        logins(in: status).first { $0.active }?.login
+    }
+
+    /// GitHub's own rule for a username. Checked before a name is ever handed to `gh`, so nothing
+    /// that could read as an option (a leading dash, say) reaches the command line.
+    static func isGitHubLogin(_ value: String) -> Bool {
+        guard (1...39).contains(value.count), !value.hasPrefix("-"), !value.hasSuffix("-") else { return false }
+        return value.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") }
     }
 
     private func savedToken(for login: String) throws -> String? {
@@ -87,7 +100,7 @@ struct CopilotAdapter: ProviderAdapter {
     // MARK: Switching
 
     func apply(_ secret: Secret) async throws {
-        guard let login = secret["login"], !login.isEmpty, let token = secret["token"], !token.isEmpty else {
+        guard let login = secret["login"], Self.isGitHubLogin(login), let token = secret["token"], !token.isEmpty else {
             throw KeyhopError("Saved Copilot login is damaged")
         }
         // Already held by gh: switching is enough, and re-adding the token would rotate nothing.
@@ -103,10 +116,33 @@ struct CopilotAdapter: ProviderAdapter {
         guard switched.status == 0 else { throw KeyhopError(Self.problem(switched, login: login)) }
     }
 
-    func signOutLocally() async throws {
-        // `gh auth logout` asks GitHub to revoke the token, which would break the copy Keyhop saved.
-        // There is no local-only sign-out for gh, so Keyhop says so rather than doing damage.
-        throw KeyhopError("Sign out of Copilot with gh auth logout. Keyhop leaves it alone, because that also revokes the token it saved.")
+    var holdsManyLogins: Bool { true }
+
+    /// Copilot can be on this computer without gh, and then Keyhop has nothing to switch it with.
+    /// Said plainly, rather than leaving Copilot to look signed out for no visible reason.
+    func blocker() -> String? {
+        guard gh == nil, Shell.which("gh") == nil else { return nil }
+        return "Keyhop switches Copilot through the GitHub CLI, which isn't installed. Install gh, then run `gh auth login`."
+    }
+
+    /// Nothing to do, and that is the point.
+    ///
+    /// Signing a tool out here exists so someone can sign in as a second account. gh already holds
+    /// as many accounts as you like at once, so Keyhop finds them all in `readAllLogins()` and
+    /// never has to take one away first. `gh auth logout` is also the wrong tool: it asks GitHub to
+    /// revoke the token, which would break the copy Keyhop saved.
+    func signOutLocally() async throws {}
+
+    /// Every GitHub account gh holds, so all of them can be saved without signing out of any.
+    func readAllLogins() async throws -> [LiveLogin] {
+        guard Shell.which("gh") != nil || gh != nil else { return [] }
+        let status = try run(["auth", "status", "--hostname", Self.host])
+        guard status.status == 0 else { return [] }
+        return try Self.logins(in: text(status)).compactMap { entry in
+            guard let token = try savedToken(for: entry.login), !token.isEmpty else { return nil }
+            return LiveLogin(identity: entry.login, email: "@\(entry.login)", plan: nil,
+                             secret: ["token": token, "login": entry.login])
+        }
     }
 
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {

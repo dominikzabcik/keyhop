@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { apiUser, apiWriter } from "./auth";
+import { apiUser, apiWriter, uploadLimit } from "./auth";
 import { type AppEnv, type Tool, TOOLS, addDays, now, today, toolList } from "./env";
 
 export interface UsageDay {
@@ -59,7 +59,7 @@ function isCount(value: unknown, max: number): value is number {
 export const usage = new Hono<AppEnv>();
 
 /** The app sends its daily totals; each day and tool replaces what was there. */
-usage.post("/api/usage", apiUser, apiWriter, async (c) => {
+usage.post("/api/usage", apiUser, apiWriter, uploadLimit, async (c) => {
   const parsed = parseUsage(await c.req.json().catch(() => null));
   if ("error" in parsed) return c.json(parsed, 400);
   const user = c.get("user")!;

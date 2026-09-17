@@ -755,7 +755,10 @@ actor DashboardSession {
             let result = await workspace.service.waitForLogin(provider)
             await self.finishAdding(provider, result: result, workspace: workspace)
         }
-        return DashboardAction(message: "Signed \(provider.name) out on this computer.", note: Output.plain(provider.signInHint))
+        let message = await workspace.service.holdsManyLogins(provider)
+            ? "Waiting for another \(provider.name) account."
+            : "Signed \(provider.name) out on this computer."
+        return DashboardAction(message: message, note: Output.plain(provider.signInHint))
     }
 
     private func finishAdding(_ provider: Provider, result: (outcome: AccountService.SyncOutcome, alreadySaved: Bool)?, workspace: Workspace) async {

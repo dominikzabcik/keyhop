@@ -36,6 +36,10 @@ actor AccountService {
         return (try? decoder.decode([Account].self, from: Data(contentsOf: directory.appendingPathComponent("accounts.json")))) ?? []
     }
 
+    func holdsManyLogins(_ provider: Provider) -> Bool {
+        adapters[provider]?.holdsManyLogins ?? false
+    }
+
     func account(_ id: UUID) -> Account? {
         accounts.first { $0.id == id }
     }
@@ -80,6 +84,7 @@ actor AccountService {
             }
             setActive(provider, known.id)
             saveMeta()
+            await saveOtherLogins(provider, adapter: adapter)
             return .current(known.id)
         }
 
@@ -98,7 +103,28 @@ actor AccountService {
         accounts.append(account)
         setActive(provider, account.id)
         saveMeta()
+        await saveOtherLogins(provider, adapter: adapter)
         return .saved(account.id)
+    }
+
+    /// Saves the logins a tool holds besides the one in use, for tools that keep several at once.
+    /// Nothing here changes which account is active; a failure only means one is saved later.
+    private func saveOtherLogins(_ provider: Provider, adapter: any ProviderAdapter) async {
+        guard let logins = try? await adapter.readAllLogins(), logins.count > 1 else { return }
+        var changed = false
+        for live in logins where !accounts.contains(where: { $0.provider == provider && $0.identity == live.identity }) {
+            let email = live.email.isEmpty ? "\(provider.name) account" : live.email
+            let account = Account(id: UUID(), provider: provider, identity: live.identity, email: email,
+                                  label: nil, plan: live.plan, addedAt: Date())
+            guard await vault.write(live.secret, for: account.id) else { continue }
+            if accounts.contains(where: { $0.provider == provider && $0.identity == live.identity }) {
+                await vault.delete(account.id)
+                continue
+            }
+            accounts.append(account)
+            changed = true
+        }
+        if changed { saveMeta() }
     }
 
     /// Moves the tool to a saved account. The login in use is saved first, so a switch never
@@ -133,6 +159,8 @@ actor AccountService {
     /// a different account. Returns the account that was in use.
     func signOutForAdding(_ provider: Provider) async throws -> UUID? {
         guard let adapter = adapters[provider] else { return nil }
+        // Waiting ten minutes for a login that can never arrive helps nobody.
+        if let blocker = adapter.blocker() { throw KeyhopError(Output.plain(blocker)) }
         if case .failed(let message) = await syncLive(provider) { throw KeyhopError(message) }
         let previous = active[provider]
         if previous != nil {
@@ -146,9 +174,21 @@ actor AccountService {
     /// the calling task is cancelled.
     func waitForLogin(_ provider: Provider, attempts: Int = 300, interval: Duration = .seconds(2)) async -> (outcome: SyncOutcome, alreadySaved: Bool)? {
         guard let adapter = adapters[provider] else { return nil }
+        // A tool that holds several logins (gh) never signed out, so its old account is still live.
+        // For those, wait for a login that wasn't saved before rather than returning the old one.
+        let stillSignedIn = (try? await adapter.readLive()) != nil
+        let before = Set(accounts.filter { $0.provider == provider }.map(\.identity))
         for _ in 0..<attempts {
             try? await Task.sleep(for: interval)
             if Task.isCancelled { return nil }
+            if stillSignedIn {
+                guard let logins = try? await adapter.readAllLogins(),
+                      let fresh = logins.first(where: { !before.contains($0.identity) }) else { continue }
+                let outcome = await syncLive(provider)
+                if case .failed = outcome { return (outcome, false) }
+                guard let saved = accounts.first(where: { $0.provider == provider && $0.identity == fresh.identity }) else { continue }
+                return (.saved(saved.id), false)
+            }
             if let live = try? await adapter.readLive() {
                 let known = accounts.contains { $0.provider == provider && $0.identity == live.identity }
                 return (await syncLive(provider), known)

@@ -208,7 +208,15 @@ enum Files {
         let dir = target.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let tmp = dir.appendingPathComponent(".\(target.lastPathComponent).keyhop-\(UUID().uuidString)")
+        #if os(Windows)
         try data.write(to: tmp)
+        #else
+        // Created with owner-only permissions from the first byte: writing first and tightening after
+        // would leave a login readable by other users for that moment.
+        guard FileManager.default.createFile(atPath: tmp.path, contents: data, attributes: [.posixPermissions: 0o600]) else {
+            throw KeyhopError("Couldn't write \(target.lastPathComponent)")
+        }
+        #endif
         #if os(Windows)
         let moved = tmp.path.withCString(encodedAs: UTF16.self) { from in
             target.path.withCString(encodedAs: UTF16.self) { to in

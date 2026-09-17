@@ -153,6 +153,31 @@ final class KeyhopTests: XCTestCase {
         XCTAssertNotEqual(one.first?.id, moved.first?.id)
     }
 
+    func testAServerSuppliedLabelCannotSpoofANotification() {
+        let now = Date()
+        func nameFor(_ label: String) -> String {
+            LimitAccount.group([limit("a", "codex", label, "5h", 96, resetsIn: 900, from: now)]).first?.name ?? ""
+        }
+        // These arrive over the network and go straight into a notification title, so the phone
+        // cleans them again rather than trusting that the website already did.
+        XCTAssertEqual(nameFor("Work\u{0A}is ready"), "Codex · Work is ready")
+        XCTAssertEqual(nameFor("Work\u{00}x"), "Codex · Work x")
+        XCTAssertEqual(nameFor("Work\u{1B}[31m"), "Codex · Work [31m")
+        // A bidi override would reverse what the words appear to say.
+        XCTAssertEqual(nameFor("a\u{202E}b"), "Codex · a b")
+        XCTAssertEqual(nameFor("   "), "Codex")
+        XCTAssertEqual(nameFor("Work"), "Codex · Work")
+
+        // The window name lands in the notification body and is cleaned the same way.
+        let alerts = AlertPlan.alerts(limits: [limit("a", "codex", "Work", "5h\u{0A}evil", 96, resetsIn: 900, from: now)],
+                                      season: nil, quests: nil, wantsLimits: true, wantsSeason: false, now: now)
+        XCTAssertEqual(alerts.first?.body, "The 5h evil limit just reset.")
+        for alert in alerts {
+            XCTAssertFalse(alert.title.contains("\u{0A}"))
+            XCTAssertFalse(alert.body.contains("\u{0A}"))
+        }
+    }
+
     func testCountdownWords() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         XCTAssertEqual(Format.until(now.addingTimeInterval(-5), from: now), "now")

@@ -20,8 +20,17 @@
       "name": "DEVICE_POLL_LIMITER",
       "namespace_id": "1002",
       "simple": { "limit": 30, "period": 60 }
+    },
+    {
+      // Per signed-in account: a computer syncs hourly and shares limits every few minutes, so
+      // sixty writes a minute is far above honest use and still bounds a runaway client.
+      "name": "UPLOAD_LIMITER",
+      "namespace_id": "1003",
+      "simple": { "limit": 60, "period": 60 }
     }
   ],
+  // Hourly: sweep limit readings nobody has refreshed in a day.
+  "triggers": { "crons": ["17 * * * *"] },
   "d1_databases": [
     {
       "binding": "DB",

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { apiUser, apiWriter } from "./auth";
+import { apiUser, apiWriter, uploadLimit } from "./auth";
 import { type AppEnv, type Tool, TOOLS, now, toolList } from "./env";
 
 /**
@@ -21,6 +21,30 @@ export interface LimitRow {
   usedPercent: number;
   /** Unix seconds, or null for a window whose provider does not say when it turns over. */
   resetsAt: number | null;
+}
+
+/**
+ * Strips anything that could make a label lie about itself once it is shown.
+ *
+ * These strings are written on a computer and read back by a phone, where they land in a
+ * notification title. A newline there can fake a second line, an escape sequence can colour a
+ * terminal, and a bidi override can reverse what the words appear to say. None of that belongs in
+ * the name of an account, so it is removed here, at the one place every reading passes through.
+ */
+export function clean(value: string): string {
+  return Array.from(value)
+    .map((character) => {
+      const code = character.codePointAt(0)!;
+      // Removed characters become a space rather than nothing, so a newline between two words
+      // leaves two words rather than welding them into one.
+      if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return " ";
+      // Bidi overrides and isolates, the classic way to make text read backwards.
+      if (code === 0x200e || code === 0x200f || (code >= 0x202a && code <= 0x202e) || (code >= 0x2066 && code <= 0x2069)) return " ";
+      return character;
+    })
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** A reading stops counting once it is this old: the computer it came from has gone quiet. */
@@ -50,11 +74,11 @@ export function parseLimits(body: unknown, reference = now()): { limits: LimitRo
     if (typeof tool !== "string" || !(TOOLS as readonly string[]).includes(tool)) {
       return { error: `Tool must be ${toolList()}.` };
     }
-    const windowLabel = typeof entry?.windowLabel === "string" ? entry.windowLabel.trim() : "";
+    const windowLabel = typeof entry?.windowLabel === "string" ? clean(entry.windowLabel) : "";
     if (!windowLabel || windowLabel.length > MAX_WINDOW) {
       return { error: `Each window needs a name of up to ${MAX_WINDOW} characters.` };
     }
-    const label = typeof entry?.label === "string" ? entry.label.trim().slice(0, MAX_LABEL) : "";
+    const label = typeof entry?.label === "string" ? clean(entry.label).slice(0, MAX_LABEL).trim() : "";
     const usedPercent = entry?.usedPercent;
     if (typeof usedPercent !== "number" || !Number.isFinite(usedPercent) || usedPercent < 0 || usedPercent > 100) {
       return { error: `Used percent for ${windowLabel} must be between 0 and 100.` };
@@ -112,10 +136,19 @@ export async function currentLimits(db: D1Database, userId: string, reference = 
   return { limits, updatedAt: updatedAt || null };
 }
 
+/**
+ * Deletes readings nobody has refreshed within the TTL. Reads already ignore them; this is what
+ * makes "no history" true in storage too, for someone who stopped syncing without turning sharing off.
+ */
+export async function sweepLimits(db: D1Database, reference = now()): Promise<number> {
+  const result = await db.prepare("DELETE FROM account_limits WHERE updated_at <= ?").bind(reference - LIMIT_TTL_SECONDS).run();
+  return result.meta.changes ?? 0;
+}
+
 export const limits = new Hono<AppEnv>();
 
 /** The computer sends where it stands. Each upload replaces the one before it. */
-limits.post("/api/limits", apiUser, apiWriter, async (c) => {
+limits.post("/api/limits", apiUser, apiWriter, uploadLimit, async (c) => {
   const parsed = parseLimits(await c.req.json().catch(() => null));
   if ("error" in parsed) return c.json(parsed, 400);
   const user = c.get("user")!;

@@ -165,14 +165,15 @@ enum CloudSync {
 
     /// Sends a year the first time, then the last eight days, since logs can arrive late.
     @discardableResult
-    static func run(_ link: inout CloudLink, tracker: TrackerEngine, now: Date = Date()) async throws -> Int {
+    static func run(_ link: inout CloudLink, tracker: TrackerEngine, now: Date = Date(),
+                    store: (any SecretStore)? = nil) async throws -> Int {
         let lookback = Double(link.lastSync == nil ? 370 : 8) * 86400
         let since = Calendar.current.startOfDay(for: now.addingTimeInterval(-lookback))
         let days = try await days(tracker: tracker, since: since, now: now)
         let saved = try await CloudClient(server: link.server, token: link.token).upload(days)
         link.lastSync = now
         link.lastSyncError = nil
-        try link.save()
+        try link.save(store: store)
         return saved
     }
 
@@ -196,27 +197,39 @@ enum CloudSync {
 
     /// After a refresh: at most once an hour, and never in the way of the refresh itself. Limits go
     /// more often, because a countdown that is an hour old is no longer a countdown.
+    ///
+    /// The two are independent. Daily totals are the leaderboard, so they go first and nothing about
+    /// limit sharing can stop them: a website that doesn't take limit readings yet, or refuses one,
+    /// costs the phone its countdown and nothing else.
     static func syncIfDue(tracker: TrackerEngine, accounts: [Account] = [], usage: [UUID: UsageSnapshot] = [:],
-                          now: Date = Date()) async {
-        guard var link = CloudLink.load() else { return }
-        var changed = false
-        do {
-            if link.sharesLimits, link.lastLimitSync.map({ now.timeIntervalSince($0) >= 300 }) ?? true {
-                try await CloudClient(server: link.server, token: link.token).upload(limits(accounts: accounts, usage: usage, now: now))
-                link.lastLimitSync = now
-                changed = true
+                          now: Date = Date(), store: (any SecretStore)? = nil) async {
+        guard var link = CloudLink.load(store: store) else { return }
+
+        if link.lastSync.map({ now.timeIntervalSince($0) >= 3600 }) ?? true {
+            do {
+                try await run(&link, tracker: tracker, now: now, store: store)
+            } catch let error as CloudError where error.kind == .unlinked {
+                CloudLink.remove(store: store)
+                return
+            } catch {
+                link.lastSyncError = error.localizedDescription
+                try? link.save(store: store)
             }
-            if link.lastSync.map({ now.timeIntervalSince($0) >= 3600 }) ?? true {
-                try await run(&link, tracker: tracker, now: now)
-                changed = false
-            }
-            if changed { try link.save() }
-        } catch let error as CloudError where error.kind == .unlinked {
-            CloudLink.remove()
-        } catch {
-            link.lastSyncError = error.localizedDescription
-            try? link.save()
         }
+
+        guard link.sharesLimits, link.lastLimitSync.map({ now.timeIntervalSince($0) >= 300 }) ?? true else { return }
+        // Counted as an attempt either way, so a website that keeps refusing is asked every five
+        // minutes rather than on every refresh.
+        link.lastLimitSync = now
+        do {
+            try await CloudClient(server: link.server, token: link.token).upload(limits(accounts: accounts, usage: usage, now: now))
+        } catch let error as CloudError where error.kind == .unlinked {
+            CloudLink.remove(store: store)
+            return
+        } catch {
+            link.lastSyncError = "Sharing limits failed: \(error.localizedDescription)"
+        }
+        try? link.save(store: store)
     }
 
     /// Turning limit sharing off takes the readings off the website too, right away.

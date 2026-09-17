@@ -104,6 +104,61 @@ final class CloudTests: XCTestCase {
         XCTAssertTrue(round.sharesLimits)
     }
 
+    /// A website older than limit sharing answers /api/limits with 404. That must cost the phone its
+    /// countdown and nothing more: daily totals still go, and the refusal is said, not hidden.
+    func testDailyTotalsStillSyncWhenTheWebsiteRefusesLimits() async throws {
+        #if os(Windows)
+        throw XCTSkip("Uses setenv to move the data folder, which Windows doesn't have.")
+        #else
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("keyhop-cloud-order-\(UUID().uuidString)")
+        setenv("KEYHOP_DATA_DIR", folder.path, 1)
+        defer {
+            unsetenv("KEYHOP_DATA_DIR")
+            try? FileManager.default.removeItem(at: folder)
+        }
+
+        final class Hits: @unchecked Sendable {
+            private let lock = NSLock()
+            private var paths: [String] = []
+            func add(_ path: String) { lock.lock(); paths.append(path); lock.unlock() }
+            var all: [String] { lock.lock(); defer { lock.unlock() }; return paths }
+        }
+        let hits = Hits()
+        let server = try LoopbackServer()
+        server.start { request in
+            hits.add("\(request.method) \(request.path)")
+            switch request.path {
+            case "/api/usage": return .json(["saved": 0])
+            default: return .json(["error": "Not found."], status: 404)
+            }
+        }
+        defer { server.stop() }
+
+        let store = MemorySecretStore()
+        try CloudLink(server: "http://127.0.0.1:\(server.port)", token: "secret", login: "mira", name: nil, isPublic: false,
+                      linkedAt: Date(), sharesLimits: true).save(store: store)
+        let engine = try TrackerEngine(url: url)
+        let now = Date()
+        // A day of usage, so there is something to send.
+        try await engine.store([UsageRecord(key: "a", provider: .claude, account: nil, session: nil, kind: .request,
+                                            timestamp: now.addingTimeInterval(-60), model: "model",
+                                            tokens: TokenCounts(output: 10), cost: 0.01, billed: nil)])
+        await CloudSync.syncIfDue(tracker: engine, now: now, store: store)
+
+        XCTAssertTrue(hits.all.contains("POST /api/usage"), "daily totals must go even though limits are refused")
+        XCTAssertTrue(hits.all.contains("POST /api/limits"))
+        let after = try XCTUnwrap(CloudLink.load(store: store), "a refusal is not an unlink")
+        XCTAssertEqual(after.lastSync?.timeIntervalSince1970 ?? 0, now.timeIntervalSince1970, accuracy: 1)
+        XCTAssertTrue(after.lastSyncError?.hasPrefix("Sharing limits failed") == true)
+        XCTAssertNotNil(after.lastLimitSync)
+
+        // Refused a moment ago, so a quick second refresh leaves the website alone.
+        let before = hits.all.count
+        await CloudSync.syncIfDue(tracker: engine, now: now.addingTimeInterval(60), store: store)
+        XCTAssertEqual(hits.all.count, before)
+        #endif
+    }
+
     func testTheLinkKeepsItsTokenInTheSecretStore() throws {
         #if os(Windows)
         throw XCTSkip("Uses setenv to move the data folder, which Windows doesn't have.")

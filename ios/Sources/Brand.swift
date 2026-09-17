@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The same neutral palette as Keyhop's window and the website. The Mac app's tokens live in an
 /// AppKit file, so the phone keeps its own copy of the few colours it needs rather than importing
@@ -29,6 +30,44 @@ enum Brand {
     }
 }
 
+extension Font {
+    /// The app's sizes, scaled with the reader's text size setting. At the default setting every
+    /// size is exactly the one the design names; larger settings grow it in step with iOS.
+    static func ui(_ size: CGFloat, _ weight: Font.Weight = .regular, _ style: Font.TextStyle = .body) -> Font {
+        let base = UIFont.systemFont(ofSize: size, weight: weight.uiWeight)
+        return Font(UIFontMetrics(forTextStyle: style.uiStyle).scaledFont(for: base))
+    }
+}
+
+private extension Font.Weight {
+    var uiWeight: UIFont.Weight {
+        switch self {
+        case .medium: .medium
+        case .semibold: .semibold
+        case .bold: .bold
+        case .light: .light
+        default: .regular
+        }
+    }
+}
+
+private extension Font.TextStyle {
+    var uiStyle: UIFont.TextStyle {
+        switch self {
+        case .largeTitle: .largeTitle
+        case .title: .title1
+        case .title2: .title2
+        case .title3: .title3
+        case .headline: .headline
+        case .subheadline: .subheadline
+        case .footnote: .footnote
+        case .caption: .caption1
+        case .caption2: .caption2
+        default: .body
+        }
+    }
+}
+
 /// Keyhop's mark: the stem, the joint that makes it a K, and two arms with the upper one hopped
 /// clear. Drawn on the same 24-unit grid as every other surface.
 ///
@@ -54,6 +93,59 @@ struct KeyhopMark: View {
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
+    }
+}
+
+/// The mark, hopping: its two arms trade light back and forth, the same motion the Mac's menu bar
+/// icon makes while it reads. Used wherever the app is waiting, so waiting always looks like Keyhop.
+///
+/// The mark is drawn at every moment; only the arms' brightness moves. With Reduce Motion on it
+/// holds still, showing whatever `arms` says.
+struct HopMark: View {
+    var size: CGFloat
+    var hopping: Bool
+    /// Seconds for one full exchange. Slower at rest, quicker while something is actually happening.
+    var period: Double = 1.4
+    var arms: [Double] = []
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        if hopping, !reduceMotion {
+            TimelineView(.animation) { context in
+                let phase = context.date.timeIntervalSinceReferenceDate / period
+                let top = 0.5 - 0.42 * cos(phase * 2 * .pi)
+                KeyhopMark(size: size, arms: [top, 1 - top])
+            }
+        } else {
+            KeyhopMark(size: size, arms: arms)
+        }
+    }
+}
+
+/// A button that answers a press in place: it dims, it never moves or grows.
+struct PressStyle: ButtonStyle {
+    var fill: Color = Brand.text
+    var ink: Color = Brand.background
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.ui(16, .semibold, .headline))
+            .foregroundStyle(ink)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(fill.opacity(configuration.isPressed ? 0.78 : 1),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+/// A quiet text action: a tonal shift on press, nothing else.
+struct QuietStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.ui(15, .medium, .subheadline))
+            .foregroundStyle(configuration.isPressed ? Brand.subtle : Brand.muted)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
     }
 }
 
@@ -106,8 +198,32 @@ struct CapacityTrack: View {
             }
         }
         .frame(height: height)
+        // Only a change animates. On first draw the bar is already at its value.
+        .animation(.spring(response: 0.55, dampingFraction: 0.9), value: share)
         .accessibilityHidden(true)
     }
+}
+
+/// A card's opening line: a name on the left and, when there is one, a quiet fact on the right.
+struct CardHead<Trailing: View>: View {
+    let title: String
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(title)
+                .font(.ui(15, .semibold, .headline))
+                .foregroundStyle(Brand.text)
+            Spacer(minLength: 8)
+            trailing
+                .font(.ui(12.5, .regular, .footnote).monospacedDigit())
+                .foregroundStyle(Brand.subtle)
+        }
+    }
+}
+
+extension CardHead where Trailing == EmptyView {
+    init(title: String) { self.init(title: title) { EmptyView() } }
 }
 
 /// A card, in the house style: a panel a hair lighter than the ground with a self-coloured edge.
@@ -151,6 +267,34 @@ enum Format {
         if days > 0 { return hours > 0 ? "\(days)d \(hours)h" : "\(days)d" }
         if hours > 0 { return "\(hours)h \(minutes)m" }
         return "\(max(minutes, 1))m"
+    }
+
+    /// "Sep 8" for a day the website names as "2026-09-08".
+    static func day(_ value: String) -> String? {
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.timeZone = TimeZone(identifier: "UTC")
+        parser.dateFormat = "yyyy-MM-dd"
+        guard let date = parser.date(from: value) else { return nil }
+        // The app's words are English, so its dates are too; a region's numeric "1. 9." beside
+        // English copy reads as a mistake.
+        let out = DateFormatter()
+        out.locale = Locale(identifier: "en_US")
+        out.timeZone = TimeZone(identifier: "UTC")
+        out.setLocalizedDateFormatFromTemplate("MMMd")
+        return out.string(from: date)
+    }
+
+    /// How far through its month a season is, 0...1, from its "2026-09" name and the days left.
+    static func seasonProgress(_ season: CloudSeason) -> Double {
+        if season.over { return 1 }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let parts = season.season.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 2,
+              let start = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: 1)),
+              let days = calendar.range(of: .day, in: .month, for: start)?.count, days > 0 else { return 0 }
+        return min(max(Double(days - season.daysLeft) / Double(days), 0), 1)
     }
 
     static func tier(_ tier: CloudSeason.Tier) -> String {

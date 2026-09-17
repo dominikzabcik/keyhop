@@ -38,7 +38,7 @@ function render(
   body: Html,
   options: {
     description?: string;
-    active?: "leaderboard" | "teams" | "season";
+    active?: "leaderboard" | "teams" | "season" | "download";
     mode?: "app" | "landing" | "marketing";
     index?: boolean;
     softwareSchema?: boolean;
@@ -146,6 +146,7 @@ pages.get("/download", (c) =>
   render(c, "Download Keyhop for macOS, Linux and Windows", downloadPage(), {
     description: "Download Keyhop for macOS, Linux or Windows and switch nine AI coding tools without breaking flow.",
     mode: "marketing",
+    active: "download",
     softwareSchema: true,
   }),
 );

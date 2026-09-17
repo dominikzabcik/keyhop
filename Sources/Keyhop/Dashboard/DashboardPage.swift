@@ -251,6 +251,12 @@ select.field option { background: var(--raised); }
 .rename .field { max-width: 260px; }
 .waiting { display: flex; align-items: center; gap: 12px; color: var(--muted); }
 .pulse { display: inline-flex; gap: 3px; }
+.busy { display: flex; align-items: center; gap: 10px; }
+.busy-note { margin: 2px 0 0; color: var(--muted); }
+.unset-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; }
+.unset-row p { margin: 0; }
+.unset-marks { display: flex; gap: 6px; opacity: .55; }
+.unset-marks .mark { width: 14px; height: 14px; }
 .pulse i { width: 5px; height: 5px; border-radius: 50%; background: var(--text); opacity: .25; animation: pulse 1.2s ease-in-out infinite; }
 .pulse i:nth-child(2) { animation-delay: .15s; } .pulse i:nth-child(3) { animation-delay: .3s; }
 @keyframes pulse { 40% { opacity: 1; } }
@@ -408,7 +414,7 @@ select.field option { background: var(--raised); }
   <div class="content">
     <div class="backdrop" id="backdrop" aria-hidden="true"></div>
     <header class="topbar"><h1 id="title">Overview</h1><div class="toolbar" id="toolbar"></div></header>
-    <main class="main" id="main"><div class="page"><p class="lede">Reading your accounts…</p></div></main>
+    <main class="main" id="main"><div class="page"><p class="lede busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span>Reading your accounts</p></div></main>
   </div>
 </div>
 <div class="tip" id="tip" hidden></div>
@@ -479,6 +485,9 @@ select.field option { background: var(--raised); }
   };
   const windowName = (label) => ({ "5h": "5-hour", "Week": "Weekly", "Opus": "Opus weekly", "Sonnet": "Sonnet weekly", "Auto": "Auto", "API": "API", "Plan": "Plan" })[label] || label;
   const mark = (tool) => `<svg class="mark" aria-hidden="true"><use href="#mark-${esc(tool)}"/></svg>`;
+  // Every wait looks the same: the three-dot pulse, then what is being read. The words are always
+  // there; only the dots move.
+  const busy = (text, cls = "empty-inline") => `<p class="${cls} busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span>${text}</p>`;
   const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
   const maxUsed = (account) => Math.max(0, ...(account.limits || []).map((l) => l.usedPercent));
   const toolName = (id) => (data.state?.status.tools.find((t) => t.id === id) || {}).name || id;
@@ -646,9 +655,15 @@ select.field option { background: var(--raised); }
       <div class="card stat"><div class="label">Closest to a limit</div><div class="value">${near ? `${Math.round(near.limit.usedPercent)}%` : "None"}</div><div class="foot">${near ? `${esc(near.tool.name)} · ${esc(windowName(near.limit.label))}` : "No limits read yet"}</div></div>
     </div>`;
 
+    // Tools with nothing saved would each be a row of instructions; they share one line instead.
+    // On a first run, when nothing is set up at all, every tool keeps its row and its sign-in hint.
+    const isSetUp = (tool) => tool.accounts.length > 0 || data.state.adding.includes(tool.id);
+    const anySetUp = tools.some(isSetUp);
+    const inUseTools = anySetUp ? tools.filter(isSetUp) : tools;
+    const unsetTools = anySetUp ? tools.filter((tool) => !isSetUp(tool)) : [];
     const inUse = `<section class="card">
       <div class="card-head"><h2>In use</h2><span class="hint">Each tool's current account and its limits</span></div>
-      <div class="list">${tools.map((tool) => {
+      <div class="list">${inUseTools.map((tool) => {
         const account = tool.accounts.find((a) => a.active);
         const other = alternative(tool, account);
         const adding = data.state.adding.includes(tool.id);
@@ -661,16 +676,20 @@ select.field option { background: var(--raised); }
           ? `<button class="btn sm secondary" data-action="switch" data-id="${esc(other.id)}">Switch to ${esc(other.name)}</button>`
           : `<button class="btn sm ghost" data-action="goto" data-section="accounts">Accounts</button>`;
         return `<div class="row tool-row">${identity}${middle}<div class="row-actions">${actions}</div></div>`;
-      }).join("")}</div>
+      }).join("")}${unsetTools.length ? `<div class="row unset-row">
+        <div class="unset-marks" aria-hidden="true">${unsetTools.map((tool) => mark(tool.id)).join("")}</div>
+        <p class="subtle">Not set up: ${esc(unsetTools.map((tool) => tool.name).join(", "))}</p>
+        <div class="row-actions">${isStatic ? "" : `<button class="btn sm ghost" data-action="goto" data-section="accounts">Add an account</button>`}</div>
+      </div>` : ""}</div>
     </section>`;
 
     const hourCard = `<section class="card">
       <div class="card-head"><h2>Today by hour</h2><span class="hint">${today ? esc(busiestHour(today)) : ""}</span></div>
-      <div class="card-body">${today ? dotHours(today) : `<p class="empty-inline">Reading usage…</p>`}</div>
+      <div class="card-body">${today ? dotHours(today) : busy("Reading usage")}</div>
     </section>`;
     const weekCard = `<section class="card">
       <div class="card-head"><h2>Last 7 days</h2><button class="btn sm ghost" data-action="goto" data-section="usage">Open usage</button></div>
-      <div class="card-body">${week ? (week.total.requests ? `<div class="chart">${stackedChart(week, "tokens", 180, "half")}</div>` : `<p class="empty-inline">No usage in the last 7 days.</p>`) : `<p class="empty-inline">Reading usage…</p>`}</div>
+      <div class="card-body">${week ? (week.total.requests ? `<div class="chart">${stackedChart(week, "tokens", 180, "half")}</div>` : `<p class="empty-inline">No usage in the last 7 days.</p>`) : busy("Reading usage")}</div>
     </section>`;
     const budgetsCard = `<section class="card">
       <div class="card-head"><h2>Budgets</h2><button class="btn sm ghost" data-action="goto" data-section="budgets">${status.budgets.length ? "Manage" : "Set a budget"}</button></div>
@@ -768,7 +787,7 @@ select.field option { background: var(--raised); }
       + tabs("metric", [["tokens", "Tokens"], ["cost", "API value"]], ui.metric)
       + `<select class="field" data-action="tool" aria-label="Tool" ${isStatic ? "disabled" : ""}>${[["all", "All tools"], ...tools.map((t) => [t.id, t.name])].map(([v, l]) => `<option value="${v}" ${v === ui.tool ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
     const usage = data.usage[`${ui.range}:${ui.tool}`] || (isStatic ? data.usage[`${ui.range}:all`] : null);
-    if (!usage) return { toolbar, body: `<div class="card"><p class="empty">Reading usage…</p></div>` };
+    if (!usage) return { toolbar, body: `<div class="card">${busy("Reading usage", "empty")}</div>` };
 
     const t = usage.total, p = usage.previous;
     const inputSide = t.input + t.cacheRead + t.cacheWrite;
@@ -957,7 +976,7 @@ select.field option { background: var(--raised); }
     </section>`;
     const month = data.usage["month:all"];
     const overall = status.budgets.find((b) => b.scope === "all" && b.period === "month");
-    const byAccount = !month ? `<p class="empty">Reading this month's usage…</p>` : month.total.requests ? accountTable(month.accounts, "cost") : `<p class="empty">No usage this month yet.</p>`;
+    const byAccount = !month ? busy("Reading this month's usage", "empty") : month.total.requests ? accountTable(month.accounts, "cost") : `<p class="empty">No usage this month yet.</p>`;
     return { body: `
       <div class="split wide-left">
         <section class="card"><div class="card-head"><h2>Budgets</h2><span class="hint mono">${status.budgets.length}</span></div>${list}</section>
@@ -970,7 +989,7 @@ select.field option { background: var(--raised); }
   }
 
   function spendCard(usage, budget) {
-    if (!usage) return `<section class="card"><div class="card-head"><h2>This month</h2></div><p class="empty">Reading this month's usage…</p></section>`;
+    if (!usage) return `<section class="card"><div class="card-head"><h2>This month</h2></div>${busy("Reading this month's usage", "empty")}</section>`;
     const now = Date.now();
     let running = 0;
     const points = [];
@@ -1217,7 +1236,7 @@ select.field option { background: var(--raised); }
       ${choice("board-period", [["today", "Today"], ["week", "7 days"], ["month", "30 days"], ["all", "All time"]], ui.boardPeriod)}
       ${choice("board-metric", [["tokens", "Tokens"], ["cost", "API value"], ["requests", "Requests"]], ui.boardMetric)}`;
     if (data.boardError) return { toolbar, body: `<div class="notice">${icon("alert")}<div><p>${esc(data.boardError)}</p></div></div>` };
-    if (!data.board) return { toolbar, body: `<p class="lede">Loading the leaderboard…</p>` };
+    if (!data.board) return { toolbar, body: busy("Reading the leaderboard", "lede") };
 
     const entries = data.board.board.entries;
     const site = data.board.website;
@@ -1263,14 +1282,14 @@ select.field option { background: var(--raised); }
     let updateRow;
     if (isStatic) updateRow = `<div class="setting-row"><div><b>Version</b><p>Saved from Keyhop ${esc(state.version)}</p></div></div>`;
     else if (data.updateError) updateRow = `<div class="setting-row"><div><b>Updates</b><p>${esc(data.updateError)}</p></div><button class="btn sm secondary" data-action="check-update">Try again</button></div>`;
-    else if (!update) updateRow = `<div class="setting-row"><div><b>Updates</b><p>Checking GitHub…</p></div></div>`;
+    else if (!update) updateRow = `<div class="setting-row"><div><b>Checking for a new version</b>${busy("Asking GitHub for the latest release", "busy-note")}</div></div>`;
     else if (update.available) updateRow = `<div class="setting-row"><div><b>Keyhop ${esc(update.latest)} is available</b><p>You have ${esc(update.current)}. The download is checked against its SHA-256 before it installs.</p></div><button class="btn sm" data-action="install-update">Install update</button></div>`;
     else updateRow = `<div class="setting-row"><div><b>Up to date</b><p>Keyhop ${esc(update.current)} is the latest version.</p></div><button class="btn sm secondary" data-action="check-update">Check again</button></div>`;
 
     const tools = doctor ? `<div class="list">${doctor.tools.map((t) => `<div class="row">
         <div class="who">${mark(t.id)}<div><b>${esc(t.name)}</b><small>${t.signedInAs ? `Signed in as ${esc(t.signedInAs)}` : t.problem ? esc(t.problem) : t.installed ? "Signed out" : "Not found on this computer"}</small></div></div>
         <div class="mono subtle" style="margin:8px 0 0 30px;overflow-wrap:anywhere">${esc(t.loginLocation)}</div>
-      </div>`).join("")}</div>` : `<p class="empty">${isStatic ? "Not included in a saved page." : "Looking at this computer…"}</p>`;
+      </div>`).join("")}</div>` : (isStatic ? `<p class="empty">Not included in a saved page.</p>` : busy("Looking for tools on this computer", "empty"));
 
     return { body: `
       ${!isStatic && state.cloud?.available ? cloudCard(state.cloud) : ""}

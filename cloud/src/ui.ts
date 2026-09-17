@@ -59,7 +59,8 @@ button, input { font: inherit; color: inherit; }
    is transform and opacity only, so it stays smooth. It scrolls away with the page. */
 .backdrop { position: absolute; top: 0; left: 0; right: 0; height: 100vh; min-height: 760px; z-index: 0; overflow: hidden; pointer-events: none; }
 .backdrop::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 38%; background: linear-gradient(to bottom, rgba(23,23,23,0), var(--bg)); }
-.top { position: relative; z-index: 1; border-bottom: 1px solid hsl(0 0% 100% / .05); background: transparent; }
+/* Above the page's own layers, so the header's menus are never drawn behind the hero. */
+.top { position: relative; z-index: 30; border-bottom: 1px solid hsl(0 0% 100% / .05); background: transparent; }
 .top-inner { max-width: 1080px; margin: 0 auto; height: 56px; padding: 0 24px; display: flex; align-items: center; gap: 20px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 650; }
 .pixel { width: 17px; height: 17px; flex: none; }
@@ -67,7 +68,31 @@ button, input { font: inherit; color: inherit; }
 .nav a, .who .me-link { height: 32px; padding: 0 10px; border-radius: 7px; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-weight: 520; transition: background .12s ease, color .12s ease; }
 .nav a:hover, .who .me-link:hover { background: var(--hover); color: var(--text); }
 .nav a[aria-current="page"] { background: hsl(0 0% 100% / .08); color: var(--text); }
-.who { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.who { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.text-link { height: 32px; padding: 0 10px; border-radius: 7px; display: inline-flex; align-items: center; color: var(--muted); text-decoration: none; font-weight: 520; transition: color .12s ease, background .12s ease; }
+.text-link:hover { color: var(--text); background: var(--hover); }
+.pop { position: relative; }
+.pop > summary { list-style: none; cursor: pointer; user-select: none; }
+.pop > summary::-webkit-details-marker { display: none; }
+.pop > summary:focus-visible, .pop-panel a:focus-visible, .pop-panel button:focus-visible { outline: 2px solid hsl(0 0% 100% / .5); outline-offset: 2px; }
+.who .me-link .chev { width: 10px; height: 10px; color: var(--subtle); transition: transform .16s ease; }
+.pop[open] .me-link .chev { transform: rotate(180deg); }
+.pop[open] > summary { background: var(--hover); color: var(--text); }
+.pop-panel { position: absolute; top: calc(100% + 8px); left: 0; z-index: 20; min-width: 220px; padding: 6px; display: grid; gap: 1px; border: 1px solid hsl(0 0% 100% / .09); border-radius: 12px; background: hsl(0 0% 11%); box-shadow: 0 8px 24px -12px hsl(0 0% 0% / .7); transform-origin: top; animation: pop-in .14s ease-out; }
+.pop-right { left: auto; right: 0; }
+.pop-panel a, .pop-panel button { height: 36px; padding: 0 10px; border: 0; border-radius: 8px; display: flex; align-items: center; width: 100%; color: var(--muted); background: transparent; font: inherit; font-weight: 520; text-align: left; text-decoration: none; cursor: pointer; }
+.pop-panel a:hover, .pop-panel button:hover { background: var(--hover); color: var(--text); }
+.pop-panel a[aria-current="page"] { color: var(--text); background: hsl(0 0% 100% / .06); }
+.pop-who { padding: 8px 10px 10px; margin-bottom: 4px; display: grid; gap: 2px; border-bottom: 1px solid hsl(0 0% 100% / .07); }
+.pop-who b { font-weight: 620; color: var(--text); }
+.pop-who span { color: var(--subtle); font-size: 12.5px; }
+.pop-form { margin: 4px 0 0; padding-top: 4px; border-top: 1px solid hsl(0 0% 100% / .07); }
+/* Moves in place; the panel is drawn from the first frame, only its scale settles. */
+@keyframes pop-in { from { transform: scale(.97); } to { transform: none; } }
+.icon-button { width: 34px; height: 34px; border-radius: 8px; display: none; align-items: center; justify-content: center; color: var(--muted); }
+.icon-button:hover { background: var(--hover); color: var(--text); }
+.icon-button svg { width: 16px; height: 16px; }
+.menu-pop .pop-panel { left: auto; right: 0; }
 
 body { position: relative; }
 main { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 32px 24px 56px; display: grid; gap: 20px; }
@@ -229,7 +254,10 @@ a.place-card:hover { border-color: var(--border-strong); }
 .quest-state { margin-top: 6px; font-size: 12px; color: var(--subtle); font-variant-numeric: tabular-nums; }
 .quest-row.done .quest-state { color: var(--good); }
 
-.site-foot { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 20px 24px 40px; color: var(--subtle); font-size: 12.5px; display: flex; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--border); }
+.site-foot { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 22px 24px 40px; color: var(--subtle); font-size: 12.5px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 40px; align-items: baseline; border-top: 1px solid var(--border); }
+.foot-about { display: flex; gap: 12px; align-items: baseline; min-width: 0; }
+.foot-about b { color: var(--muted); font-weight: 600; }
+.foot-links { display: flex; gap: 6px 18px; flex-wrap: wrap; justify-content: flex-end; }
 .site-foot a { color: var(--muted); text-decoration: none; } .site-foot a:hover { color: var(--text); }
 
 /* Landing page: the product UI itself is the visual language. */
@@ -237,31 +265,43 @@ a.place-card:hover { border-color: var(--border-strong); }
 .landing .backdrop::after { height: 54%; }
 .landing .top-inner, .landing .site-foot { max-width: 1180px; }
 .landing .top { border-color: transparent; }
-.landing-main { max-width: 1180px; padding-top: 0; padding-bottom: 0; gap: 0; overflow: hidden; }
+.landing-main { max-width: 1180px; padding-top: 0; padding-bottom: 0; gap: 0; }
+body.landing { overflow-x: clip; }
 .landing-main h1, .landing-main h2, .landing-main h3, .landing-main p { margin-top: 0; }
-.landing-main h2 { margin-bottom: 0; font-size: clamp(30px, 4vw, 52px); line-height: 1.05; letter-spacing: -.045em; font-weight: 650; }
+.landing-main h2 { text-wrap: balance; margin-bottom: 0; font-size: clamp(30px, 4vw, 52px); line-height: 1.05; letter-spacing: -.045em; font-weight: 650; }
 .landing-main h3 { margin-bottom: 7px; font-size: 16px; line-height: 1.3; font-weight: 620; letter-spacing: -.01em; }
 .landing-main .mark { width: 18px; height: 18px; }
 .landing-main .btn { height: 42px; padding: 0 18px; border-radius: 9px; }
 .landing-main .btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.landing-kicker { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px; color: hsl(0 0% 77%); font: 11.5px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
-.landing-kicker::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--good); box-shadow: 0 0 14px hsl(145 50% 58% / .6); }
+.landing-kicker { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--subtle); font-size: 14px; font-weight: 520; line-height: 1.3; }
 .landing-hero { min-height: 780px; padding: 120px 0 64px; display: grid; grid-template-columns: minmax(0, .82fr) minmax(520px, 1.18fr); gap: 62px; align-items: center; }
 .hero-copy { position: relative; z-index: 3; padding-left: 22px; }
-.hero-copy h1 { max-width: 600px; margin: 0 0 24px; font-size: clamp(50px, 6.5vw, 84px); line-height: .93; letter-spacing: -.065em; font-weight: 670; text-shadow: 0 4px 28px hsl(0 0% 9% / .75); }
-.hero-copy h1 span { color: var(--muted); }
+.hero-copy h1 { max-width: 600px; margin: 0 0 24px; font-size: clamp(44px, 4.7vw, 68px); line-height: 1; letter-spacing: -.055em; font-weight: 670; text-shadow: 0 4px 28px hsl(0 0% 9% / .75); }
+.hero-copy h1 .line { display: block; white-space: nowrap; }
+.hero-copy h1 .tone { color: var(--muted); }
 .hero-copy > p { max-width: 520px; margin-bottom: 30px; color: hsl(0 0% 71%); font-size: 18px; line-height: 1.58; text-wrap: balance; }
 .hero-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .hero-note { margin-top: 17px; display: flex; gap: 8px 18px; flex-wrap: wrap; color: var(--subtle); font-size: 12.5px; }
-.hero-note span { display: inline-flex; align-items: center; gap: 7px; }
+.hero-note span { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
 .hero-note span::before { content: ""; width: 3px; height: 3px; border-radius: 50%; background: var(--subtle); }
-.tool-strip { margin-top: 36px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.tool-pill { height: 34px; padding: 0 11px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 8px; background: hsl(0 0% 10% / .54); color: var(--muted); font-size: 12.5px; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
-.tool-pill .mark { width: 14px; height: 14px; fill: var(--muted); }
+/* The tools as bare marks, one row, with their names said once underneath. */
+.tool-strip { margin-top: 40px; display: grid; gap: 12px; }
+.tool-marks { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.tool-marks .mark { width: 20px; height: 20px; fill: hsl(0 0% 72%); transition: fill .15s ease; }
+.tool-strip:hover .tool-marks .mark { fill: var(--text); }
+.tool-strip p { max-width: 420px; margin: 0; color: var(--subtle); font-size: 12.5px; line-height: 1.55; }
 .product-stage { position: relative; min-height: 570px; display: grid; align-items: center; perspective: 1200px; }
-.product-window { width: 760px; overflow: hidden; border-radius: 14px; border: 1px solid hsl(0 0% 100% / .14); background: #151515; box-shadow: 0 40px 100px rgba(0,0,0,.46), 0 0 0 1px rgba(0,0,0,.5); transform: rotateY(-6deg) rotateX(2deg); transform-origin: 50% 50%; animation: product-in .8s cubic-bezier(.2,.8,.2,1) both, product-float 8s 1s ease-in-out infinite alternate; }
-@keyframes product-in { from { opacity: 0; transform: translateY(26px) rotateY(-6deg) rotateX(2deg); } to { opacity: 1; transform: translateY(0) rotateY(-6deg) rotateX(2deg); } }
-@keyframes product-float { from { translate: 0 0; } to { translate: 0 -8px; } }
+.product-window { width: 760px; overflow: hidden; border-radius: 14px; border: 1px solid hsl(0 0% 100% / .14); background: #151515; box-shadow: 0 30px 50px -30px rgba(0,0,0,.75), 0 0 0 1px rgba(0,0,0,.5); transform: rotateY(-6deg) rotateX(2deg); transform-origin: 50% 50%; animation: product-in .8s cubic-bezier(.2,.8,.2,1) both; }
+/* Settles by position only: the window is drawn from the first frame, so a throttled or skipped animation never hides it. */
+@keyframes product-in { from { transform: translateY(26px) rotateY(-6deg) rotateX(2deg); } to { transform: translateY(0) rotateY(-6deg) rotateX(2deg); } }
+/* As the page scrolls, the window turns toward the reader and rises a little. It is tied to scroll
+   position, so it never loops, and browsers without scroll timelines keep the resting tilt. */
+@keyframes product-settle { from { transform: rotateY(-6deg) rotateX(2deg); } to { transform: rotateY(-1.5deg) rotateX(0deg) translateY(-18px); } }
+@supports (animation-timeline: scroll()) {
+  @media (min-width: 861px) and (prefers-reduced-motion: no-preference) {
+    .product-window { animation: product-settle linear both; animation-timeline: scroll(root); animation-range: 0 520px; }
+  }
+}
 .product-titlebar { height: 42px; padding: 0 14px; display: flex; align-items: center; gap: 7px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11.5px; }
 .window-dot { width: 8px; height: 8px; border-radius: 50%; background: hsl(0 0% 100% / .13); }
 .product-titlebar .title { margin-left: 8px; color: hsl(0 0% 72%); font-weight: 570; }
@@ -302,8 +342,8 @@ a.place-card:hover { border-color: var(--border-strong); }
 .limit-track span.warn { background: var(--warn); }
 .limit-track span.bad { background: var(--bad); }
 .account-action { color: var(--subtle); font-size: 8.5px; text-align: right; }
-.tray-card { position: absolute; right: -12px; bottom: 6px; z-index: 4; width: 270px; border: 1px solid hsl(0 0% 100% / .15); border-radius: 14px; overflow: hidden; background: hsl(0 0% 9% / .96); box-shadow: 0 28px 80px rgba(0,0,0,.65); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); animation: tray-in .65s .35s cubic-bezier(.2,.8,.2,1) both; }
-@keyframes tray-in { from { opacity: 0; transform: translate(18px, 14px) scale(.97); } to { opacity: 1; transform: none; } }
+.tray-card { position: absolute; right: -12px; bottom: 6px; z-index: 4; width: 270px; border: 1px solid hsl(0 0% 100% / .15); border-radius: 14px; overflow: hidden; background: hsl(0 0% 9% / .96); box-shadow: 0 14px 28px -14px rgba(0,0,0,.8), 0 2px 6px -2px rgba(0,0,0,.5); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); animation: tray-in .65s .35s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes tray-in { from { transform: translate(18px, 14px); } to { transform: none; } }
 .tray-tabs { margin: 10px; padding: 3px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; border: 1px solid var(--border); border-radius: 8px; background: var(--raised); }
 .tray-tab { height: 28px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 5px; color: var(--subtle); font-size: 10px; font-weight: 580; }
 .tray-tab .mark { width: 12px; height: 12px; fill: currentColor; }
@@ -336,7 +376,7 @@ a.place-card:hover { border-color: var(--border-strong); }
 .switch-row span { display: grid; font-size: 11.5px; font-weight: 580; }
 .switch-row small { color: var(--subtle); font-size: 9.5px; font-weight: 400; }
 .switch-row em { margin-left: auto; color: var(--good); font: normal 9px/1 var(--mono); text-transform: uppercase; }
-.switch-row:last-child { translate: 42px 0; border-color: var(--border-strong); }
+.switch-row:last-child { margin-left: 42px; border-color: var(--border-strong); }
 .limits-visual { display: grid; align-content: end; gap: 16px; }
 .big-limit { display: grid; grid-template-columns: 1fr auto; gap: 7px; color: var(--muted); font-size: 10.5px; }
 .big-limit b { color: var(--text); }
@@ -345,9 +385,9 @@ a.place-card:hover { border-color: var(--border-strong); }
 .chart-visual i { flex: 1; min-width: 12px; height: var(--h); display: block; border-radius: 4px 4px 0 0; background: hsl(0 0% 100% / .14); }
 .chart-visual i:nth-child(3n+1) { background: hsl(0 0% 100% / .78); }
 .chart-visual i:nth-child(3n+2) { background: hsl(0 0% 100% / .42); }
-.privacy-visual { display: grid; grid-template-columns: repeat(8, 1fr); gap: 7px; align-content: end; }
-.privacy-visual i { aspect-ratio: 1; border: 1px solid var(--border); border-radius: 5px; background: hsl(0 0% 100% / .025); }
-.privacy-visual i:nth-child(2), .privacy-visual i:nth-child(11), .privacy-visual i:nth-child(20), .privacy-visual i:nth-child(29) { background: hsl(145 50% 58% / .65); box-shadow: 0 0 14px hsl(145 50% 58% / .14); }
+.privacy-visual { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); grid-auto-rows: 26px; gap: 7px; align-content: end; }
+.privacy-visual i { border: 1px solid var(--border); border-radius: 5px; background: hsl(0 0% 100% / .025); }
+.privacy-visual i:nth-child(2), .privacy-visual i:nth-child(11), .privacy-visual i:nth-child(20), .privacy-visual i:nth-child(29) { background: hsl(145 38% 50% / .6); }
 .workflow { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .workflow-step { position: relative; padding: 36px 32px 42px; }
 .workflow-step + .workflow-step { border-left: 1px solid var(--border); }
@@ -451,12 +491,16 @@ a.place-card:hover { border-color: var(--border-strong); }
 .platform-head { display: flex; align-items: center; gap: 15px; }
 .platform-head h2 { margin: 0; font-size: 22px; font-weight: 630; letter-spacing: -.025em; }
 .platform-head p { margin: 3px 0 0; color: var(--subtle); font-size: 12.5px; }
-.platform-mark { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--raised); color: var(--text); font: 18px/1 var(--mono); }
+.platform-mark { width: 28px; height: 28px; flex: none; fill: var(--text); }
 .platform-card > p { max-width: 610px; margin: 22px 0; color: var(--muted); }
 .platform-card code, .legal-content code, .prose code { color: hsl(0 0% 76%); font-family: var(--mono); font-size: .9em; }
-.command-block { margin-top: 28px; padding: 15px 17px; display: grid; gap: 8px; overflow-x: auto; border: 1px solid var(--border); border-radius: 9px; background: #111; }
-.command-block span { color: var(--subtle); font: 9.5px/1 var(--mono); text-transform: uppercase; letter-spacing: .08em; }
-.command-block code { color: hsl(0 0% 76%); font: 11.5px/1.55 var(--mono); white-space: nowrap; }
+.command-block { margin-top: 28px; padding: 12px 14px 15px 17px; display: grid; gap: 8px; border: 1px solid var(--border); border-radius: 9px; background: #111; }
+.command-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.command-head span { color: var(--subtle); font-size: 12px; font-weight: 520; }
+.command-block code { color: hsl(0 0% 80%); font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.copy { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 520; cursor: pointer; transition: color .12s ease, background .12s ease, border-color .12s ease; }
+.copy:hover { color: var(--text); background: var(--hover); }
+.copy[data-done] { color: var(--good); border-color: hsl(145 40% 50% / .35); }
 .platform-actions { margin-top: auto; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .platform-actions > a:not(.btn) { color: var(--muted); font-size: 12.5px; text-underline-offset: 3px; }
 .content-split { padding: 74px 0; display: grid; grid-template-columns: .75fr 1.25fr; gap: 90px; border-top: 1px solid var(--border); }
@@ -494,15 +538,24 @@ a.place-card:hover { border-color: var(--border-strong); }
   .podium, .split, .aside-layout { grid-template-columns: 1fr; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hide-sm { display: none; }
+  .site-foot { grid-template-columns: 1fr; }
+  .foot-about { flex-direction: column; gap: 4px; }
+  .foot-links { justify-content: flex-start; }
   .top-inner { gap: 10px; padding: 0 16px; }
+  .top-inner > .nav { display: none; }
+  .icon-button { display: inline-flex; }
   main { padding: 24px 16px 48px; }
   .landing-main { padding: 0 16px; }
   .landing .top-inner, .marketing .top-inner { padding: 0 16px; }
   .landing .nav a[href="#product"] { display: none; }
-  .landing-hero { min-height: auto; padding: 92px 0 72px; grid-template-columns: 1fr; gap: 54px; }
+  /* minmax(0, …): the product window is 600px wide in layout even while scaled down, and a bare 1fr
+     would widen the whole column to fit it, pushing the text past the right edge. */
+  .landing-hero { min-height: auto; padding: 92px 0 72px; grid-template-columns: minmax(0, 1fr); gap: 54px; }
   .hero-copy { padding-left: 0; text-align: center; }
   .hero-copy h1, .hero-copy > p { margin-left: auto; margin-right: auto; }
-  .hero-actions, .hero-note, .tool-strip { justify-content: center; }
+  .hero-copy h1 .line { white-space: normal; }
+  .hero-actions, .hero-note, .tool-marks { justify-content: center; }
+  .tool-strip p { margin: 0 auto; }
   .product-stage { min-height: 500px; width: min(700px, calc(100vw - 16px)); justify-self: center; }
   .product-window { width: 700px; transform: scale(.9); }
   .tray-card { right: 0; }
@@ -526,9 +579,12 @@ a.place-card:hover { border-color: var(--border-strong); }
 @media (max-width: 600px) {
   .landing .nav, .marketing .nav { display: none; }
   .landing-hero { padding-top: 74px; }
-  .hero-copy h1 { font-size: clamp(48px, 15vw, 68px); }
+  .hero-copy h1 { font-size: clamp(40px, 12.5vw, 56px); }
   .hero-copy > p { font-size: 16px; }
   .product-stage { min-height: 390px; }
+  /* Side by side they overrun a phone; stacked, each action gets the full width. */
+  .hero-actions { flex-direction: column; align-items: stretch; }
+  .hero-actions .btn { justify-content: center; }
   .product-window { width: 600px; transform: translateX(-25px) scale(.66); transform-origin: 50% 50%; animation: none; }
   .tray-card { width: 236px; right: 2px; bottom: 0; }
   .feature-grid { grid-template-columns: 1fr; }
@@ -555,6 +611,9 @@ a.place-card:hover { border-color: var(--border-strong); }
   .page-cta { align-items: stretch; flex-direction: column; }
   .legal-nav { grid-template-columns: repeat(2, auto); }
 }
+/* Sign-in sits in the header until the header runs out of room, then moves into the menu. */
+.pop-panel a.show-xs { display: none; }
+@media (max-width: 420px) { .hide-xs { display: none; } .pop-panel a.show-xs { display: flex; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 `;
 
@@ -563,7 +622,7 @@ export function layout(options: {
   description?: string;
   path: string;
   user: User | null;
-  active?: "leaderboard" | "teams" | "season";
+  active?: "leaderboard" | "teams" | "season" | "download";
   mode?: "app" | "landing" | "marketing";
   index?: boolean;
   softwareSchema?: boolean;
@@ -576,6 +635,12 @@ export function layout(options: {
   const user = options.user;
   const mode = options.mode ?? "app";
   const publicSite = mode !== "app";
+  // The same places from every page, so moving around never changes what the header offers.
+  const navLinks = html`<a href="${mode === "landing" ? "#product" : "/#product"}">Product</a>
+    <a href="/leaderboard" ${current("leaderboard")}>Leaderboard</a>
+    <a href="/season" ${current("season")}>Season</a>
+    ${user ? html`<a href="/teams" ${current("teams")}>Teams</a>` : ""}
+    <a href="/download" ${current("download")}>Download</a>`;
   const scene = mode === "landing" ? "orbit" : "leaves";
   const sceneOpacity = mode === "landing" ? 0.74 : mode === "marketing" ? 0.58 : 0.85;
   const robots = options.index === false ? "noindex, nofollow" : "index, follow, max-image-preview:large";
@@ -634,38 +699,69 @@ ${schema ? html`<script type="application/ld+json" nonce="${options.nonce}">${ra
 <div class="backdrop" aria-hidden="true"></div>
 <header class="top"><div class="top-inner">
   <a class="brand" href="/">${raw(PIXEL_MARK)}Keyhop</a>
-  ${publicSite
-    ? html`<nav class="nav" aria-label="Main">
-        <a href="${mode === "landing" ? "#product" : "/#product"}">Product</a>
-        <a href="${mode === "landing" ? "#roadmap" : "/#roadmap"}">Roadmap</a>
-        <a href="/leaderboard">Leaderboard</a>
-        <a href="/privacy">Privacy</a>
-        <a href="https://github.com/dominikzabcik/keyhop">GitHub</a>
-      </nav>
-      <div class="who"><a class="btn sm" href="/download">Get Keyhop</a></div>`
-    : html`<nav class="nav" aria-label="Main">
-        <a href="/leaderboard" ${current("leaderboard")}>Leaderboard</a>
-        <a href="/season" ${current("season")}>Season</a>
-        ${user ? html`<a href="/teams" ${current("teams")}>Teams</a>` : ""}
-      </nav>
-      <div class="who">
-        ${user
-          ? html`<a class="me-link" href="/u/${user.login}">${avatar(user, 24)}<span class="hide-sm">${user.login}</span></a>
-              <a class="btn ghost sm" href="/settings">Settings</a>`
-          : html`<a class="btn sm" href="/login?next=${encodeURIComponent(options.path)}">${githubIcon()}Sign in with GitHub</a>`}
-      </div>`}
+  <nav class="nav" aria-label="Main">${navLinks}</nav>
+  <div class="who">
+    <details class="pop menu-pop">
+      <summary class="icon-button" aria-label="Menu">${raw(MENU_GLYPH)}</summary>
+      <div class="pop-panel" role="menu">${navLinks}${!user && publicSite ? html`<a class="show-xs" href="/login?next=${encodeURIComponent(options.path)}">Sign in</a>` : ""}</div>
+    </details>
+    ${user
+      ? html`<details class="pop account-pop">
+          <summary class="me-link" aria-label="Your account">${avatar(user, 24)}<span class="hide-sm">${user.login}</span>${raw(CHEVRON_GLYPH)}</summary>
+          <div class="pop-panel pop-right" role="menu">
+            <div class="pop-who"><b>${user.display_name ?? user.name ?? user.login}</b><span>@${user.login}</span></div>
+            <a role="menuitem" href="/u/${user.login}">Your profile</a>
+            <a role="menuitem" href="/teams">Teams</a>
+            <a role="menuitem" href="/settings">Settings</a>
+            <form method="post" action="/auth/logout" class="pop-form">
+              <input type="hidden" name="next" value="${options.path}">
+              <button role="menuitem" type="submit">Sign out</button>
+            </form>
+          </div>
+        </details>`
+      : html`${publicSite
+          ? html`<a class="text-link hide-xs" href="/login?next=${encodeURIComponent(options.path)}">Sign in</a>
+              <a class="btn sm" href="/download">Get Keyhop</a>`
+          : html`<a class="btn sm" href="/login?next=${encodeURIComponent(options.path)}">${githubIcon()}<span>Sign in<span class="hide-sm"> with GitHub</span></span></a>`}`}
+  </div>
 </div></header>
 <main id="main-content" class="${mode === "landing" ? "landing-main" : mode === "marketing" ? "marketing-main" : ""}">${options.body}</main>
 <footer class="site-foot">
-  <span>Keyhop</span>
-  <span>${publicSite ? "Free, open source and built for the tools you already use." : "Totals are sent by the Keyhop app: tokens, API value and requests per day. Nothing else."}</span>
-  <a href="/download">Download</a>
-  <a href="/privacy">Privacy</a>
-  <a href="/terms">Terms</a>
-  <a href="/security">Security</a>
-  <a href="https://github.com/dominikzabcik/keyhop">GitHub</a>
+  <div class="foot-about">
+    <b>Keyhop</b>
+    <span>${publicSite ? "Free, open source and built for the tools you already use." : "The Keyhop app sends tokens, API value and requests per day, plus current limits only if you share them with your phone."}</span>
+  </div>
+  <nav class="foot-links" aria-label="More">
+    <a href="/#roadmap">Roadmap</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/security">Security</a>
+    <a href="https://github.com/dominikzabcik/keyhop">GitHub</a>
+  </nav>
 </footer>
 <script nonce="${options.nonce}">${raw(BACKDROP_SCRIPT)}
+// Copy buttons: the command is already on screen, so a failed copy still leaves it there to select.
+document.addEventListener("click", function (event) {
+  var button = event.target.closest && event.target.closest("button[data-copy]");
+  if (!button || !navigator.clipboard) return;
+  navigator.clipboard.writeText(button.getAttribute("data-copy")).then(function () {
+    button.textContent = "Copied";
+    button.setAttribute("data-done", "");
+    setTimeout(function () { button.textContent = "Copy"; button.removeAttribute("data-done"); }, 1600);
+  }, function () { button.textContent = "Select and copy"; });
+});
+// Menus close on an outside click or Escape. They open and close without this too.
+(function () {
+  function shut(except) {
+    document.querySelectorAll("details.pop[open]").forEach(function (menu) { if (menu !== except) menu.removeAttribute("open"); });
+  }
+  document.addEventListener("click", function (event) { shut(event.target.closest && event.target.closest("details.pop")); });
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") return;
+    var open = document.querySelector("details.pop[open]");
+    if (open) { open.removeAttribute("open"); open.querySelector("summary").focus(); }
+  });
+})();
 (function () {
   var host = document.querySelector(".backdrop");
   if (!host || !window.KeyhopBackdrop) return;
@@ -675,6 +771,11 @@ ${schema ? html`<script type="application/ld+json" nonce="${options.nonce}">${ra
 </body>
 </html>`;
 }
+
+/** Three rounded bars: the menu on small screens. */
+const MENU_GLYPH = `<svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><rect x="2" y="3" width="12" height="2" rx="1"/><rect x="2" y="7" width="12" height="2" rx="1"/><rect x="2" y="11" width="12" height="2" rx="1"/></svg>`;
+/** A small open chevron beside the account name. */
+const CHEVRON_GLYPH = `<svg class="chev" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.8 5 6.6 8 3.8"/></svg>`;
 
 /** How many of the six steps a tier has climbed. */
 const TIER_STEPS: Record<string, number> = { bronze: 1, silver: 2, gold: 3, platinum: 4, diamond: 5, master: 6 };

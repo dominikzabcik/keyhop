@@ -699,6 +699,7 @@ describe("limit sharing", () => {
     expect((await (await readLimits(stranger)).json()) as unknown).toEqual({ limits: [], updatedAt: null });
     expect((await call("/api/limits")).status).toBe(401);
   });
+
   it("sweeps readings nobody refreshed, and only those", async () => {
     const mac = await linkApp(await signIn("yara"));
     await sendLimits(mac, [{ accountKey: "old", tool: "claude", windowLabel: "5h", usedPercent: 10 }]);
@@ -728,5 +729,64 @@ describe("limit sharing", () => {
     expect((await sendLimits(calm, [])).status).toBe(200);
     // Reading is never throttled by writing.
     expect((await readLimits(busy)).status).toBe(200);
+  });
+});
+
+describe("site header", () => {
+  it("offers sign-in everywhere, and the same places on every page", async () => {
+    for (const path of ["/", "/download", "/privacy", "/leaderboard", "/season"]) {
+      const body = await (await call(path)).text();
+      expect(body, path).toContain('href="/login?next=');
+      for (const place of ['>Leaderboard</a>', '>Season</a>', '>Download</a>', '>Product</a>']) {
+        expect(body, `${path} ${place}`).toContain(place);
+      }
+      // Teams only means something once signed in.
+      expect(body, path).not.toContain('href="/teams"');
+      expect(body, path).not.toContain('action="/auth/logout"');
+    }
+  });
+
+  it("shows who is signed in, with a way out, on marketing pages too", async () => {
+    const cookie = await signIn("header-user");
+    for (const path of ["/", "/download", "/leaderboard"]) {
+      const body = await (await call(path, { headers: { cookie } })).text();
+      expect(body, path).toContain("@header-user");
+      expect(body, path).toContain('href="/u/header-user"');
+      expect(body, path).toContain('href="/settings"');
+      expect(body, path).toContain('href="/teams"');
+      expect(body, path).toContain('action="/auth/logout"');
+      expect(body, path).not.toContain('href="/login?next=');
+    }
+  });
+
+  it("marks the page you are on", async () => {
+    const body = await (await call("/download")).text();
+    expect(body).toMatch(/href="\/download" aria-current="page"/);
+  });
+
+  it("signs out back to the page you were on, unless it needs you signed in", async () => {
+    const back = async (next: string) => {
+      const cookie = await signIn(`leaver${Math.random().toString(36).slice(2, 8)}`);
+      const response = await form("/auth/logout", cookie, { next });
+      expect(response.status).toBe(302);
+      expect(response.headers.getSetCookie().some((value) => value.startsWith("keyhop_session=;"))).toBe(true);
+      // The session is really gone, not just the cookie.
+      expect((await call("/settings", { headers: { cookie } })).status).toBe(302);
+      return response.headers.get("location");
+    };
+    expect(await back("/season")).toBe("/season");
+    expect(await back("/download")).toBe("/download");
+    expect(await back("/settings")).toBe("/");
+    expect(await back("/teams")).toBe("/");
+    expect(await back("https://evil.example/")).toBe("/leaderboard");
+    expect(await back("//evil.example/")).toBe("/leaderboard");
+    expect(await back("")).toBe("/");
+  });
+
+  it("refuses a sign-out posted from another site", async () => {
+    const cookie = await signIn("stays-in");
+    const response = await form("/auth/logout", cookie, { next: "/" }, "https://evil.example");
+    expect(response.status).toBe(403);
+    expect((await call("/settings", { headers: { cookie } })).status).toBe(200);
   });
 });

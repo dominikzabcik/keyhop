@@ -71,6 +71,9 @@ final class Store: ObservableObject {
     @Published private(set) var quests: CloudQuests?
     @Published private(set) var limits: CloudLimits = .none
     @Published private(set) var loading = false
+    /// True once a read has finished, whether it worked or not, so the screen can tell "still
+    /// reading" apart from "read, and there was nothing".
+    @Published private(set) var hasRead = false
     @Published var problem: String?
 
     /// What the phone may announce. Both off until someone turns them on and iOS agrees.
@@ -85,6 +88,7 @@ final class Store: ObservableObject {
 
     /// While a link is being approved in the browser.
     @Published private(set) var pending: CloudClient.LinkStart?
+    private var pendingServer: String?
 
     private static let linkKey = "phoneLink"
     private static let limitAlertsKey = "alertsForLimits"
@@ -100,10 +104,17 @@ final class Store: ObservableObject {
         }
     }
 
+    /// `--sample-waiting`: the link screen partway through, showing a made-up code. Nothing is sent.
+    init(waitingSample: Void) {
+        pending = CloudClient.LinkStart(deviceCode: "sample", userCode: "KQ7M-3HXP",
+                                        verifyUrl: "https://keyhop.example/link?code=KQ7M-3HXP", interval: 5, expiresIn: 600)
+    }
+
     /// `--sample` fills the screens with made-up people, for trying the app out and for screenshots.
     /// It never reads a token and never reaches the website, the way the Mac app's sample mode works.
     init(sample: Void) {
         link = PhoneLink(server: "https://keyhop.example", login: "you", name: "You")
+        hasRead = true
         season = CloudSeason(
             season: "2026-09", label: "September 2026", daysLeft: 17, over: false, players: 6,
             you: CloudSeason.You(rank: 3, tokens: 4_140_000_000,
@@ -155,7 +166,10 @@ final class Store: ObservableObject {
     func refresh() async {
         guard let client else { return }
         loading = true
-        defer { loading = false }
+        defer {
+            loading = false
+            hasRead = true
+        }
         do {
             async let profile = client.me()
             async let season = client.season(team: nil)
@@ -218,6 +232,7 @@ final class Store: ObservableObject {
                 throw CloudError(kind: .server, message: "Keyhop cloud returned an unsafe linking address.")
             }
             pending = start
+            pendingServer = server
             guard await UIApplication.shared.open(verificationURL) else {
                 throw CloudError(kind: .server, message: "Couldn't open the linking page.")
             }
@@ -227,6 +242,13 @@ final class Store: ObservableObject {
             pending = nil
             problem = error.localizedDescription
         }
+    }
+
+    /// Opens the approval page again, for someone who closed the browser before approving.
+    func reopenLink() {
+        guard let pending, let server = pendingServer,
+              let url = Self.verificationURL(pending.verifyUrl, server: server) else { return }
+        UIApplication.shared.open(url)
     }
 
     func cancelLink() {
@@ -290,6 +312,7 @@ final class Store: ObservableObject {
         board = nil
         quests = nil
         limits = .none
+        hasRead = false
         // Nothing left to count down to: an unlinked phone should stay quiet.
         Notifier.clear()
         if let keychainError { throw keychainError }

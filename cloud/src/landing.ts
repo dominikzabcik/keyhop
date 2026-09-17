@@ -1,5 +1,6 @@
 import { html, raw } from "hono/html";
 import type { Html } from "./ui";
+import { TOOLS } from "./env";
 import { PIXEL_MARK, mark } from "./ui";
 
 const arrow = () => html`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5"/></svg>`;
@@ -11,19 +12,15 @@ export function landingPage(): Html {
   return html`
     <section class="landing-hero">
       <div class="hero-copy">
-        <span class="landing-kicker">Free and open source</span>
-        <h1>Every account.<br><span>One hop away.</span></h1>
-        <p>Switch accounts across six AI tools without breaking flow. Keyhop keeps supported limits, local usage and budgets in one quiet app.</p>
+        <h1><span class="line">Every account.</span><span class="line tone">One hop away.</span></h1>
+        <p>Switch accounts across nine AI tools without breaking flow. Keyhop keeps supported limits, local usage and budgets in one quiet app.</p>
         <div class="hero-actions">
           <a class="btn" href="/download">Download Keyhop ${arrow()}</a>
-          <a class="btn secondary" href="#install">Install from the terminal</a>
         </div>
-        <div class="hero-note"><span>macOS, Linux and Windows</span><span>No telemetry</span></div>
-        <div class="tool-strip" aria-label="Supported tools">
-          <span class="tool-pill">${mark("claude")}Claude Code</span>
-          <span class="tool-pill">${mark("cursor")}Cursor</span>
-          <span class="tool-pill">${mark("codex")}Codex</span>
-          <span class="tool-pill">${mark("gemini")}Gemini CLI</span>
+        <div class="hero-note"><span>Free, open source, no telemetry</span><span>macOS, Linux and Windows</span></div>
+        <div class="tool-strip">
+          <div class="tool-marks" aria-hidden="true">${TOOLS.map((tool) => mark(tool))}</div>
+          <p>Claude Code, Cursor, Codex, Gemini CLI, OpenCode, Pi, Copilot, Windsurf and Codebuff.</p>
         </div>
       </div>
 
@@ -157,7 +154,7 @@ export function landingPage(): Html {
         <article class="future-card future-ai">
           <div class="future-label"><span>01 · Smart Hop</span><em>Available now</em></div>
           <h3>Know the best account before the next session starts.</h3>
-          <p>Keyhop weighs remaining capacity, reset time, forecasts and budgets locally, then recommends the cleanest place to keep working—without reading your prompts.</p>
+          <p>Keyhop weighs remaining capacity, reset time, forecasts and budgets locally, then recommends the cleanest place to keep working, without reading your prompts.</p>
           <div class="future-preview route-preview" aria-hidden="true">
             <div><span>Recommended next</span><b>Claude · Studio</b><em>82% free</em></div>
             <div><span>Why</span><b>Resets in 34 min</b><em>Best runway</em></div>

@@ -213,7 +213,10 @@ auth.post("/auth/logout", async (c) => {
   const token = getCookie(c, SESSION_COOKIE);
   if (token) await c.env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256(token)).run();
   deleteCookie(c, SESSION_COOKIE, { path: "/" });
-  return c.redirect("/leaderboard");
+  const form = await c.req.parseBody().catch(() => ({}) as Record<string, unknown>);
+  const next = typeof form.next === "string" ? form.next : "";
+  const privatePage = /^\/(settings|teams|link|welcome)(\/|\?|$)/.test(next);
+  return c.redirect(next && !privatePage ? safeNext(next) : "/");
 });
 
 // MARK: Linking the Keyhop app

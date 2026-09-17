@@ -188,6 +188,24 @@ final class KeyhopTests: XCTestCase {
         XCTAssertEqual(Format.until(now.addingTimeInterval(2 * 86400 + 5 * 3600), from: now), "2d 5h")
     }
 
+    func testDaysReadInTheAppsLanguageWhateverTheRegion() {
+        XCTAssertEqual(Format.day("2026-09-08"), "Sep 8")
+        XCTAssertEqual(Format.day("2026-12-31"), "Dec 31")
+        XCTAssertNil(Format.day("not a day"))
+    }
+
+    func testSeasonProgressFollowsItsOwnMonth() {
+        func season(_ name: String, left: Int, over: Bool = false) -> CloudSeason {
+            CloudSeason(season: name, label: name, daysLeft: left, over: over, players: 1, you: nil)
+        }
+        XCTAssertEqual(Format.seasonProgress(season("2026-09", left: 30)), 0, accuracy: 1e-9)
+        XCTAssertEqual(Format.seasonProgress(season("2026-09", left: 15)), 0.5, accuracy: 1e-9)
+        // February has its own length, not thirty days.
+        XCTAssertEqual(Format.seasonProgress(season("2026-02", left: 14)), 0.5, accuracy: 1e-9)
+        XCTAssertEqual(Format.seasonProgress(season("2026-09", left: 3, over: true)), 1)
+        XCTAssertEqual(Format.seasonProgress(season("garbage", left: 3)), 0)
+    }
+
     func testToolNames() {
         XCTAssertEqual(Format.tool("gemini"), "Gemini CLI")
         XCTAssertEqual(Format.tool("claude"), "Claude Code")

@@ -11,6 +11,7 @@
 - OpenCode usage is read by when a response finishes, not when it starts, so a long response that ends after a later one began is counted in full instead of being missed or stored half-done.
 - Saved logins are written to disk owner-only from the first byte, rather than tightened a moment after the file exists.
 - Keyhop identifies itself as Keyhop to GitHub and Codebuff. It no longer presents Copilot requests as coming from an editor, or a Codebuff CLI token as a browser session.
+- The website has one header on every page, so signing in, your account and signing out are always in reach, and the home and download pages fit phones properly. The iOS companion shows Keyhop's mark hopping while it reads, moves its numbers and bars when they change, and follows your text size. Keyhop's window gives every tool its mark, gathers tools that aren't set up onto one line, and shows every wait the same way.
 - "Every tool" and the "Full house" badge now count the six tools Keyhop can actually measure, so limit-only Copilot, Windsurf and Codebuff accounts do not make either impossible to finish.
 
 ## [0.10.0]

@@ -12,3 +12,7 @@ xcuserdata/
 # xcodegen writes this from project.yml, so it is not a source.
 ios/Sources/Info.plist
 ios/.generated/
+
+# The checks write their pictures and report here.
+checks/report/
+checks/node_modules/

@@ -1,0 +1,16 @@
+{
+  "name": "keyhop-checks",
+  "private": true,
+  "type": "module",
+  "description": "Drives every Keyhop screen and page, checks what can be checked, and asks Jev about the rest.",
+  "scripts": {
+    "site": "node run.mjs --site",
+    "app": "node run.mjs --app",
+    "all": "node run.mjs --site --app",
+    "review": "node run.mjs --site --app --review"
+  },
+  "devDependencies": {
+    "@typesafe-ai/sdk": "^0.6.0",
+    "playwright": "^1.50.0"
+  }
+}

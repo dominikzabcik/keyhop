@@ -138,6 +138,53 @@ jobs:
             ${{ runner.temp }}/keyhop-insights.html
           if-no-files-found: warn
 
+  screens:
+    name: Screens
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install the website's packages
+        working-directory: cloud
+        run: npm ci
+
+      - name: Install the checks
+        working-directory: checks
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Build Keyhop
+        run: swift build
+
+      # Every page of the website and every section of Keyhop's window, at three widths each:
+      # what they say, whether anything overflows or is cut off, and whether their controls answer.
+      - name: Walk every screen
+        working-directory: checks
+        run: node run.mjs --site --app
+
+      # Jev reads what each screen says and answers typed questions about it. It runs only where
+      # the key is configured, and never fails the build: a judgement is a second opinion.
+      - name: Ask Jev about them
+        if: ${{ secrets.TYPESAFE_API_KEY != '' }}
+        continue-on-error: true
+        working-directory: checks
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+        run: node run.mjs --site --app --review
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: screens
+          path: checks/report
+          if-no-files-found: warn
+
   linux:
     name: Linux ${{ matrix.arch }}
     strategy:

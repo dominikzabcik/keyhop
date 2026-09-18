@@ -98,6 +98,17 @@ button, input, select { font: inherit; color: inherit; }
 .foot-row small { font-size: 12px; color: var(--subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .foot-row.spin .icon { animation: turn 1s linear infinite; }
 @keyframes turn { to { transform: rotate(360deg); } }
+/* Progress: one track, filled by width so its round ends stay round at every length. When the
+   total isn't known yet, a short segment travels along it instead. */
+.meter { position: relative; height: 4px; border-radius: 99px; background: var(--faint); overflow: hidden; }
+.meter > span { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: inherit; background: var(--text); transition: width .35s ease; }
+.meter.unknown > span { width: 28%; animation: travel 1.3s ease-in-out infinite; }
+@keyframes travel { from { left: -28%; } to { left: 100%; } }
+.foot-row .meter { margin-top: 6px; height: 3px; }
+/* A button doing its work keeps its label readable and says so with a turning ring. */
+.btn.working { cursor: progress; }
+.btn.working:disabled { opacity: 1; }
+.btn .ring { width: 12px; height: 12px; flex: none; border-radius: 50%; border: 1.6px solid currentColor; border-right-color: transparent; animation: turn .8s linear infinite; }
 /* In the Mac app's window the title bar buttons sit in the sidebar's top row, and that row and the
    top bar move the window. */
 .mac-window .shell { grid-template-columns: 256px minmax(0, 1fr); }
@@ -113,6 +124,9 @@ button, input, select { font: inherit; color: inherit; }
 /* Nothing scrolls under the top bar, so over the Field it simply gets out of the way. */
 .has-backdrop .topbar { background: transparent; border-bottom-color: transparent; }
 .topbar h1 { margin: 0; font-size: 15px; font-weight: 620; }
+/* The whole window's progress, along the bottom edge of the top bar. */
+.topbar .meter { position: absolute; left: 24px; right: 24px; bottom: -2px; height: 3px; background: transparent; opacity: 0; transition: opacity .25s ease; }
+.topbar .meter.on { opacity: 1; }
 .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .main { position: relative; z-index: 1; flex: 1; overflow: auto; padding: 22px 24px 40px; }
 .page { max-width: 1320px; margin: 0 auto; display: grid; gap: 16px; }
@@ -169,7 +183,6 @@ button, input, select { font: inherit; color: inherit; }
 .btn.danger:hover { color: var(--bad); }
 .btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
 .btn:disabled { opacity: .45; cursor: default; }
-.btn.working { opacity: .6; cursor: progress; }
 a.btn { text-decoration: none; }
 .main p a:not(.btn) { color: var(--text); text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -250,8 +263,15 @@ select.field option { background: var(--raised); }
 .rename { display: flex; gap: 8px; align-items: center; }
 .rename .field { max-width: 260px; }
 .waiting { display: flex; align-items: center; gap: 12px; color: var(--muted); }
+.waiting small { color: var(--subtle); font-size: 12px; }
+.waiting-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .pulse { display: inline-flex; gap: 3px; }
 .busy { display: flex; align-items: center; gap: 10px; }
+.loading { display: grid; gap: 10px; max-width: 420px; }
+.loading .busy { margin: 0; }
+.loading .busy b { font-weight: 560; color: var(--text); }
+.loading .count { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--muted); }
+.loading small { color: var(--subtle); font-size: 12px; }
 .busy-note { margin: 2px 0 0; color: var(--muted); }
 .unset-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; }
 .unset-row p { margin: 0; }
@@ -382,7 +402,11 @@ select.field option { background: var(--raised); }
   .stats, .limits, .account-row, .tool-row { grid-template-columns: 1fr; }
   .kv { grid-template-columns: 1fr; gap: 2px; }
 }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  /* A bar that can't travel would read as stuck part-way, so the words carry it alone. */
+  .meter.unknown > span { display: none; }
+}
 </style>
 </head>
 <body>
@@ -407,13 +431,13 @@ select.field option { background: var(--raised); }
       <a href="#settings" data-section="settings"><svg><use href="#i-settings"/></svg>Settings</a>
     </nav>
     <div class="sidebar-foot">
-      <button class="foot-row" id="refresh" data-action="refresh"><svg class="icon"><use href="#i-refresh"/></svg><span><b>Refresh</b><small id="read">Limits not read yet</small></span></button>
+      <button class="foot-row" id="refresh" data-action="refresh"><svg class="icon"><use href="#i-refresh"/></svg><span style="flex:1"><b>Refresh</b><small id="read">Limits not read yet</small><span class="meter" id="foot-meter" hidden><span></span></span></span></button>
       <button class="foot-row" data-action="goto" data-section="settings"><svg class="icon"><use href="#i-update"/></svg><span><b id="update-title">Check for updates</b><small id="version"></small></span></button>
     </div>
   </aside>
   <div class="content">
     <div class="backdrop" id="backdrop" aria-hidden="true"></div>
-    <header class="topbar"><h1 id="title">Overview</h1><div class="toolbar" id="toolbar"></div></header>
+    <header class="topbar"><h1 id="title">Overview</h1><div class="toolbar" id="toolbar"></div><div class="meter" id="top-meter" role="progressbar" aria-label="Keyhop is reading" aria-hidden="true"><span></span></div></header>
     <main class="main" id="main"><div class="page"><p class="lede busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span>Reading your accounts</p></div></main>
   </div>
 </div>
@@ -445,6 +469,7 @@ select.field option { background: var(--raised); }
     range: "week", metric: "tokens", tool: "all",
     boardPeriod: "week", boardMetric: "tokens", boardTeam: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
+    pending: new Map(), loadingUsage: 0,
   };
   history.replaceState(null, "", "#" + ui.section);
   const data = { state: boot?.state || null, usage: {}, doctor: null, update: null, updateError: null };
@@ -488,6 +513,18 @@ select.field option { background: var(--raised); }
   // Every wait looks the same: the three-dot pulse, then what is being read. The words are always
   // there; only the dots move.
   const busy = (text, cls = "empty-inline") => `<p class="${cls} busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span>${text}</p>`;
+  // A wait that can say how far it has got: the step Keyhop is on, a count and a bar, updated in
+  // place while the step runs. Before the first report it reads like any other wait.
+  const loading = (text, cls = "empty-inline") => `<div class="loading ${cls === "empty" ? "empty" : ""}" data-loading="${esc(text)}">${loadingInner(text)}</div>`;
+  function loadingInner(text) {
+    const step = data.state?.activity;
+    const title = step ? step.title : text;
+    const count = step?.count ? `<span class="count">${esc(step.count)}</span>` : "";
+    const hint = step?.step === "history" ? `<small>The first read goes through every log on this computer. After that, only what is new.</small>` : step?.detail ? `<small>${esc(step.detail)}</small>` : "";
+    const width = step?.fraction != null ? `style="width:${(step.fraction * 100).toFixed(1)}%"` : "";
+    return `<p class="busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span><b>${esc(title)}</b>${count}</p>
+      <div class="meter${step?.fraction != null ? "" : " unknown"}" role="progressbar" aria-label="${esc(title)}" ${step?.fraction != null ? `aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(step.fraction * 100)}"` : ""}><span ${width}></span></div>${hint}`;
+  }
   const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
   const maxUsed = (account) => Math.max(0, ...(account.limits || []).map((l) => l.usedPercent));
   const toolName = (id) => (data.state?.status.tools.find((t) => t.id === id) || {}).name || id;
@@ -515,7 +552,14 @@ select.field option { background: var(--raised); }
   async function loadUsage(range, tool = "all") {
     const key = `${range}:${tool}`;
     if (isStatic) return data.usage[key] || data.usage[`${range}:all`];
-    data.usage[key] = await api(`/api/usage?range=${encodeURIComponent(range)}&tool=${encodeURIComponent(tool)}`);
+    // Only a first read shows a wait: after that the last figures stay up while new ones come in.
+    const first = !data.usage[key];
+    if (first) { ui.loadingUsage = (ui.loadingUsage || 0) + 1; watchActivity(); }
+    try {
+      data.usage[key] = await api(`/api/usage?range=${encodeURIComponent(range)}&tool=${encodeURIComponent(tool)}`);
+    } finally {
+      if (first) ui.loadingUsage -= 1;
+    }
     return data.usage[key];
   }
 
@@ -568,6 +612,83 @@ select.field option { background: var(--raised); }
     $("#toolbar").innerHTML = page.toolbar || "";
     const offline = ui.offline ? `<div class="notice">${icon("alert")}<div><p>${esc(ui.offline)}</p></div></div>` : "";
     $("#main").innerHTML = `<div class="page">${offline}${page.body}</div>`;
+    applyPending();
+    renderActivity();
+  }
+
+  // MARK: Progress
+
+  // How long a new login has been awaited, as a clock that ticks in place ("0:42").
+  const waited = (tool) => {
+    const since = data.state?.addingSince?.[tool];
+    return since ? `<span class="num subtle" data-since="${esc(since)}">${clock(since)}</span>` : "";
+  };
+  function clock(since) {
+    const seconds = Math.max(0, Math.floor((Date.now() - new Date(since).getTime()) / 1000));
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  }
+  setInterval(() => { for (const node of document.querySelectorAll("[data-since]")) node.textContent = clock(node.dataset.since); }, 1000);
+
+  // Updates every progress display in place, so a running refresh never re-draws the page.
+  function renderActivity() {
+    const state = data.state;
+    const step = state?.activity;
+    const busyNow = !!(state?.refreshing || step || ui.loadingUsage);
+    const read = state?.status?.refreshedAt;
+    const label = step ? `${step.title}${step.count ? ` · ${step.count}` : ""}` : state?.refreshing ? "Starting…" : ui.loadingUsage ? "Reading usage" : read ? `Limits read ${fmt.relative(read)}` : "Limits not read yet";
+    $("#read").textContent = label;
+    for (const meter of [$("#foot-meter"), $("#top-meter")]) {
+      if (!meter) continue;
+      const known = step?.fraction != null;
+      meter.classList.toggle("unknown", busyNow && !known);
+      meter.firstElementChild.style.width = known ? `${(step.fraction * 100).toFixed(1)}%` : "";
+      if (meter.id === "foot-meter") meter.hidden = !busyNow; else meter.classList.toggle("on", busyNow);
+      if (known) meter.setAttribute("aria-valuenow", Math.round(step.fraction * 100)); else meter.removeAttribute("aria-valuenow");
+    }
+    for (const node of document.querySelectorAll("[data-loading]")) node.innerHTML = loadingInner(node.dataset.loading);
+    const run = $(".hero-run");
+    if (run) run.classList.toggle("on", busyNow);
+  }
+
+  // While Keyhop is working, ask how far it has got a few times a second; otherwise every 20 seconds.
+  let watching = false;
+  async function watchActivity() {
+    if (watching || isStatic) return;
+    watching = true;
+    try {
+      const busyNow = () => data.state?.refreshing || data.state?.activity || ui.loadingUsage || ui.pending.size;
+      // A new login can take minutes to arrive, so that wait is checked less often.
+      while (busyNow() || data.state?.adding?.length) {
+        await new Promise((resolve) => setTimeout(resolve, busyNow() ? 450 : 1500));
+        try {
+          const wasRefreshing = data.state?.refreshing;
+          const wasAdding = (data.state?.adding || []).join();
+          await loadState();
+          renderActivity();
+          const addingChanged = wasAdding !== (data.state.adding || []).join();
+          if ((wasRefreshing && !data.state.refreshing || addingChanged) && !ui.pending.size) {
+            await loadSection();
+            if (!editing()) render(); else renderSidebar();
+          }
+        } catch { break; }
+      }
+    } finally {
+      watching = false;
+      renderActivity();
+    }
+  }
+
+  // Buttons whose work is still running, keyed by what they act on, so a re-drawn page keeps them busy.
+  const pendingKey = (el) => [el.dataset.action, el.dataset.id || el.dataset.tool || el.dataset.scope || el.dataset.value || ""].join(":");
+  function applyPending() {
+    for (const el of document.querySelectorAll("button[data-action]")) {
+      const label = ui.pending.get(pendingKey(el));
+      if (label === undefined) continue;
+      el.disabled = true;
+      el.classList.add("working");
+      el.setAttribute("aria-busy", "true");
+      el.innerHTML = `<span class="ring" aria-hidden="true"></span>${esc(label || el.textContent.trim())}`;
+    }
   }
 
   function renderSidebar() {
@@ -579,7 +700,8 @@ select.field option { background: var(--raised); }
     const read = state?.status?.refreshedAt;
     $("#refresh").hidden = isStatic;
     $("#refresh").classList.toggle("spin", !!state?.refreshing);
-    $("#read").textContent = state?.refreshing ? "Reading limits…" : read ? `Limits read ${fmt.relative(read)}` : "Limits not read yet";
+    $("#refresh").setAttribute("aria-busy", state?.refreshing ? "true" : "false");
+    renderActivity();
     $("#update-title").textContent = data.update?.available ? `Update to ${data.update.latest}` : "Check for updates";
     $("#version").textContent = state ? `v${state.version} · ${state.platform}` : "";
   }
@@ -670,7 +792,7 @@ select.field option { background: var(--raised); }
         const identity = account
           ? `<div class="who">${mark(tool.id)}<div><b>${esc(tool.name)}</b><small>${esc(account.name)}${account.plan ? ` · ${esc(account.plan)}` : ""}</small></div></div>`
           : `<div class="who">${mark(tool.id)}<div><b>${esc(tool.name)}</b><small>${tool.accounts.length ? "Signed out" : "No saved accounts"}</small></div></div>`;
-        const middle = adding ? `<div class="waiting"><span class="pulse"><i></i><i></i><i></i></span>Waiting for the new login</div>`
+        const middle = adding ? `<div class="waiting"><span class="pulse"><i></i><i></i><i></i></span><span>Waiting for the new login ${waited(tool.id)}</span></div>`
           : account ? limits(account, 2, tool.limitsNote) : `<p class="empty-inline subtle">${esc(tool.signInHint)}</p>`;
         const actions = isStatic ? "" : other
           ? `<button class="btn sm secondary" data-action="switch" data-id="${esc(other.id)}">Switch to ${esc(other.name)}</button>`
@@ -685,11 +807,11 @@ select.field option { background: var(--raised); }
 
     const hourCard = `<section class="card">
       <div class="card-head"><h2>Today by hour</h2><span class="hint">${today ? esc(busiestHour(today)) : ""}</span></div>
-      <div class="card-body">${today ? dotHours(today) : busy("Reading usage")}</div>
+      <div class="card-body">${today ? dotHours(today) : loading("Reading usage")}</div>
     </section>`;
     const weekCard = `<section class="card">
       <div class="card-head"><h2>Last 7 days</h2><button class="btn sm ghost" data-action="goto" data-section="usage">Open usage</button></div>
-      <div class="card-body">${week ? (week.total.requests ? `<div class="chart">${stackedChart(week, "tokens", 180, "half")}</div>` : `<p class="empty-inline">No usage in the last 7 days.</p>`) : busy("Reading usage")}</div>
+      <div class="card-body">${week ? (week.total.requests ? `<div class="chart">${stackedChart(week, "tokens", 180, "half")}</div>` : `<p class="empty-inline">No usage in the last 7 days.</p>`) : loading("Reading usage")}</div>
     </section>`;
     const budgetsCard = `<section class="card">
       <div class="card-head"><h2>Budgets</h2><button class="btn sm ghost" data-action="goto" data-section="budgets">${status.budgets.length ? "Manage" : "Set a budget"}</button></div>
@@ -747,7 +869,8 @@ select.field option { background: var(--raised); }
     const body = tools.map((tool) => {
       const adding = data.state.adding.includes(tool.id);
       const rows = tool.accounts.map((account) => accountRow(account, tool.limitsNote)).join("");
-      const waiting = adding ? `<div class="row"><div class="waiting"><span class="pulse"><i></i><i></i><i></i></span><span>Waiting for a new ${esc(tool.name)} login. ${esc(tool.signInHint)}</span></div></div>` : "";
+      const waiting = adding ? `<div class="row waiting-row"><div class="waiting"><span class="pulse"><i></i><i></i><i></i></span><span>Waiting for a new ${esc(tool.name)} login ${waited(tool.id)}<br><small>${esc(tool.signInHint)} Keyhop saves it the moment it appears.</small></span></div>
+        ${isStatic ? "" : `<button class="btn sm ghost" data-action="add-stop" data-tool="${esc(tool.id)}">Stop waiting</button>`}</div>` : "";
       const empty = !tool.accounts.length && !adding ? `<p class="empty">${esc(tool.signInHint)}</p>` : "";
       return `<section class="group">
         <div class="group-head">${mark(tool.id)}<h2>${esc(tool.name)}</h2><span class="count">${tool.accounts.length}</span>
@@ -787,7 +910,7 @@ select.field option { background: var(--raised); }
       + tabs("metric", [["tokens", "Tokens"], ["cost", "API value"]], ui.metric)
       + `<select class="field" data-action="tool" aria-label="Tool" ${isStatic ? "disabled" : ""}>${[["all", "All tools"], ...tools.map((t) => [t.id, t.name])].map(([v, l]) => `<option value="${v}" ${v === ui.tool ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
     const usage = data.usage[`${ui.range}:${ui.tool}`] || (isStatic ? data.usage[`${ui.range}:all`] : null);
-    if (!usage) return { toolbar, body: `<div class="card">${busy("Reading usage", "empty")}</div>` };
+    if (!usage) return { toolbar, body: `<div class="card">${loading("Reading usage", "empty")}</div>` };
 
     const t = usage.total, p = usage.previous;
     const inputSide = t.input + t.cacheRead + t.cacheWrite;
@@ -976,7 +1099,7 @@ select.field option { background: var(--raised); }
     </section>`;
     const month = data.usage["month:all"];
     const overall = status.budgets.find((b) => b.scope === "all" && b.period === "month");
-    const byAccount = !month ? busy("Reading this month's usage", "empty") : month.total.requests ? accountTable(month.accounts, "cost") : `<p class="empty">No usage this month yet.</p>`;
+    const byAccount = !month ? loading("Reading this month's usage", "empty") : month.total.requests ? accountTable(month.accounts, "cost") : `<p class="empty">No usage this month yet.</p>`;
     return { body: `
       <div class="split wide-left">
         <section class="card"><div class="card-head"><h2>Budgets</h2><span class="hint mono">${status.budgets.length}</span></div>${list}</section>
@@ -989,7 +1112,7 @@ select.field option { background: var(--raised); }
   }
 
   function spendCard(usage, budget) {
-    if (!usage) return `<section class="card"><div class="card-head"><h2>This month</h2></div>${busy("Reading this month's usage", "empty")}</section>`;
+    if (!usage) return `<section class="card"><div class="card-head"><h2>This month</h2></div>${loading("Reading this month's usage", "empty")}</section>`;
     const now = Date.now();
     let running = 0;
     const points = [];
@@ -1347,17 +1470,22 @@ select.field option { background: var(--raised); }
 
   const editing = () => ui.editing || ui.confirming || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
 
-  async function act(button, call) {
-    if (button) { button.disabled = true; button.classList.add("working"); }
+  async function act(button, call, label) {
+    const key = button ? pendingKey(button) : null;
+    if (key) { ui.pending.set(key, label || ""); applyPending(); }
     try {
-      const result = await call();
+      const running = call();
+      watchActivity();
+      const result = await running;
       if (result && result.message) toast(result.note ? `${result.message} ${result.note}` : result.message);
       await loadState();
       await loadSection();
     } catch (error) {
       toast(error.message, true);
     } finally {
+      if (key) ui.pending.delete(key);
       render();
+      watchActivity();
     }
   }
 
@@ -1378,14 +1506,18 @@ select.field option { background: var(--raised); }
     const id = el.dataset.id;
     switch (el.dataset.action) {
       case "goto": go(el.dataset.section); break;
-      case "refresh": act(null, () => { data.state.refreshing = true; renderSidebar(); return api("/api/refresh", {}); }); break;
-      case "switch": act(el, () => api("/api/switch", { id })); break;
-      case "add": act(el, () => api("/api/add", { tool: el.dataset.tool })); break;
+      case "refresh":
+        if (data.state?.refreshing) break;
+        act(null, () => { data.state.refreshing = true; renderActivity(); return api("/api/refresh", {}); });
+        break;
+      case "switch": act(el, () => api("/api/switch", { id }), "Switching"); break;
+      case "add": act(el, () => api("/api/add", { tool: el.dataset.tool }), "Signing out"); break;
+      case "add-stop": act(el, () => api("/api/add/stop", { tool: el.dataset.tool }), "Stopping"); break;
       case "edit": ui.editing = id; ui.confirming = null; render(); $("form[data-form=rename] input")?.focus(); break;
       case "cancel-edit": ui.editing = null; render(); break;
       case "confirm-remove": ui.confirming = id; ui.editing = null; render(); break;
       case "cancel-remove": ui.confirming = null; render(); break;
-      case "remove": ui.confirming = null; act(el, () => api("/api/remove", { id })); break;
+      case "remove": act(el, () => api("/api/remove", { id }).finally(() => { ui.confirming = null; }), "Removing"); break;
       case "range": case "metric":
         ui[el.dataset.action] = el.dataset.value;
         render();
@@ -1395,12 +1527,12 @@ select.field option { background: var(--raised); }
       case "cancel-budget": ui.budgetEdit = null; render(); break;
       case "delete-budget": act(el, () => api("/api/budget", { scope: el.dataset.scope === "all" ? "all" : el.dataset.scope.replace("account:", ""), amount: null })); break;
       case "check-update": data.update = null; data.updateError = null; render(); await loadSection(); render(); break;
-      case "install-update": act(el, () => api("/api/update", {})); break;
-      case "cloud-link": act(el, () => api("/api/cloud/link", {})); break;
-      case "cloud-sync": act(el, () => api("/api/cloud/sync", {})); break;
-      case "cloud-unlink": data.board = null; act(el, () => api("/api/cloud/unlink", {})); break;
-      case "cloud-limits-on": act(el, () => api("/api/cloud/limits", { on: true })); break;
-      case "cloud-limits-off": act(el, () => api("/api/cloud/limits", { on: false })); break;
+      case "install-update": act(el, () => api("/api/update", {}), "Installing"); break;
+      case "cloud-link": act(el, () => api("/api/cloud/link", {}), "Opening GitHub"); break;
+      case "cloud-sync": act(el, () => api("/api/cloud/sync", {}), "Syncing"); break;
+      case "cloud-unlink": data.board = null; act(el, () => api("/api/cloud/unlink", {}), "Unlinking"); break;
+      case "cloud-limits-on": act(el, () => api("/api/cloud/limits", { on: true }), "Turning on"); break;
+      case "cloud-limits-off": act(el, () => api("/api/cloud/limits", { on: false }), "Stopping"); break;
       case "appearance": setAppearance({ [el.dataset.key]: el.dataset.value }); break;
       case "appearance-clear": setAppearance({ image: "" }); break;
       case "board-period": case "board-metric":
@@ -1492,6 +1624,7 @@ select.field option { background: var(--raised); }
     try {
       await loadState();
       render();
+      watchActivity();
       await loadSection();
       render();
     } catch (error) {
@@ -1504,6 +1637,7 @@ select.field option { background: var(--raised); }
         await loadState();
         if (ui.section === "overview" || ui.section === "usage") await loadSection();
         if (!editing()) render(); else renderSidebar();
+        watchActivity();
       } catch (error) {
         ui.offline = error.message;
         if (!editing()) render();

@@ -187,7 +187,11 @@ struct DashboardState: Encodable {
     let savedAt: Date
     let status: StatusDocument
     let adding: [String]
+    /// When each of those waits began, so the window can show how long it has been.
+    let addingSince: [String: Date]
     let refreshing: Bool
+    /// What a refresh or a first read of token history is doing right now, while it does it.
+    let activity: WorkProgress?
     let messages: [String]
     let cloud: DashboardCloud
     let appearance: DashboardAppearance
@@ -513,7 +517,9 @@ struct DashboardUsage: Encodable {
                           tool: key.provider.rawValue, color: otherColor, order: 10_000)
         }
         if index >= seriesColors.count, accounts.count > seriesColors.count + 1 {
-            return Series(id: "other", name: "Other accounts", tool: key.provider.rawValue, color: otherColor, order: 9_000)
+            // One series for all of them, whatever the tool: its values are summed under this id,
+            // so a copy per tool would draw the same total once for each.
+            return Series(id: "other", name: "Other accounts", tool: "mixed", color: otherColor, order: 9_000)
         }
         let account = accounts[index]
         return Series(id: account.id.uuidString, name: "\(account.provider.shortName), \(account.displayName)",
@@ -531,8 +537,13 @@ actor DashboardSession {
     private var closed = false
     private var refreshing = false
     private var adding: [Provider: Task<Void, Never>] = [:]
+    private var addingSince: [Provider: Date] = [:]
+    /// The account each tool had before it was signed out to add another, so stopping puts it back.
+    private var beforeAdding: [Provider: UUID] = [:]
+    private var stoppedAdding: Set<Provider> = []
     private var messages: [String] = []
     private var lastIngest: Date?
+    private let progress = ProgressBox()
     private let openWorkspace: @Sendable () throws -> Workspace
     private let changed: @Sendable () -> Void
     private let installUpdateHook: (@Sendable () async -> DashboardAction)?
@@ -594,6 +605,8 @@ actor DashboardSession {
                 return .json(try await switchAccount(try Self.decode(IDBody.self, request).id))
             case ("POST", "/api/add"):
                 return .json(try await add(try Self.decode(ToolBody.self, request).tool))
+            case ("POST", "/api/add/stop"):
+                return .json(try await stopAdding(try Self.decode(ToolBody.self, request).tool))
             case ("POST", "/api/rename"):
                 let body = try Self.decode(RenameBody.self, request)
                 return .json(try await rename(body.id, to: body.name))
@@ -656,7 +669,8 @@ actor DashboardSession {
         messages.removeAll()
         return DashboardState(mode: sample ? "sample" : "live", version: AppVersion.current, platform: Platform.name,
                               dataDirectory: Platform.dataDirectory.path, savedAt: Date(), status: StatusDocument(overview),
-                              adding: adding.keys.map(\.rawValue).sorted(), refreshing: refreshing, messages: pending,
+                              adding: adding.keys.map(\.rawValue).sorted(),
+                              addingSince: Dictionary(uniqueKeysWithValues: addingSince.map { ($0.key.rawValue, $0.value) }), refreshing: refreshing, activity: progress.value, messages: pending,
                               cloud: cloudStatus(), appearance: currentAppearance())
     }
 
@@ -664,6 +678,14 @@ actor DashboardSession {
         let now = Date()
         let heat = DashboardUsage.heatmapInterval(now: now)
         if sample {
+            if readLogs, lastIngest == nil, !refreshing {
+                lastIngest = now
+                for percent in stride(from: 0, through: 100, by: 5) {
+                    progress.set(WorkProgress(step: .history, done: percent, total: 100))
+                    try? await Task.sleep(for: .milliseconds(60))
+                }
+                progress.set(nil)
+            }
             let everyone = SampleData.accounts(now: now)
             let accounts = everyone.filter { tool == nil || $0.provider == tool }
             return DashboardUsage(range: range, tool: tool, now: now,
@@ -673,7 +695,10 @@ actor DashboardSession {
         }
         let workspace = try openWorkspace()
         if readLogs, lastIngest.map({ now.timeIntervalSince($0) > 120 }) ?? true {
-            _ = try await workspace.tracker.ingestLocalLogs()
+            // A refresh already reads the logs and says so; reading them alongside would only wait on it.
+            let reporting = !refreshing
+            defer { if reporting { progress.set(nil) } }
+            _ = try await workspace.tracker.ingestLocalLogs(progress: reporting ? progress.handler : nil)
             lastIngest = now
         }
         let sole = await workspace.service.soleAccounts
@@ -721,12 +746,42 @@ actor DashboardSession {
     }
 
     func refresh() async throws {
-        guard !sample, !refreshing else { return }
+        if sample { return await rehearse() }
+        guard !refreshing else { return }
         refreshing = true
-        defer { refreshing = false }
+        progress.set(WorkProgress(step: .logins, done: 0, total: Provider.allCases.count))
+        defer {
+            refreshing = false
+            progress.set(nil)
+        }
         var workspace = try openWorkspace()
-        _ = try await Commands.performRefresh(&workspace, claimAlerts: false)
+        _ = try await Commands.performRefresh(&workspace, claimAlerts: false, progress: progress.handler)
         lastIngest = Date()
+    }
+
+    /// Sample data has nothing to read, so a refresh there plays the same steps with made-up
+    /// timings, and the window shows exactly what a real one looks like.
+    private func rehearse() async {
+        guard !refreshing else { return }
+        refreshing = true
+        defer {
+            refreshing = false
+            progress.set(nil)
+        }
+        let tools = Provider.allCases
+        for (index, tool) in tools.enumerated() {
+            progress.set(WorkProgress(step: .logins, done: index, total: tools.count, detail: tool.name))
+            try? await Task.sleep(for: .milliseconds(110))
+        }
+        let names = ["Claude Code", "Claude Code", "Codex", "Cursor", "Codex", "Gemini CLI"]
+        for index in 0...names.count {
+            progress.set(WorkProgress(step: .limits, done: index, total: names.count, detail: index > 0 ? names[index - 1] : nil))
+            try? await Task.sleep(for: .milliseconds(260))
+        }
+        for percent in stride(from: 0, through: 100, by: 4) {
+            progress.set(WorkProgress(step: .history, done: percent, total: 100))
+            try? await Task.sleep(for: .milliseconds(70))
+        }
     }
 
     private func switchAccount(_ id: UUID) async throws -> DashboardAction {
@@ -747,7 +802,8 @@ actor DashboardSession {
             return DashboardAction(message: "Already waiting for a new \(provider.name) login.", note: nil)
         }
         let workspace = try openWorkspace()
-        _ = try await workspace.service.signOutForAdding(provider)
+        beforeAdding[provider] = try await workspace.service.signOutForAdding(provider)
+        addingSince[provider] = Date()
         var state = CLIState.load()
         state.active[provider.rawValue] = nil
         state.save()
@@ -761,9 +817,35 @@ actor DashboardSession {
         return DashboardAction(message: message, note: Output.plain(provider.signInHint))
     }
 
+    private func stopAdding(_ word: String) async throws -> DashboardAction {
+        let provider = try Commands.tool(word)
+        guard let task = adding[provider] else {
+            return DashboardAction(message: "Keyhop isn't waiting for a \(provider.name) login.", note: nil)
+        }
+        stoppedAdding.insert(provider)
+        task.cancel()
+        await task.value
+        let service = (try? openWorkspace())?.service
+        guard let back = await service?.active[provider], let account = await service?.account(back) else {
+            return DashboardAction(message: "Stopped waiting for a new \(provider.name) login.", note: nil)
+        }
+        return DashboardAction(message: "Stopped waiting. \(provider.name) is back on \(account.displayName).", note: nil)
+    }
+
     private func finishAdding(_ provider: Provider, result: (outcome: AccountService.SyncOutcome, alreadySaved: Bool)?, workspace: Workspace) async {
         adding[provider] = nil
+        addingSince[provider] = nil
+        let previous = beforeAdding.removeValue(forKey: provider)
         defer { changed() }
+        if result == nil, stoppedAdding.remove(provider) != nil {
+            // Stopped on purpose: the tool goes back to the account it had, if there was one.
+            guard let previous, (try? await workspace.service.switchTo(previous)) != nil else { return }
+            try? await workspace.tracker.noteActive(provider, account: previous, at: Date())
+            var state = CLIState.load()
+            state.active[provider.rawValue] = previous.uuidString
+            state.save()
+            return
+        }
         guard let result else {
             messages.append("No new \(provider.name) login arrived. Sign in, then add it again.")
             return

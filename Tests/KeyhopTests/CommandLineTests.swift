@@ -266,6 +266,55 @@ final class DashboardTests: XCTestCase {
         XCTAssertEqual(usage.heatmap.last?.day, formatter.string(from: now))
         XCTAssertLessThanOrEqual(usage.streak.current, usage.streak.longest)
         XCTAssertGreaterThan(usage.streak.activeDays, 0)
+        // Accounts past the colored ones share one series, across tools, so each is drawn once.
+        XCTAssertGreaterThan(accounts.count, DashboardUsage.seriesColors.count + 1)
+        XCTAssertEqual(Set(usage.series.map(\.id)).count, usage.series.count)
+        XCTAssertEqual(usage.series.filter { $0.id == "other" }.count, 1)
+        let drawn = usage.buckets.reduce(0) { sum, bucket in sum + usage.series.reduce(0) { $0 + (bucket.values[$1.id]?.tokens ?? 0) } }
+        XCTAssertEqual(drawn, usage.total.tokens)
+    }
+
+    /// Stopping a wait for a new login puts the tool back on the account it had.
+    func testStoppingAnAddPutsTheToolBackOnItsAccount() async throws {
+        #if os(Windows)
+        throw XCTSkip("Uses setenv to move the data folder, which Windows doesn't have.")
+        #else
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("keyhop-add-stop-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        setenv("KEYHOP_DATA_DIR", folder.path, 1)
+        defer {
+            unsetenv("KEYHOP_DATA_DIR")
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let tool = FakeTool(["user": "first", "used": "10"])
+        let service = AccountService(directory: folder, adapters: [.codex: FakeAdapter(provider: .codex, tool: tool)],
+                                     vault: Vault(store: MemorySecretStore()))
+        let tracker = try TrackerEngine(url: folder.appendingPathComponent("usage.sqlite"))
+        _ = await service.syncLive(.codex)
+        let session = try DashboardSession(sample: false, workspace: { Workspace(service: service, tracker: tracker, state: CLIState.load()) })
+
+        let token = "0123abcd", port: UInt16 = 8123
+        func post(_ path: String, _ body: String) async -> HTTPResponse {
+            await session.respond(to: HTTPRequest(method: "POST", path: path, query: [:], headers: [
+                "host": "127.0.0.1:8123", "authorization": "Bearer \(token)", "content-type": "application/json",
+            ], body: Data(body.utf8)), token: token, port: port)
+        }
+
+        let started = await post("/api/add", #"{"tool":"codex"}"#)
+        XCTAssertEqual(started.status, 200)
+        XCTAssertNil(tool.login, "adding signs the tool out first")
+        let waiting = try await session.state(allowRefresh: false)
+        XCTAssertEqual(waiting.adding, ["codex"])
+        XCTAssertNotNil(waiting.addingSince["codex"])
+
+        let stopped = await post("/api/add/stop", #"{"tool":"codex"}"#)
+        XCTAssertEqual(stopped.status, 200)
+        XCTAssertTrue(String(decoding: stopped.body, as: UTF8.self).contains("back on"))
+        XCTAssertEqual(tool.login?["user"], "first")
+        let after = try await session.state(allowRefresh: false)
+        XCTAssertTrue(after.adding.isEmpty)
+        XCTAssertTrue(after.addingSince.isEmpty)
+        #endif
     }
 
     func testStreaksCountBackFromTodayOrAQuietToday() {

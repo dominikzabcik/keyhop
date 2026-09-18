@@ -227,7 +227,7 @@ pages.get("/leaderboard", async (c) => {
       ${user && !user.public
         ? html`<div class="notice"><div><b>You aren't on the leaderboard</b><p>Your profile is private. Turn it public in <a href="/settings">Settings</a> to join.</p></div></div>`
         : ""}
-      ${board(entries, metric, user, "Nobody has synced usage for this period yet.")}`,
+      ${board(entries, metric, user, "No usage yet for this period. Link a computer running Keyhop and yours shows up here.")}`,
     { active: "leaderboard", description: `Who used the most AI ${PERIOD_PHRASES[period]}, on Keyhop.` },
   );
 });
@@ -289,7 +289,7 @@ async function seasonPage(c: C, season: string) {
           </section>`
         : ""}
       ${board.length === 0
-        ? html`<div class="card empty">Nobody has synced usage for this season yet.</div>`
+        ? html`<div class="card empty">No usage yet this season. Link a computer running Keyhop and yours shows up here.</div>`
         : html`<div class="card"><div class="table-wrap"><table class="table">
             <thead><tr><th class="rank">#</th><th>Person</th><th>Tier</th><th class="hide-sm">Tools</th>
               <th class="num hide-sm">Active days</th><th class="num">Tokens</th></tr></thead>

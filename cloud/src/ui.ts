@@ -261,7 +261,6 @@ a.place-card:hover { border-color: var(--border-strong); }
 .site-foot a { color: var(--muted); text-decoration: none; } .site-foot a:hover { color: var(--text); }
 
 /* Public supporting pages share a quiet editorial system with the landing page. */
-.landing-kicker { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--subtle); font-size: 14px; font-weight: 520; line-height: 1.3; }
 .marketing .backdrop { height: 620px; min-height: 0; opacity: .55; }
 .marketing .backdrop::after { height: 65%; }
 .marketing .top-inner, .marketing .site-foot { max-width: 1080px; }
@@ -288,12 +287,11 @@ a.place-card:hover { border-color: var(--border-strong); }
 .copy[data-done] { color: var(--good); border-color: hsl(145 40% 50% / .35); }
 .platform-actions { margin-top: auto; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .platform-actions > a:not(.btn) { color: var(--muted); font-size: 12.5px; text-underline-offset: 3px; }
-.content-split { padding: 74px 0; display: grid; grid-template-columns: .75fr 1.25fr; gap: 90px; border-top: 1px solid var(--border); }
+.content-split { padding: 74px 0; display: grid; grid-template-columns: .75fr 1.25fr; gap: 90px; }
 .content-split h2 { max-width: 390px; margin: 12px 0 0; font-size: clamp(28px, 4vw, 44px); line-height: 1.08; letter-spacing: -.04em; font-weight: 640; }
-.section-index { color: var(--subtle); font: 10px/1 var(--mono); letter-spacing: .08em; }
 .prose { color: var(--muted); font-size: 15px; line-height: 1.75; }
 .prose p { margin: 0; }
-.prose p + p { margin-top: 18px; }
+.prose p + p, .prose ul + p, .prose p + ul, .prose ol + p { margin-top: 18px; }
 .prose a, .legal-content a { color: var(--text); text-underline-offset: 3px; }
 .page-cta { margin-top: 70px; padding: 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--raised); }
 .page-cta div { display: grid; gap: 3px; }
@@ -301,21 +299,21 @@ a.place-card:hover { border-color: var(--border-strong); }
 .page-cta span { color: var(--muted); font-size: 13px; }
 .legal-layout { padding-bottom: 40px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 86px; align-items: start; }
 .legal-nav { position: sticky; top: 28px; display: grid; gap: 4px; }
-.legal-nav span { margin-bottom: 10px; color: var(--subtle); font: 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .08em; }
+.legal-nav span { margin-bottom: 10px; color: var(--subtle); font-size: 12.5px; font-weight: 560; }
 .legal-nav a { padding: 7px 0; color: var(--muted); text-decoration: none; font-size: 12.5px; }
 .legal-nav a:hover { color: var(--text); }
 .legal-content { min-width: 0; }
 .legal-content section { padding: 0 0 62px; scroll-margin-top: 24px; }
-.legal-content section + section { padding-top: 62px; border-top: 1px solid var(--border); }
+.legal-content section + section { padding-top: 62px; }
 .legal-content h2 { margin: 12px 0 20px; font-size: clamp(26px, 4vw, 40px); line-height: 1.1; letter-spacing: -.035em; font-weight: 640; }
 .legal-content p, .legal-content li { color: var(--muted); font-size: 14.5px; line-height: 1.75; }
 .legal-content p { margin: 0; }
-.legal-content p + p { margin-top: 17px; }
+.legal-content p + p, .legal-content ul + p, .legal-content p + ul, .legal-content ol + p { margin-top: 17px; }
 .legal-content ul { margin: 0; padding-left: 20px; display: grid; gap: 12px; }
 .legal-content li::marker { color: var(--subtle); }
 .legal-content li b { color: var(--text); font-weight: 590; }
 .updated { padding-top: 8px; color: var(--subtle) !important; font: 11px/1.5 var(--mono) !important; }
-.security-report { min-height: 280px; margin-bottom: 88px; padding: 46px; display: flex; align-items: center; justify-content: space-between; gap: 50px; border: 1px solid hsl(145 50% 58% / .22); border-radius: 14px; background: radial-gradient(90% 160% at 100% 0%, hsl(145 24% 16%) 0%, transparent 62%), var(--panel); }
+.security-report { min-height: 280px; margin-bottom: 88px; padding: 46px; display: flex; align-items: center; justify-content: space-between; gap: 50px; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .05); }
 .security-report h2 { max-width: 600px; margin: 0 0 13px; font-size: clamp(28px, 4vw, 42px); line-height: 1.06; letter-spacing: -.04em; }
 .security-report p { max-width: 620px; margin: 0; color: var(--muted); line-height: 1.7; }
 

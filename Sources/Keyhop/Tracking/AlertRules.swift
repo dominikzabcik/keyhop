@@ -57,11 +57,18 @@ enum AlertRules {
             let spent = budgetSpend[budget.scope] ?? 0
             let share = spent / budget.amount
             guard let threshold = [1.0, 0.8].first(where: { share >= $0 }) else { continue }
-            let name = budget.account.flatMap { id in accounts.first { $0.id == id }?.displayName } ?? "All accounts"
+            let account = budget.account.flatMap { id in accounts.first { $0.id == id }?.displayName }
+            // A budget over every account is a plural subject, and the budget is the whole set's.
+            let name = account ?? "All accounts"
+            let verb = account == nil ? "are" : "is"
+            let whose = account == nil ? "the" : "its"
+            let used = account == nil ? "have used" : "used"
             let periodStart = Int(budget.period.interval(containing: now).start.timeIntervalSince1970)
             alerts.append(AlertCandidate(
                 key: "budget:\(budget.scope):\(periodStart):\(Int(threshold * 100))",
-                title: threshold >= 1 ? "\(name) is over its \(budget.period.adjective) budget" : "\(name) used 80% of its \(budget.period.adjective) budget",
+                title: threshold >= 1
+                    ? "\(name) \(verb) over \(whose) \(budget.period.adjective) budget"
+                    : "\(name) \(used) 80% of \(whose) \(budget.period.adjective) budget",
                 body: "\(Numbers.usd(spent)) of \(Numbers.usd(budget.amount)).",
                 switchTo: nil
             ))

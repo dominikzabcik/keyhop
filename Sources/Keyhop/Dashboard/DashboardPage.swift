@@ -670,7 +670,12 @@ select.field option { background: var(--raised); }
             await loadSection();
             if (!editing()) render(); else renderSidebar();
           }
-        } catch { break; }
+        } catch {
+          // Keyhop stopped answering: whatever was running is no longer known to be running, and a
+          // bar that keeps moving would say otherwise.
+          if (data.state) { data.state.refreshing = false; data.state.activity = null; }
+          break;
+        }
       }
     } finally {
       watching = false;
@@ -922,7 +927,7 @@ select.field option { background: var(--raised); }
     </div>`;
     const heat = heatCard(usage);
     if (!t.requests) {
-      return { toolbar, body: `${stats}<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code, Codex and Gemini CLI logs on this computer, and Cursor's usage export after a refresh.</p></div>${heat}` };
+      return { toolbar, body: `${stats}<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code, Codex, Gemini CLI, OpenCode and Pi records on this computer, and Cursor's usage export after a refresh.</p></div>${heat}` };
     }
     const legend = `<ul class="legend">${usage.series.map((s) => `<li><span class="swatch" style="background:${s.color}"></span>${esc(s.name)}</li>`).join("")}</ul>`;
     const chart = `<section class="card">
@@ -1393,7 +1398,7 @@ select.field option { background: var(--raised); }
       ? `<section class="card"><table class="table"><thead><tr><th style="width:52px">#</th><th>Person</th><th>Tools</th><th class="right">Active days</th><th class="right">${heading}</th></tr></thead>
           <tbody>${entries.map((e) => `<tr class="${e.isYou ? "me" : ""}"><td class="mono subtle">${e.rank}</td><td>${person(e, 26)}</td><td class="bar-cell">${mix(e)}</td>
           <td class="right mono subtle">${e.activeDays}</td><td class="right mono">${esc(value(e))}</td></tr>`).join("")}</tbody></table></section>`
-      : `<section class="card"><p class="empty">Nobody has synced usage for this period yet.</p></section>`;
+      : `<section class="card"><p class="empty">No usage yet for this period. It fills in as the computers on your board refresh.</p></section>`;
     const note = `<p class="empty-inline subtle">Create teams and invite people on <a href="${esc(site)}/teams" target="_blank" rel="noopener">the website</a>.${cloud.isPublic ? "" : ` Your profile is private; make it public in the <a href="${esc(site)}/settings" target="_blank" rel="noopener">website's settings</a> to join the global board.`}</p>`;
     return { toolbar, body: seasonRow(data.board.season, site) + stats + questsCard(data.board.quests) + podium + table + note };
   }
@@ -1482,6 +1487,7 @@ select.field option { background: var(--raised); }
       await loadSection();
     } catch (error) {
       toast(error.message, true);
+      if (data.state) { data.state.refreshing = false; data.state.activity = null; }
     } finally {
       if (key) ui.pending.delete(key);
       render();
@@ -1606,6 +1612,9 @@ select.field option { background: var(--raised); }
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && (ui.editing || ui.confirming || ui.budgetEdit)) { ui.editing = ui.confirming = ui.budgetEdit = null; render(); }
   });
+  const followVisibility = () => document.documentElement.toggleAttribute("data-away", document.hidden);
+  document.addEventListener("visibilitychange", followVisibility);
+  followVisibility();
   addEventListener("hashchange", () => {
     const section = location.hash.slice(1);
     if (SECTIONS.includes(section) && section !== ui.section) go(section);

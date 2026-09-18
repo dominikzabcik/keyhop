@@ -13,6 +13,10 @@
 - Saved logins are written to disk owner-only from the first byte, rather than tightened a moment after the file exists.
 - Keyhop identifies itself as Keyhop to GitHub and Codebuff. It no longer presents Copilot requests as coming from an editor, or a Codebuff CLI token as a browser session.
 - Every wait says what it is doing and how far it has got. A refresh names its step and counts it: each tool's login, each account's limits, then the token history in your logs, with a bar in Keyhop's window, along the menu's footer and on a terminal line for `keyhop refresh`, `keyhop status` and `keyhop usage`. The first read of a long history reports by how much is left to read, so it moves from the first second. A button you press stays visibly working until its work is done, even while the page redraws.
+- The website's other pages lost their decoration: the small label above each page's headline, the numbered labels repeated above section headings, the tinted panel on the security page and the rules between sections. Lists and the paragraphs after them no longer touch.
+- A budget set over every account reads as one: "All accounts are over the monthly budget", not "is over its".
+- Keyhop's window keeps saying what it knows when Keyhop stops answering: the bars stop rather than suggesting a read is still running.
+- Closing Keyhop's window lets go of the page it was showing, and the moving backdrop holds still while the window isn't on screen.
 - Waiting for a new login can be stopped. Keyhop's window shows how long it has waited and offers Stop waiting, which puts the tool back on the account it had instead of leaving it signed out.
 - Usage charts no longer draw accounts past the fourth once per tool. They share one "Other accounts" series, so the bars add up to the total and the legend names it once.
 - The website's home page is rebuilt around a working day: accounts as lanes, limits filling them and Keyhop hopping to the one with room, played out as you scroll where the browser supports it and shown whole where it doesn't. It lists exactly how Keyhop switches each of the nine tools and what never leaves your computer.

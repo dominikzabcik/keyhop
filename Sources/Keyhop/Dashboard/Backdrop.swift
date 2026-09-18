@@ -79,6 +79,8 @@ enum Backdrop {
     ".bd-picture { background-position: center; background-size: cover; background-repeat: no-repeat; }",
 
     "@media (prefers-reduced-motion: reduce) { .bd *, .bd-runner, .bd-runner * { animation: none !important; } .bd-fall, .bd-mote { display: none; } }",
+    // Nobody is watching a window that isn't on screen, so the scene holds still until it is.
+    "html[data-away] .bd *, html[data-away] .bd-runner * { animation-play-state: paused; }",
   ].join("\n");
 
   function number(n) {

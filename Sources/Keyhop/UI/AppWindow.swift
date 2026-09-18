@@ -102,13 +102,16 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
     private static let messageName = "keyhopWindow"
 
     let window: NSWindow
-    private let webView: WKWebView
+    /// Let go of when the window closes: a loaded page costs its own process, hundreds of megabytes
+    /// after a long day, and AppKit can keep a closed window (and everything in it) for a while.
+    private var webView: WKWebView?
     private let host: DashboardHost
 
     init(host: DashboardHost, section: String) {
         self.host = host
         let frame = NSRect(x: 0, y: 0, width: 1280, height: 820)
-        webView = WKWebView(frame: frame, configuration: WKWebViewConfiguration())
+        let webView = WKWebView(frame: frame, configuration: WKWebViewConfiguration())
+        self.webView = webView
         window = NSWindow(contentRect: frame, styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                           backing: .buffered, defer: false)
         super.init()
@@ -170,6 +173,7 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
     }
 
     func go(to section: String) {
+        guard let webView else { return }
         if webView.isLoading {
             webView.load(URLRequest(url: host.url(section: section)))
         } else {
@@ -180,7 +184,20 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
     // MARK: Window
 
     func windowWillClose(_ notification: Notification) {
-        webView.configuration.userContentController.removeScriptMessageHandler(forName: Self.messageName)
+        // Closing the window lets go of the page: no delegates, no view, no reference here. AppKit
+        // keeps caches of its own that outlive this, so the web content process can still sit on
+        // its memory for a while, but nothing here asks it to stay.
+        let retired = webView
+        webView = nil
+        window.makeFirstResponder(nil)
+        window.contentView = nil
+        if let retired {
+            retired.configuration.userContentController.removeScriptMessageHandler(forName: Self.messageName)
+            retired.stopLoading()
+            retired.navigationDelegate = nil
+            retired.uiDelegate = nil
+            retired.removeFromSuperview()
+        }
         AppWindow.closed()
     }
 
@@ -240,6 +257,8 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        // Only worth reloading while the window is still showing it.
+        guard self.webView != nil else { return }
         webView.reload()
     }
 

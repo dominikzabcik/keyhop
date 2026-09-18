@@ -17,6 +17,7 @@
 - A budget set over every account reads as one: "All accounts are over the monthly budget", not "is over its".
 - Keyhop's window keeps saying what it knows when Keyhop stops answering: the bars stop rather than suggesting a read is still running.
 - Closing Keyhop's window lets go of the page it was showing, and the moving backdrop holds still while the window isn't on screen.
+- The menu bar panel is rebuilt to look the way it behaves: one surface per account instead of cards inside cards, edges lit along their top lip rather than drawn in grey, the tool strip without its box, the tracked-caps "IN USE" chip replaced by a dot and a word, limits led by their number, and a footer of one action and one status. Switching an account now moves it into place instead of redrawing the panel, unless you ask for less motion.
 - Waiting for a new login can be stopped. Keyhop's window shows how long it has waited and offers Stop waiting, which puts the tool back on the account it had instead of leaving it signed out.
 - Usage charts no longer draw accounts past the fourth once per tool. They share one "Other accounts" series, so the bars add up to the total and the legend names it once.
 - The website's home page is rebuilt around a working day: accounts as lanes, limits filling them and Keyhop hopping to the one with room, played out as you scroll where the browser supports it and shown whole where it doesn't. It lists exactly how Keyhop switches each of the nine tools and what never leaves your computer.

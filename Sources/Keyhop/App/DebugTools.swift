@@ -13,7 +13,7 @@ import SwiftUI
 ///     --preview-menu [tool]       show the menu with sample data in a window
 ///     --preview-window [section]  show Keyhop's window with sample data
 ///     --preview-welcome           show the welcome window with sample data
-///     --snapshot <prefix>         render the menu and welcome window with sample data to PNGs
+///     --snapshot <prefix> [--tool <tool>]  render the menu and welcome window with sample data to PNGs
 enum DebugTools {
     static func handle(_ arguments: [String]) -> Bool {
         func value(after flag: String) -> String? {
@@ -82,7 +82,8 @@ enum DebugTools {
             return true
         }
         if let prefix = value(after: "--snapshot") {
-            MainActor.assumeIsolated { Snapshot.render(prefix: prefix) }
+            let tool = value(after: "--tool").flatMap(Provider.init(rawValue:)) ?? .claude
+            MainActor.assumeIsolated { Snapshot.render(prefix: prefix, tool: tool) }
             return true
         }
         return false
@@ -128,8 +129,15 @@ enum Previews {
 /// Renders the menu and welcome window with sample data to PNGs, for CI smoke tests.
 @MainActor
 enum Snapshot {
-    static func render(prefix: String) {
-        let store = AccountStore(preview: ())
+    static func render(prefix: String, tool: Provider = .claude) {
+        // The menu opens on the tab it last showed, which is saved. Rendering offscreen never runs
+        // the view's onAppear, so the tab is set here instead and put back afterwards.
+        let savedTab = UserDefaults.standard.string(forKey: "menuTool")
+        UserDefaults.standard.set(tool.rawValue, forKey: "menuTool")
+        defer {
+            if let savedTab { UserDefaults.standard.set(savedTab, forKey: "menuTool") } else { UserDefaults.standard.removeObject(forKey: "menuTool") }
+        }
+        let store = AccountStore(preview: (), focus: tool)
         if ProcessInfo.processInfo.arguments.contains("--busy") {
             store.previewRefreshing(WorkProgress(step: .limits, done: 3, total: 6, detail: "Codex"))
         }

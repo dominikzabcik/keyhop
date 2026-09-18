@@ -49,17 +49,13 @@ private struct ToolTabs: View {
     let namespace: Namespace.ID
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
-        HStack(spacing: 2) {
+        HStack(spacing: 1) {
             ForEach(Provider.allCases) { provider in
                 ToolTab(provider: provider, selected: provider == selection, namespace: namespace) {
                     withAnimation(.snappy(duration: 0.24)) { selection = provider }
                 }
             }
         }
-        .padding(3)
-        .background(shape.fill(Brand.raised))
-        .overlay(shape.strokeBorder(Brand.border))
     }
 }
 
@@ -86,12 +82,14 @@ private struct ToolTab: View {
             }
             .foregroundStyle(lit ? Brand.text : Brand.muted)
             .frame(maxWidth: .infinity)
-            .frame(height: 26)
+            .frame(height: 30)
             .background {
                 if selected {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(Brand.selected)
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.white.opacity(0.07))
                         .matchedGeometryEffect(id: "tab", in: namespace)
+                } else if hovering {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Brand.hover)
                 }
             }
             .contentShape(Rectangle())
@@ -110,6 +108,7 @@ private struct ToolTab: View {
 private struct ToolPanel: View {
     @EnvironmentObject private var store: AccountStore
     @EnvironmentObject private var tracker: UsageTracker
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let provider: Provider
     @Binding var renaming: UUID?
 
@@ -142,16 +141,17 @@ private struct ToolPanel: View {
                 } else {
                     SignedOutCard(provider: provider)
                 }
-                VStack(spacing: 0) {
+                VStack(spacing: 1) {
                     ForEach(others) { account in
                         AlternativeRow(account: account, best: account.id == best, renaming: $renaming)
-                        RowDivider()
+                            .transition(.move(edge: .top).combined(with: .opacity))
                     }
                     AddRow(provider: provider)
                 }
-                .card()
             }
         }
+        // A switch moves an account up into place rather than redrawing the panel.
+        .animation(reduceMotion ? nil : .snappy(duration: 0.3), value: store.active[provider])
     }
 
     /// Room left on the tightest limit, in percent.
@@ -169,12 +169,17 @@ private struct InUseCard: View {
     var body: some View {
         let snapshot = store.usage[account.id]
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
-                    EditableName(account: account, font: .system(size: 14, weight: .semibold), renaming: $renaming)
+                    EditableName(account: account, font: .system(size: 15, weight: .semibold), renaming: $renaming)
                         .foregroundStyle(Brand.text)
                     Spacer(minLength: 8)
-                    Badge("In use", live: true)
+                    HStack(spacing: 6) {
+                        Circle().fill(Brand.good).frame(width: 5, height: 5)
+                        Text("In use")
+                            .font(.system(size: 11.5, weight: .medium))
+                            .foregroundStyle(Brand.muted)
+                    }
                 }
                 if let detail {
                     Text(detail)
@@ -184,13 +189,13 @@ private struct InUseCard: View {
                         .truncationMode(.middle)
                 }
             }
-            .padding(14)
-
-            RowDivider()
+            .padding(.horizontal, 15)
+            .padding(.top, 14)
+            .padding(.bottom, 15)
 
             VStack(alignment: .leading, spacing: 12) {
                 if let snapshot, !snapshot.windows.isEmpty {
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 18), GridItem(.flexible())], alignment: .leading, spacing: 14) {
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 20), GridItem(.flexible())], alignment: .leading, spacing: 16) {
                         ForEach(snapshot.windows) { window in
                             LimitCell(window: window, runsOut: tracker.forecasts[UsageTracker.forecastKey(account.id, window.label)])
                         }
@@ -208,13 +213,16 @@ private struct InUseCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(14)
+            .padding(.horizontal, 15)
+            .padding(.bottom, 15)
 
             if let spend = tracker.today[account.id], spend.requests > 0 {
-                RowDivider()
+                // The day's figures sit on their own step of the surface rather than behind a line.
                 SpendLine(account: account, spend: spend)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 11)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.white.opacity(0.03))
             }
         }
         .card()
@@ -241,11 +249,12 @@ private struct LimitCell: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(window.label)
-                        .font(.system(size: 12.5))
-                        .foregroundStyle(Brand.muted)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Brand.subtle)
                     Spacer(minLength: 4)
+                    // The number is what the eye comes for, so it carries the weight.
                     Text("\(Int(window.usedPercent.rounded()))%")
-                        .font(Brand.mono(12, weight: .medium))
+                        .font(Brand.mono(13, weight: .semibold))
                         .foregroundStyle(Brand.text)
                 }
                 .padding(.bottom, 7)
@@ -358,11 +367,11 @@ private struct AlternativeRow: View {
                     }
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 15)
+            .padding(.vertical, 11)
             .contentShape(Rectangle())
         }
-        .buttonStyle(RowButtonStyle())
+        .buttonStyle(RowButtonStyle(radius: 9))
         .disabled(store.switching != nil && store.switching != account.id)
         .help("Switch \(account.provider.name) to \(account.email)")
         .accessibilityLabel("Switch to \(account.displayName)")
@@ -408,11 +417,11 @@ private struct AddRow: View {
                 Spacer()
             }
             .font(.system(size: 12.5, weight: .medium))
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 15)
             .padding(.vertical, 10)
             .contentShape(Rectangle())
         }
-        .buttonStyle(RowButtonStyle(quiet: true))
+        .buttonStyle(RowButtonStyle(quiet: true, radius: 9))
         .disabled(store.addingFor != nil || store.switching != nil)
     }
 }
@@ -457,7 +466,7 @@ private struct EmptyPanel: View {
             Text("No \(provider.name) account yet")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Brand.text)
-            Text("Sign in to \(provider.name) as usual and Keyhop saves the login. Add more accounts to switch between them.")
+            Text("Sign in to \(provider.name) as usual and Keyhop saves the login.")
                 .font(.system(size: 12))
                 .foregroundStyle(Brand.muted)
                 .multilineTextAlignment(.center)
@@ -568,21 +577,6 @@ private struct MenuFooter: View {
             .buttonStyle(AppButtonStyle(kind: .ghost, size: .small))
             .help("Refresh usage")
             .accessibilityLabel(store.isRefreshing ? "Refreshing" : "Refresh usage")
-
-            Button { Task { await updater.check(userInitiated: true) } } label: {
-                HStack(spacing: 6) {
-                    Icon("update", size: 13)
-                    // While a read is running its step needs the room, so the version steps aside.
-                    if !store.isRefreshing, !tracker.isUpdating {
-                        Text(updater.phase == .checking ? "Checking…" : Updater.currentVersion)
-                            .fixedSize()
-                    }
-                }
-            }
-            .buttonStyle(AppButtonStyle(kind: .ghost, size: .small))
-            .disabled(updater.phase == .checking || updater.phase == .downloading || updater.phase == .installing)
-            .help("Check for updates")
-            .accessibilityLabel("Check for updates, version \(Updater.currentVersion)")
 
             if staticSnapshot {
                 Icon("more", size: 14)

@@ -8,7 +8,7 @@ import SwiftUI
 enum Brand {
     static let background = Color(white: 0.09)
     static let sidebar = Color(white: 0.072)
-    static let panel = Color(white: 0.106)
+    static let panel = Color(white: 0.118)
     static let raised = Color(white: 0.135)
     static let raisedHover = Color(white: 0.16)
     static let hover = Color.white.opacity(0.05)
@@ -40,12 +40,16 @@ extension Color {
 }
 
 extension View {
-    /// The dashboard's card: a panel one step above the background with a faint edge.
-    func card(radius: CGFloat = 10) -> some View {
+    /// The dashboard's card: a panel one step above the background, edged in its own light. The
+    /// edge is brighter along the top lip, the way a raised surface catches the light, rather than
+    /// a drawn grey outline.
+    func card(radius: CGFloat = 12) -> some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         return background(shape.fill(Brand.panel))
             .clipShape(shape)
-            .overlay(shape.strokeBorder(Brand.border))
+            .overlay(shape.strokeBorder(LinearGradient(
+                colors: [Color.white.opacity(0.11), Color.white.opacity(0.035)],
+                startPoint: .top, endPoint: .bottom), lineWidth: 1))
     }
 }
 

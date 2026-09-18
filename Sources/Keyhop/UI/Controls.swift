@@ -110,14 +110,16 @@ extension EnvironmentValues {
 /// muted until then.
 struct RowButtonStyle: ButtonStyle {
     var quiet = false
+    var radius: CGFloat = 0
 
     func makeBody(configuration: Configuration) -> some View {
-        RowBody(configuration: configuration, quiet: quiet)
+        RowBody(configuration: configuration, quiet: quiet, radius: radius)
     }
 
     private struct RowBody: View {
         let configuration: ButtonStyleConfiguration
         let quiet: Bool
+        let radius: CGFloat
         @Environment(\.isEnabled) private var isEnabled
         @State private var hovering = false
 
@@ -125,7 +127,8 @@ struct RowButtonStyle: ButtonStyle {
             let hot = hovering && isEnabled
             configuration.label
                 .foregroundStyle(quiet && !hot ? Brand.muted : Brand.text)
-                .background(Rectangle().fill(configuration.isPressed ? Brand.selected : hot ? Brand.hover : .clear))
+                .background(RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(configuration.isPressed ? Brand.selected : hot ? Brand.hover : .clear))
                 .opacity(isEnabled ? 1 : 0.5)
                 .onHover { hovering = $0 }
                 .animation(.easeOut(duration: 0.12), value: hovering)
@@ -145,21 +148,21 @@ struct LimitBar: View {
             let height = geo.size.height
             let value = min(max(fraction, 0), 1)
             ZStack(alignment: .leading) {
-                Capsule().fill(Brand.faint)
+                Capsule().fill(Color.white.opacity(0.07))
                 Capsule()
                     .fill(Self.tint(value, pace: pace))
                     .frame(width: value > 0 ? max(height, width * value) : 0)
                 if let pace {
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(Color.white.opacity(0.45))
-                        .frame(width: 2, height: height + 6)
-                        .offset(x: min(max(width * pace - 1, 0), width - 2))
+                    Capsule()
+                        .fill(Color.white.opacity(0.4))
+                        .frame(width: 1.5, height: height + 5)
+                        .offset(x: min(max(width * pace - 0.75, 0), width - 1.5))
                 }
             }
             .frame(width: width, height: height)
             .animation(.smooth(duration: 0.5), value: value)
         }
-        .frame(height: 6)
+        .frame(height: 5)
     }
 
     static func tint(_ value: Double, pace: Double?) -> Color {

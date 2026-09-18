@@ -40,18 +40,53 @@ actor TrackerEngine {
     // MARK: Ingest
 
     @discardableResult
-    func ingestLocalLogs() throws -> Int {
-        var added = 0
+    func ingestLocalLogs(progress: ProgressHandler? = nil) throws -> Int {
+        var files: [(url: URL, feed: LogFeed, size: Int64)] = []
         for feed in LogFeed.all {
             for root in feed.roots where FileManager.default.fileExists(atPath: root.path) {
-                let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles])
-                while let url = files?.nextObject() as? URL {
+                let found = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles])
+                while let url = found?.nextObject() as? URL {
                     guard url.pathExtension == "jsonl" else { continue }
-                    added += try ingest(url, feed: feed)
+                    let size = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+                    files.append((url, feed, size))
                 }
             }
         }
+
+        // What is left to read, so the first read of a long history can say how far it has got.
+        var total: Int64 = 0
+        if progress != nil {
+            var offsets: [String: Int64] = [:]
+            try db.query("SELECT path, offset FROM sources") { row in
+                if let path = row.text(0) { offsets[path] = row.int(1) }
+            }
+            for file in files {
+                let offset = offsets[file.url.path] ?? 0
+                total += file.size < offset ? file.size : file.size - offset
+            }
+        }
+        var done: Int64 = 0
+        var reported = -1
+        func report(_ bytes: Int64, force: Bool = false) {
+            guard let progress else { return }
+            done += bytes
+            // Whole percents are plenty for a bar, and keep a big read from reporting per chunk.
+            let percent = total > 0 ? Int(done * 100 / total) : 100
+            guard force || percent != reported else { return }
+            reported = percent
+            progress(WorkProgress(step: .history, done: Int(min(done, total) / 1024), total: Int(total / 1024)))
+        }
+        report(0, force: true)
+
+        var added = 0
+        for file in files {
+            added += try ingest(file.url, feed: file.feed, size: file.size) { report($0) }
+        }
         added += try ingestOpenCode()
+        if progress != nil {
+            done = total
+            report(0, force: true)
+        }
         return added
     }
 
@@ -85,8 +120,7 @@ actor TrackerEngine {
     }
 
     /// Reads only what was appended since the last pass, and only whole lines.
-    private func ingest(_ url: URL, feed: LogFeed) throws -> Int {
-        let size = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+    private func ingest(_ url: URL, feed: LogFeed, size: Int64, read: (Int64) -> Void = { _ in }) throws -> Int {
         var offset: Int64 = 0
         var state: [String: String] = [:]
         try db.query("SELECT offset, state FROM sources WHERE path = ?", [.text(url.path)]) { row in
@@ -115,6 +149,7 @@ actor TrackerEngine {
                     return
                 }
                 pending.append(chunk)
+                read(Int64(chunk.count))
                 var lineStart = pending.startIndex
                 while let newline = pending[lineStart...].firstIndex(of: 0x0A) {
                     let line = pending[lineStart..<newline]

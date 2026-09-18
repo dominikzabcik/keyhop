@@ -139,7 +139,9 @@ extension Commands {
         try args.finish()
         guard var link = CloudLink.load() else { throw KeyhopError("Not linked yet. Run keyhop cloud login.") }
         let workspace = try Workspace.open()
-        _ = try await workspace.tracker.ingestLocalLogs()
+        let terminal = TerminalProgress()
+        _ = try await workspace.tracker.ingestLocalLogs(progress: terminal.handler)
+        terminal.finish()
         do {
             let saved = try await CloudSync.run(&link, tracker: workspace.tracker)
             if json {

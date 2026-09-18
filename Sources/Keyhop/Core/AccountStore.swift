@@ -19,6 +19,8 @@ final class AccountStore: ObservableObject {
     @Published private(set) var glyphSweep: Double?
 
     static let shared = AccountStore()
+    /// Where a refresh has got, read by the menu while one runs.
+    nonisolated let progress = ProgressBox()
 
     private let service: AccountService?
     /// Shared with Keyhop's window, so both change the same saved accounts. Nil in previews.
@@ -51,6 +53,14 @@ final class AccountStore: ObservableObject {
     }
 
     /// Sample data for previews. Touches no files, Keychain or network.
+    /// Sample data can also stand in mid-refresh, so `--preview-menu --busy` shows what a read
+    /// looks like without one running.
+    func previewRefreshing(_ step: WorkProgress) {
+        guard service == nil else { return }
+        progress.set(step)
+        isRefreshing = true
+    }
+
     init(preview: Void, focus: Provider = .claude) {
         service = nil
         let now = Date()
@@ -123,11 +133,15 @@ final class AccountStore: ObservableObject {
         guard let service, refreshTask == nil, switching == nil else { return }
         if !force, let lastRefresh, Date().timeIntervalSince(lastRefresh) < 90 { return }
         isRefreshing = true
+        let progress = progress
         refreshTask = Task {
-            for provider in Provider.allCases where provider != addingFor {
+            let tools = Provider.allCases.filter { $0 != addingFor }
+            for (index, provider) in tools.enumerated() {
+                progress.set(WorkProgress(step: .logins, done: index, total: tools.count, detail: provider.name))
                 await report(await service.syncLive(provider), for: provider)
             }
-            usage = await service.fetchUsage(previous: usage)
+            usage = await service.fetchUsage(previous: usage, progress: progress.handler)
+            progress.set(nil)
             await mirror()
             lastRefresh = Date()
             shareWithCommandLine()

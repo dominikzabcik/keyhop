@@ -110,3 +110,48 @@ final class UpdaterTests: XCTestCase {
         XCTAssertNil(Releases.expectedHash(in: listing, for: "Other.zip"))
     }
 }
+
+final class WorkProgressTests: XCTestCase {
+    func testStepsSayHowFarTheyHaveGot() throws {
+        let limits = WorkProgress(step: .limits, done: 3, total: 7, detail: "Codex")
+        XCTAssertEqual(limits.title, "Reading limits")
+        XCTAssertEqual(limits.count, "3 of 7")
+        XCTAssertEqual(limits.fraction ?? 0, 3.0 / 7, accuracy: 1e-9)
+        XCTAssertEqual(TerminalProgress.line(limits, width: 7), "Reading limits  [###----]  3 of 7  Codex")
+
+        XCTAssertEqual(limits.brief, "Limits 3/7")
+        let history = WorkProgress(step: .history, done: 420, total: 1000)
+        XCTAssertEqual(history.count, "42%")
+        XCTAssertEqual(history.brief, "History 42%")
+        let unknown = WorkProgress(step: .history, done: 0, total: 0)
+        XCTAssertNil(unknown.fraction)
+        XCTAssertNil(unknown.count)
+        XCTAssertEqual(TerminalProgress.line(unknown), "Reading token history")
+        // Never past the end, whatever the counts say.
+        XCTAssertEqual(WorkProgress(step: .logins, done: 12, total: 9).fraction, 1)
+        XCTAssertEqual(WorkProgress(step: .logins, done: 12, total: 9).count, "9 of 9")
+
+        // The window gets the words and numbers ready to show, and reads them back unchanged.
+        let json = try XCTUnwrap(JSON.object(try JSONEncoder().encode(limits)))
+        XCTAssertEqual(json["title"] as? String, "Reading limits")
+        XCTAssertEqual(json["count"] as? String, "3 of 7")
+        XCTAssertEqual(try JSONDecoder().decode(WorkProgress.self, from: JSONEncoder().encode(limits)), limits)
+    }
+
+    func testTheBoxKeepsOnlyTheLatestProgress() {
+        let box = ProgressBox()
+        XCTAssertNil(box.value)
+        box.handler(WorkProgress(step: .logins, done: 1, total: 9))
+        box.handler(WorkProgress(step: .limits, done: 2, total: 4))
+        XCTAssertEqual(box.value?.step, .limits)
+        box.set(nil)
+        XCTAssertNil(box.value)
+    }
+
+    func testTheTerminalLineStaysOffWhenNotATerminal() {
+        let quiet = TerminalProgress(enabled: false)
+        quiet.draw(WorkProgress(step: .limits, done: 1, total: 2))
+        quiet.finish()
+        XCTAssertFalse(quiet.enabled)
+    }
+}

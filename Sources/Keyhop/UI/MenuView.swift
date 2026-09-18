@@ -73,11 +73,16 @@ private struct ToolTab: View {
     var body: some View {
         let lit = selected || hovering
         Button(action: action) {
+            // Nine tools in a 340-point menu leave no room for nine names, so only the tool being
+            // shown is named; the rest stand on their own marks.
             HStack(spacing: 6) {
                 ProviderMark(provider: provider, tint: lit ? Brand.text : Brand.muted)
                     .frame(width: 12, height: 12)
-                Text(provider.shortName)
-                    .font(.system(size: 12.5, weight: .medium))
+                if selected {
+                    Text(provider.shortName)
+                        .font(.system(size: 12.5, weight: .medium))
+                        .fixedSize()
+                }
             }
             .foregroundStyle(lit ? Brand.text : Brand.muted)
             .frame(maxWidth: .infinity)
@@ -532,6 +537,7 @@ private struct NoticeLine: View {
 
 private struct MenuFooter: View {
     @EnvironmentObject private var store: AccountStore
+    @EnvironmentObject private var tracker: UsageTracker
     @ObservedObject private var updater = Updater.shared
     @AppStorage("autoRefresh") private var autoRefresh = true
     @AppStorage("checkForUpdates") private var checkForUpdates = true
@@ -553,7 +559,7 @@ private struct MenuFooter: View {
                         Icon("refresh", size: 13)
                             .rotationEffect(.degrees(store.isRefreshing ? context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360 : 0))
                     }
-                    TimelineView(.periodic(from: .now, by: 30)) { context in
+                    TimelineView(.periodic(from: .now, by: store.isRefreshing || tracker.isUpdating ? 0.25 : 30)) { context in
                         Text(updatedText(context.date))
                             .fixedSize()
                     }
@@ -561,12 +567,16 @@ private struct MenuFooter: View {
             }
             .buttonStyle(AppButtonStyle(kind: .ghost, size: .small))
             .help("Refresh usage")
+            .accessibilityLabel(store.isRefreshing ? "Refreshing" : "Refresh usage")
 
             Button { Task { await updater.check(userInitiated: true) } } label: {
                 HStack(spacing: 6) {
                     Icon("update", size: 13)
-                    Text(updater.phase == .checking ? "Checking…" : Updater.currentVersion)
-                        .fixedSize()
+                    // While a read is running its step needs the room, so the version steps aside.
+                    if !store.isRefreshing, !tracker.isUpdating {
+                        Text(updater.phase == .checking ? "Checking…" : Updater.currentVersion)
+                            .fixedSize()
+                    }
                 }
             }
             .buttonStyle(AppButtonStyle(kind: .ghost, size: .small))
@@ -585,7 +595,13 @@ private struct MenuFooter: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(Brand.sidebar)
-        .overlay(alignment: .top) { RowDivider() }
+        .overlay(alignment: .top) {
+            if store.isRefreshing || tracker.isUpdating {
+                WorkMeter(box: store.progress)
+            } else {
+                RowDivider()
+            }
+        }
         .onChange(of: launchAtLogin) { _, enabled in
             do {
                 if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
@@ -621,10 +637,46 @@ private struct MenuFooter: View {
     }
 
     private func updatedText(_ now: Date) -> String {
+        if let step = store.progress.value { return step.brief }
         if store.isRefreshing { return "Updating" }
+        if tracker.isUpdating { return "Reading usage" }
         guard let last = store.lastRefresh else { return "Refresh" }
         let minutes = Int(now.timeIntervalSince(last) / 60)
         return minutes < 1 ? "Just now" : "\(minutes)m ago"
+    }
+}
+#endif
+
+
+#if os(macOS)
+/// The footer's top edge doubles as a progress bar while Keyhop reads: filled as far as the step
+/// has got, or a short segment moving along it while the total isn't known.
+private struct WorkMeter: View {
+    let box: ProgressBox
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
+            GeometryReader { geometry in
+                let width = geometry.size.width
+                ZStack(alignment: .leading) {
+                    Rectangle().fill(Brand.border)
+                    if let fraction = box.value?.fraction {
+                        Capsule().fill(Brand.text)
+                            .frame(width: max(2, width * fraction))
+                            .animation(.easeOut(duration: 0.3), value: fraction)
+                    } else {
+                        let phase = reduceMotion ? 0.5 : context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.3) / 1.3
+                        Capsule().fill(Brand.text)
+                            .frame(width: width * 0.28)
+                            .offset(x: -width * 0.28 + phase * width * 1.28)
+                    }
+                }
+                .clipped()
+            }
+            .frame(height: 2)
+        }
+        .accessibilityHidden(true)
     }
 }
 #endif

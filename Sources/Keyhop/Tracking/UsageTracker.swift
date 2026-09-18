@@ -72,7 +72,8 @@ final class UsageTracker: ObservableObject {
             for provider in Provider.allCases {
                 try await engine.noteActive(provider, account: store.active[provider], at: now)
             }
-            try await engine.ingestLocalLogs()
+            defer { store.progress.set(nil) }
+            try await engine.ingestLocalLogs(progress: store.progress.handler)
 
             // Cursor keeps no local logs, so each account's own usage export fills in, at most twice an hour.
             for account in accounts where account.provider == .cursor {

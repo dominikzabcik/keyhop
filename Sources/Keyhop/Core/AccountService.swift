@@ -201,8 +201,9 @@ actor AccountService {
 
     /// Fetches every saved account's limits with its own token. Tokens are refreshed only for
     /// accounts that aren't in use. Failures keep the last good reading alongside the error.
-    func fetchUsage(previous: [UUID: UsageSnapshot]) async -> [UUID: UsageSnapshot] {
+    func fetchUsage(previous: [UUID: UsageSnapshot], progress: ProgressHandler? = nil) async -> [UUID: UsageSnapshot] {
         let targets = accounts.map { ($0, active[$0.provider] == $0.id) }
+        progress?(WorkProgress(step: .limits, done: 0, total: targets.count))
         let vault = vault
         let adapters = adapters
         let results = await withTaskGroup(of: (UUID, UsageSnapshot, String?).self) { group -> [(UUID, UsageSnapshot, String?)] in
@@ -229,7 +230,11 @@ actor AccountService {
                 }
             }
             var collected: [(UUID, UsageSnapshot, String?)] = []
-            for await result in group { collected.append(result) }
+            let names = Dictionary(uniqueKeysWithValues: targets.map { ($0.0.id, $0.0.provider.name) })
+            for await result in group {
+                collected.append(result)
+                progress?(WorkProgress(step: .limits, done: collected.count, total: targets.count, detail: names[result.0]))
+            }
             return collected
         }
 

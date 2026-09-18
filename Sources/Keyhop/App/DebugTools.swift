@@ -102,6 +102,9 @@ enum Previews {
 
     static func menu(tab: Provider) {
         let store = AccountStore(preview: (), focus: tab)
+        if ProcessInfo.processInfo.arguments.contains("--busy") {
+            store.previewRefreshing(WorkProgress(step: .limits, done: 3, total: 6, detail: "Codex"))
+        }
         let root = MenuView()
             .environmentObject(store)
             .environmentObject(UsageTracker(preview: store))
@@ -127,6 +130,9 @@ enum Previews {
 enum Snapshot {
     static func render(prefix: String) {
         let store = AccountStore(preview: ())
+        if ProcessInfo.processInfo.arguments.contains("--busy") {
+            store.previewRefreshing(WorkProgress(step: .limits, done: 3, total: 6, detail: "Codex"))
+        }
         let tracker = UsageTracker(preview: store)
         let corners = RoundedRectangle(cornerRadius: 12, style: .continuous)
         write(MenuView().environmentObject(store).environmentObject(tracker).environment(\.staticSnapshot, true).clipShape(corners),

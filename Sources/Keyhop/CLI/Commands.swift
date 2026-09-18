@@ -86,9 +86,11 @@ enum Commands {
         }
         var workspace = try Workspace.open()
         // Nothing has been read on this computer yet, so the first status reads everything once.
+        let terminal = TerminalProgress()
         let overview = refresh || workspace.state.refreshedAt == nil
-            ? try await performRefresh(&workspace, claimAlerts: false)
+            ? try await performRefresh(&workspace, claimAlerts: false, progress: terminal.handler)
             : try await currentOverview(workspace)
+        terminal.finish()
         try emit(overview, json: json)
     }
 
@@ -97,17 +99,21 @@ enum Commands {
         let claimAlerts = args.flag("--claim-alerts")
         try args.finish()
         var workspace = try Workspace.open()
-        let overview = try await performRefresh(&workspace, claimAlerts: claimAlerts)
+        let terminal = TerminalProgress()
+        defer { terminal.finish() }
+        let overview = try await performRefresh(&workspace, claimAlerts: claimAlerts, progress: terminal.handler)
+        terminal.finish()
         try emit(overview, json: json)
     }
 
     /// Syncs every tool's login, reads limits with each account's own token, reads usage logs
     /// and Cursor's exports, and records limit samples for forecasts.
-    static func performRefresh(_ workspace: inout Workspace, claimAlerts: Bool) async throws -> Overview {
+    static func performRefresh(_ workspace: inout Workspace, claimAlerts: Bool, progress: ProgressHandler? = nil) async throws -> Overview {
         let service = workspace.service
         let tracker = workspace.tracker
         var notices: [String] = []
-        for provider in Provider.allCases {
+        for (index, provider) in Provider.allCases.enumerated() {
+            progress?(WorkProgress(step: .logins, done: index, total: Provider.allCases.count, detail: provider.name))
             switch await service.syncLive(provider) {
             case .saved(let id):
                 if let account = await service.account(id) { notices.append("Saved \(account.email) to \(provider.name).") }
@@ -117,7 +123,7 @@ enum Commands {
                 break
             }
         }
-        let usage = await service.fetchUsage(previous: workspace.state.usageByID)
+        let usage = await service.fetchUsage(previous: workspace.state.usageByID, progress: progress)
         let accounts = await service.accounts
         let active = await service.active
         let now = Date()
@@ -125,7 +131,7 @@ enum Commands {
         for provider in Provider.allCases {
             try await tracker.noteActive(provider, account: active[provider], at: now)
         }
-        try await tracker.ingestLocalLogs()
+        try await tracker.ingestLocalLogs(progress: progress)
         for account in accounts where account.provider == .cursor {
             let key = account.id.uuidString
             if let last = workspace.state.cursorExports[key], now.timeIntervalSince(last) < 30 * 60 { continue }
@@ -322,7 +328,11 @@ enum Commands {
         try args.finish()
 
         let workspace = try Workspace.open()
-        if !skipLogs { try await workspace.tracker.ingestLocalLogs() }
+        if !skipLogs {
+            let terminal = TerminalProgress()
+            defer { terminal.finish() }
+            try await workspace.tracker.ingestLocalLogs(progress: terminal.handler)
+        }
         let now = Date()
         let sole = await workspace.service.soleAccounts
         let digest = try await workspace.tracker.digest(interval: range.interval(now: now), previous: range.previous(now: now),

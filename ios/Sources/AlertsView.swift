@@ -89,22 +89,27 @@ struct AlertsView: View {
     }
 
     private func row(title: String, note: String, on: Binding<Bool>) -> some View {
-        Toggle(isOn: Binding(get: { on.wrappedValue }, set: { asked in
-            on.wrappedValue = asked
-            // The prompt arrives with a reason attached: they just asked for this alert.
-            if asked { Task { await store.allowAlerts() } }
-        })) {
-            VStack(alignment: .leading, spacing: 3) {
+        // The switch carries the title itself, so a screen reader announces the setting it flips.
+        // The note explains it underneath rather than inside the control.
+        VStack(alignment: .leading, spacing: 3) {
+            Toggle(isOn: Binding(get: { on.wrappedValue }, set: { asked in
+                on.wrappedValue = asked
+                // The prompt arrives with a reason attached: they just asked for this alert.
+                if asked { Task { await store.allowAlerts() } }
+            })) {
                 Text(title)
                     .font(.ui(15, .medium, .subheadline))
                     .foregroundStyle(Brand.text)
-                Text(note)
-                    .font(.ui(12.5, .regular, .footnote))
-                    .foregroundStyle(Brand.muted)
-                    .fixedSize(horizontal: false, vertical: true)
             }
+            Text(note)
+                .font(.ui(12.5, .regular, .footnote))
+                .foregroundStyle(Brand.muted)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.trailing, 60)
+                .accessibilityHidden(true)
         }
         .tint(Brand.good)
+        .accessibilityHint(note)
         .sensoryFeedback(.selection, trigger: on.wrappedValue)
     }
 }

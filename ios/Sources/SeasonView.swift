@@ -54,13 +54,15 @@ struct SeasonView: View {
                         Divider()
                         Button("Unlink this phone", role: .destructive) { Task { await store.unlink() } }
                     } label: {
-                        Image(systemName: "ellipsis")
+                        // A Label carries the name with it, which a menu's own accessibilityLabel
+                        // does not survive in a toolbar.
+                        Label("More", systemImage: "ellipsis")
+                            .labelStyle(.iconOnly)
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Brand.muted)
                             .frame(width: 32, height: 32)
                             .contentShape(Rectangle())
                     }
-                    .accessibilityLabel("More")
                 }
             }
             .sheet(isPresented: $showingAlerts) { AlertsView() }

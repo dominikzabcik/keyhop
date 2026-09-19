@@ -47,7 +47,7 @@ jobs:
   ios:
     name: iOS
     runs-on: macos-15
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
 
@@ -72,12 +72,21 @@ jobs:
           PY
           echo "Selected an available iPhone simulator by UDID."
 
+      # Unit tests and the UI tests that walk every screen in the simulator.
       - name: Build and test
         working-directory: ios
         run: |
           xcodebuild -project Keyhop.xcodeproj -scheme Keyhop \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
-            -derivedDataPath build test | tail -8
+            -derivedDataPath build test | tail -20
+
+      # Each UI test keeps a picture of its screen and the names on it.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ios-screens
+          path: ios/build/Logs/Test/*.xcresult
+          if-no-files-found: warn
 
       # A build that runs is worth more than one that only compiles: the app is launched with sample
       # data and has to still be alive a moment later.

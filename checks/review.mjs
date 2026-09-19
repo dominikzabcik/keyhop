@@ -10,7 +10,23 @@
  * a run that fails on one would teach everybody to ignore it.
  */
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { choice, noul, score, TypeSafeClient } from "@typesafe-ai/sdk";
+
+/** The key can sit in checks/.env, which is never committed, instead of the shell's environment. */
+function loadKeyFile() {
+  if (process.env.TYPESAFE_API_KEY) return;
+  try {
+    const file = readFileSync(join(dirname(fileURLToPath(import.meta.url)), ".env"), "utf8");
+    for (const line of file.split("\n")) {
+      const match = line.match(/^\s*(?:export\s+)?([A-Z_]+)\s*=\s*"?([^"\n]*)"?\s*$/);
+      if (match) process.env[match[1]] ??= match[2];
+    }
+  } catch {}
+}
 
 /** How sure Jev has to be before a judgement is worth reading. Below this it says so instead. */
 const CERTAIN = 0.75;
@@ -95,6 +111,7 @@ function describe(answer) {
 }
 
 export async function review(readings) {
+  loadKeyFile();
   if (!process.env.TYPESAFE_API_KEY) {
     console.log("No TYPESAFE_API_KEY, so nothing was sent to Jev. The checks above ran without it.");
     return [];

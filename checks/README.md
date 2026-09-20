@@ -9,8 +9,9 @@ npm install && npx playwright install chromium
 
 node run.mjs --site          # the website, from a local wrangler
 node run.mjs --app           # Keyhop's window, from `keyhop dashboard --sample`
-node run.mjs --site --app    # both
-node run.mjs --site --app --review   # both, then ask Jev
+node run.mjs --cli           # the commands, including the tools `keyhop mcp` serves
+node run.mjs                 # all three
+node run.mjs --review        # all three, then ask Jev
 ```
 
 `--app` needs the debug binary, so run `swift build` first. Pictures of every screen at every width
@@ -30,6 +31,12 @@ These are decidable, so they fail:
 - A link on any screen leads to a 404.
 - A control does nothing at all when pressed: the page doesn't change, the address doesn't change,
   and no message appears.
+- A command exits non-zero, prints something `--json` can't parse, leaves a key out of its JSON, or
+  prints a value that never resolved. `keyhop mcp` is asked for its tools the way an agent asks,
+  and has to offer `keyhop_status`, `keyhop_usage` and `keyhop_recommendation`.
+
+Only commands that read are run, each with its own empty data folder, so a check can never reach a
+real login, a real database or the real keyhop.app.
 
 Destructive controls are left alone. `LEAVE_ALONE` in `checks.mjs` lists what is never pressed.
 

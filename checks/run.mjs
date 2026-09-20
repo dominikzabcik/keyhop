@@ -3,8 +3,9 @@
  *
  *   node run.mjs --site            the website, from a local wrangler
  *   node run.mjs --app             the Mac window, from `keyhop dashboard --sample`
- *   node run.mjs --site --app      both
- *   node run.mjs --site --review   both, then ask Jev about what it read
+ *   node run.mjs --cli             the commands, including the tools `keyhop mcp` serves
+ *   node run.mjs                   all three
+ *   node run.mjs --review          all three, then ask Jev about what it read
  *
  * Findings that are decidable fail the run. Jev's answers are written into the report and never
  * fail it on their own: a judgement is a second opinion, not a gate.
@@ -17,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { chromium, request as playwrightRequest } from "playwright";
 
+import { checkCommands } from "./cli.mjs";
 import { checkLinks, faults, pokeControls, readScreen } from "./checks.mjs";
 import { ACCOUNT_SCREENS, APP_SCREENS, APP_WIDTHS, SITE_SCREENS, WIDTHS } from "./screens.mjs";
 import { signIn } from "./signin.mjs";
@@ -26,10 +28,16 @@ const root = join(here, "..");
 const out = join(here, "report");
 
 const flags = new Set(process.argv.slice(2));
-const wanted = { site: flags.has("--site"), app: flags.has("--app"), review: flags.has("--review") };
-if (!wanted.site && !wanted.app) {
+const wanted = {
+  site: flags.has("--site"),
+  app: flags.has("--app"),
+  cli: flags.has("--cli"),
+  review: flags.has("--review"),
+};
+if (!wanted.site && !wanted.app && !wanted.cli) {
   wanted.site = true;
   wanted.app = true;
+  wanted.cli = true;
 }
 
 /** Starts a process and waits until `ready` recognises its output. Kills it when the run ends. */
@@ -222,6 +230,10 @@ async function main() {
       const app = await checkApp(browser);
       found.push(...app.found);
       readings.push(...app.readings);
+    }
+    if (wanted.cli) {
+      console.log("Running the commands…");
+      found.push(...(await checkCommands(join(root, ".build/debug/Keyhop"))));
     }
   } finally {
     await browser.close();

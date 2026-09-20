@@ -177,11 +177,12 @@ jobs:
       - name: Build Keyhop
         run: swift build
 
-      # Every page of the website and every section of Keyhop's window, at three widths each:
-      # what they say, whether anything overflows or is cut off, and whether their controls answer.
-      - name: Walk every screen
+      # Every page of the website and every section of Keyhop's window, at three widths each: what
+      # they say, whether anything overflows or is cut off, and whether their controls answer. Then
+      # the commands, including the tools `keyhop mcp` serves to an agent.
+      - name: Walk every screen and run every command
         working-directory: checks
-        run: node run.mjs --site --app
+        run: node run.mjs --site --app --cli
 
       # Jev reads what each screen says and answers typed questions about it. It runs only where
       # the key is configured, and never fails the build: a judgement is a second opinion.
@@ -189,7 +190,7 @@ jobs:
         if: ${{ env.TYPESAFE_API_KEY != '' }}
         continue-on-error: true
         working-directory: checks
-        run: node run.mjs --site --app --review
+        run: node run.mjs --site --app --cli --review
 
       - uses: actions/upload-artifact@v7
         if: always()

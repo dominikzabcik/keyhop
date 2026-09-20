@@ -223,6 +223,36 @@ async function checkApp(browser) {
   }
 }
 
+/** The run as a page someone can read, saved beside the pictures. */
+function summary(found, judgements, readings) {
+  const lines = [`# Every screen, ${new Date().toISOString().slice(0, 16).replace("T", " ")}`, ""];
+  lines.push(`${readings.length} screens read, ${readings.reduce((n, r) => n + (r.pressed?.length ?? 0), 0)} controls pressed.`, "");
+
+  lines.push(found.length ? `## ${found.length} problems` : "## No problems", "");
+  for (const fault of found) lines.push(`- **${fault.screen}** (${fault.width}) ${fault.kind}: ${fault.detail}`);
+  lines.push("");
+
+  const raised = judgements.filter((j) => !j.passed);
+  if (judgements.length) {
+    lines.push(raised.length ? `## ${raised.length} judgements to look at` : "## Jev raised nothing", "");
+    for (const judgement of raised) lines.push(`- **${judgement.screen}** ${judgement.question}: ${judgement.answer}`);
+    lines.push("", "<details><summary>Every answer</summary>", "");
+    for (const screen of [...new Set(judgements.map((j) => j.screen))]) {
+      lines.push(`**${screen}**`, "");
+      for (const judgement of judgements.filter((j) => j.screen === screen)) {
+        const sure = judgement.confidence == null ? "" : ` (confidence ${judgement.confidence.toFixed(2)})`;
+        lines.push(`- ${judgement.question}: ${judgement.answer}${sure}${judgement.note ? ` — ${judgement.note}` : ""}`);
+      }
+      lines.push("");
+    }
+    lines.push("</details>", "");
+  }
+
+  lines.push("## Screens", "");
+  for (const reading of readings) lines.push(`- ${reading.target}/${reading.screen}: ${reading.headings[0]?.text ?? reading.title}`);
+  return lines.join("\n") + "\n";
+}
+
 async function main() {
   await rm(out, { recursive: true, force: true });
   await mkdir(join(out, "screens"), { recursive: true });
@@ -255,6 +285,7 @@ async function main() {
   }
 
   await writeFile(join(out, "report.json"), JSON.stringify({ found, judgements, screens: readings.map((r) => r.screen) }, null, 2));
+  await writeFile(join(out, "report.md"), summary(found, judgements, readings));
 
   for (const fault of found) console.log(`✗ ${fault.screen} (${fault.width}) ${fault.kind}: ${fault.detail}`);
   for (const judgement of judgements) {

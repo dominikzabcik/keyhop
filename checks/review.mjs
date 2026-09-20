@@ -2,9 +2,13 @@
  * The second opinion: Jev reads what each screen says and answers typed questions about it.
  *
  * Jev takes text and structured data, not pictures, so it is never asked how a screen looks. It is
- * asked about the things a picture wouldn't settle anyway and an assertion can't express: whether
- * the writing is Keyhop's, whether a screen says what it is for, whether the words on it agree with
- * each other, and whether someone would know what to do next.
+ * asked what a picture wouldn't settle anyway and an assertion can't express: whether the writing
+ * is Keyhop's, whether the screen says what it is for, and whether it contradicts itself.
+ *
+ * Every question here asks one thing. A question that asks two ("does it agree with itself and say
+ * what to do next") comes back near 0.5 whatever the screen, which says nothing. Each one also
+ * declares the answer that means the screen is fine, and anything in the middle is reported as too
+ * close to call rather than as a fault: acting on a coin flip is worse than not acting.
  *
  * Every answer lands in the report. None of them fail the run: a judgement is a second opinion, and
  * a run that fails on one would teach everybody to ignore it.
@@ -28,85 +32,114 @@ function loadKeyFile() {
   } catch {}
 }
 
-/** How sure Jev has to be before a judgement is worth reading. Below this it says so instead. */
+/** Answers between these are too close to call: the model gave yes and no similar weight. */
+const UNSURE = [0.3, 0.7];
+/** A choice or a score below this confidence is reported as unsure too. */
 const CERTAIN = 0.75;
 
-/** The house style, as rules a reader can apply without seeing the screen. */
-const VOICE = [
-  "Plain words, short sentences, no marketing language and no exclamation marks.",
-  "Never an em dash; a hyphen, a colon or two sentences instead.",
-  "It says what Keyhop does, not how remarkable it is.",
-  "It never promises more usage, more limits, or anything a provider's terms forbid.",
-  "A wait, an error or an empty screen says what happened and what to do next.",
-];
+/** Every tool Keyhop switches, so a list that has gone stale can be spotted. */
+const TOOLS = "Claude Code, Cursor, Codex, Gemini CLI, OpenCode, Pi, GitHub Copilot, Windsurf and Codebuff";
 
+/** Each question, and the answer that means the screen is fine. */
 const QUESTIONS = {
-  own_voice: noul(
-    `Is every sentence here written in this voice?\n${VOICE.map((rule) => `- ${rule}`).join("\n")}`,
-  ),
-  says_its_purpose: noul(
-    "From this screen alone, without prior knowledge of the product, is it clear what the screen is for?",
-  ),
-  agrees_with_itself: noul(
-    "Do the words on this screen agree with each other: no claim contradicted elsewhere on it, no name or number used two different ways?",
-  ),
-  next_step_is_clear: noul(
-    "If someone arrived here and could do one thing next, does the screen make that one thing obvious?",
-  ),
-  empty_or_waiting_explains: noul(
-    "If any part of this screen is empty, loading, or reporting a problem, does it say what happened and what to do about it? Answer 1 if no part of the screen is empty, loading or failing.",
-  ),
-  clarity: score("How easily could a first-time reader tell what this screen offers and act on it?", {
-    0: "Unreadable: the reader cannot tell what this is or do anything with it.",
-    1: "Confusing: the purpose is guessable, but the wording or order works against it.",
-    2: "Workable: understandable after a second read.",
-    3: "Clear: purpose and next step are obvious on the first read.",
-  }),
-  weakest_part: choice("Which part of this screen would confuse a first-time reader most?", {
-    headings: "The headings: what they name, or that they name the wrong thing.",
-    body: "The explaining text: too much, too little, or unclear.",
-    controls: "The buttons and links: what they do, or what they are called.",
-    nothing: "Nothing here would confuse a first-time reader.",
-  }),
+  sells_itself: {
+    wants: "no",
+    question: noul(
+      "Does any sentence praise the product rather than describe it, with words such as powerful, seamless, effortless, revolutionary, amazing or best?",
+    ),
+  },
+  promises_more_usage: {
+    wants: "no",
+    question: noul(
+      "Does the text offer more usage, higher limits, or a way around a provider's limits, rather than only moving between accounts someone already owns?",
+    ),
+  },
+  contradicts_itself: {
+    wants: "no",
+    question: noul("Do two statements on this screen give different values or facts for the same thing?", {
+      true: "Two places state something incompatible, such as different totals, names or counts for one thing.",
+      false: "Everything stated is consistent, or there is nothing to compare.",
+    }),
+  },
+  tool_list_is_short: {
+    wants: "no",
+    question: noul(
+      `Does this screen set out to list the tools Keyhop works with and leave one out? Keyhop works with ${TOOLS}. Answer no if the screen does not set out to list them.`,
+    ),
+  },
+  heading_says_the_subject: {
+    wants: "yes",
+    question: noul("Does the main heading name what this screen is about?"),
+  },
+  an_action_is_offered: {
+    wants: "yes",
+    question: noul("Is there at least one control here whose name says what pressing it will do?"),
+  },
+  empty_parts_say_why: {
+    wants: "yes",
+    question: noul("Does every empty list or missing figure on this screen say what would fill it?", {
+      true: "Each empty part explains what would put something there, or nothing on the screen is empty.",
+      false: "Something is empty and the screen does not say what would fill it.",
+    }),
+  },
+  a_stranger_could_use_it: {
+    wants: "yes",
+    question: noul("Could someone who has never seen Keyhop tell what to do on this screen without help?"),
+  },
+  clarity: {
+    wants: "score",
+    question: score("How easily could a first-time reader tell what this screen offers and act on it?", [
+      "Unreadable: the reader cannot tell what this is or do anything with it.",
+      "Confusing: the purpose is guessable, but the wording or order works against it.",
+      "Workable: understandable after a second read.",
+      "Clear: purpose and next step are obvious on the first read.",
+    ]),
+  },
+  weakest_part: {
+    wants: "nothing",
+    question: choice("Which part of this screen would confuse a first-time reader most?", {
+      headings: "The headings: what they name, or that they name the wrong thing.",
+      body: "The explaining text: too much, too little, or unclear.",
+      controls: "The buttons and links: what they do, or what they are called.",
+      nothing: "Nothing here would confuse a first-time reader.",
+    }),
+  },
 };
 
 /** A screen, trimmed to what Jev can judge: its own words and what it offers. */
 function stateFor(reading) {
+  const onSite = reading.target === "site" || reading.target === "account";
   return {
     screen: `${reading.target}/${reading.screen}`,
-    where: reading.target === "site" ? "a page on keyhop.app" : "a section of Keyhop's window on a Mac",
+    where: onSite
+      ? "a page on keyhop.app, the website for Keyhop, which switches between AI coding accounts you own"
+      : "a section of Keyhop's window, a Mac app that switches between AI coding accounts you own",
     title: reading.title,
-    description: reading.description,
     headings: reading.headings.map((h) => `h${h.level}: ${h.text}`),
     controls: [...new Set(reading.controls.map((c) => c.text).filter(Boolean))].slice(0, 40),
     text: reading.text.slice(0, 6000),
   };
 }
 
-/** True when an answer counts as passing, per question. */
-function passed(name, answer) {
+/** How an answer reads, and whether it is fine, a fault, or too close to call. */
+function verdict(wants, answer) {
   switch (answer.type) {
-    case "noul":
-      return answer.noul >= 0.6;
-    case "score":
-      return answer.score >= 2;
-    case "choice":
-      return answer.choice === "nothing";
+    case "noul": {
+      const [low, high] = UNSURE;
+      if (answer.noul > low && answer.noul < high) return { text: answer.noul.toFixed(2), passed: true, unsure: true };
+      const yes = answer.noul >= high;
+      return { text: answer.noul.toFixed(2), passed: wants === "yes" ? yes : !yes, unsure: false };
+    }
+    case "score": {
+      const unsure = (answer.confidence ?? 1) < CERTAIN;
+      return { text: `${answer.score}/3`, passed: unsure ? true : answer.score >= 2, unsure };
+    }
+    case "choice": {
+      const unsure = (answer.confidence ?? 1) < CERTAIN;
+      return { text: answer.choice, passed: unsure ? true : answer.choice === wants, unsure };
+    }
     default:
-      return true;
-  }
-}
-
-function describe(answer) {
-  switch (answer.type) {
-    case "noul":
-      return answer.noul.toFixed(2);
-    case "score":
-      return `${answer.score}/3`;
-    case "choice":
-      return answer.choice;
-    default:
-      return JSON.stringify(answer);
+      return { text: JSON.stringify(answer), passed: true, unsure: true };
   }
 }
 
@@ -117,34 +150,28 @@ export async function review(readings) {
     return [];
   }
   const client = new TypeSafeClient();
+  const questions = Object.fromEntries(Object.entries(QUESTIONS).map(([name, entry]) => [name, entry.question]));
   const judgements = [];
 
   for (const reading of readings) {
+    const screen = `${reading.target}/${reading.screen}`;
     let answers;
     try {
-      ({ answers } = await client.systemOne({ state: stateFor(reading), questions: QUESTIONS }));
+      ({ answers } = await client.systemOne({ state: stateFor(reading), questions }));
     } catch (error) {
-      judgements.push({
-        screen: `${reading.target}/${reading.screen}`,
-        question: "review",
-        answer: "not asked",
-        passed: true,
-        note: `Jev couldn't be reached: ${error.message}`,
-      });
+      judgements.push({ screen, question: "review", answer: "not asked", passed: true, note: `Jev couldn't be reached: ${error.message}` });
       continue;
     }
 
     for (const [name, answer] of Object.entries(answers)) {
-      // A choice or a score carries its own confidence; an unsure answer is reported as unsure
-      // rather than as a fault, because acting on a coin flip is worse than not acting.
-      const unsure = answer.confidence != null && answer.confidence < CERTAIN;
+      const { text, passed, unsure } = verdict(QUESTIONS[name].wants, answer);
       judgements.push({
-        screen: `${reading.target}/${reading.screen}`,
+        screen,
         question: name,
-        answer: describe(answer),
+        answer: text,
         confidence: answer.confidence ?? null,
-        passed: unsure ? true : passed(name, answer),
-        note: unsure ? "Jev wasn't sure enough to call it" : undefined,
+        passed,
+        note: unsure ? "too close to call" : undefined,
       });
     }
   }

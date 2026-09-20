@@ -273,7 +273,15 @@ async function seasonPage(c: C, season: string) {
             </div>
             <span class="mono muted">${tokens(mine?.tokens ?? 0)} this season</span>
           </section>`
-        : ""}
+        : html`<section class="card season-intro">
+            <p>A season runs for one calendar month. Keyhop on your computer sends how many tokens
+            each tool used that day, and your tier follows the total. Nothing about what you asked
+            or wrote is sent.</p>
+            <div class="row-actions">
+              <a class="btn sm" href="/login">Sign in with GitHub</a>
+              <a class="btn sm ghost" href="/download">Get Keyhop first</a>
+            </div>
+          </section>`}
       ${goals
         ? html`<section class="card">
             <div class="card-head"><h2>Quests</h2><span class="hint">Today and this week</span></div>

@@ -298,6 +298,8 @@ a.place-card:hover { border-color: var(--border-strong); }
 .page-cta b { font-size: 15px; font-weight: 610; }
 .page-cta span { color: var(--muted); font-size: 13px; }
 .legal-layout { padding-bottom: 40px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 86px; align-items: start; }
+.season-intro { display: grid; gap: 16px; padding: 20px; }
+.season-intro p { max-width: 640px; margin: 0; color: var(--muted); line-height: 1.7; }
 .legal-nav { position: sticky; top: 28px; display: grid; gap: 4px; }
 .legal-nav span { margin-bottom: 10px; color: var(--subtle); font-size: 12.5px; font-weight: 560; }
 .legal-nav a { padding: 7px 0; color: var(--muted); text-decoration: none; font-size: 12.5px; }

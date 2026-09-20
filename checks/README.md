@@ -73,8 +73,14 @@ Put it in `screens.mjs`. A screen needs a name and a path (website) or section (
 lists text that has to be there, and `expect.status` covers pages that aren't meant to answer 200.
 Everything in "What fails a run" then applies to it without another line of code.
 
-## What this does not cover
+## The screens that aren't web pages
 
-The menu bar panel and the iOS app are native, not web, so this harness cannot drive them. They are
-covered by `swift test`, `xcodebuild test`, and the snapshot images from
-`Keyhop --snapshot` and `scripts/ios-screenshots.sh`.
+The menu bar panel and the phone app are native, so this harness cannot drive them. They are
+covered where they live, and they reach the same review by a different road:
+
+- **The phone**: `xcodebuild test` runs `ios/UITests`, which drives every screen in a simulator and
+  writes down what each one said. `--review` picks those up from the simulator's own folder (or
+  from `KEYHOP_SCREEN_TEXT`) and puts them in front of Jev with everything else. A screen written
+  more than a day ago is ignored, because it no longer describes the app.
+- **The menu bar panel and the welcome window**: `swift test` renders them and reads the words back
+  off the pixels, so a label that goes missing or turns into a placeholder fails there.

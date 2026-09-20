@@ -142,7 +142,8 @@ export async function checkLinks(request, origin, hrefs) {
 }
 
 /** Controls nobody should click on a test run: they throw work away or sign someone out. */
-const LEAVE_ALONE = /remove|delete|unlink|sign out|log out|stop|quit|reset|install|update|add account|add \w+ account/i;
+const LEAVE_ALONE =
+  /remove|delete|unlink|sign out|log out|stop|quit|reset|install|update|add account|add \w+ account|private|public|revoke|leave|disband|transfer|regenerate|rename/i;
 
 /**
  * Presses every control a visitor could press and reports the ones that do nothing at all.
@@ -156,25 +157,43 @@ export async function pokeControls(page, screen) {
   const pressed = [];
   const handles = await page.$$("button:not([disabled]), summary, [role=button]:not([disabled])");
   for (const handle of handles) {
-    const label = (await handle.evaluate((el) => (el.getAttribute("aria-label") || el.textContent || "").trim().replace(/\s+/g, " "))).slice(0, 60);
-    if (!label || LEAVE_ALONE.test(label)) continue;
-    if (!(await handle.isVisible()) || !(await handle.isEnabled())) continue;
+    let label;
+    try {
+      // A press a moment ago may have taken the page elsewhere, which leaves this handle behind.
+      label = (await handle.evaluate((el) => (el.getAttribute("aria-label") || el.textContent || "").trim().replace(/\s+/g, " "))).slice(0, 60);
+      if (!label || LEAVE_ALONE.test(label)) continue;
+      if (!(await handle.isVisible()) || !(await handle.isEnabled())) continue;
+    } catch {
+      continue;
+    }
 
-    const before = await page.evaluate(() => ({
-      html: document.body.innerHTML.length + ":" + document.body.innerText.length,
-      url: location.href,
-    }));
+    let before;
+    try {
+      before = await page.evaluate(() => ({
+        html: document.body.innerHTML.length + ":" + document.body.innerText.length,
+        url: location.href,
+      }));
+    } catch {
+      continue;
+    }
     try {
       await handle.click({ timeout: 2000, noWaitAfter: true });
     } catch {
       continue; // Something covered it mid-run; that is not the control's fault.
     }
     await page.waitForTimeout(450);
-    const after = await page.evaluate(() => ({
-      html: document.body.innerHTML.length + ":" + document.body.innerText.length,
-      url: location.href,
-      said: document.querySelector("#toast:not(.away), [role=status]")?.textContent?.trim() ?? "",
-    }));
+    let after;
+    try {
+      after = await page.evaluate(() => ({
+        html: document.body.innerHTML.length + ":" + document.body.innerText.length,
+        url: location.href,
+        said: document.querySelector("#toast:not(.away), [role=status]")?.textContent?.trim() ?? "",
+      }));
+    } catch {
+      // The page went somewhere while being read, which is the loudest possible answer.
+      pressed.push(label);
+      continue;
+    }
     if (before.html === after.html && before.url === after.url && !after.said) {
       dead.push({ screen: screen.name, width: "laptop", kind: "dead-control", detail: `"${label}" does nothing when pressed` });
     }

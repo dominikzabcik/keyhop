@@ -30,8 +30,18 @@ export const SITE_SCREENS = [
   { name: "terms", path: "/terms", mustSay: ["Provider rules still apply"] },
   { name: "security", path: "/security", mustSay: ["Report problems privately."] },
   { name: "login", path: "/login", mustSay: ["GitHub"] },
-  { name: "profile", path: "/u/keyhop", expect: { status: [200, 404] } },
   { name: "missing", path: "/no-such-page", expect: { status: [404] } },
+];
+
+/** Pages that only exist once someone is signed in. The harness signs itself in to reach them. */
+export const ACCOUNT_SCREENS = [
+  { name: "profile", path: "/u/checks-visitor", mustSay: ["checks-visitor"] },
+  { name: "settings", path: "/settings", mustSay: ["Settings"] },
+  { name: "teams", path: "/teams", mustSay: ["Teams"] },
+  { name: "link", path: "/link", mustSay: [] },
+  { name: "welcome", path: "/welcome", mustSay: [] },
+  { name: "leaderboard-signed-in", path: "/leaderboard", mustSay: ["Leaderboard"] },
+  { name: "season-signed-in", path: "/season", mustSay: ["Season"] },
 ];
 
 /** The Mac window, served by `keyhop dashboard --sample`. Its sections live behind the hash. */

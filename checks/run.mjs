@@ -10,14 +10,16 @@
  * fail it on their own: a judgement is a second opinion, not a gate.
  */
 
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { chromium, request as playwrightRequest } from "playwright";
 
 import { checkLinks, faults, pokeControls, readScreen } from "./checks.mjs";
-import { APP_SCREENS, APP_WIDTHS, SITE_SCREENS, WIDTHS } from "./screens.mjs";
+import { ACCOUNT_SCREENS, APP_SCREENS, APP_WIDTHS, SITE_SCREENS, WIDTHS } from "./screens.mjs";
+import { signIn } from "./signin.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -55,8 +57,12 @@ function start(command, args, { cwd, ready, timeout = 120_000 }) {
   });
 }
 
-async function withPage(browser, size, visit) {
+async function withPage(browser, size, visit, cookie) {
   const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, deviceScaleFactor: 1 });
+  if (cookie) {
+    const { path, ...rest } = cookie; // Playwright takes a url or a path, not both.
+    await context.addCookies([rest]);
+  }
   const page = await context.newPage();
   const consoleErrors = [];
   page.on("console", (message) => {
@@ -71,7 +77,7 @@ async function withPage(browser, size, visit) {
 }
 
 /** Walks one target's screens at every width, saving a picture and a reading of each. */
-async function walk({ browser, origin, screens, open, label, widths = WIDTHS }) {
+async function walk({ browser, origin, screens, open, label, widths = WIDTHS, cookie }) {
   const found = [];
   const readings = [];
   for (const screen of screens) {
@@ -91,7 +97,7 @@ async function walk({ browser, origin, screens, open, label, widths = WIDTHS }) 
           pressed = poked.pressed;
         }
         return { reading, status, pressed };
-      });
+      }, cookie);
       if (size.name === "laptop") readings.push({ target: label, screen: screen.name, status, pressed, ...reading, shot });
     }
   }
@@ -99,6 +105,14 @@ async function walk({ browser, origin, screens, open, label, widths = WIDTHS }) 
 }
 
 async function checkSite(browser) {
+  // A machine that has never run the website locally has an empty database, and half its pages
+  // answer 500. The migrations are the website's own, applied to the local copy only.
+  console.log("Preparing the local database…");
+  await promisify(execFile)("npx", ["wrangler", "d1", "migrations", "apply", "switchr", "--local"], {
+    cwd: join(root, "cloud"),
+    env: process.env,
+  });
+
   console.log("Starting the website…");
   const { child } = await start("npx", ["wrangler", "dev", "--port", "8811", "--ip", "127.0.0.1"], {
     cwd: join(root, "cloud"),
@@ -124,6 +138,33 @@ async function checkSite(browser) {
         return response?.status() ?? null;
       },
     });
+
+    // The same walk again, this time as someone who is signed in, for the pages that need it.
+    console.log("Signing in to the local website…");
+    let cookie = null;
+    try {
+      cookie = { ...(await signIn(join(root, "cloud"))), url: origin };
+    } catch (error) {
+      result.found.push({ screen: "sign-in", width: "-", kind: "setup", detail: `couldn't sign in locally: ${error.message}` });
+    }
+    if (cookie) {
+      const signedIn = await walk({
+        browser,
+        origin,
+        screens: ACCOUNT_SCREENS,
+        label: "account",
+        cookie,
+        open: async (page, screen) => {
+          const response = await page.goto(origin + screen.path, { waitUntil: "networkidle" });
+          return response?.status() ?? null;
+        },
+      });
+      result.found.push(...signedIn.found);
+      result.readings.push(...signedIn.readings);
+      // Pressing things is the point, and some of them are settings. The visitor is put back the
+      // way it started before anything else reads the site.
+      await signIn(join(root, "cloud"));
+    }
 
     const api = await playwrightRequest.newContext();
     const hrefs = result.readings.flatMap((r) => r.controls.map((c) => c.href));

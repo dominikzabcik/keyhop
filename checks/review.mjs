@@ -108,12 +108,15 @@ const QUESTIONS = {
 
 /** A screen, trimmed to what Jev can judge: its own words and what it offers. */
 function stateFor(reading) {
-  const onSite = reading.target === "site" || reading.target === "account";
+  const where = {
+    site: "a page on keyhop.app, the website for Keyhop, which switches between AI coding accounts you own",
+    account: "a page on keyhop.app shown to someone who is signed in",
+    app: "a section of Keyhop's window, a Mac app that switches between AI coding accounts you own",
+    phone: "a screen of Keyhop's iPhone companion, which shows limits, seasons and standings read from a computer",
+  };
   return {
     screen: `${reading.target}/${reading.screen}`,
-    where: onSite
-      ? "a page on keyhop.app, the website for Keyhop, which switches between AI coding accounts you own"
-      : "a section of Keyhop's window, a Mac app that switches between AI coding accounts you own",
+    where: where[reading.target] ?? where.site,
     title: reading.title,
     headings: reading.headings.map((h) => `h${h.level}: ${h.text}`),
     controls: [...new Set(reading.controls.map((c) => c.text).filter(Boolean))].slice(0, 40),

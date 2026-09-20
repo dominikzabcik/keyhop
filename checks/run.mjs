@@ -12,7 +12,8 @@
  */
 
 import { execFile, spawn } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -223,6 +224,49 @@ async function checkApp(browser) {
   }
 }
 
+/**
+ * What the phone's screens said, last time its tests ran.
+ *
+ * The UI tests drive the phone in a simulator and write down what each screen showed. Reading
+ * those here puts the phone in front of Jev with the pages and the window, without a second run.
+ */
+async function phoneScreens() {
+  const folders = [];
+  if (process.env.KEYHOP_SCREEN_TEXT) folders.push(process.env.KEYHOP_SCREEN_TEXT);
+  const devices = join(homedir(), "Library/Developer/CoreSimulator/Devices");
+  try {
+    for (const device of await readdir(devices)) folders.push(join(devices, device, "data/keyhop-screens"));
+  } catch {}
+
+  const readings = [];
+  const seen = new Set();
+  for (const folder of folders) {
+    let files;
+    try {
+      files = await readdir(folder);
+    } catch {
+      continue;
+    }
+    for (const file of files.filter((name) => name.endsWith(".json"))) {
+      const when = (await stat(join(folder, file))).mtimeMs;
+      // A screen from a run days ago says nothing about the app as it stands now.
+      if (Date.now() - when > 24 * 60 * 60 * 1000 || seen.has(file)) continue;
+      seen.add(file);
+      const said = JSON.parse(await readFile(join(folder, file), "utf8"));
+      readings.push({
+        target: "phone",
+        screen: said.screen,
+        title: said.title,
+        headings: [],
+        controls: (said.controls ?? []).map((text) => ({ text })),
+        text: said.text ?? "",
+        pressed: [],
+      });
+    }
+  }
+  return readings;
+}
+
 /** The run as a page someone can read, saved beside the pictures. */
 function summary(found, judgements, readings) {
   const lines = [`# Every screen, ${new Date().toISOString().slice(0, 16).replace("T", " ")}`, ""];
@@ -276,6 +320,12 @@ async function main() {
     }
   } finally {
     await browser.close();
+  }
+
+  if (wanted.review) {
+    const phone = await phoneScreens();
+    if (phone.length) console.log(`Reading ${phone.length} screens the phone's tests wrote down…`);
+    readings.push(...phone);
   }
 
   let judgements = [];

@@ -25,6 +25,10 @@ final class ScreenTests: XCTestCase {
     }
 
     /// Saves what the screen offers, for the review that reads screens rather than looks at them.
+    ///
+    /// The picture and the tree are attached to the test run, and what the screen says is written
+    /// beside them as JSON, so the same questions asked of the website's pages can be asked of
+    /// these without anyone opening an xcresult bundle.
     private func record(_ name: String) {
         let tree = XCTAttachment(string: app.debugDescription)
         tree.name = "screen-\(name)"
@@ -34,6 +38,30 @@ final class ScreenTests: XCTestCase {
         shot.name = "screen-\(name)"
         shot.lifetime = .keepAlways
         add(shot)
+
+        let screen = app.frame
+        func texts(_ query: XCUIElementQuery) -> [String] {
+            query.allElementsBoundByIndex
+                .filter { $0.exists && screen.contains($0.frame) }
+                .map { $0.label.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        }
+        let said: [String: Any] = [
+            "screen": name,
+            "title": texts(app.navigationBars.staticTexts).first ?? name,
+            "text": texts(app.staticTexts).joined(separator: " · "),
+            "controls": Array(Set(texts(app.buttons) + texts(app.switches))).sorted(),
+        ]
+        guard let folder = ProcessInfo.processInfo.environment["KEYHOP_SCREEN_TEXT"] ?? defaultFolder,
+              let data = try? JSONSerialization.data(withJSONObject: said, options: [.prettyPrinted, .sortedKeys]) else { return }
+        try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
+        try? data.write(to: URL(fileURLWithPath: folder).appendingPathComponent("\(name).json"))
+    }
+
+    /// Where the screens are written when nothing says otherwise: beside the built app.
+    private var defaultFolder: String? {
+        guard let home = ProcessInfo.processInfo.environment["SIMULATOR_SHARED_RESOURCES_DIRECTORY"] else { return nil }
+        return URL(fileURLWithPath: home).appendingPathComponent("keyhop-screens").path
     }
 
     /// Every button and every image a screen shows has to say what it is, or a screen reader has

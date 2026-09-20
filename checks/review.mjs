@@ -163,8 +163,14 @@ export async function review(readings) {
       continue;
     }
 
+    // Which part is weakest is a forced choice between four: on a page that is mostly prose, the
+    // body wins whatever its quality. It is only worth raising about a screen that reads poorly,
+    // so the two answers are combined here rather than reported apart.
+    const readsPoorly = (answers.clarity?.score ?? 3) < 2.5;
+
     for (const [name, answer] of Object.entries(answers)) {
-      const { text, passed, unsure } = verdict(QUESTIONS[name].wants, answer);
+      let { text, passed, unsure } = verdict(QUESTIONS[name].wants, answer);
+      if (name === "weakest_part" && !readsPoorly) passed = true;
       judgements.push({
         screen,
         question: name,

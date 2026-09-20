@@ -291,6 +291,7 @@ export function landingPage(): Html {
     <section class="band faq">
       <h2>Before you hand over a login.</h2>
       <div class="faq-list">
+        <details><summary>What is Keyhop, exactly?</summary><p>A small app you install on your own computer: it sits in the menu bar or tray, and answers as the <code>keyhop</code> command. It holds the logins you already have for each AI coding tool, shows how much of each account's limit is left, and hands a tool a different one of your accounts when you ask, or when the one in use runs out.</p></details>
         <details><summary>Does Keyhop share accounts or add usage?</summary><p>No. Keyhop only switches between accounts you already own. It cannot increase a plan's limits, and every provider's terms still apply.</p></details>
         <details><summary>What exactly changes when I switch?</summary><p>Keyhop saves the login the tool is using, loads the one you chose, hands it to the tool through its normal credential path, and reads it back to confirm the switch.</p></details>
         <details><summary>Where are my provider tokens stored?</summary><p>In Login Keychain on macOS, Secret Service or private files on Linux, and DPAPI-encrypted files on Windows. Provider tokens are never sent to keyhop.app.</p></details>

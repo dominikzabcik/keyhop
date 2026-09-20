@@ -134,8 +134,10 @@ jobs:
 
       - name: Lint scripts and manifests
         run: |
-          brew install shellcheck
+          brew install shellcheck actionlint
           shellcheck install.sh scripts/*.sh packaging/linux/install-local.sh
+          # A workflow that doesn't parse is a workflow that silently doesn't run.
+          actionlint -shellcheck= .github/workflows/*.yml
           python3 -m py_compile packaging/linux/keyhop-tray scripts/render-manifests.py
           ruby -c Casks/keyhop.rb
 
@@ -151,6 +153,10 @@ jobs:
     name: Screens
     runs-on: macos-15
     timeout-minutes: 30
+    # Read here so a step can ask whether the key exists: `secrets` itself is not available to
+    # a step's `if`.
+    env:
+      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
     steps:
       - uses: actions/checkout@v7
 
@@ -180,11 +186,9 @@ jobs:
       # Jev reads what each screen says and answers typed questions about it. It runs only where
       # the key is configured, and never fails the build: a judgement is a second opinion.
       - name: Ask Jev about them
-        if: ${{ secrets.TYPESAFE_API_KEY != '' }}
+        if: ${{ env.TYPESAFE_API_KEY != '' }}
         continue-on-error: true
         working-directory: checks
-        env:
-          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: node run.mjs --site --app --review
 
       - uses: actions/upload-artifact@v7

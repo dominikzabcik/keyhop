@@ -73,12 +73,21 @@ async function withPage(browser, size, visit, cookie) {
   }
   const page = await context.newPage();
   const consoleErrors = [];
+  const failedRequests = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
   page.on("pageerror", (error) => consoleErrors.push(String(error)));
+  page.on("response", (response) => {
+    if (response.status() < 400) return;
+    failedRequests.push({
+      path: new URL(response.url()).pathname,
+      status: response.status(),
+      isDocument: response.request().resourceType() === "document",
+    });
+  });
   try {
-    return await visit(page, consoleErrors);
+    return await visit(page, consoleErrors, failedRequests);
   } finally {
     await context.close();
   }
@@ -91,12 +100,12 @@ async function walk({ browser, origin, screens, open, label, widths = WIDTHS, co
   for (const screen of screens) {
     for (const size of widths) {
       const shot = join(out, "screens", `${label}-${screen.name}-${size.name}.png`);
-      const { reading, status, pressed } = await withPage(browser, size, async (page, consoleErrors) => {
+      const { reading, status, pressed } = await withPage(browser, size, async (page, consoleErrors, failedRequests) => {
         const status = await open(page, screen);
         await page.waitForTimeout(700); // Let anything that animates settle before it is judged.
         const reading = await readScreen(page);
         await page.screenshot({ path: shot, fullPage: false });
-        found.push(...faults({ screen, width: size.name, reading, status, consoleErrors }));
+        found.push(...faults({ screen, width: size.name, reading, status, consoleErrors, failedRequests }));
         // One width is enough to learn whether the controls answer at all.
         let pressed = [];
         if (size.name === "laptop" && screen.expect?.status?.includes(404) !== true) {

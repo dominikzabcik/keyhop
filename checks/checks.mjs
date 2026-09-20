@@ -83,18 +83,26 @@ export async function readScreen(page) {
 }
 
 /** Turns a reading into the problems it shows. Every entry here is something a person would call a bug. */
-export function faults({ screen, width, reading, status, consoleErrors }) {
+export function faults({ screen, width, reading, status, consoleErrors, failedRequests }) {
   const found = [];
   const fault = (kind, detail) => found.push({ screen: screen.name, width, kind, detail });
 
   const wanted = screen.expect?.status ?? [200];
   if (status != null && !wanted.includes(status)) fault("status", `answered ${status}, expected ${wanted.join(" or ")}`);
 
+  // A browser logs one of these for every request that fails, which the requests below already
+  // cover with the address attached. What is left here is the page's own errors.
   for (const message of consoleErrors) {
-    // A page that is meant to answer 404 logs its own status; that is the test passing, not a fault.
-    const echoed = message.match(/Failed to load resource.*status of (\d+)/);
-    if (echoed && wanted.includes(Number(echoed[1]))) continue;
+    if (message.startsWith("Failed to load resource")) continue;
     fault("console", message.slice(0, 200));
+  }
+
+  for (const request of failedRequests ?? []) {
+    if (request.isDocument && wanted.includes(request.status)) continue;
+    // Some requests are allowed to fail: an update check needs GitHub, and a machine without it
+    // still has to show the page, which is what the screen says here.
+    if ((screen.mayFail ?? []).some((path) => request.path.startsWith(path))) continue;
+    fault("request", `${request.path} answered ${request.status}`);
   }
 
   for (const phrase of screen.mustSay ?? []) {

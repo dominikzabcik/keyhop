@@ -51,7 +51,9 @@ export const APP_SCREENS = [
   { name: "usage", section: "usage", mustSay: ["Tokens"] },
   { name: "budgets", section: "budgets", mustSay: ["Budget"] },
   { name: "leaderboard", section: "leaderboard", mustSay: [] },
-  { name: "settings", section: "settings", mustSay: ["Updates", "Storage and privacy"] },
+  // Asking GitHub for the latest release needs the network. A machine without it still has to
+  // show Settings, and say that the check failed rather than showing nothing.
+  { name: "settings", section: "settings", mustSay: ["Updates", "Storage and privacy"], mayFail: ["/api/update"] },
 ];
 
 /**

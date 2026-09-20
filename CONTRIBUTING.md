@@ -5,8 +5,17 @@ Keyhop is a small personal project, but issues and pull requests are welcome.
 ## Build and test
 
 ```bash
-swift test      # unit tests, on macOS, Linux and Windows
+swift test      # unit tests, plus the menu read back off its own pixels, on macOS, Linux and Windows
 swift build     # debug build
+```
+
+Every screen is walked by `checks/`: each page of the website and each section of Keyhop's window at
+three widths, every control pressed, and every reading command run. See `checks/README.md`.
+
+```bash
+cd checks && npm install && npx playwright install chromium
+node run.mjs            # the website, the window and the commands
+node run.mjs --review   # and ask Jev what it thinks of what each screen says
 ```
 
 | System | Needs | Packages |
@@ -54,7 +63,9 @@ With `--status-file sample.json`, the real trays show that data without running 
 | `packaging/windows`, `packaging/icons` | The Windows icon and the app icon at every size |
 | `Casks`, `bucket` | The Homebrew cask and the Scoop manifest |
 | `scripts` | Build, packaging, art, pricing table and disk image settings |
-| `Tests/KeyhopTests` | Unit tests |
+| `Tests/KeyhopTests` | Unit tests, and the menu bar panel read back off its own pixels |
+| `checks/` | Every screen walked in a browser, every command run, and Jev's read on what they say |
+| `ios/UITests` | The phone's screens, driven in a simulator |
 
 The Linux and Windows trays only talk to `keyhop ... --json`. When you change a JSON document in `Sources/Keyhop/CLI/Reports.swift`, add fields rather than renaming them, or update both trays in the same change.
 

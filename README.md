@@ -223,6 +223,7 @@ Keyhop updates from this repository's releases. A release without a checksum, or
 There's no analytics and no telemetry. Keyhop's network requests are:
 
 - **Limits:** supported providers' usage endpoints, called with that account's own token: `api.anthropic.com`, `chatgpt.com`, `cursor.com`, `api.github.com` for Copilot and `codebuff.com`. Windsurf limits come from its local active-profile cache.
+- **Telling one profile from another:** an Anthropic sign-in inside OpenCode or Pi is nothing but tokens that rotate, so Keyhop asks `api.anthropic.com` which account that token belongs to, with the token itself. Without it, one account would turn into a new saved profile every few hours.
 - **Token refresh:** for accounts that aren't in use, the providers' own sign-in services: `platform.claude.com` and `auth.openai.com`.
 - **Cursor usage export:** `cursor.com`, per saved Cursor account.
 - **Updates:** `api.github.com` and `github.com`, for release information and downloads.

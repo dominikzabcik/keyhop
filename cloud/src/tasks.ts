@@ -12,9 +12,9 @@ import type { WorkCommit } from "./work";
  * together they landed. That means it is the same for everyone looking at the same day, it costs
  * nothing, it works offline, and it can never invent work that didn't happen.
  *
- * Jev could sharpen the edges later. It answers typed questions with numbers, so the question it
- * would be asked is "do these two belong to the same task", one pair at a time, to merge or split
- * what is grouped below. It cannot write the report, and nothing here waits on it.
+ * Jev can sharpen the edges later, through `sharpen`: it is asked "do these two belong to the
+ * same task", one pair at a time, and those answers merge or split what is grouped below. It
+ * cannot write a title, and nothing here waits on it. The page always shows the grouping below.
  */
 
 export interface Task {
@@ -217,20 +217,66 @@ export function tasksFor(repo: string, commits: WorkCommit[]): Task[] {
   }
 
   return groups
-    .map((group) => {
-      const times = group.map((entry) => entry.commit.at);
-      return {
-        title: titleFor(group),
-        repos: [repo],
-        commits: group.map((entry) => ({ ...entry.commit, repo })).sort((a, b) => b.at - a.at),
-        insertions: group.reduce((sum, entry) => sum + entry.commit.insertions, 0),
-        deletions: group.reduce((sum, entry) => sum + entry.commit.deletions, 0),
-        from: Math.min(...times),
-        to: Math.max(...times),
-        offset: group[0].commit.offset,
-      };
-    })
+    .map((group) => taskFrom(group.map((entry) => ({ ...entry.commit, repo }))))
     .sort((a, b) => b.commits.length - a.commits.length || b.to - a.to);
+}
+
+function parseCommit(commit: WorkCommit): Parsed {
+  const { scope, body } = parseSubject(commit.subject);
+  return { commit, scope, body, tokens: tokenize(`${scope} ${body}`) };
+}
+
+/** Rebuilds a task from its commits, titles included, so a merge or a split never invents wording. */
+function taskFrom(commits: (WorkCommit & { repo: string })[]): Task {
+  const parsed = commits.map(parseCommit);
+  const times = commits.map((entry) => entry.at);
+  const repos: string[] = [];
+  for (const entry of commits) if (!repos.includes(entry.repo)) repos.push(entry.repo);
+  return {
+    title: titleFor(parsed),
+    repos,
+    commits: [...commits].sort((a, b) => b.at - a.at),
+    insertions: commits.reduce((sum, entry) => sum + entry.insertions, 0),
+    deletions: commits.reduce((sum, entry) => sum + entry.deletions, 0),
+    from: Math.min(...times),
+    to: Math.max(...times),
+    offset: commits[0].offset,
+  };
+}
+
+const oldest = (task: Task) => [...task.commits].sort((a, b) => a.at - b.at)[0];
+const newest = (task: Task) => [...task.commits].sort((a, b) => b.at - a.at)[0];
+
+/**
+ * Applies pairwise same/different answers to a heuristic grouping.
+ *
+ * Neighbouring commits inside a task whose subjects are not the same work are split apart.
+ * Neighbouring tasks whose subjects are the same work are joined. Titles stay taken from the
+ * commits. The day page never calls this: a caller that has no answers leaves the grouping as-is.
+ */
+export function sharpen(tasks: Task[], same: (left: string, right: string) => boolean): Task[] {
+  if (tasks.length === 0) return [];
+  const split: Task[] = [];
+  for (const task of tasks) {
+    const ordered = [...task.commits].sort((a, b) => a.at - b.at);
+    let bucket = [ordered[0]];
+    for (let i = 1; i < ordered.length; i++) {
+      if (same(ordered[i - 1].subject, ordered[i].subject)) bucket.push(ordered[i]);
+      else {
+        split.push(taskFrom(bucket));
+        bucket = [ordered[i]];
+      }
+    }
+    split.push(taskFrom(bucket));
+  }
+  split.sort((a, b) => a.from - b.from || a.to - b.to);
+  const joined: Task[] = [];
+  for (const piece of split) {
+    const prev = joined[joined.length - 1];
+    if (prev && same(newest(prev).subject, oldest(piece).subject)) joined[joined.length - 1] = taskFrom([...prev.commits, ...piece.commits]);
+    else joined.push(piece);
+  }
+  return joined.sort((a, b) => b.commits.length - a.commits.length || b.to - a.to);
 }
 
 /**

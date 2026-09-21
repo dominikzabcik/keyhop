@@ -96,6 +96,7 @@ struct DBRow {
 
     func int(_ column: Int32) -> Int64 { sqlite3_column_int64(statement, column) }
     func double(_ column: Int32) -> Double { sqlite3_column_double(statement, column) }
+    func isNull(_ column: Int32) -> Bool { sqlite3_column_type(statement, column) == SQLITE_NULL }
     func text(_ column: Int32) -> String? { sqlite3_column_text(statement, column).map { String(cString: $0) } }
     func data(_ column: Int32) -> Data? {
         guard sqlite3_column_type(statement, column) != SQLITE_NULL,

@@ -102,6 +102,7 @@ keyhop switch work@studio.dev          move a tool to a saved account (email, na
 keyhop add cursor                      sign Cursor out here and save the next login
 keyhop rename work@studio.dev Work     give an account a name
 keyhop usage --range 30d --tool claude tokens and API value by account, model, maker and project
+keyhop usage --range 2026-06-01..2026-08-31  any days; also 90d, 12m and all
 keyhop dashboard                       open Keyhop's window: accounts, usage, budgets, settings
 keyhop insights --output usage.html    save the dashboard as one file you can share or keep
 keyhop budget set all 200 --period month

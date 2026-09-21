@@ -68,7 +68,8 @@ enum MCPServer {
             title: "Keyhop usage",
             description: "Read cached local token, request and API-value history for a time range, grouped by tool, account, model, model maker and project folder. This never reads prompts or source code.",
             properties: [
-                "range": ["type": "string", "enum": ["today", "week", "month", "30d"], "default": "week"],
+                "range": ["type": "string", "default": "week",
+                          "description": "today, week, month, 30d, 90d, 12m, all, or two dates as 2026-01-01..2026-03-31"],
                 "tool": ["type": "string", "enum": Provider.allCases.map(\.rawValue)],
             ]
         ),
@@ -108,8 +109,11 @@ enum MCPServer {
             return try result(StatusDocument(try await Commands.currentOverview(workspace)))
         case "keyhop_usage":
             let word = arguments["range"] as? String ?? "week"
-            guard let range = InsightsRange(argument: word) else { throw UsageError("range must be today, week, month or 30d") }
+            guard let asked = InsightsRange(argument: word) else {
+                throw UsageError("range must be today, week, month, 30d, 90d, 12m, all, or dates as 2026-01-01..2026-03-31")
+            }
             let provider = try provider(in: arguments)
+            let range = asked.resolved(firstUse: try await workspace.tracker.firstUse(provider: provider))
             let now = Date()
             let sole = await workspace.service.soleAccounts
             let digest = try await workspace.tracker.digest(interval: range.interval(now: now), previous: range.previous(now: now),

@@ -451,6 +451,10 @@ struct DashboardUsage: Encodable {
     let end: Date
     let total: Figures
     let previous: Figures
+    /// Whether `previous` is a real period to compare with; everything since the start has none.
+    let compared: Bool
+    /// For everything since the start, the first day Keyhop has usage for.
+    let since: Date?
     let series: [Series]
     let buckets: [Bucket]
     let toolSeries: [Series]
@@ -481,18 +485,20 @@ struct DashboardUsage: Encodable {
         let interval = range.interval(now: now)
         self.range = range.argument
         title = range.title
-        bucket = range.bucket == .hour ? "hour" : "day"
+        bucket = range.bucket.name
         self.tool = tool?.rawValue ?? "all"
         start = interval.start
         end = interval.end
         total = Figures(digest.total)
         previous = Figures(digest.previous)
+        compared = range.hasPrevious
+        since = range.since
 
         let calendar = Calendar.current
         let keyFormat = DateFormatter()
         keyFormat.locale = Locale(identifier: "en_US_POSIX")
         keyFormat.dateFormat = range.bucket.dateFormat
-        let component: Calendar.Component = range.bucket == .hour ? .hour : .day
+        let component = range.bucket.component
 
         let accountChart = Self.chart(points: digest.points, interval: interval, format: keyFormat, calendar: calendar,
                                       component: component) { Self.series(for: $0.key, accounts: accounts) }
@@ -820,8 +826,9 @@ actor DashboardSession {
                               cloud: cloudStatus(), work: workStatus(), appearance: currentAppearance())
     }
 
-    func usage(range: InsightsRange, tool: Provider?, readLogs: Bool) async throws -> DashboardUsage {
+    func usage(range asked: InsightsRange, tool: Provider?, readLogs: Bool) async throws -> DashboardUsage {
         let now = Date()
+        var range = asked
         let heat = DashboardUsage.heatmapInterval(now: now)
         if sample {
             if readLogs, lastIngest == nil, !refreshing {
@@ -834,6 +841,8 @@ actor DashboardSession {
             }
             let everyone = SampleData.accounts(now: now)
             let accounts = everyone.filter { tool == nil || $0.provider == tool }
+            // Sample history reaches back a little over a year.
+            range = asked.resolved(firstUse: now.addingTimeInterval(-400 * 86_400))
             let digest = SampleData.digest(range: range, accounts: accounts, now: now)
             return DashboardUsage(range: range, tool: tool, now: now, digest: digest,
                                   daily: SampleData.digest(interval: heat, bucket: .day, accounts: accounts, now: now),
@@ -848,6 +857,7 @@ actor DashboardSession {
             _ = try await workspace.tracker.ingestLocalLogs(progress: reporting ? progress.handler : nil)
             lastIngest = now
         }
+        range = asked.resolved(firstUse: try await workspace.tracker.firstUse(provider: tool))
         let sole = await workspace.service.soleAccounts
         let digest = try await workspace.tracker.digest(interval: range.interval(now: now), previous: range.previous(now: now),
                                                         bucket: range.bucket, provider: tool, sole: sole)
@@ -860,7 +870,7 @@ actor DashboardSession {
 
     func bootDocument(readLogs: Bool) async throws -> DashboardBoot {
         var ranges: [String: DashboardUsage] = [:]
-        for range in InsightsRange.allCases {
+        for range in InsightsRange.presets + [.all(since: nil)] {
             ranges[range.argument] = try await usage(range: range, tool: nil, readLogs: readLogs && range == .today)
         }
         let current = try await state(allowRefresh: false)

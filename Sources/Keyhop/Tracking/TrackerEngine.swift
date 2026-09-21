@@ -373,11 +373,11 @@ actor TrackerEngine {
         var points: [String: (start: Date, key: AccountKey, model: String, totals: Totals)] = [:]
         let providerFilter: SQL = provider.map { .text($0.rawValue) } ?? .null
         try db.query("""
-            SELECT e.provider, \(Self.accountColumn), e.model, strftime(?1, e.ts, 'unixepoch', 'localtime'), \(Self.sums)
+            SELECT e.provider, \(Self.accountColumn), e.model, \(bucket.sqliteLabel("e.ts")), \(Self.sums)
             FROM events e
-            WHERE e.ts >= ?2 AND e.ts < ?3 AND (?4 IS NULL OR e.provider = ?4) AND \(Self.notDoubleCounted)
+            WHERE e.ts >= ?1 AND e.ts < ?2 AND (?3 IS NULL OR e.provider = ?3) AND \(Self.notDoubleCounted)
             GROUP BY 1, 2, 3, 4
-            """, [.text(bucket.sqliteFormat), .real(interval.start.timeIntervalSince1970), .real(interval.end.timeIntervalSince1970), providerFilter]) { row in
+            """, [.real(interval.start.timeIntervalSince1970), .real(interval.end.timeIntervalSince1970), providerFilter]) { row in
             guard let provider = Provider(rawValue: row.text(0) ?? ""), let label = row.text(3), let start = parser.date(from: label) else { return }
             let account = row.text(1).flatMap { UUID(uuidString: $0) } ?? sole[provider]
             let key = AccountKey(provider: provider, account: account)
@@ -415,6 +415,16 @@ actor TrackerEngine {
 
     /// Named sessions in the range, newest last activity first. Requests the tool never labelled
     /// as a session are left out, so the list is conversations rather than every single response.
+    /// When the first usage Keyhop has on record happened, for everything since the start.
+    func firstUse(provider: Provider?) throws -> Date? {
+        var first: Date?
+        try db.query("SELECT MIN(ts) FROM events WHERE (?1 IS NULL OR provider = ?1)",
+                     [provider.map { .text($0.rawValue) } ?? .null]) { row in
+            if !row.isNull(0) { first = Date(timeIntervalSince1970: row.double(0)) }
+        }
+        return first
+    }
+
     func sessions(in interval: DateInterval, provider: Provider?, sole: [Provider: UUID], limit: Int = 40) throws -> [UsageDigest.Session] {
         var sessions: [UsageDigest.Session] = []
         let providerFilter: SQL = provider.map { .text($0.rawValue) } ?? .null

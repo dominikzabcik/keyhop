@@ -59,10 +59,52 @@ struct UsageRecord {
 }
 
 enum Bucket {
-    case hour, day
+    case hour, day, week, month
 
-    var sqliteFormat: String { self == .hour ? "%Y-%m-%d %H" : "%Y-%m-%d" }
+    /// The SQLite expression giving the start of an event's bucket, in the same form as
+    /// `dateFormat`. Weeks start on Monday: `weekday 0` moves to the coming Sunday (or stays on
+    /// one), and six days back from it is that week's Monday.
+    func sqliteLabel(_ column: String) -> String {
+        switch self {
+        case .hour: "strftime('%Y-%m-%d %H', \(column), 'unixepoch', 'localtime')"
+        case .day: "strftime('%Y-%m-%d', \(column), 'unixepoch', 'localtime')"
+        case .week: "date(\(column), 'unixepoch', 'localtime', 'weekday 0', '-6 days')"
+        case .month: "strftime('%Y-%m-01', \(column), 'unixepoch', 'localtime')"
+        }
+    }
+
     var dateFormat: String { self == .hour ? "yyyy-MM-dd HH" : "yyyy-MM-dd" }
+
+    var component: Calendar.Component {
+        switch self {
+        case .hour: .hour
+        case .day: .day
+        case .week: .weekOfYear
+        case .month: .month
+        }
+    }
+
+    /// The word the window uses for it.
+    var name: String {
+        switch self {
+        case .hour: "hour"
+        case .day: "day"
+        case .week: "week"
+        case .month: "month"
+        }
+    }
+
+    /// Where the bucket holding `date` begins.
+    func start(of date: Date) -> Date {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2
+        switch self {
+        case .hour: return calendar.dateInterval(of: .hour, for: date)?.start ?? date
+        case .day: return calendar.startOfDay(for: date)
+        case .week: return calendar.dateInterval(of: .weekOfYear, for: date)?.start ?? calendar.startOfDay(for: date)
+        case .month: return calendar.dateInterval(of: .month, for: date)?.start ?? calendar.startOfDay(for: date)
+        }
+    }
 }
 
 struct AccountKey: Hashable {

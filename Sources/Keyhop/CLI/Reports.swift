@@ -253,7 +253,7 @@ struct UsageDocument: Encodable {
         let interval = range.interval(now: now)
         self.range = range.argument
         title = range.title
-        bucket = range.bucket == .hour ? "hour" : "day"
+        bucket = range.bucket.name
         start = interval.start
         end = interval.end
         total = SpendDocument(digest.total)
@@ -390,7 +390,10 @@ enum Reports {
         let before = Double(digest.previous.tokens.total)
         if before > 0 {
             let change = Int(((Double(digest.total.tokens.total) - before) / before * 100).rounded())
-            headline += change == 0 ? " (same as the period before)" : " (\(abs(change))% \(change > 0 ? "more" : "fewer") tokens than the period before)"
+            // Past ten times as much, a percentage stops meaning anything.
+            headline += change == 0 ? " (same as the period before)"
+                : change >= 900 ? " (\(Int((Double(digest.total.tokens.total) / before).rounded()))× the tokens of the period before)"
+                : " (\(abs(change))% \(change > 0 ? "more" : "fewer") tokens than the period before)"
         }
         lines.append(headline)
         if digest.total.billed > 0 { lines.append("Billed on demand: \(Numbers.usd(digest.total.billed))") }

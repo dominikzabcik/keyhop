@@ -323,8 +323,8 @@ enum Commands {
         let json = args.flag("--json")
         let skipLogs = args.flag("--no-read")
         let word = try args.option("--range") ?? "week"
-        guard let range = InsightsRange(argument: word) else {
-            throw UsageError("Unknown range '\(word)'. Use today, week, month or 30d.")
+        guard let asked = InsightsRange(argument: word) else {
+            throw UsageError("Unknown range '\(word)'. Use today, week, month, 30d, 90d, 12m, all, or dates as 2026-01-01..2026-03-31.")
         }
         let tool = try toolOption(&args)
         try args.finish()
@@ -336,6 +336,7 @@ enum Commands {
             try await workspace.tracker.ingestLocalLogs(progress: terminal.handler)
         }
         let now = Date()
+        let range = asked.resolved(firstUse: try await workspace.tracker.firstUse(provider: tool))
         let sole = await workspace.service.soleAccounts
         let digest = try await workspace.tracker.digest(interval: range.interval(now: now), previous: range.previous(now: now),
                                                         bucket: range.bucket, provider: tool, sole: sole)

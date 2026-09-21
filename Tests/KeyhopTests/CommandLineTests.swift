@@ -38,7 +38,8 @@ final class ArgumentsTests: XCTestCase {
     func testRangeWords() {
         XCTAssertEqual(InsightsRange(argument: "30d"), .thirtyDays)
         XCTAssertEqual(InsightsRange(argument: "Week"), .week)
-        XCTAssertNil(InsightsRange(argument: "year"))
+        XCTAssertEqual(InsightsRange(argument: "year"), .year)
+        XCTAssertNil(InsightsRange(argument: "decade"))
     }
 
     func testAccountsResolveByEmailNameOrIDPrefix() throws {
@@ -153,7 +154,7 @@ final class TrayContractTests: XCTestCase {
     func testSampleDataFillsEveryRangeWithoutRealLogins() {
         let now = Date()
         let accounts = SampleData.accounts(now: now)
-        for range in InsightsRange.allCases {
+        for range in InsightsRange.presets + [.all(since: now.addingTimeInterval(-400 * 86_400))] {
             XCTAssertGreaterThan(SampleData.digest(range: range, accounts: accounts, now: now).total.requests, 0, range.title)
         }
         XCTAssertEqual(Set(accounts.map(\.provider)), Set(Provider.allCases))
@@ -166,7 +167,7 @@ final class TrayContractTests: XCTestCase {
 
     func testSampleDataIsNeverEmptyEarlyInTheDay() {
         let justAfterMidnight = Calendar.current.startOfDay(for: Date()).addingTimeInterval(5 * 60)
-        for range in InsightsRange.allCases {
+        for range in InsightsRange.presets {
             let digest = SampleData.digest(range: range, accounts: SampleData.accounts(), now: justAfterMidnight)
             XCTAssertGreaterThan(digest.total.requests, 0, range.title)
         }
@@ -345,7 +346,7 @@ final class DashboardTests: XCTestCase {
 
     func testStaticSampleExportHasEveryRange() async throws {
         let page = try await Dashboard.staticPage(sample: true, readLogs: false)
-        for range in InsightsRange.allCases {
+        for range in InsightsRange.presets + [.all(since: nil)] {
             XCTAssertTrue(page.contains(#""range":"\#(range.argument)""#), range.argument)
         }
         XCTAssertTrue(page.contains(#""mode":"static""#))

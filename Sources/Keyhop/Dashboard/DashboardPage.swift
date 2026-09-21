@@ -120,7 +120,7 @@ button, input, select { font: inherit; color: inherit; }
    only, so it stays smooth. */
 .backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; transition: opacity .4s ease; }
 .backdrop.scoped-out { opacity: 0 !important; }
-.topbar { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 52px; padding: 0 24px; border-bottom: 1px solid var(--border); flex: none; }
+.topbar { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; padding: 10px 24px; border-bottom: 1px solid var(--border); flex: none; }
 /* Nothing scrolls under the top bar, so over the Field it simply gets out of the way. */
 .has-backdrop .topbar { background: transparent; border-bottom-color: transparent; }
 .topbar h1 { margin: 0; font-size: 15px; font-weight: 620; }
@@ -209,6 +209,20 @@ a.btn { text-decoration: none; }
 select.field { appearance: none; padding-right: 28px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 15px) 14px, calc(100% - 11px) 14px; background-size: 4px 4px; background-repeat: no-repeat; }
 select.field option { background: var(--raised); }
 .toolbar select.field { width: auto; height: 32px; }
+.range-pick { position: relative; }
+.range-button { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px 0 12px; border-radius: 7px; border: 1px solid var(--border-strong); background: var(--raised); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 560; cursor: pointer; white-space: nowrap; }
+.range-button:hover { border-color: hsl(0 0% 100% / .22); }
+.range-button svg { width: 10px; height: 10px; color: var(--muted); transition: transform .16s ease; }
+.range-button[aria-expanded="true"] svg { transform: rotate(180deg); }
+.range-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: 268px; padding: 6px; border-radius: 10px; border: 1px solid var(--border-strong); background: hsl(0 0% 12.5%); box-shadow: 0 8px 20px -10px rgba(0, 0, 0, .6); }
+.range-list { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.range-list button { height: 30px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer; }
+.range-list button:hover { color: var(--text); background: hsl(0 0% 100% / .05); }
+.range-list button[aria-checked="true"] { color: var(--text); background: hsl(0 0% 100% / .1); font-weight: 560; }
+.range-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; padding: 10px 4px 4px; border-top: 1px solid var(--border); }
+.range-dates label { display: grid; gap: 4px; font-size: 11.5px; color: var(--muted); }
+.range-dates .field { height: 30px; padding: 0 8px; font-size: 12.5px; color-scheme: dark; }
+.range-dates .btn { grid-column: 1 / -1; justify-content: center; }
 
 .progress { position: relative; height: 6px; border-radius: 99px; background: var(--faint); overflow: visible; }
 .progress > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: var(--text); transition: width .5s ease; }
@@ -472,7 +486,7 @@ select.field option { background: var(--raised); }
   const wanted = params.get("s") || location.hash.slice(1);
   const ui = {
     section: SECTIONS.includes(wanted) ? wanted : (boot?.section || "overview"),
-    range: "week", metric: "tokens", tool: "all", group: "account",
+    range: "week", rangeOpen: false, metric: "tokens", tool: "all", group: "account",
     boardPeriod: "week", boardMetric: "tokens", boardTeam: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
     pending: new Map(), loadingUsage: 0,
@@ -511,6 +525,8 @@ select.field option { background: var(--raised); }
     change(now, before) {
       if (!before) return "";
       const pct = Math.round(((now - before) / before) * 100);
+      // Past ten times as much, a percentage stops meaning anything.
+      if (pct >= 900) return `<span class="mono up">${Math.round(now / before)}×</span>`;
       return pct === 0 ? `<span class="mono subtle">0%</span>` : `<span class="mono ${pct > 0 ? "up" : "down"}">${pct > 0 ? "+" : ""}${pct}%</span>`;
     },
   };
@@ -948,7 +964,7 @@ select.field option { background: var(--raised); }
   // MARK: Usage
 
   function usagePage(tools) {
-    const toolbar = tabs("range", [["today", "Today"], ["week", "7 days"], ["month", "Month"], ["30d", "30 days"]], ui.range)
+    const toolbar = rangePicker(data.usage[`${ui.range}:${ui.tool}`])
       + tabs("metric", [["tokens", "Tokens"], ["cost", "API value"]], ui.metric)
       + tabs("group", [["account", "By account"], ["tool", "By tool"], ["model", "By model"]], ui.group)
       + `<select class="field" data-action="tool" aria-label="Tool" ${isStatic ? "disabled" : ""}>${[["all", "All tools"], ...tools.map((t) => [t.id, t.name])].map(([v, l]) => `<option value="${v}" ${v === ui.tool ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`
@@ -959,7 +975,7 @@ select.field option { background: var(--raised); }
     const t = usage.total, p = usage.previous;
     const inputSide = t.input + t.cacheRead + t.cacheWrite + (t.cacheWrite1h || 0);
     const stats = `<div class="stats">
-      <div class="card stat"><div class="label">Tokens ${fmt.change(t.tokens, p.tokens)}</div><div class="value">${fmt.tokens(t.tokens)}</div><div class="foot">vs ${fmt.tokens(p.tokens)} the period before</div></div>
+      <div class="card stat"><div class="label">Tokens ${fmt.change(t.tokens, p.tokens)}</div><div class="value">${fmt.tokens(t.tokens)}</div><div class="foot">${usage.compared === false ? `Since ${esc(fmt.day(usage.since || usage.start, { month: "short", day: "numeric", year: "numeric" }))}` : `vs ${fmt.tokens(p.tokens)} the period before`}</div></div>
       <div class="card stat"><div class="label">API value ${fmt.change(t.cost, p.cost)}</div><div class="value">${fmt.usd(t.cost)}</div><div class="foot">${t.billed > 0 ? `${fmt.usd(t.billed)} billed on demand` : "At standard API prices"}</div></div>
       <div class="card stat"><div class="label">Requests</div><div class="value">${fmt.count(t.requests)}</div><div class="foot">${t.requests ? `${fmt.tokens(t.tokens / t.requests)} tokens per request` : "None yet"}</div></div>
       <div class="card stat"><div class="label">From cache</div><div class="value">${inputSide ? Math.round((t.cacheRead / inputSide) * 100) : 0}%</div><div class="foot">of input was cached context</div></div>
@@ -995,6 +1011,27 @@ select.field option { background: var(--raised); }
     return { toolbar, body: `${stats}${chart}<div class="split wide-left">${heat}${mix}</div><div class="split">${toolsCard}${models}</div>${makers && projects ? `<div class="split">${makers}${projects}</div>` : makers + projects}${accounts}${sessions}` };
   }
 
+  // One button for the range, opening the fixed ranges and a pair of dates. Tabs for seven ranges
+  // plus dates would crowd everything else out of the toolbar.
+  const RANGES = [["today", "Today"], ["week", "7 days"], ["month", "This month"], ["30d", "30 days"], ["90d", "90 days"], ["12m", "12 months"], ["all", "All time"]];
+  const localDay = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  function rangePicker(usage) {
+    const preset = RANGES.find(([value]) => value === ui.range);
+    const label = preset ? preset[1] : usage?.title || "Chosen dates";
+    const today = localDay(new Date());
+    const [from, to] = ui.range.includes("..") ? ui.range.split("..") : [usage ? localDay(new Date(usage.start)) : today, today];
+    const offered = RANGES.filter(([value]) => !isStatic || data.usage[`${value}:all`]);
+    const menu = ui.rangeOpen ? `<div class="range-menu">
+      <div class="range-list" role="group" aria-label="Range">${offered.map(([value, name]) => `<button type="button" data-action="range" data-value="${value}" aria-checked="${value === ui.range}" role="menuitemradio">${esc(name)}</button>`).join("")}</div>
+      ${isStatic ? "" : `<form class="range-dates" data-form="range">
+        <label>From<input class="field" type="date" name="from" value="${esc(from)}" max="${today}" required></label>
+        <label>To<input class="field" type="date" name="to" value="${esc(to)}" max="${today}" required></label>
+        <button class="btn sm secondary">Show these days</button>
+      </form>`}
+    </div>` : "";
+    return `<div class="range-pick"><button type="button" class="range-button" data-action="range-menu" aria-haspopup="true" aria-expanded="${ui.rangeOpen}">${esc(label)}<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.6 5 6.6 8 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>${menu}</div>`;
+  }
+
   function niceCeiling(value) {
     if (value <= 0) return 1;
     const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
@@ -1028,7 +1065,14 @@ select.field option { background: var(--raised); }
     const slot = pw / Math.max(1, buckets.length);
     const bw = Math.max(3, Math.min(slot * 0.58, 30));
     const label = (v) => (metric === "tokens" ? fmt.tokens(v) : v === 0 ? "$0" : v < 10 ? "$" + v.toFixed(2) : fmt.usd(v));
-    const every = usage.bucket === "hour" ? 3 : buckets.length > 10 ? 5 : 1;
+    // As many labels as fit at about 64px each, on a step that reads naturally for hours.
+    const fits = Math.max(2, Math.floor(pw / 64));
+    const every = Math.max(usage.bucket === "hour" ? 3 : 1, Math.ceil(buckets.length / fits));
+    const spansYears = buckets.length > 1 && new Date(buckets[0].start).getFullYear() !== new Date(buckets[buckets.length - 1].start).getFullYear();
+    const axisOptions = usage.bucket === "hour" ? { hour: "2-digit" }
+      : usage.bucket === "month" ? (spansYears ? { month: "short", year: "2-digit" } : { month: "short" })
+      : usage.bucket === "week" || buckets.length > 10 ? { month: "short", day: "numeric" }
+      : { weekday: "short" };
     let grid = "", bars = "", hits = "";
     for (let i = 0; i <= 4; i++) {
       const value = (ceiling / 4) * i, y = (T + ph - (value / ceiling) * ph).toFixed(1);
@@ -1049,8 +1093,7 @@ select.field option { background: var(--raised); }
           : `<rect x="${x.toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${entry.s.color}"/>`;
       });
       if (i % every === 0) {
-        const options = usage.bucket === "hour" ? { hour: "2-digit" } : buckets.length > 10 ? { month: "short", day: "numeric" } : { weekday: "short" };
-        grid += `<text class="axis" x="${cx.toFixed(1)}" y="${H - 7}" text-anchor="middle">${esc(fmt.day(bucket.start, options))}</text>`;
+        grid += `<text class="axis" x="${cx.toFixed(1)}" y="${H - 7}" text-anchor="middle">${esc(fmt.day(bucket.start, axisOptions))}</text>`;
       }
       hits += `<rect class="hit" x="${(L + slot * i).toFixed(1)}" y="${T}" width="${slot.toFixed(1)}" height="${ph}" data-bucket="${i}" data-metric="${metric}" data-group="${group || "account"}" data-key="${usage.range}:${usage.tool}"/>`;
     });
@@ -1087,17 +1130,22 @@ select.field option { background: var(--raised); }
     const active = days.map((d) => d.tokens).filter((v) => v > 0).sort((a, b) => a - b);
     const quartile = (q) => (active.length ? active[Math.min(active.length - 1, Math.floor(q * active.length))] : 0);
     const cuts = [quartile(0.25), quartile(0.5), quartile(0.75)];
-    let cells = "", months = "", lastMonth = -1;
+    let cells = "", lastMonth = -1;
+    const labels = [];
     days.forEach((day, i) => {
       const slot = i + offset, col = Math.floor(slot / 7), row = slot % 7;
       const level = !day.tokens ? 0 : day.tokens <= cuts[0] ? 1 : day.tokens <= cuts[1] ? 2 : day.tokens <= cuts[2] ? 3 : 4;
       const date = parse(day.day);
       if (row === 0 && date.getMonth() !== lastMonth && col < columns - 2) {
-        months += `<text x="${col * (size + gap)}" y="11">${esc(fmt.day(date, { month: "short" }))}</text>`;
+        labels.push({ col, text: fmt.day(date, { month: "short" }) });
         lastMonth = date.getMonth();
       }
       cells += `<rect class="l${level}" x="${col * (size + gap)}" y="${top + row * (size + gap)}" width="${size}" height="${size}" rx="2.5"><title>${esc(fmt.day(date, { weekday: "short", month: "short", day: "numeric" }))} · ${day.tokens ? `${fmt.tokens(day.tokens)} tokens, ${fmt.usd(day.cost)}` : "no usage"}</title></rect>`;
     });
+    // A month that starts a column or two before the next one has no room for its name; the
+    // next month's name wins rather than the two running into each other.
+    const months = labels.filter((label, i) => !labels[i + 1] || labels[i + 1].col - label.col >= 3)
+      .map((label) => `<text x="${label.col * (size + gap)}" y="11">${esc(label.text)}</text>`).join("");
     const width = columns * (size + gap) - gap, height = top + 7 * (size + gap) - gap;
     return `<svg class="heat" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Daily activity over 26 weeks">${months}${cells}</svg>`;
   }
@@ -1648,7 +1696,10 @@ select.field option { background: var(--raised); }
     const show = (v) => (metric === "tokens" ? fmt.tokens(v) : fmt.usd(v));
     const rows = grouped.series.map((s) => ({ s, v: bucket.values[s.id] })).filter((e) => e.v && pick(e.v) > 0).reverse();
     const total = rows.reduce((sum, e) => sum + pick(e.v), 0);
-    const when = usage.bucket === "hour" ? fmt.day(bucket.start, { weekday: "short", hour: "2-digit", minute: "2-digit" }) : fmt.day(bucket.start, { weekday: "short", month: "short", day: "numeric" });
+    const when = usage.bucket === "hour" ? fmt.day(bucket.start, { weekday: "short", hour: "2-digit", minute: "2-digit" })
+      : usage.bucket === "week" ? `Week of ${fmt.day(bucket.start, { month: "short", day: "numeric", year: "numeric" })}`
+      : usage.bucket === "month" ? fmt.day(bucket.start, { month: "long", year: "numeric" })
+      : fmt.day(bucket.start, { weekday: "short", month: "short", day: "numeric" });
     tip.innerHTML = `<b>${esc(when)} · <span class="mono">${esc(show(total))}</span></b>${rows.length ? rows.map((e) => `<div><span class="swatch" style="background:${e.s.color}"></span><span>${esc(e.s.name)}</span><span class="mono">${esc(show(pick(e.v)))}</span></div>`).join("") : `<div><span></span><span>No usage</span><span></span></div>`}`;
     tip.hidden = false;
     const box = tip.getBoundingClientRect();
@@ -1661,7 +1712,7 @@ select.field option { background: var(--raised); }
 
   // MARK: Actions
 
-  const editing = () => ui.editing || ui.confirming || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
+  const editing = () => ui.editing || ui.confirming || ui.rangeOpen || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
 
   async function act(button, call, label) {
     const key = button ? pendingKey(button) : null;
@@ -1695,6 +1746,8 @@ select.field option { background: var(--raised); }
   document.addEventListener("click", async (event) => {
     const link = event.target.closest("#nav a");
     if (link) { event.preventDefault(); if (link.dataset.section !== ui.section) go(link.dataset.section); return; }
+    // A click anywhere outside the open range menu closes it.
+    if (ui.rangeOpen && !event.target.closest(".range-pick")) { ui.rangeOpen = false; render(); }
     const el = event.target.closest("[data-action]");
     if (!el || el.disabled || el.tagName === "SELECT") return;
     const id = el.dataset.id;
@@ -1712,8 +1765,14 @@ select.field option { background: var(--raised); }
       case "confirm-remove": ui.confirming = id; ui.editing = null; render(); break;
       case "cancel-remove": ui.confirming = null; render(); break;
       case "remove": act(el, () => api("/api/remove", { id }).finally(() => { ui.confirming = null; }), "Removing"); break;
+      case "range-menu":
+        ui.rangeOpen = !ui.rangeOpen;
+        render();
+        if (ui.rangeOpen) $(".range-list [aria-checked=true]")?.focus();
+        break;
       case "range": case "metric": case "group":
         ui[el.dataset.action] = el.dataset.value;
+        if (el.dataset.action === "range") ui.rangeOpen = false;
         render();
         if (el.dataset.action === "range") { await loadSection(); render(); }
         break;
@@ -1812,6 +1871,14 @@ select.field option { background: var(--raised); }
       ui.budgetEdit = null;
       act(button, () => api("/api/budget", { scope, amount, period }));
     }
+    if (form.dataset.form === "range") {
+      const from = form.elements.from.value, to = form.elements.to.value;
+      if (!from || !to) { toast("Pick both days.", true); return; }
+      ui.range = from <= to ? `${from}..${to}` : `${to}..${from}`;
+      ui.rangeOpen = false;
+      render();
+      loadSection().then(render);
+    }
     if (form.dataset.form === "work-folder") {
       const folder = String(form.elements.folder.value || "").trim();
       if (!folder) { toast("Type a folder to scan, like ~/Projects.", true); return; }
@@ -1820,6 +1887,7 @@ select.field option { background: var(--raised); }
   });
 
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && ui.rangeOpen) { ui.rangeOpen = false; render(); $(".range-button")?.focus(); return; }
     if (event.key === "Escape" && (ui.editing || ui.confirming || ui.budgetEdit)) { ui.editing = ui.confirming = ui.budgetEdit = null; render(); }
   });
   const followVisibility = () => document.documentElement.toggleAttribute("data-away", document.hidden);

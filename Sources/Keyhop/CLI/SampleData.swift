@@ -90,7 +90,9 @@ enum SampleData {
     }
 
     static func digest(range: InsightsRange, accounts: [Account], now: Date) -> UsageDigest {
-        digest(interval: range.interval(now: now), bucket: range.bucket, accounts: accounts, now: now)
+        var digest = digest(interval: range.interval(now: now), bucket: range.bucket, accounts: accounts, now: now)
+        if !range.hasPrevious { digest.previous = Totals() }
+        return digest
     }
 
     /// Where each sample tool's work happened: the repositories someone might have on the go, and
@@ -111,7 +113,7 @@ enum SampleData {
     static func digest(interval: DateInterval, bucket: Bucket, accounts: [Account], now: Date) -> UsageDigest {
         var digest = UsageDigest()
         let calendar = Calendar.current
-        let component: Calendar.Component = bucket == .hour ? .hour : .day
+        let component = bucket.component
         let models = ["claude-opus-5", "gpt-5.6-sol", "composer-2", "claude-sonnet-5", "claude-haiku-4-5",
                       "gemini-3.1-pro-preview", "openai/gpt-5.6-sol", "anthropic/claude-sonnet-5"]
         var start = interval.start
@@ -127,6 +129,9 @@ enum SampleData {
                 if bucket == .hour {
                     // A working-day curve with a quiet floor, so night hours aren't empty.
                     daily = max(0.08, sin((hour - 7) / 14 * .pi))
+                } else if bucket == .week || bucket == .month {
+                    // About five working days a week, twenty-two a month, with a slow drift.
+                    daily = (bucket == .week ? 5.2 : 22) * (0.8 + 0.2 * sin(index / 5))
                 } else {
                     let weekday = calendar.component(.weekday, from: start)
                     daily = Int(index) % 13 == 5 ? 0 : weekday == 1 ? 0.25 : weekday == 7 ? 0.45 : 1

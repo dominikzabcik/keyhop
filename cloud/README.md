@@ -45,6 +45,8 @@ npm test                         # runs inside the Workers runtime
 npm run typecheck
 ```
 
+`wrangler.jsonc` sets `dev.host` to localhost so `/auth/dev` sees a local host rather than keyhop.app, which would refuse the sign-in.
+
 Point a local Keyhop at it with `KEYHOP_CLOUD_URL=http://localhost:8787 keyhop cloud login`. Use `KEYHOP_DATA_DIR` to keep that link away from your real data.
 
 ## Deploy

@@ -8,6 +8,10 @@
   // different Worker and leave the live one, and its database, behind.
   "routes": [{ "pattern": "keyhop.app", "custom_domain": true }],
   "workers_dev": true,
+  // Local development answers as localhost. Without this, `wrangler dev` forwards every request as
+  // the first route's host, so the Worker sees keyhop.app, the localhost-only dev sign-in refuses,
+  // and `scripts/seed-local.mjs` can't sign anyone in. It changes nothing about a deploy.
+  "dev": { "host": "localhost" },
   "preview_urls": false,
   "observability": { "enabled": true },
   "ratelimits": [

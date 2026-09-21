@@ -35,8 +35,9 @@ async function sql(cwd, statements) {
 }
 
 /**
- * Puts an account, a session and a few days of usage into the local database, and returns the
- * cookie that signs a browser in as them.
+ * Puts an account, a session, a few days of usage and today's work into the local database, and
+ * returns the cookie that signs a browser in as them. The work is one team and two tasks, so the
+ * day page has something Jev can read rather than an empty state.
  */
 export async function signIn(cloudDirectory) {
   const token = `checks-${crypto.randomUUID()}`;
@@ -62,6 +63,20 @@ export async function signIn(cloudDirectory) {
     `INSERT INTO sessions (id, token_hash, user_id, kind, created_at, last_used_at, expires_at)
      VALUES (${quoted(crypto.randomUUID())}, ${quoted(hash)}, ${quoted(VISITOR.id)}, 'web', ${now}, ${now}, ${now + 86_400});`,
     ...usage,
+    `INSERT OR REPLACE INTO teams (id, slug, name, owner_id, created_at)
+     VALUES ('22222222-2222-4222-8222-222222222222', 'checks', 'Checks', ${quoted(VISITOR.id)}, ${now});`,
+    `INSERT OR REPLACE INTO team_members (team_id, user_id, role, joined_at)
+     VALUES ('22222222-2222-4222-8222-222222222222', ${quoted(VISITOR.id)}, 'owner', ${now});`,
+    `INSERT OR REPLACE INTO daily_work (user_id, day, repo, commits, insertions, deletions, updated_at)
+     VALUES (${quoted(VISITOR.id)}, ${quoted(day(0))}, 'acme/atlas', 3, 40, 8, ${now});`,
+    `INSERT OR REPLACE INTO work_commits (user_id, day, repo, sha, subject, insertions, deletions, at, offset_seconds)
+     VALUES (${quoted(VISITOR.id)}, ${quoted(day(0))}, 'acme/atlas', 'a1b2c3d', 'feat(importer): stop a dead job retrying forever', 20, 4, ${now - 7200}, 0);`,
+    `INSERT OR REPLACE INTO work_commits (user_id, day, repo, sha, subject, insertions, deletions, at, offset_seconds)
+     VALUES (${quoted(VISITOR.id)}, ${quoted(day(0))}, 'acme/atlas', 'b2c3d4e', 'fix(importer): retry with a ceiling', 12, 3, ${now - 5400}, 0);`,
+    `INSERT OR REPLACE INTO work_commits (user_id, day, repo, sha, subject, insertions, deletions, at, offset_seconds)
+     VALUES (${quoted(VISITOR.id)}, ${quoted(day(0))}, 'acme/atlas', 'c3d4e5f', 'docs: write down what the sync actually does', 8, 1, ${now - 1800}, 0);`,
+    `INSERT OR REPLACE INTO work_index (user_id, done, total, complete, updated_at)
+     VALUES (${quoted(VISITOR.id)}, 1, 1, 1, ${now});`,
   ]);
 
   return { name: SESSION_COOKIE, value: token, path: "/", httpOnly: true, sameSite: "Lax" };

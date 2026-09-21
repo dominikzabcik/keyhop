@@ -42,6 +42,7 @@ export const ACCOUNT_SCREENS = [
   { name: "welcome", path: "/welcome", mustSay: [] },
   { name: "leaderboard-signed-in", path: "/leaderboard", mustSay: ["Leaderboard"] },
   { name: "season-signed-in", path: "/season", mustSay: ["Season"] },
+  { name: "team-day", path: "/t/checks/day", mustSay: ["Today", "Importer"] },
 ];
 
 /** The Mac window, served by `keyhop dashboard --sample`. Its sections live behind the hash. */

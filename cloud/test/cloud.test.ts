@@ -8,7 +8,7 @@ import { LIMIT_TTL_SECONDS, clean, parseLimits, sweepLimits } from "../src/limit
 import { badgesFrom, questsFrom } from "../src/quests";
 import { webLink } from "../src/account";
 import { INDEX_TTL_SECONDS, parseIndex, parseWork } from "../src/work";
-import { parseSubject, span, tasksFor, tasksForDay } from "../src/tasks";
+import { parseSubject, sharpen, span, tasksFor, tasksForDay } from "../src/tasks";
 
 const BASE = "http://localhost";
 
@@ -925,6 +925,26 @@ describe("one task across two repositories", () => {
     expect(auth.from).toBe(at(9));
     expect(auth.to).toBe(at(10));
     expect(tasks.find((task) => task.title === "Billing")!.repos).toEqual(["acme/ledger"]);
+  });
+
+  it("lets pairwise answers split a group and join two that belong together", () => {
+    const importer = tasksFor("acme/atlas", [
+      commit("aaaaaaa", "feat(importer): stop a dead job retrying forever", at(9)),
+      commit("bbbbbbb", "fix(importer): retry with a ceiling", at(10)),
+    ]);
+    expect(importer).toHaveLength(1);
+    const split = sharpen(importer, (left, right) => left === right);
+    expect(split).toHaveLength(2);
+
+    const apart = tasksForDay([
+      { repo: "acme/atlas", subjects: [commit("aaaaaaa", "feat(auth): keep the session alive", at(9))] },
+      { repo: "acme/atlas-web", subjects: [commit("bbbbbbb", "feat(session): refuse an expired token", at(10))] },
+    ]);
+    expect(apart).toHaveLength(2);
+    const joined = sharpen(apart, () => true);
+    expect(joined).toHaveLength(1);
+    expect(joined[0].repos).toEqual(["acme/atlas", "acme/atlas-web"]);
+    expect(joined[0].commits).toHaveLength(2);
   });
 });
 

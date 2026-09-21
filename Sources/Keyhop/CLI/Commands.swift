@@ -481,6 +481,15 @@ enum Commands {
         if json { try Output.json(document) } else { print(Reports.doctor(document)) }
     }
 
+    /// The providers' own status pages, for every tool that has one.
+    static func services(_ args: inout Arguments) async throws {
+        let json = args.flag("--json")
+        let sample = args.flag("--sample")
+        try args.finish()
+        let health = sample ? SampleData.services() : await ServiceStatus.check(Provider.allCases)
+        if json { try Output.json(health) } else { print(Reports.services(health)) }
+    }
+
     /// What Keyhop can see on this computer. Sample data reads no logins.
     static func doctorDocument(sample: Bool) async -> DoctorDocument {
         var tools: [DoctorDocument.Tool] = []

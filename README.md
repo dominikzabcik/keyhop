@@ -101,12 +101,13 @@ keyhop recommend [--tool codex]        Smart Hop's best current runway
 keyhop switch work@studio.dev          move a tool to a saved account (email, name or ID)
 keyhop add cursor                      sign Cursor out here and save the next login
 keyhop rename work@studio.dev Work     give an account a name
-keyhop usage --range 30d --tool claude tokens and API value by account and model
+keyhop usage --range 30d --tool claude tokens and API value by account, model, maker and project
 keyhop dashboard                       open Keyhop's window: accounts, usage, budgets, settings
 keyhop insights --output usage.html    save the dashboard as one file you can share or keep
 keyhop budget set all 200 --period month
 keyhop update                          install the latest verified release
 keyhop doctor                          paths, secret storage and what Keyhop can see
+keyhop services                        whether a provider reports an outage right now
 keyhop mcp                             read-only MCP server over standard input/output
 ```
 
@@ -116,7 +117,7 @@ Add `--json` to any of them for scripts. `keyhop status --sample` and `keyhop da
 
 Smart Hop ranks saved accounts locally from remaining limits, reset timing, recent forecasts and budgets. It is deterministic, works offline with cached data and never reads prompts or source code. Run `keyhop recommend`, or use the recommendation shown in the app and tray.
 
-`keyhop mcp` exposes three read-only tools to local AI clients: `keyhop_status`, `keyhop_usage` and `keyhop_recommendation`. They can inspect cached Keyhop data, but cannot switch accounts or read credentials. Add it to a client with one of these configurations:
+`keyhop mcp` exposes four read-only tools to local AI clients: `keyhop_status`, `keyhop_usage`, `keyhop_recommendation` and `keyhop_services`. They can inspect cached Keyhop data, but cannot switch accounts or read credentials. Add it to a client with one of these configurations:
 
 ```bash
 claude mcp add --scope user keyhop -- keyhop mcp
@@ -149,6 +150,8 @@ Keyhop keeps its own record of what every account uses.
 
 - **Per account:** each request is credited to the account that was in use at that moment. Keyhop records every switch, including logins you change outside it. Usage from before Keyhop started goes to the tool's only saved account when there's one.
 - **API value:** requests are priced at each provider's standard API rates, from a table generated from [models.dev](https://models.dev). Subscriptions don't bill per token, so API value measures how much use you get, not what you pay. Cursor's on-demand charges are shown separately as billed.
+- **Per project:** Claude Code, Codex, OpenCode and Pi record the folder they ran in, and Keyhop files that work under the git repository the folder belongs to, or the folder itself outside one. Gemini CLI and Cursor record no folder. Project paths stay on your computer; they're never part of what a linked computer sends.
+- **Per maker:** usage is also totalled by the company that made each model, read from its name, so OpenCode's or Pi's mix of Anthropic, OpenAI and Google models is split the same way as everything else.
 - **Budgets:** set one per account or across all accounts, per day, week or month, in the Budgets section of Keyhop's window or with `keyhop budget` anywhere. The Linux and Windows trays set a monthly budget across all accounts. Keyhop notifies you at 80% and at 100%.
 - **Forecasts:** Keyhop samples each limit and projects when it runs out at the recent rate. Once a limit is half used and on track to run out before it resets, the alert offers the switch.
 - **Smart Hop:** the recommendation combines remaining limit room, budget room, reset timing and projected runout, with stable tie-breaking so the same data always gives the same answer.
@@ -251,6 +254,7 @@ There's no analytics and no telemetry. Keyhop's network requests are:
 - **Token refresh:** for accounts that aren't in use, the providers' own sign-in services: `platform.claude.com` and `auth.openai.com`.
 - **Cursor usage export:** `cursor.com`, per saved Cursor account.
 - **Updates:** `api.github.com` and `github.com`, for release information and downloads.
+- **Service status:** the public status pages of the tools you have accounts for, `status.claude.com`, `status.openai.com`, `status.cursor.com`, `www.githubstatus.com` and `status.windsurf.com`, while Overview is open or when you run `keyhop services`. Nothing about you or your accounts goes with them.
 - **Leaderboards:** only after you link a computer, Keyhop cloud receives your daily totals per tool.
 
 Everything else stays on your computer:

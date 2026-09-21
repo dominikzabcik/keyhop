@@ -24,6 +24,18 @@ enum SampleData {
         ]
     }
 
+    /// Codex in the middle of a partial outage and the rest working, so the window and the checks
+    /// show what trouble looks like.
+    static func services(now: Date = Date()) -> [ServiceHealth] {
+        ServiceStatus.sorted(ServiceStatus.pages.map { tool, page in
+            let trouble = tool == .codex
+            return ServiceHealth(
+                tool: tool.rawValue, name: page.name, page: page.url, level: trouble ? .partialOutage : .operational,
+                incidents: trouble ? [ServiceHealth.Incident(name: "Elevated error rates in Codex CLI", stage: "identified",
+                                                             updated: now.addingTimeInterval(-1_140), link: page.url)] : [])
+        })
+    }
+
     static func overview(now: Date = Date()) -> Overview {
         let accounts = accounts(now: now)
         let active: [Provider: UUID] = [

@@ -189,8 +189,11 @@ final class MCPTests: XCTestCase {
         let listed = try XCTUnwrap(listResponse)
         let listResult = try XCTUnwrap(listed["result"] as? [String: Any])
         let tools = try XCTUnwrap(listResult["tools"] as? [[String: Any]])
-        XCTAssertEqual(Set(tools.compactMap { $0["name"] as? String }), ["keyhop_status", "keyhop_usage", "keyhop_recommendation"])
+        XCTAssertEqual(Set(tools.compactMap { $0["name"] as? String }), ["keyhop_status", "keyhop_usage", "keyhop_recommendation", "keyhop_services"])
         XCTAssertTrue(tools.allSatisfy { (($0["annotations"] as? [String: Any])?["readOnlyHint"] as? Bool) == true })
+        // Only the status pages leave this computer, and the tool says so.
+        let reachesOut = tools.filter { (($0["annotations"] as? [String: Any])?["openWorldHint"] as? Bool) == true }.compactMap { $0["name"] as? String }
+        XCTAssertEqual(reachesOut, ["keyhop_services"])
     }
 
     func testRejectsUnknownMCPMethods() async throws {

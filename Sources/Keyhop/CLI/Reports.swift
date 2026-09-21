@@ -462,6 +462,22 @@ enum Reports {
         return placed + unplaced
     }
 
+    static func services(_ health: [ServiceHealth]) -> String {
+        var lines: [String] = []
+        for service in health {
+            let tool = Provider(rawValue: service.tool)?.name ?? service.tool
+            lines.append("\(tool.padding(toLength: 16, withPad: " ", startingAt: 0)) \(service.level.words)")
+            for incident in service.incidents {
+                lines.append("  \(incident.name) (\(incident.stage))\(incident.link.map { "  \($0)" } ?? "")")
+            }
+        }
+        if health.contains(where: \.isTrouble) {
+            lines.append("")
+            lines.append("An outage affects every account, so switching won't help until it's over.")
+        }
+        return lines.joined(separator: "\n")
+    }
+
     static func doctor(_ document: DoctorDocument) -> String {
         var lines = [
             "Keyhop \(document.version) on \(document.platform)",

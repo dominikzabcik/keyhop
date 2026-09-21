@@ -5,7 +5,7 @@ import Foundation
 enum KeyhopCLI {
     static let commands: Set<String> = [
         "status", "refresh", "recommend", "switch", "add", "rename", "remove", "usage", "dashboard", "insights", "budget",
-        "cloud", "work", "mcp", "update", "doctor", "reset", "version", "help", "--help", "-h", "--version",
+        "cloud", "work", "mcp", "update", "doctor", "services", "reset", "version", "help", "--help", "-h", "--version",
     ]
 
     static func handles(_ word: String) -> Bool {
@@ -48,6 +48,7 @@ enum KeyhopCLI {
             case "mcp": try await MCPServer.run(&args)
             case "update": try await Commands.update(&args)
             case "doctor": try await Commands.doctor(&args)
+            case "services": try await Commands.services(&args)
             case "reset": try await Commands.reset(&args)
             case "version", "--version": print("keyhop \(AppVersion.current)")
             case "help", "--help", "-h": print(helpText)
@@ -108,6 +109,7 @@ enum KeyhopCLI {
     App
       update [--check] [--json]            Check for and install a new release
       doctor [--json]                      Show paths, storage and what Keyhop can see
+      services [--json]                    Whether Claude, OpenAI, Cursor, GitHub and Windsurf report trouble
       reset [--yes]                        Remove saved logins, usage history and settings
       version
 

@@ -768,6 +768,8 @@ actor DashboardSession {
                 let word = request.query["tool"] ?? "all"
                 let tool = word == "all" ? nil : try Commands.tool(word)
                 return .json(try await usage(range: range, tool: tool, readLogs: true))
+            case ("GET", "/api/services"):
+                return .json(try await services())
             case ("GET", "/api/doctor"):
                 return .json(await Commands.doctorDocument(sample: sample))
             case ("GET", "/api/update"):
@@ -788,6 +790,15 @@ actor DashboardSession {
     }
 
     // MARK: Reading
+
+    /// The status pages of the tools someone has accounts for, so a tool they never use can't
+    /// raise an alarm.
+    func services() async throws -> [ServiceHealth] {
+        if sample { return SampleData.services() }
+        let workspace = try openWorkspace()
+        let tools = Set(await workspace.service.accounts.map(\.provider))
+        return await ServiceStatus.check(Provider.allCases.filter(tools.contains))
+    }
 
     func state(allowRefresh: Bool) async throws -> DashboardState {
         let overview: Overview

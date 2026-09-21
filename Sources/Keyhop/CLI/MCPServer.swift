@@ -66,7 +66,7 @@ enum MCPServer {
         tool(
             name: "keyhop_usage",
             title: "Keyhop usage",
-            description: "Read cached local token, request and API-value history for a time range, grouped by tool, account and model. This never reads prompts or source code.",
+            description: "Read cached local token, request and API-value history for a time range, grouped by tool, account, model, model maker and project folder. This never reads prompts or source code.",
             properties: [
                 "range": ["type": "string", "enum": ["today", "week", "month", "30d"], "default": "week"],
                 "tool": ["type": "string", "enum": Provider.allCases.map(\.rawValue)],
@@ -78,16 +78,23 @@ enum MCPServer {
             description: "Choose the best current account runway from remaining limits, forecasts, reset timing and budgets.",
             properties: ["tool": ["type": "string", "enum": Provider.allCases.map(\.rawValue)]]
         ),
+        tool(
+            name: "keyhop_services",
+            title: "Provider service status",
+            description: "Read whether Anthropic, OpenAI, Cursor, GitHub and Windsurf report an outage, degraded performance or maintenance for the services these tools depend on, from their public status pages. An outage affects every account, so switching accounts doesn't help during one.",
+            properties: [:],
+            openWorld: true
+        ),
     ]
     private static let toolNames = Set(tools.compactMap { $0["name"] as? String })
 
-    private static func tool(name: String, title: String, description: String, properties: [String: Any]) -> [String: Any] {
+    private static func tool(name: String, title: String, description: String, properties: [String: Any], openWorld: Bool = false) -> [String: Any] {
         [
             "name": name,
             "title": title,
             "description": description,
             "inputSchema": ["type": "object", "properties": properties, "additionalProperties": false],
-            "annotations": ["readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false],
+            "annotations": ["readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": openWorld],
             "execution": ["taskSupport": "forbidden"],
         ]
     }
@@ -113,6 +120,9 @@ enum MCPServer {
             let budgets = try await workspace.tracker.budgets()
             let spend = try await workspace.tracker.budgetSpend(for: budgets, now: now, sole: sole)
             return try result(UsageDocument(range: range, now: now, digest: report, accounts: accounts, budgets: budgets, spend: spend))
+        case "keyhop_services":
+            let tools = Set(await workspace.service.accounts.map(\.provider))
+            return try result(await ServiceStatus.check(tools.isEmpty ? Provider.allCases : Provider.allCases.filter(tools.contains)))
         case "keyhop_recommendation":
             let overview = try await Commands.currentOverview(workspace)
             return try result(RecommendationListDocument(overview, provider: try provider(in: arguments)))

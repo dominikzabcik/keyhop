@@ -226,6 +226,7 @@ select.field option { background: var(--raised); }
 .notice div { flex: 1; min-width: 0; }
 .notice b { font-weight: 600; }
 .notice p { margin: 0; color: var(--muted); }
+.warn-text { color: var(--warn); }
 
 /* Overview */
 .tool-row { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(260px, 1.6fr) 210px; gap: 20px; align-items: center; }
@@ -572,9 +573,21 @@ select.field option { background: var(--raised); }
     return data.usage[key];
   }
 
+  // The providers' status pages are read on their own, so a slow page never holds Overview up.
+  // Read again at most every two minutes; Keyhop caches each page for five.
+  let servicesLoading = false;
+  function loadServices() {
+    if (isStatic || servicesLoading || (data.servicesAt && Date.now() - data.servicesAt < 120_000)) return;
+    servicesLoading = true;
+    api("/api/services")
+      .then((list) => { data.services = list; data.servicesAt = Date.now(); if (ui.section === "overview") render(); })
+      .catch(() => {})
+      .finally(() => { servicesLoading = false; });
+  }
+
   async function loadSection() {
     try {
-      if (ui.section === "overview") await Promise.all([loadUsage("today"), loadUsage("week")]);
+      if (ui.section === "overview") { loadServices(); await Promise.all([loadUsage("today"), loadUsage("week")]); }
       if (ui.section === "usage") await loadUsage(ui.range, ui.tool);
       if (ui.section === "budgets") await loadUsage("month");
       if (ui.section === "leaderboard" && !isStatic && data.state?.cloud?.linked) {
@@ -778,6 +791,20 @@ select.field option { background: var(--raised); }
       <div class="notice">${icon("alert")}<div><b>${esc(alert.title)}</b><p>${esc(alert.body)}</p></div>
       ${alert.switchTo && !isStatic ? `<button class="btn sm" data-action="switch" data-id="${esc(alert.switchTo)}">Switch</button>` : ""}</div>`).join("");
 
+    // A provider's own outage, which no account switch gets around. Maintenance is said plainly,
+    // without the advice, since it's planned and usually brief.
+    const levelWords = { maintenance: "under maintenance", degraded: "degraded performance", partial: "partial outage", major: "major outage" };
+    const services = data.services || [];
+    const troubled = services.filter((s) => levelWords[s.level]);
+    const outages = troubled.map((s) => {
+      const incident = s.incidents[0];
+      const detail = incident ? `${esc(incident.name)}. ${esc(incident.stage[0].toUpperCase() + incident.stage.slice(1))}${incident.updated ? ` ${esc(ago(incident.updated))}` : ""}.` : "";
+      const advice = s.level === "maintenance" ? "" : " Every account is affected, so switching won't help.";
+      return `<div class="notice">${icon("alert")}<div><b>${esc(toolName(s.tool))}: ${levelWords[s.level]}</b><p>${detail}${advice}</p></div>
+        <a class="btn sm secondary" href="${esc(incident?.link || s.page)}" target="_blank" rel="noopener">Status page</a></div>`;
+    }).join("");
+    const serviceHint = services.length && !troubled.length && services.some((s) => s.level === "operational") ? " · Services operational" : "";
+
     const streak = (week || today)?.streak;
     const hero = `<section class="hero">
       <h2 class="hero-figure"><span class="num">${fmt.tokens(status.today.tokens)}</span><span class="unit">tokens today</span></h2>
@@ -798,13 +825,14 @@ select.field option { background: var(--raised); }
     const inUseTools = anySetUp ? tools.filter(isSetUp) : tools;
     const unsetTools = anySetUp ? tools.filter((tool) => !isSetUp(tool)) : [];
     const inUse = `<section class="card">
-      <div class="card-head"><h2>In use</h2><span class="hint">Each tool's current account and its limits</span></div>
+      <div class="card-head"><h2>In use</h2><span class="hint">Each tool's current account and its limits${serviceHint}</span></div>
       <div class="list">${inUseTools.map((tool) => {
         const account = tool.accounts.find((a) => a.active);
         const other = alternative(tool, account);
         const adding = data.state.adding.includes(tool.id);
+        const outage = troubled.find((s) => s.tool === tool.id);
         const identity = account
-          ? `<div class="who">${mark(tool.id)}<div><b>${esc(tool.name)}</b><small>${esc(account.name)}${account.plan ? ` · ${esc(account.plan)}` : ""}</small></div></div>`
+          ? `<div class="who">${mark(tool.id)}<div><b>${esc(tool.name)}</b><small>${esc(account.name)}${account.plan ? ` · ${esc(account.plan)}` : ""}${outage ? ` · <span class="warn-text">${esc(levelWords[outage.level][0].toUpperCase() + levelWords[outage.level].slice(1))}</span>` : ""}</small></div></div>`
           : `<div class="who">${mark(tool.id)}<div><b>${esc(tool.name)}</b><small>${tool.accounts.length ? "Signed out" : "No saved accounts"}</small></div></div>`;
         const middle = adding ? `<div class="waiting"><span class="pulse"><i></i><i></i><i></i></span><span>Waiting for the new login ${waited(tool.id)}</span></div>`
           : account ? limits(account, 2, tool.limitsNote) : `<p class="empty-inline subtle">${esc(tool.signInHint)}</p>`;
@@ -836,7 +864,7 @@ select.field option { background: var(--raised); }
       ${week && week.models.length ? modelTable(week.models.slice(0, 6), "tokens", false) : `<p class="empty">No models used this week.</p>`}
     </section>`;
 
-    return { body: `${alerts}${stats}${inUse}<div class="split">${hourCard}${weekCard}</div><div class="split">${budgetsCard}${modelsCard}</div>` };
+    return { body: `${alerts}${outages}${stats}${inUse}<div class="split">${hourCard}${weekCard}</div><div class="split">${budgetsCard}${modelsCard}</div>` };
   }
 
   function busiestHour(usage) {

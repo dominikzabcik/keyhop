@@ -180,7 +180,9 @@ struct UsageDocument: Encodable {
     let total: SpendDocument
     let previous: SpendDocument
     let accounts: [AccountUsage]
+    let tools: [ToolUsage]
     let models: [ModelUsage]
+    let sessions: [SessionUsage]
     let points: [Point]
     let budgets: [BudgetDocument]
 
@@ -193,8 +195,31 @@ struct UsageDocument: Encodable {
         let spend: SpendDocument
     }
 
+    struct ToolUsage: Encodable {
+        let tool: String
+        let name: String
+        let spend: SpendDocument
+    }
+
     struct ModelUsage: Encodable {
         let model: String
+        let tool: String
+        let spend: SpendDocument
+        let input: Int
+        let output: Int
+        let cacheRead: Int
+        let cacheWrite: Int
+        let cacheWrite1h: Int
+        let reasoning: Int
+    }
+
+    struct SessionUsage: Encodable {
+        let id: String
+        let tool: String
+        let account: UUID?
+        let model: String
+        let from: Date
+        let to: Date
         let spend: SpendDocument
     }
 
@@ -202,6 +227,7 @@ struct UsageDocument: Encodable {
         let start: Date
         let account: UUID?
         let tool: String
+        let model: String
         let tokens: Int
         let cost: Double
     }
@@ -222,11 +248,24 @@ struct UsageDocument: Encodable {
                 return AccountUsage(id: key.account, tool: key.provider.rawValue, name: account?.displayName ?? "Earlier or removed",
                                     email: account?.email, plan: account?.plan, spend: SpendDocument(totals))
             }
+        tools = digest.byProvider
+            .sorted { $0.value.tokens.total > $1.value.tokens.total }
+            .map { ToolUsage(tool: $0.key.rawValue, name: $0.key.name, spend: SpendDocument($0.value)) }
         models = digest.byModel
             .sorted { $0.value.tokens.total > $1.value.tokens.total }
-            .map { ModelUsage(model: $0.key, spend: SpendDocument($0.value)) }
+            .map { key, totals in
+                ModelUsage(model: key.model, tool: key.provider.rawValue, spend: SpendDocument(totals),
+                           input: totals.tokens.input, output: totals.tokens.output, cacheRead: totals.tokens.cacheRead,
+                           cacheWrite: totals.tokens.cacheWrite, cacheWrite1h: totals.tokens.cacheWrite1h,
+                           reasoning: totals.tokens.reasoning)
+            }
+        sessions = digest.sessions.map {
+            SessionUsage(id: $0.id, tool: $0.provider.rawValue, account: $0.account, model: $0.model,
+                         from: $0.from, to: $0.to, spend: SpendDocument($0.totals))
+        }
         points = digest.points.map {
-            Point(start: $0.start, account: $0.key.account, tool: $0.key.provider.rawValue, tokens: $0.totals.tokens.total, cost: $0.totals.cost)
+            Point(start: $0.start, account: $0.key.account, tool: $0.key.provider.rawValue, model: $0.model,
+                  tokens: $0.totals.tokens.total, cost: $0.totals.cost)
         }
         self.budgets = budgets.map { BudgetDocument($0, spent: spend[$0.scope] ?? 0, accounts: accounts) }
     }
@@ -340,6 +379,11 @@ enum Reports {
         }
 
         lines.append("")
+        lines.append("Tools")
+        for (provider, totals) in digest.byProvider.sorted(by: { $0.value.tokens.total > $1.value.tokens.total }) {
+            lines.append("  \(provider.name.padding(toLength: 38, withPad: " ", startingAt: 0)) \(Numbers.tokens(totals.tokens.total).leftPadded(8))  \(Numbers.usd(totals.cost).leftPadded(9))")
+        }
+        lines.append("")
         lines.append("Accounts")
         for (key, totals) in digest.byAccount.sorted(by: { $0.value.tokens.total > $1.value.tokens.total }) {
             let account = key.account.flatMap { id in accounts.first { $0.id == id } }
@@ -348,8 +392,9 @@ enum Reports {
         }
         lines.append("")
         lines.append("Models")
-        for (model, totals) in digest.byModel.sorted(by: { $0.value.tokens.total > $1.value.tokens.total }).prefix(10) {
-            lines.append("  \(model.padding(toLength: 38, withPad: " ", startingAt: 0)) \(Numbers.tokens(totals.tokens.total).leftPadded(8))  \(Numbers.usd(totals.cost).leftPadded(9))")
+        for (key, totals) in digest.byModel.sorted(by: { $0.value.tokens.total > $1.value.tokens.total }) {
+            let name = "\(key.model) · \(key.provider.shortName)"
+            lines.append("  \(name.padding(toLength: 38, withPad: " ", startingAt: 0)) \(Numbers.tokens(totals.tokens.total).leftPadded(8))  \(Numbers.usd(totals.cost).leftPadded(9))")
         }
         return lines.joined(separator: "\n")
     }

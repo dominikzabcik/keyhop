@@ -5,7 +5,7 @@ import Foundation
 enum KeyhopCLI {
     static let commands: Set<String> = [
         "status", "refresh", "recommend", "switch", "add", "rename", "remove", "usage", "dashboard", "insights", "budget",
-        "cloud", "mcp", "update", "doctor", "reset", "version", "help", "--help", "-h", "--version",
+        "cloud", "work", "mcp", "update", "doctor", "reset", "version", "help", "--help", "-h", "--version",
     ]
 
     static func handles(_ word: String) -> Bool {

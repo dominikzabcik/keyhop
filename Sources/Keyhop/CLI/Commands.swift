@@ -339,13 +339,15 @@ enum Commands {
         let sole = await workspace.service.soleAccounts
         let digest = try await workspace.tracker.digest(interval: range.interval(now: now), previous: range.previous(now: now),
                                                         bucket: range.bucket, provider: tool, sole: sole)
+        var report = digest
+        report.sessions = (try? await workspace.tracker.sessions(in: range.interval(now: now), provider: tool, sole: sole)) ?? []
         let accounts = await workspace.service.accounts
         let budgets = try await workspace.tracker.budgets()
         let spend = try await workspace.tracker.budgetSpend(for: budgets, now: now, sole: sole)
         if json {
-            try Output.json(UsageDocument(range: range, now: now, digest: digest, accounts: accounts, budgets: budgets, spend: spend))
+            try Output.json(UsageDocument(range: range, now: now, digest: report, accounts: accounts, budgets: budgets, spend: spend))
         } else {
-            print(Reports.usage(range: range, digest: digest, accounts: accounts))
+            print(Reports.usage(range: range, digest: report, accounts: accounts))
         }
     }
 

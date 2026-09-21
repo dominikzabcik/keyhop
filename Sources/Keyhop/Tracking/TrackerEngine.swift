@@ -348,7 +348,7 @@ actor TrackerEngine {
         parser.timeZone = .current
         parser.dateFormat = bucket.dateFormat
 
-        var points: [String: (start: Date, key: AccountKey, totals: Totals)] = [:]
+        var points: [String: (start: Date, key: AccountKey, model: String, totals: Totals)] = [:]
         let providerFilter: SQL = provider.map { .text($0.rawValue) } ?? .null
         try db.query("""
             SELECT e.provider, \(Self.accountColumn), e.model, strftime(?1, e.ts, 'unixepoch', 'localtime'), \(Self.sums)
@@ -359,17 +359,19 @@ actor TrackerEngine {
             guard let provider = Provider(rawValue: row.text(0) ?? ""), let label = row.text(3), let start = parser.date(from: label) else { return }
             let account = row.text(1).flatMap { UUID(uuidString: $0) } ?? sole[provider]
             let key = AccountKey(provider: provider, account: account)
+            let model = Pricing.normalize(row.text(2) ?? "unknown")
             let totals = Self.totals(row, from: 4)
             digest.total += totals
             digest.byAccount[key, default: Totals()] += totals
-            digest.byModel[Pricing.normalize(row.text(2) ?? "unknown"), default: Totals()] += totals
-            let pointKey = "\(label)|\(provider.rawValue)|\(account?.uuidString ?? "-")"
-            var point = points[pointKey] ?? (start, key, Totals())
+            digest.byModel[ModelKey(provider: provider, model: model), default: Totals()] += totals
+            digest.byProvider[provider, default: Totals()] += totals
+            let pointKey = "\(label)|\(provider.rawValue)|\(account?.uuidString ?? "-")|\(model)"
+            var point = points[pointKey] ?? (start, key, model, Totals())
             point.totals += totals
             points[pointKey] = point
         }
         digest.points = points.values
-            .map { UsageDigest.Point(start: $0.start, key: $0.key, totals: $0.totals) }
+            .map { UsageDigest.Point(start: $0.start, key: $0.key, model: $0.model, totals: $0.totals) }
             .sorted { $0.start < $1.start }
 
         try db.query("""
@@ -379,5 +381,37 @@ actor TrackerEngine {
             digest.previous = Self.totals(row, from: 0)
         }
         return digest
+    }
+
+    /// Named sessions in the range, newest last activity first. Requests the tool never labelled
+    /// as a session are left out, so the list is conversations rather than every single response.
+    func sessions(in interval: DateInterval, provider: Provider?, sole: [Provider: UUID], limit: Int = 40) throws -> [UsageDigest.Session] {
+        var sessions: [UsageDigest.Session] = []
+        let providerFilter: SQL = provider.map { .text($0.rawValue) } ?? .null
+        try db.query("""
+            SELECT e.session, e.provider, \(Self.accountColumn), e.model, MIN(e.ts), MAX(e.ts), \(Self.sums)
+            FROM events e
+            WHERE e.ts >= ?1 AND e.ts < ?2 AND (?3 IS NULL OR e.provider = ?3)
+              AND e.session IS NOT NULL AND e.session != ''
+              AND \(Self.notDoubleCounted)
+            GROUP BY 1, 2, 3, 4
+            ORDER BY MAX(e.ts) DESC
+            LIMIT ?4
+            """, [
+                .real(interval.start.timeIntervalSince1970), .real(interval.end.timeIntervalSince1970),
+                providerFilter, .int(Int64(limit)),
+            ]) { row in
+            guard let id = row.text(0), let provider = Provider(rawValue: row.text(1) ?? "") else { return }
+            sessions.append(UsageDigest.Session(
+                id: id,
+                provider: provider,
+                account: row.text(2).flatMap { UUID(uuidString: $0) } ?? sole[provider],
+                model: Pricing.normalize(row.text(3) ?? "unknown"),
+                from: Date(timeIntervalSince1970: row.double(4)),
+                to: Date(timeIntervalSince1970: row.double(5)),
+                totals: Self.totals(row, from: 6)
+            ))
+        }
+        return sessions
     }
 }

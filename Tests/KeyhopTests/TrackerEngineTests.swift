@@ -88,10 +88,25 @@ final class TrackerEngineTests: XCTestCase {
             record("c", at: now.addingTimeInterval(-5000), output: 40),
         ])
         let digest = try await engine.digest(interval: interval, previous: previous, bucket: .hour, provider: nil, sole: [:])
-        XCTAssertEqual(digest.byModel["claude-haiku-4-5"]?.tokens.output, 10)
+        XCTAssertEqual(digest.byModel[ModelKey(provider: .claude, model: "claude-haiku-4-5")]?.tokens.output, 10)
+        XCTAssertEqual(digest.byProvider[.claude]?.tokens.output, 10)
         XCTAssertEqual(digest.total.tokens.output, 10)
         XCTAssertEqual(digest.previous.tokens.output, 40)
-        XCTAssertFalse(digest.points.isEmpty)
+        XCTAssertEqual(digest.points.count, 1)
+        XCTAssertEqual(digest.points.first?.model, "claude-haiku-4-5")
+        XCTAssertEqual(digest.points.first?.totals.tokens.output, 10)
+    }
+
+    func testSessionsAreNewestFirstAndSkipUnnamed() async throws {
+        let engine = try TrackerEngine(url: url)
+        let now = Date()
+        try await engine.store([
+            record("named", session: "chat-1", at: now.addingTimeInterval(-30), output: 20),
+            record("anon", session: nil, at: now.addingTimeInterval(-20), output: 5),
+        ])
+        let found = try await engine.sessions(in: DateInterval(start: now.addingTimeInterval(-60), end: now), provider: nil, sole: [:])
+        XCTAssertEqual(found.map(\.id), ["chat-1"])
+        XCTAssertEqual(found.first?.totals.tokens.output, 20)
     }
 
     func testForecastProjectsWhenALimitRunsOut() async throws {

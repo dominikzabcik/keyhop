@@ -254,9 +254,10 @@ final class DashboardTests: XCTestCase {
     func testUsageDocumentFillsBucketsTheHeatmapAndStreaks() {
         let now = Date()
         let accounts = SampleData.accounts(now: now)
+        let digest = SampleData.digest(range: .week, accounts: accounts, now: now)
         let daily = SampleData.digest(interval: DashboardUsage.heatmapInterval(now: now), bucket: .day, accounts: accounts, now: now)
-        let usage = DashboardUsage(range: .week, tool: nil, now: now, digest: SampleData.digest(range: .week, accounts: accounts, now: now),
-                                   daily: daily, accounts: accounts, active: [:])
+        let usage = DashboardUsage(range: .week, tool: nil, now: now, digest: digest, daily: daily, accounts: accounts,
+                                   active: [:], sessions: digest.sessions)
         XCTAssertEqual(usage.buckets.count, 7)
         XCTAssertEqual(usage.series.first?.color, "#C9821A")
         XCTAssertGreaterThanOrEqual(usage.heatmap.count, 176)
@@ -272,6 +273,11 @@ final class DashboardTests: XCTestCase {
         XCTAssertEqual(usage.series.filter { $0.id == "other" }.count, 1)
         let drawn = usage.buckets.reduce(0) { sum, bucket in sum + usage.series.reduce(0) { $0 + (bucket.values[$1.id]?.tokens ?? 0) } }
         XCTAssertEqual(drawn, usage.total.tokens)
+        let byTool = usage.toolBuckets.reduce(0) { sum, bucket in sum + usage.toolSeries.reduce(0) { $0 + (bucket.values[$1.id]?.tokens ?? 0) } }
+        XCTAssertEqual(byTool, usage.total.tokens)
+        XCTAssertFalse(usage.tools.isEmpty)
+        XCTAssertFalse(usage.models.contains { $0.tool.isEmpty })
+        XCTAssertFalse(usage.sessions.isEmpty)
     }
 
     /// Stopping a wait for a new login puts the tool back on the account it had.

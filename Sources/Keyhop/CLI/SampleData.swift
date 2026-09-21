@@ -111,12 +111,10 @@ enum SampleData {
                 let tokens = Int(base * wave * daily * (bucket == .hour ? 0.12 : 1))
                 guard tokens > 0 else { continue }
                 let cost = Double(tokens) / 1_000_000 * [2.9, 2.2, 1.1, 0.8, 1.5, 2.0][i % 6]
-                let totals = Totals(tokens: TokenCounts(input: tokens / 20, cacheRead: tokens * 3 / 4, output: tokens / 5), cost: cost,
+                let totals = Totals(tokens: TokenCounts(input: tokens / 20, cacheWrite: tokens / 50, cacheRead: tokens * 3 / 4,
+                                                        output: tokens / 5, reasoning: tokens / 30), cost: cost,
                                     billed: account.provider == .cursor ? cost * 0.08 : 0, requests: max(1, tokens / 9000))
                 let key = AccountKey(provider: account.provider, account: account.id)
-                digest.points.append(UsageDigest.Point(start: start, key: key, totals: totals))
-                digest.byAccount[key, default: Totals()] += totals
-                digest.total += totals
                 let model = switch account.provider {
                 case .claude: Int(index) % 5 == 0 ? 3 : 0
                 case .codex: 1
@@ -125,16 +123,39 @@ enum SampleData {
                 case .pi: 7
                 case .cursor, .copilot, .windsurf, .codebuff: 2
                 }
-                digest.byModel[models[model], default: Totals()] += totals
+                let name = models[model]
+                digest.points.append(UsageDigest.Point(start: start, key: key, model: name, totals: totals))
+                digest.byAccount[key, default: Totals()] += totals
+                digest.byModel[ModelKey(provider: account.provider, model: name), default: Totals()] += totals
+                digest.byProvider[account.provider, default: Totals()] += totals
+                digest.total += totals
             }
             guard let next = calendar.date(byAdding: component, value: 1, to: start) else { break }
             start = next
             index += 1
         }
         if digest.total.requests > 0 {
-            digest.byModel[models[4], default: Totals()] += Totals(tokens: TokenCounts(input: 40_000, cacheRead: 300_000, output: 60_000), cost: 0.6, requests: 80)
+            digest.byModel[ModelKey(provider: .claude, model: models[4]), default: Totals()] +=
+                Totals(tokens: TokenCounts(input: 40_000, cacheRead: 300_000, output: 60_000), cost: 0.6, requests: 80)
         }
         digest.previous = Totals(tokens: TokenCounts(output: Int(Double(digest.total.tokens.total) * 0.86)), cost: digest.total.cost * 0.88)
+        digest.sessions = sessions(from: digest, now: now)
         return digest
+    }
+
+    /// A handful of conversations drawn from the same sample burn, so Usage has a sessions list.
+    static func sessions(from digest: UsageDigest, now: Date) -> [UsageDigest.Session] {
+        digest.byModel.sorted { $0.value.tokens.total > $1.value.tokens.total }.prefix(8).enumerated().map { index, entry in
+            let span = TimeInterval((index + 1) * 1400)
+            return UsageDigest.Session(
+                id: "sample-\(entry.key.provider.rawValue)-\(index)",
+                provider: entry.key.provider,
+                account: digest.byAccount.first { $0.key.provider == entry.key.provider }?.key.account,
+                model: entry.key.model,
+                from: now.addingTimeInterval(-span - 2400),
+                to: now.addingTimeInterval(-span),
+                totals: entry.value
+            )
+        }
     }
 }

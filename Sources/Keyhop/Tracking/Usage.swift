@@ -69,17 +69,38 @@ struct AccountKey: Hashable {
     let account: UUID?
 }
 
+/// One model on one tool. The same short name on two tools stays two rows.
+struct ModelKey: Hashable, CustomStringConvertible {
+    let provider: Provider
+    let model: String
+    var description: String { "\(provider.shortName) · \(model)" }
+}
+
 struct UsageDigest {
     struct Point: Identifiable {
         let start: Date
         let key: AccountKey
+        let model: String
         let totals: Totals
-        var id: String { "\(start.timeIntervalSince1970)|\(key.provider.rawValue)|\(key.account?.uuidString ?? "-")" }
+        var id: String { "\(start.timeIntervalSince1970)|\(key.provider.rawValue)|\(key.account?.uuidString ?? "-")|\(model)" }
+    }
+
+    /// A conversation or session the tool named, rolled up for the Usage list.
+    struct Session {
+        let id: String
+        let provider: Provider
+        let account: UUID?
+        let model: String
+        let from: Date
+        let to: Date
+        let totals: Totals
     }
 
     var points: [Point] = []
     var byAccount: [AccountKey: Totals] = [:]
-    var byModel: [String: Totals] = [:]
+    var byModel: [ModelKey: Totals] = [:]
+    var byProvider: [Provider: Totals] = [:]
+    var sessions: [Session] = []
     var total = Totals()
     var previous = Totals()
 }

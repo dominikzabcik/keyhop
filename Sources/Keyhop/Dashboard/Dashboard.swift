@@ -194,6 +194,7 @@ struct DashboardState: Encodable {
     let activity: WorkProgress?
     let messages: [String]
     let cloud: DashboardCloud
+    let work: DashboardWork
     let appearance: DashboardAppearance
 }
 
@@ -275,6 +276,29 @@ struct DashboardCloud: Encodable {
     let linking: Linking?
 }
 
+/// What Keyhop is allowed to read from this computer's git repositories.
+struct DashboardWork: Encodable {
+    struct Index: Encodable {
+        let done: Int
+        let total: Int
+        let complete: Bool
+    }
+
+    let gitAvailable: Bool
+    let enabled: Bool
+    let shareSubjects: Bool
+    let roots: [String]
+    let lastSync: Date?
+    let index: Index
+    let linked: Bool
+}
+
+struct DashboardWorkAction: Encodable {
+    let message: String
+    let note: String?
+    let work: DashboardWork
+}
+
 struct DashboardCloudLinkAction: Encodable {
     let message: String
     let note: String?
@@ -318,6 +342,8 @@ struct DashboardUsage: Encodable {
         let output: Int
         let cacheRead: Int
         let cacheWrite: Int
+        let cacheWrite1h: Int
+        let reasoning: Int
         let cost: Double
         let billed: Double
 
@@ -327,7 +353,9 @@ struct DashboardUsage: Encodable {
             input = totals.tokens.input
             output = totals.tokens.output
             cacheRead = totals.tokens.cacheRead
-            cacheWrite = totals.tokens.cacheWrite + totals.tokens.cacheWrite1h
+            cacheWrite = totals.tokens.cacheWrite
+            cacheWrite1h = totals.tokens.cacheWrite1h
+            reasoning = totals.tokens.reasoning
             cost = totals.cost
             billed = totals.billed
         }
@@ -365,6 +393,25 @@ struct DashboardUsage: Encodable {
 
     struct ModelRow: Encodable {
         let model: String
+        let tool: String
+        let color: String
+        let figures: Figures
+    }
+
+    struct ToolRow: Encodable {
+        let id: String
+        let name: String
+        let color: String
+        let figures: Figures
+    }
+
+    struct SessionRow: Encodable {
+        let id: String
+        let tool: String
+        let account: String
+        let model: String
+        let from: Date
+        let to: Date
         let figures: Figures
     }
 
@@ -391,8 +438,14 @@ struct DashboardUsage: Encodable {
     let previous: Figures
     let series: [Series]
     let buckets: [Bucket]
+    let toolSeries: [Series]
+    let toolBuckets: [Bucket]
+    let modelSeries: [Series]
+    let modelBuckets: [Bucket]
     let accounts: [AccountRow]
+    let tools: [ToolRow]
     let models: [ModelRow]
+    let sessions: [SessionRow]
     let heatmap: [Day]
     let streak: Streak
 
@@ -400,8 +453,14 @@ struct DashboardUsage: Encodable {
     /// the enamel surface. Accounts past the fourth share the neutral.
     static let seriesColors = ["#C9821A", "#2F6FC0", "#B8423F", "#1E9A78"]
     static let otherColor = "#8A8A86"
+    /// One colour per tool, stable across ranges so a Claude bar is always the same amber.
+    static let toolColors: [String: String] = [
+        "claude": "#C9821A", "cursor": "#2F6FC0", "codex": "#B8423F", "gemini": "#1E9A78",
+        "opencode": "#7A6BC4", "pi": "#C45B8A", "copilot": "#6B8F9E", "windsurf": "#3D8B9A", "codebuff": "#A67C52",
+    ]
 
-    init(range: InsightsRange, tool: Provider?, now: Date, digest: UsageDigest, daily: UsageDigest, accounts: [Account], active: [Provider: UUID]) {
+    init(range: InsightsRange, tool: Provider?, now: Date, digest: UsageDigest, daily: UsageDigest, accounts: [Account],
+         active: [Provider: UUID], sessions: [UsageDigest.Session] = []) {
         let interval = range.interval(now: now)
         self.range = range.argument
         title = range.title
@@ -416,28 +475,27 @@ struct DashboardUsage: Encodable {
         let keyFormat = DateFormatter()
         keyFormat.locale = Locale(identifier: "en_US_POSIX")
         keyFormat.dateFormat = range.bucket.dateFormat
-
-        var values: [String: [String: Value]] = [:]
-        var seen: Set<Series> = []
-        for point in digest.points {
-            let entry = Self.series(for: point.key, accounts: accounts)
-            seen.insert(entry)
-            var value = values[keyFormat.string(from: point.start), default: [:]][entry.id, default: Value()]
-            value.tokens += point.totals.tokens.total
-            value.cost += point.totals.cost
-            values[keyFormat.string(from: point.start), default: [:]][entry.id] = value
-        }
-        series = seen.sorted { ($0.order, $0.id) < ($1.order, $1.id) }
-
-        var buckets: [Bucket] = []
-        var cursor = interval.start
         let component: Calendar.Component = range.bucket == .hour ? .hour : .day
-        while cursor < interval.end, buckets.count < 800 {
-            buckets.append(Bucket(start: cursor, values: values[keyFormat.string(from: cursor)] ?? [:]))
-            guard let next = calendar.date(byAdding: component, value: 1, to: cursor) else { break }
-            cursor = next
+
+        let accountChart = Self.chart(points: digest.points, interval: interval, format: keyFormat, calendar: calendar,
+                                      component: component) { Self.series(for: $0.key, accounts: accounts) }
+        series = accountChart.series
+        buckets = accountChart.buckets
+
+        let toolChart = Self.chart(points: digest.points, interval: interval, format: keyFormat, calendar: calendar,
+                                   component: component, seriesFor: Self.toolSeries(for:))
+        toolSeries = toolChart.series
+        toolBuckets = toolChart.buckets
+
+        let rankedModels = digest.byModel.sorted { $0.value.tokens.total > $1.value.tokens.total }
+        let namedModels = Set(rankedModels.prefix(7).map { "\($0.key.provider.rawValue):\($0.key.model)" })
+        let collapseModels = rankedModels.count > 8
+        let modelChart = Self.chart(points: digest.points, interval: interval, format: keyFormat, calendar: calendar,
+                                    component: component) { point in
+            Self.modelSeries(for: point, named: namedModels, collapse: collapseModels)
         }
-        self.buckets = buckets
+        modelSeries = modelChart.series
+        modelBuckets = modelChart.buckets
 
         self.accounts = digest.byAccount
             .sorted { $0.value.tokens.total > $1.value.tokens.total }
@@ -448,9 +506,25 @@ struct DashboardUsage: Encodable {
                                   name: account?.displayName ?? "Earlier or removed", email: account?.email, plan: account?.plan,
                                   active: account.map { active[key.provider] == $0.id } ?? false, figures: Figures(totals))
             }
-        models = digest.byModel
+        tools = digest.byProvider
             .sorted { $0.value.tokens.total > $1.value.tokens.total }
-            .map { ModelRow(model: $0.key, figures: Figures($0.value)) }
+            .map { provider, totals in
+                let entry = Self.toolSeries(for: UsageDigest.Point(start: interval.start, key: AccountKey(provider: provider, account: nil),
+                                                                   model: "", totals: totals))
+                return ToolRow(id: provider.rawValue, name: provider.name, color: entry.color, figures: Figures(totals))
+            }
+        models = rankedModels.map { key, totals in
+            let point = UsageDigest.Point(start: interval.start, key: AccountKey(provider: key.provider, account: nil),
+                                          model: key.model, totals: totals)
+            let entry = Self.modelSeries(for: point, named: namedModels, collapse: false)
+            return ModelRow(model: key.model, tool: key.provider.rawValue, color: entry.color, figures: Figures(totals))
+        }
+        self.sessions = sessions.map { session in
+            let account = session.account.flatMap { id in accounts.first { $0.id == id } }
+            return SessionRow(id: session.id, tool: session.provider.rawValue,
+                              account: account?.displayName ?? "Earlier or removed", model: session.model,
+                              from: session.from, to: session.to, figures: Figures(session.totals))
+        }
 
         let dayFormat = DateFormatter()
         dayFormat.locale = Locale(identifier: "en_US_POSIX")
@@ -473,6 +547,28 @@ struct DashboardUsage: Encodable {
         }
         heatmap = days
         streak = Self.streak(days: days, today: dayFormat.string(from: now))
+    }
+
+    static func chart(points: [UsageDigest.Point], interval: DateInterval, format: DateFormatter, calendar: Calendar,
+                      component: Calendar.Component, seriesFor: (UsageDigest.Point) -> Series) -> (series: [Series], buckets: [Bucket]) {
+        var values: [String: [String: Value]] = [:]
+        var seen: Set<Series> = []
+        for point in points {
+            let entry = seriesFor(point)
+            seen.insert(entry)
+            var value = values[format.string(from: point.start), default: [:]][entry.id, default: Value()]
+            value.tokens += point.totals.tokens.total
+            value.cost += point.totals.cost
+            values[format.string(from: point.start), default: [:]][entry.id] = value
+        }
+        var buckets: [Bucket] = []
+        var cursor = interval.start
+        while cursor < interval.end, buckets.count < 800 {
+            buckets.append(Bucket(start: cursor, values: values[format.string(from: cursor)] ?? [:]))
+            guard let next = calendar.date(byAdding: component, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return (seen.sorted { ($0.order, $0.id) < ($1.order, $1.id) }, buckets)
     }
 
     /// 26 weeks ending this week, starting on a Monday.
@@ -524,6 +620,22 @@ struct DashboardUsage: Encodable {
         let account = accounts[index]
         return Series(id: account.id.uuidString, name: "\(account.provider.shortName), \(account.displayName)",
                       tool: account.provider.rawValue, color: index < seriesColors.count ? seriesColors[index] : otherColor, order: index)
+    }
+
+    static func toolSeries(for point: UsageDigest.Point) -> Series {
+        let provider = point.key.provider
+        return Series(id: provider.rawValue, name: provider.name, tool: provider.rawValue,
+                      color: toolColors[provider.rawValue] ?? otherColor, order: Provider.allCases.firstIndex(of: provider) ?? 99)
+    }
+
+    static func modelSeries(for point: UsageDigest.Point, named: Set<String>, collapse: Bool) -> Series {
+        let id = "\(point.key.provider.rawValue):\(point.model)"
+        if collapse, !named.contains(id) {
+            return Series(id: "other-models", name: "Other models", tool: "mixed", color: otherColor, order: 9_000)
+        }
+        let color = toolColors[point.key.provider.rawValue] ?? otherColor
+        return Series(id: id, name: point.model, tool: point.key.provider.rawValue, color: color,
+                      order: Provider.allCases.firstIndex(of: point.key.provider).map { $0 * 100 } ?? 500)
     }
 }
 
@@ -628,6 +740,8 @@ actor DashboardSession {
                 return .json(try await cloudUnlink())
             case ("GET", "/api/cloud/leaderboard"):
                 return .json(try await cloudLeaderboard(period: request.query["period"], metric: request.query["metric"], team: request.query["team"]))
+            case ("POST", "/api/work"):
+                return .json(try await applyWork(try Self.decode(WorkBody.self, request)))
             case ("GET", "/api/usage"):
                 guard let range = InsightsRange(argument: request.query["range"] ?? "week") else { throw UsageError("Unknown range.") }
                 let word = request.query["tool"] ?? "all"
@@ -671,7 +785,7 @@ actor DashboardSession {
                               dataDirectory: Platform.dataDirectory.path, savedAt: Date(), status: StatusDocument(overview),
                               adding: adding.keys.map(\.rawValue).sorted(),
                               addingSince: Dictionary(uniqueKeysWithValues: addingSince.map { ($0.key.rawValue, $0.value) }), refreshing: refreshing, activity: progress.value, messages: pending,
-                              cloud: cloudStatus(), appearance: currentAppearance())
+                              cloud: cloudStatus(), work: workStatus(), appearance: currentAppearance())
     }
 
     func usage(range: InsightsRange, tool: Provider?, readLogs: Bool) async throws -> DashboardUsage {
@@ -688,10 +802,11 @@ actor DashboardSession {
             }
             let everyone = SampleData.accounts(now: now)
             let accounts = everyone.filter { tool == nil || $0.provider == tool }
-            return DashboardUsage(range: range, tool: tool, now: now,
-                                  digest: SampleData.digest(range: range, accounts: accounts, now: now),
+            let digest = SampleData.digest(range: range, accounts: accounts, now: now)
+            return DashboardUsage(range: range, tool: tool, now: now, digest: digest,
                                   daily: SampleData.digest(interval: heat, bucket: .day, accounts: accounts, now: now),
-                                  accounts: everyone, active: SampleData.overview(now: now).active)
+                                  accounts: everyone, active: SampleData.overview(now: now).active,
+                                  sessions: digest.sessions)
         }
         let workspace = try openWorkspace()
         if readLogs, lastIngest.map({ now.timeIntervalSince($0) > 120 }) ?? true {
@@ -705,8 +820,10 @@ actor DashboardSession {
         let digest = try await workspace.tracker.digest(interval: range.interval(now: now), previous: range.previous(now: now),
                                                         bucket: range.bucket, provider: tool, sole: sole)
         let daily = try await workspace.tracker.digest(interval: heat, previous: heat, bucket: .day, provider: tool, sole: sole)
+        let sessions = (try? await workspace.tracker.sessions(in: range.interval(now: now), provider: tool, sole: sole)) ?? []
         return DashboardUsage(range: range, tool: tool, now: now, digest: digest, daily: daily,
-                              accounts: await workspace.service.accounts, active: workspace.state.activeByTool)
+                              accounts: await workspace.service.accounts, active: workspace.state.activeByTool,
+                              sessions: sessions)
     }
 
     func bootDocument(readLogs: Bool) async throws -> DashboardBoot {
@@ -731,6 +848,13 @@ actor DashboardSession {
         let scope: String
         let amount: Double?
         let period: String?
+    }
+
+    private struct WorkBody: Decodable {
+        let enabled: Bool?
+        let shareSubjects: Bool?
+        let add: String?
+        let remove: String?
     }
 
     private static func decode<Body: Decodable>(_ type: Body.Type, _ request: HTTPRequest) throws -> Body {
@@ -1158,5 +1282,55 @@ actor DashboardSession {
         #endif
         return DashboardAction(message: "Installed Keyhop \(release.version) \(how).", note: "Reopen Keyhop to use it.")
         #endif
+    }
+
+    // MARK: Work
+
+    func workStatus() -> DashboardWork {
+        if sample {
+            return DashboardWork(gitAvailable: true, enabled: false, shareSubjects: false,
+                                 roots: [FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Projects").path],
+                                 lastSync: nil, index: .init(done: 0, total: 0, complete: false), linked: true)
+        }
+        let settings = WorkSettings.load()
+        let index = WorkIndex.load()
+        return DashboardWork(gitAvailable: GitWork.isAvailable, enabled: settings.enabled, shareSubjects: settings.shareSubjects,
+                             roots: settings.roots, lastSync: settings.lastSync,
+                             index: .init(done: index.done, total: index.total, complete: index.isComplete),
+                             linked: CloudLink.load() != nil)
+    }
+
+    private func applyWork(_ body: WorkBody) async throws -> DashboardWorkAction {
+        try refuseInSample()
+        guard GitWork.isAvailable else { throw KeyhopError("git isn't installed, so Keyhop can't count commits on this computer.") }
+        var settings = WorkSettings.load()
+        var message = "Saved."
+        if let enabled = body.enabled {
+            settings.enabled = enabled
+            if enabled, settings.roots.isEmpty { settings.roots = WorkSettings.likelyRoots() }
+            message = enabled ? "Commit counting is on." : "Commit counting is off."
+        }
+        if let share = body.shareSubjects {
+            settings.shareSubjects = share
+            message = share
+                ? "Subject lines will go with the next sync."
+                : "Subject lines stay on this computer."
+            if !share, let link = CloudLink.load() {
+                try await CloudSync.stopSharingSubjects(&settings, link: link)
+            }
+        }
+        if let folder = body.add?.trimmingCharacters(in: .whitespacesAndNewlines), !folder.isEmpty {
+            let path = (folder as NSString).expandingTildeInPath
+            guard FileManager.default.fileExists(atPath: path) else { throw KeyhopError("That folder isn't there.") }
+            if !settings.roots.contains(path) { settings.roots.append(path) }
+            message = "Added \(path)."
+        }
+        if let folder = body.remove {
+            let path = (folder as NSString).expandingTildeInPath
+            settings.roots.removeAll { $0 == path || $0 == folder }
+            message = "Removed \(path)."
+        }
+        try settings.save()
+        return DashboardWorkAction(message: message, note: nil, work: workStatus())
     }
 }

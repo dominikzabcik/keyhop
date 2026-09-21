@@ -398,6 +398,14 @@ struct DashboardUsage: Encodable {
         let figures: Figures
     }
 
+    /// A repository or folder the work happened in. `path` is shown with the home folder as `~`, and
+    /// is nil for usage no tool placed in a folder.
+    struct ProjectRow: Encodable {
+        let name: String
+        let path: String?
+        let figures: Figures
+    }
+
     struct ToolRow: Encodable {
         let id: String
         let name: String
@@ -445,6 +453,7 @@ struct DashboardUsage: Encodable {
     let accounts: [AccountRow]
     let tools: [ToolRow]
     let models: [ModelRow]
+    let projects: [ProjectRow]
     let sessions: [SessionRow]
     let heatmap: [Day]
     let streak: Streak
@@ -518,6 +527,9 @@ struct DashboardUsage: Encodable {
                                           model: key.model, totals: totals)
             let entry = Self.modelSeries(for: point, named: namedModels, collapse: false)
             return ModelRow(model: key.model, tool: key.provider.rawValue, color: entry.color, figures: Figures(totals))
+        }
+        projects = Reports.projects(digest).map { project in
+            ProjectRow(name: project.name, path: project.path.map(Projects.display), figures: Figures(project.totals))
         }
         self.sessions = sessions.map { session in
             let account = session.account.flatMap { id in accounts.first { $0.id == id } }

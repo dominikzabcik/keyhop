@@ -8,6 +8,23 @@ actor TrackerEngine {
     init(url: URL) throws {
         db = try Database(url: url)
         try db.script(Self.schema)
+        try Self.addProjects(to: db)
+    }
+
+    /// A database made before projects existed gets the column, and its logs are read again once so
+    /// the history already stored is filed under projects too. Reading again can't count anything
+    /// twice: every record keeps its key, and the second read only fills in the project.
+    private static func addProjects(to db: Database) throws {
+        var present = false
+        try db.query("PRAGMA table_info(events)") { row in
+            if row.text(1) == "project" { present = true }
+        }
+        guard !present else { return }
+        try db.script("""
+            ALTER TABLE events ADD COLUMN project TEXT;
+            CREATE INDEX IF NOT EXISTS events_by_project ON events (project, ts);
+            DELETE FROM sources;
+            """)
     }
 
     private static let schema = """
@@ -175,15 +192,20 @@ actor TrackerEngine {
 
     private func insert(_ record: UsageRecord) throws {
         let t = record.tokens
+        // A record seen before keeps everything it had. The one thing a later read can add is the
+        // project, for history stored before projects were recorded.
         try db.execute("""
-            INSERT OR IGNORE INTO events
-                (key, provider, account, session, kind, ts, model, input, cache_write, cache_write_1h, cache_read, output, reasoning, cost, billed)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO events
+                (key, provider, account, session, kind, ts, model, input, cache_write, cache_write_1h, cache_read, output, reasoning, cost, billed, project)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET project = excluded.project
+            WHERE events.project IS NULL AND excluded.project IS NOT NULL
             """, [
                 .text(record.key), .text(record.provider.rawValue), .text(record.account?.uuidString), .text(record.session),
                 .text(record.kind.rawValue), .real(record.timestamp.timeIntervalSince1970), .text(record.model),
                 .int(Int64(t.input)), .int(Int64(t.cacheWrite)), .int(Int64(t.cacheWrite1h)), .int(Int64(t.cacheRead)),
                 .int(Int64(t.output)), .int(Int64(t.reasoning)), .real(record.cost), record.billed.map(SQL.real) ?? .null,
+                .text(record.project),
             ])
     }
 
@@ -373,6 +395,14 @@ actor TrackerEngine {
         digest.points = points.values
             .map { UsageDigest.Point(start: $0.start, key: $0.key, model: $0.model, totals: $0.totals) }
             .sorted { $0.start < $1.start }
+
+        try db.query("""
+            SELECT COALESCE(e.project, ''), \(Self.sums) FROM events e
+            WHERE e.ts >= ?1 AND e.ts < ?2 AND (?3 IS NULL OR e.provider = ?3) AND \(Self.notDoubleCounted)
+            GROUP BY 1
+            """, [.real(interval.start.timeIntervalSince1970), .real(interval.end.timeIntervalSince1970), providerFilter]) { row in
+            digest.byProject[row.text(0) ?? "", default: Totals()] += Self.totals(row, from: 1)
+        }
 
         try db.query("""
             SELECT \(Self.sums) FROM events e

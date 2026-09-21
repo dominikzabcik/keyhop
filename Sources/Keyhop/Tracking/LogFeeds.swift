@@ -44,7 +44,7 @@ struct LogFeed {
             provider: .claude, account: nil, session: object["sessionId"] as? String,
             kind: .request, timestamp: timestamp, model: model, tokens: tokens,
             cost: Pricing.cost(model: model, tokens: tokens, fast: usage["speed"] as? String == "fast"),
-            billed: nil
+            billed: nil, project: Projects.root(for: object["cwd"] as? String)
         )
     }
 
@@ -63,6 +63,7 @@ struct LogFeed {
         switch object["type"] as? String {
         case "turn_context":
             if let model = payload["model"] as? String { state["model"] = model }
+            if let directory = payload["cwd"] as? String { state["cwd"] = directory }
             return nil
 
         case "token_usage_record":
@@ -72,7 +73,8 @@ struct LogFeed {
             let id = payload["response_id"] as? String ?? "\(session):\(object["ordinal"] ?? timestamp.timeIntervalSince1970)"
             return UsageRecord(key: "codex:\(id)", provider: .codex, account: nil, session: payload["session_id"] as? String ?? session,
                                kind: .request, timestamp: timestamp, model: model, tokens: tokens,
-                               cost: Pricing.cost(model: model, tokens: tokens), billed: nil)
+                               cost: Pricing.cost(model: model, tokens: tokens), billed: nil,
+                               project: Projects.root(for: state["cwd"]))
 
         case "event_msg" where payload["type"] as? String == "token_count":
             guard let info = payload["info"] as? [String: Any],
@@ -97,7 +99,8 @@ struct LogFeed {
             let tokens = codexTokens(usage)
             return UsageRecord(key: "codex-total:\(session):\(runningTotal)", provider: .codex, account: nil, session: session,
                                kind: .runningTotal, timestamp: timestamp, model: model, tokens: tokens,
-                               cost: Pricing.cost(model: model, tokens: tokens), billed: nil)
+                               cost: Pricing.cost(model: model, tokens: tokens), billed: nil,
+                               project: Projects.root(for: state["cwd"]))
 
         default:
             return nil
@@ -169,6 +172,7 @@ struct LogFeed {
         let type = object["type"] as? String
         if type == "session" {
             if let session = object["id"] as? String { state["session"] = session }
+            if let directory = object["cwd"] as? String { state["cwd"] = directory }
             return nil
         }
         if type == "model_change" {
@@ -208,7 +212,8 @@ struct LogFeed {
         return UsageRecord(
             key: "pi:\(id):\(stamp)", provider: .pi, account: nil, session: session,
             kind: .request, timestamp: timestamp, model: model, tokens: tokens,
-            cost: logged > 0 ? logged : Pricing.cost(model: model, tokens: tokens), billed: nil
+            cost: logged > 0 ? logged : Pricing.cost(model: model, tokens: tokens), billed: nil,
+            project: Projects.root(for: state["cwd"])
         )
     }
 
@@ -263,7 +268,8 @@ enum OpenCodeFeed {
                 key: "opencode:\(id)", provider: .opencode, account: nil, session: session,
                 kind: .request, timestamp: Date(timeIntervalSince1970: Double(created) / 1000),
                 model: model, tokens: tokens,
-                cost: logged > 0 ? logged : Pricing.cost(model: model, tokens: tokens), billed: nil
+                cost: logged > 0 ? logged : Pricing.cost(model: model, tokens: tokens), billed: nil,
+                project: Projects.root(for: (message["path"] as? [String: Any])?["cwd"] as? String)
             ))
         }
         return (records, watermark)

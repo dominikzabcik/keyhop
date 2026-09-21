@@ -182,9 +182,18 @@ struct UsageDocument: Encodable {
     let accounts: [AccountUsage]
     let tools: [ToolUsage]
     let models: [ModelUsage]
+    let projects: [ProjectUsage]
     let sessions: [SessionUsage]
     let points: [Point]
     let budgets: [BudgetDocument]
+
+    /// A repository or folder, by where it is on this computer and the short name it goes by.
+    /// Usage no tool placed in a folder has neither.
+    struct ProjectUsage: Encodable {
+        let path: String?
+        let name: String
+        let spend: SpendDocument
+    }
 
     struct AccountUsage: Encodable {
         let id: UUID?
@@ -259,6 +268,9 @@ struct UsageDocument: Encodable {
                            cacheWrite: totals.tokens.cacheWrite, cacheWrite1h: totals.tokens.cacheWrite1h,
                            reasoning: totals.tokens.reasoning)
             }
+        projects = Reports.projects(digest).map { path, name, totals in
+            ProjectUsage(path: path, name: name, spend: SpendDocument(totals))
+        }
         sessions = digest.sessions.map {
             SessionUsage(id: $0.id, tool: $0.provider.rawValue, account: $0.account, model: $0.model,
                          from: $0.from, to: $0.to, spend: SpendDocument($0.totals))
@@ -396,7 +408,28 @@ enum Reports {
             let name = "\(key.model) · \(key.provider.shortName)"
             lines.append("  \(name.padding(toLength: 38, withPad: " ", startingAt: 0)) \(Numbers.tokens(totals.tokens.total).leftPadded(8))  \(Numbers.usd(totals.cost).leftPadded(9))")
         }
+        let projects = Self.projects(digest)
+        if projects.contains(where: { $0.path != nil }) {
+            lines.append("")
+            lines.append("Projects")
+            for (_, name, totals) in projects.prefix(12) {
+                lines.append("  \(name.padding(toLength: 38, withPad: " ", startingAt: 0)) \(Numbers.tokens(totals.tokens.total).leftPadded(8))  \(Numbers.usd(totals.cost).leftPadded(9))")
+            }
+            if projects.count > 12 { lines.append("  and \(projects.count - 12) more") }
+        }
         return lines.joined(separator: "\n")
+    }
+
+    /// Projects, most used first, each with the short name it goes by. Usage no tool placed in a
+    /// folder comes last whatever its size, because it isn't a project.
+    static func projects(_ digest: UsageDigest) -> [(path: String?, name: String, totals: Totals)] {
+        let names = Projects.names(for: digest.byProject.keys.filter { !$0.isEmpty })
+        let placed = digest.byProject
+            .filter { !$0.key.isEmpty }
+            .sorted { $0.value.tokens.total > $1.value.tokens.total }
+            .map { (path: Optional($0.key), name: names[$0.key] ?? $0.key, totals: $0.value) }
+        let unplaced = digest.byProject[""].map { [(path: String?.none, name: "No folder recorded", totals: $0)] } ?? []
+        return placed + unplaced
     }
 
     static func doctor(_ document: DoctorDocument) -> String {

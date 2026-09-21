@@ -81,6 +81,19 @@ enum SampleData {
         digest(interval: range.interval(now: now), bucket: range.bucket, accounts: accounts, now: now)
     }
 
+    /// Where each sample tool's work happened: the repositories someone might have on the go, and
+    /// Gemini CLI and Cursor, which record no folder, in none.
+    private static func sampleProject(_ tool: Provider, _ index: Int) -> String {
+        let home = Files.home.path
+        switch tool {
+        case .gemini, .cursor: return ""
+        case .claude: return index % 3 == 0 ? "\(home)/code/atlas" : "\(home)/code/keyhop"
+        case .codex: return "\(home)/code/atlas"
+        case .opencode, .pi: return "\(home)/code/field-notes"
+        case .copilot, .windsurf, .codebuff: return "\(home)/code/keyhop"
+        }
+    }
+
     /// Smooth, repeatable usage: a working-day rhythm by the hour, and by the day a weekly wave with
     /// quieter weekends and the odd day off.
     static func digest(interval: DateInterval, bucket: Bucket, accounts: [Account], now: Date) -> UsageDigest {
@@ -128,6 +141,7 @@ enum SampleData {
                 digest.byAccount[key, default: Totals()] += totals
                 digest.byModel[ModelKey(provider: account.provider, model: name), default: Totals()] += totals
                 digest.byProvider[account.provider, default: Totals()] += totals
+                digest.byProject[sampleProject(account.provider, Int(index)), default: Totals()] += totals
                 digest.total += totals
             }
             guard let next = calendar.date(byAdding: component, value: 1, to: start) else { break }

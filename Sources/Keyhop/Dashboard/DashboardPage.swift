@@ -953,10 +953,14 @@ select.field option { background: var(--raised); }
     const toolsCard = `<section class="card"><div class="card-head"><h2>Tools</h2><span class="hint mono">${(usage.tools || []).length}</span></div>${toolTable(usage.tools || [], ui.metric)}</section>`;
     const models = `<section class="card"><div class="card-head"><h2>Models</h2><span class="hint mono">${usage.models.length}</span></div>${modelTable(usage.models, ui.metric, true)}</section>`;
     const accounts = `<section class="card"><div class="card-head"><h2>Accounts</h2><span class="hint mono">${usage.accounts.length}</span></div>${accountTable(usage.accounts, ui.metric)}</section>`;
+    const placed = (usage.projects || []).filter((p) => p.path);
+    const projects = placed.length
+      ? `<section class="card"><div class="card-head"><h2>Projects</h2><span class="hint mono">${placed.length}</span></div>${projectTable(usage.projects, ui.metric)}</section>`
+      : "";
     const sessions = (usage.sessions && usage.sessions.length)
       ? `<section class="card"><div class="card-head"><h2>Sessions</h2><span class="hint mono">${usage.sessions.length}</span></div>${sessionTable(usage.sessions, ui.metric)}</section>`
       : "";
-    return { toolbar, body: `${stats}${chart}<div class="split wide-left">${heat}${mix}</div><div class="split">${toolsCard}${models}</div>${accounts}${sessions}` };
+    return { toolbar, body: `${stats}${chart}<div class="split wide-left">${heat}${mix}</div><div class="split">${toolsCard}${models}</div>${projects}${accounts}${sessions}` };
   }
 
   function niceCeiling(value) {
@@ -1105,6 +1109,21 @@ select.field option { background: var(--raised); }
         <table class="table"><thead><tr><th>Model</th>${showBars ? "<th></th>" : ""}<th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th></tr></thead><tbody>${rows}</tbody></table>
       </div>`;
     }).join("");
+  }
+
+  // Each repository or folder, most used first. Usage no tool placed in a folder closes the list
+  // and says so, rather than being left out and making the rows add up to less than the total.
+  function projectTable(projects, metric) {
+    const value = (p) => (metric === "tokens" ? p.figures.tokens : p.figures.cost);
+    const peak = Math.max(0.000001, ...projects.map(value));
+    const shown = projects.slice(0, 12);
+    const rows = shown.map((p) => `<tr>
+      <td>${p.path ? `<b>${esc(p.name)}</b><div class="subtle mono" style="font-size:11px">${esc(p.path)}</div>` : `<span class="subtle">${esc(p.name)}</span>`}</td>
+      <td class="bar-cell">${progress((value(p) / peak) * 100, null, "plain")}</td>
+      <td class="right mono">${metric === "tokens" ? fmt.tokens(p.figures.tokens) : fmt.usd(p.figures.cost)}</td>
+    </tr>`).join("");
+    const more = projects.length > shown.length ? `<p class="empty-inline" style="padding:10px 16px">and ${projects.length - shown.length} more</p>` : "";
+    return `<table class="table"><thead><tr><th>Project</th><th></th><th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th></tr></thead><tbody>${rows}</tbody></table>${more}`;
   }
 
   function toolTable(tools, metric) {

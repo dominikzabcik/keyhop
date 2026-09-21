@@ -54,6 +54,8 @@ struct UsageRecord {
     var tokens: TokenCounts
     var cost: Double
     var billed: Double?
+    /// The repository or folder the work happened in, where the tool records one. See `Projects`.
+    var project: String? = nil
 }
 
 enum Bucket {
@@ -100,6 +102,8 @@ struct UsageDigest {
     var byAccount: [AccountKey: Totals] = [:]
     var byModel: [ModelKey: Totals] = [:]
     var byProvider: [Provider: Totals] = [:]
+    /// Keyed by project path. Usage no tool placed in a folder is under "".
+    var byProject: [String: Totals] = [:]
     var sessions: [Session] = []
     var total = Totals()
     var previous = Totals()

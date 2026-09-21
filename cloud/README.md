@@ -10,9 +10,18 @@ Leaderboards, teams and public profiles for Keyhop. It runs as one Cloudflare Wo
 | `sessions` | SHA-256 hashes of browser session tokens and linked-app tokens. Never the tokens |
 | `device_links` | Codes waiting to be approved, for 10 minutes |
 | `daily_usage` | Tokens, API value and requests per day per tool (`claude`, `cursor`, `codex`, `gemini`) |
+| `daily_work` | Commits, lines added and lines removed per day per repository, named as `owner/name` |
+| `work_commits` | The subject lines behind those counts, and only while a person has turned sharing on |
+| `work_index` | How far one computer has got through its repositories. One row per person, no history |
 | `teams`, `team_members`, `team_invites` | Teams, who's in them and invite links, which expire after 7 days |
 
-No prompts, emails, account names, models or GitHub tokens are stored. Deleting an account in Settings removes all of it.
+No prompts, emails, account names, models or GitHub tokens are stored. No paths, branches, diffs or file names are stored either: a repository arrives already named as `owner/name`. Deleting an account in Settings removes all of it.
+
+Commits are counted by the app, from the clones already on someone's computer, so private repositories work and GitHub is never asked for anything. Each upload states a whole day for a whole repository and replaces what was there, which is what makes a rebase harmless: the day is restated rather than added to. Subject lines are a second, separate yes, off until someone turns them on, and turning them off deletes every row of `work_commits` for them.
+
+A first index can take a while, so the app reports how far it has got and the day page says when someone's figures are still filling in. A row in `work_index` is believed for six hours, after which the app doing the indexing has clearly stopped and the page stops claiming it.
+
+`/t/<team>/day` reads a day back as the tasks it was made of. The grouping is worked out from the commits themselves, in `tasks.ts`, with no model involved, so everyone looking at the same day sees the same report.
 
 ## How the app links
 

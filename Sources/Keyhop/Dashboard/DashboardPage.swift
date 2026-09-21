@@ -520,7 +520,11 @@ select.field option { background: var(--raised); }
     const step = data.state?.activity;
     const title = step ? step.title : text;
     const count = step?.count ? `<span class="count">${esc(step.count)}</span>` : "";
-    const hint = step?.step === "history" ? `<small>The first read goes through every log on this computer. After that, only what is new.</small>` : step?.detail ? `<small>${esc(step.detail)}</small>` : "";
+    const hints = {
+      history: "The first read goes through every log on this computer. After that, only what is new.",
+      repositories: "The first index reads every repository you have. After that, only the ones that changed.",
+    };
+    const hint = hints[step?.step] ? `<small>${hints[step.step]}</small>` : step?.detail ? `<small>${esc(step.detail)}</small>` : "";
     const width = step?.fraction != null ? `style="width:${(step.fraction * 100).toFixed(1)}%"` : "";
     return `<p class="busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span><b>${esc(title)}</b>${count}</p>
       <div class="meter${step?.fraction != null ? "" : " unknown"}" role="progressbar" aria-label="${esc(title)}" ${step?.fraction != null ? `aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(step.fraction * 100)}"` : ""}><span ${width}></span></div>${hint}`;

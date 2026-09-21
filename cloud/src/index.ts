@@ -11,6 +11,7 @@ import { seasons } from "./seasons";
 import { site } from "./site";
 import { teams } from "./teams";
 import { usage } from "./usage";
+import { work } from "./work";
 
 const app = new Hono<AppEnv>();
 
@@ -32,6 +33,7 @@ app.use("*", sameOrigin);
 app.route("/", site);
 app.route("/", auth);
 app.route("/", usage);
+app.route("/", work);
 app.route("/", limits);
 app.route("/", card);
 app.route("/", quests);

@@ -7,6 +7,8 @@ import { parseUsage } from "../src/usage";
 import { LIMIT_TTL_SECONDS, clean, parseLimits, sweepLimits } from "../src/limits";
 import { badgesFrom, questsFrom } from "../src/quests";
 import { webLink } from "../src/account";
+import { INDEX_TTL_SECONDS, parseIndex, parseWork } from "../src/work";
+import { parseSubject, span, tasksFor, tasksForDay } from "../src/tasks";
 
 const BASE = "http://localhost";
 
@@ -441,6 +443,7 @@ describe("quests and badges", () => {
         [reference, "opencode", 1000],
         [reference, "pi", 1000],
       ]),
+      [],
       reference,
     );
     const by = Object.fromEntries(list.map((entry) => [entry.key, entry]));
@@ -453,7 +456,7 @@ describe("quests and badges", () => {
 
   it("leaves a goal short when the days do not add up", () => {
     const reference = "2026-09-13";
-    const by = Object.fromEntries(questsFrom(rows([[reference, "claude", 10]]), reference).map((entry) => [entry.key, entry]));
+    const by = Object.fromEntries(questsFrom(rows([[reference, "claude", 10]]), [], reference).map((entry) => [entry.key, entry]));
     expect(by["two-tools"]).toMatchObject({ done: 1, complete: false });
     expect(by["five-days"]).toMatchObject({ done: 1, complete: false });
   });
@@ -467,7 +470,7 @@ describe("quests and badges", () => {
     ]);
     tracked.push([reference, "copilot", 1], [reference, "windsurf", 1], [reference, "codebuff", 1]);
     const data = rows(tracked);
-    const quests = Object.fromEntries(questsFrom(data, reference).map((entry) => [entry.key, entry]));
+    const quests = Object.fromEntries(questsFrom(data, [], reference).map((entry) => [entry.key, entry]));
     const badges = Object.fromEntries(badgesFrom(data, { top3: false, bestTier: null }, reference).map((entry) => [entry.key, entry]));
     expect(quests["every-tool"]).toMatchObject({ done: 6, target: 6, complete: true });
     expect(badges["all-tools"].earned).toBe(true);
@@ -790,5 +793,169 @@ describe("site header", () => {
     const response = await form("/auth/logout", cookie, { next: "/" }, "https://evil.example");
     expect(response.status).toBe(403);
     expect((await call("/settings", { headers: { cookie } })).status).toBe(200);
+  });
+});
+
+describe("commits from a day", () => {
+  const commit = (sha: string, subject: string, at: number, insertions = 10, deletions = 2) => ({
+    sha,
+    subject,
+    insertions,
+    deletions,
+    at,
+    offset: 0,
+  });
+  const at = (hour: number, minute = 0) => Date.UTC(2026, 8, 21, hour, minute) / 1000;
+
+  it("checks an upload the way the app sends it", () => {
+    const parsed = parseWork(
+      { days: [{ day: "2026-09-21", repo: "acme/atlas", commits: 2, insertions: 40, deletions: 9 }] },
+      "2026-09-21",
+    );
+    expect(parsed).toEqual({
+      days: [{ day: "2026-09-21", repo: "acme/atlas", commits: 2, insertions: 40, deletions: 9, subjects: undefined }],
+    });
+  });
+
+  it("refuses what would make a day wrong", () => {
+    const day = (entry: Record<string, unknown>) => parseWork({ days: [entry] }, "2026-09-21");
+    const base = { day: "2026-09-21", repo: "acme/atlas", commits: 1, insertions: 1, deletions: 0 };
+    expect(day({ ...base, repo: "atlas" })).toHaveProperty("error");
+    expect(day({ ...base, repo: "../../etc/passwd" })).toHaveProperty("error");
+    expect(day({ ...base, day: "2026-02-30" })).toHaveProperty("error");
+    expect(day({ ...base, day: "2020-01-01" })).toHaveProperty("error");
+    expect(day({ ...base, commits: -1 })).toHaveProperty("error");
+    expect(day({ ...base, commits: 1.5 })).toHaveProperty("error");
+    expect(parseWork({ days: "no" })).toHaveProperty("error");
+  });
+
+  it("keeps a subject to its first line, and a zone to a real one", () => {
+    const withSubject = (extra: Record<string, unknown>) =>
+      parseWork(
+        {
+          days: [
+            {
+              day: "2026-09-21",
+              repo: "acme/atlas",
+              commits: 1,
+              insertions: 1,
+              deletions: 0,
+              subjects: [{ sha: "a1b2c3d", subject: "feat: land it", insertions: 1, deletions: 0, at: 1, ...extra }],
+            },
+          ],
+        },
+        "2026-09-21",
+      );
+    const parsed = withSubject({ subject: "feat: land it\nand here is the body nobody asked for" });
+    expect("days" in parsed && parsed.days[0].subjects?.[0].subject).toBe("feat: land it");
+    expect(withSubject({ offset: 999_999 })).toHaveProperty("error");
+    expect(withSubject({ sha: "nothex!" })).toHaveProperty("error");
+    // A day with no offset at all is read as UTC rather than refused.
+    const plain = withSubject({});
+    expect("days" in plain && plain.days[0].subjects?.[0].offset).toBe(0);
+  });
+
+  it("groups a day's commits into the tasks behind them", () => {
+    const tasks = tasksFor("acme/atlas", [
+      commit("aaaaaaa", "feat(importer): stop a dead job retrying forever", at(9)),
+      commit("bbbbbbb", "fix(importer): retry with a ceiling", at(10)),
+      commit("ccccccc", "docs: write down what the sync actually does", at(14)),
+    ]);
+    expect(tasks).toHaveLength(2);
+    expect(tasks[0]).toMatchObject({ title: "Importer", repos: ["acme/atlas"] });
+    expect(tasks[0].commits).toHaveLength(2);
+    expect(tasks[1].title).toBe("Write down what the sync actually does");
+  });
+
+  it("keeps two different scopes apart however close they land", () => {
+    const tasks = tasksFor("acme/atlas", [
+      commit("aaaaaaa", "feat(auth): keep the session alive", at(9)),
+      commit("bbbbbbb", "feat(ledger): keep the session alive", at(9, 5)),
+    ]);
+    expect(tasks).toHaveLength(2);
+  });
+
+  it("does not let one shared word chain a whole morning together", () => {
+    // Each of these shares a word with the one before it, and nothing with the one before that.
+    const tasks = tasksFor("acme/atlas", [
+      commit("aaaaaaa", "make the importer read the ledger", at(9)),
+      commit("bbbbbbb", "let the ledger name its columns", at(9, 30)),
+      commit("ccccccc", "name the columns on the invoice", at(10)),
+    ]);
+    expect(tasks.length).toBeGreaterThan(1);
+  });
+
+  it("matches a word to its plural, and reads the clock where it was written", () => {
+    const tasks = tasksFor("acme/atlas", [
+      commit("aaaaaaa", "walk every screen and read the menu", at(9)),
+      commit("bbbbbbb", "walk the phone's screens", at(10)),
+    ]);
+    expect(tasks).toHaveLength(1);
+    // Two hours east: the same instants read as a later clock, the way their author saw them.
+    expect(span(at(9), at(10), 0)).toBe("09:00 to 10:00");
+    expect(span(at(9), at(10), 7200)).toBe("11:00 to 12:00");
+    expect(span(at(9), at(9), 0)).toBe("09:00");
+  });
+
+  it("takes a conventional prefix off a subject without mangling a plain one", () => {
+    expect(parseSubject("feat(auth): let a token expire")).toEqual({ type: "feat", scope: "auth", body: "let a token expire" });
+    expect(parseSubject("fix!: undo it")).toMatchObject({ type: "fix", body: "undo it" });
+    // Not a conventional type, so the colon is part of what the person wrote.
+    expect(parseSubject("note: this is prose")).toEqual({ type: "", scope: "", body: "note: this is prose" });
+    expect(parseSubject("just a subject")).toEqual({ type: "", scope: "", body: "just a subject" });
+  });
+});
+
+describe("one task across two repositories", () => {
+  const commit = (sha: string, subject: string, at: number) => ({ sha, subject, insertions: 5, deletions: 1, at, offset: 0 });
+  const at = (hour: number) => Date.UTC(2026, 8, 21, hour) / 1000;
+
+  it("joins the same work back together, and keeps different work apart", () => {
+    const tasks = tasksForDay([
+      { repo: "acme/atlas", subjects: [commit("aaaaaaa", "feat(auth): keep the session alive", at(9))] },
+      { repo: "acme/atlas-web", subjects: [commit("bbbbbbb", "feat(auth): refuse an expired token", at(10))] },
+      { repo: "acme/ledger", subjects: [commit("ccccccc", "feat(billing): round the way the invoice does", at(11))] },
+    ]);
+    expect(tasks).toHaveLength(2);
+    const auth = tasks.find((task) => task.title === "Auth")!;
+    expect(auth.repos).toEqual(["acme/atlas", "acme/atlas-web"]);
+    expect(auth.commits).toHaveLength(2);
+    // Every commit still says which repository it landed in.
+    expect(auth.commits.map((entry) => entry.repo)).toEqual(["acme/atlas-web", "acme/atlas"]);
+    expect(auth.from).toBe(at(9));
+    expect(auth.to).toBe(at(10));
+    expect(tasks.find((task) => task.title === "Billing")!.repos).toEqual(["acme/ledger"]);
+  });
+});
+
+describe("indexing progress", () => {
+  const base = { day: "2026-09-21", repo: "acme/atlas", commits: 1, insertions: 1, deletions: 0 };
+
+  it("takes the progress an app reports alongside its days", () => {
+    const parsed = parseWork({ days: [base], index: { done: 12, total: 40, complete: false } }, "2026-09-21");
+    expect("days" in parsed && parsed.index).toEqual({ done: 12, total: 40, complete: false });
+  });
+
+  it("is optional, because an older app sends none", () => {
+    const parsed = parseWork({ days: [base] }, "2026-09-21");
+    expect("days" in parsed && parsed.index).toBeUndefined();
+    expect(parseIndex(undefined)).toEqual({});
+    expect(parseIndex(null)).toEqual({});
+  });
+
+  it("refuses progress that can't be true", () => {
+    expect(parseIndex({ done: 5, total: 2, complete: false })).toHaveProperty("error");
+    expect(parseIndex({ done: -1, total: 2, complete: false })).toHaveProperty("error");
+    expect(parseIndex({ done: 1.5, total: 2, complete: false })).toHaveProperty("error");
+    expect(parseIndex({ done: 1, total: 2 })).toHaveProperty("error");
+    expect(parseIndex({ done: 1, total: 2, complete: "yes" })).toHaveProperty("error");
+    // A whole day of repositories is fine; a hundred thousand is a broken client.
+    expect(parseIndex({ done: 900, total: 900, complete: true })).toHaveProperty("index");
+    expect(parseIndex({ done: 0, total: 100_000, complete: false })).toHaveProperty("error");
+  });
+
+  it("believes an unfinished index only while it is being refreshed", () => {
+    // The window the day page trusts, so a stopped app stops claiming to be indexing.
+    expect(INDEX_TTL_SECONDS).toBe(6 * 3600);
   });
 });

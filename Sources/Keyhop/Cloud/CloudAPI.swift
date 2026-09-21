@@ -26,6 +26,41 @@ struct CloudDay: Codable, Equatable {
     let requests: Int
 }
 
+/// One commit, as the website stores it. Only the subject line travels: never the body, the diff
+/// or the file names. Sent only while subject sharing is on.
+struct CloudWorkCommit: Codable, Equatable {
+    let sha: String
+    let subject: String
+    let insertions: Int
+    let deletions: Int
+    /// When it was authored, in seconds, so a day can be read in the order it happened.
+    let at: Int
+    /// Seconds east of UTC where it was authored, so the clock reads as that person's own.
+    let offset: Int
+}
+
+/// One day's commits in one repository. `subjects` is left out entirely unless sharing is on, and
+/// leaving it out is what clears the subjects the website already holds for that day.
+struct CloudWorkDay: Codable, Equatable {
+    let day: String
+    let repo: String
+    var commits: Int
+    var insertions: Int
+    var deletions: Int
+    var subjects: [CloudWorkCommit]?
+}
+
+/// How far this computer has got through its repositories.
+///
+/// Sent with the commits so the website can tell a half-indexed day from a quiet one. A day still
+/// filling in has real numbers that are not yet the whole truth, and saying so is the difference
+/// between a teammate reading "nothing yet" and reading "they did less than me".
+struct CloudWorkIndex: Codable, Equatable {
+    let done: Int
+    let total: Int
+    let complete: Bool
+}
+
 /// One window of one account's limits, as a linked phone reads them. Sent only while limit sharing
 /// is on, and only ever the current reading: the website keeps no history of these.
 struct CloudLimit: Codable, Equatable, Identifiable {
@@ -223,6 +258,37 @@ struct CloudClient {
             saved += try JSONDecoder().decode(Response.self, from: data).saved
         }
         return saved
+    }
+
+    /// Replaces the website's commits for each day and repository sent.
+    ///
+    /// The index state rides on the last batch, so it only ever says "complete" once everything it
+    /// describes has actually arrived.
+    @discardableResult
+    func upload(_ work: [CloudWorkDay], index: CloudWorkIndex? = nil) async throws -> Int {
+        struct Response: Decodable { let saved: Int }
+        struct Body: Encodable {
+            let days: [CloudWorkDay]
+            let index: CloudWorkIndex?
+        }
+        var saved = 0
+        // Subjects make these rows much larger than usage rows, so they go in smaller batches.
+        let batches = max(1, Int(ceil(Double(work.count) / 200)))
+        for batch in 0..<batches {
+            let start = batch * 200
+            let chunk = start < work.count ? Array(work[start..<min(start + 200, work.count)]) : []
+            let last = batch == batches - 1
+            let (data, status) = try await send("POST", "/api/work", body: Body(days: chunk, index: last ? index : nil))
+            guard status == 200 else { throw problem(data, status) }
+            saved += try JSONDecoder().decode(Response.self, from: data).saved
+        }
+        return saved
+    }
+
+    /// Takes the subjects down, for when subject sharing is turned off.
+    func clearWorkSubjects() async throws {
+        let (data, status) = try await send("DELETE", "/api/work/subjects")
+        guard status == 200 || status == 401 else { throw problem(data, status) }
     }
 
     /// Replaces the readings the website holds for this person with these.

@@ -157,7 +157,9 @@ enum Commands {
             workspace.state.sentAlerts = workspace.state.sentAlerts.filter { now.timeIntervalSince($0.value) < 40 * 86400 }
         }
         workspace.state.save()
-        await CloudSync.syncIfDue(tracker: tracker, accounts: accounts, usage: usage, now: now)
+        // The indexing pass draws on the same meter as the rest of a refresh, so a first index
+        // shows up in the window and the menu instead of looking like the app has stalled.
+        await CloudSync.syncIfDue(tracker: tracker, accounts: accounts, usage: usage, now: now, progress: progress)
         return overview
     }
 

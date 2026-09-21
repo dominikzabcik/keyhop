@@ -161,11 +161,35 @@ Keyhop keeps its own record of what every account uses.
 
 Link Keyhop with your GitHub account to compare usage with friends and teams: in Keyhop's window open **Settings** and choose **Link with GitHub**, or run `keyhop cloud login`. Keyhop then sends daily totals per tool about once an hour.
 
-- **Global leaderboard:** ranked by tokens, API value or requests, for today, 7 days, 30 days or all time. Only people who make their profile public appear.
+- **Global leaderboard:** ranked by tokens, API value, requests, commits or lines, for today, 7 days, 30 days or all time. Only people who make their profile public appear.
 - **Teams:** create a team on the website and share its invite link. Members see each other's totals, even with private profiles.
 - **Ranked seasons:** every calendar month is a season, and the tokens you use in it place you on a ladder of six tiers from Bronze to Master, each with three divisions. Finished seasons stay readable, and quests and badges are counted the same way: from the daily totals themselves, so nothing can drift.
 - **Profiles:** a page at `/u/<login>` with a year of activity, streaks, tools, badges and your weekly rank. Set a display name, a bio and a link in Settings, and share the card at `/u/<login>/card.svg`.
+- **The team's day:** `/t/<team>/day` reads one day back as the things people worked on. Commits are grouped into tasks by what they say and when they landed, so a day shows up as "Auth, 5 commits, 09:49 to 11:59" rather than as a list, and the commits stay underneath so the summary can be checked.
 - **What's sent:** tokens, API value and requests per tool per day. Never prompts, emails, account names or models. `keyhop cloud logout` unlinks a computer, and deleting your account on the website removes everything it holds.
+
+### Counting what you shipped
+
+Token counts say what a day cost. `keyhop work on` adds what came out of it, by reading the git repositories already on your computer.
+
+```bash
+keyhop work on                  # count the commits you author
+keyhop work add ~/Projects      # where to look for repositories
+keyhop work scan --days 7       # what would be sent, without sending it
+keyhop work index               # read everything now, and say how far it got
+keyhop work subjects on         # also send each commit's first line
+```
+
+The first index is the slow one: every clone under every folder, each one's log walked with per-file
+counts. After that Keyhop remembers each repository's newest commit, so one nobody has touched costs
+a single bounded revision walk instead of a full read, and an hourly sync stays out of the way.
+`keyhop work status` says how far it has got, and `keyhop work index --again` starts over. The index
+is only a cache: deleting it costs one slow pass and nothing else.
+
+While a first index is running, the team's day says so rather than presenting partial counts as
+final, because reporting someone as having done less than they did is worse than saying nothing.
+
+Only commits you authored count, matched on the email git recorded, and merges are left out, so moving history is never mistaken for work. Each day is restated in full at every sync rather than added to, which is what makes rebasing, amending and squashing harmless. Repositories travel as `owner/name`; paths, branches, file names and diffs never leave the computer. Subject lines are a separate yes, off until `keyhop work subjects on`, and `keyhop work subjects off` deletes the ones already sent.
 
 See the leaderboard at [keyhop.app](https://keyhop.app/leaderboard). The service lives in [`cloud/`](cloud/README.md).
 

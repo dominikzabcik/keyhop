@@ -5,7 +5,7 @@ import Foundation
 enum KeyhopCLI {
     static let commands: Set<String> = [
         "status", "refresh", "recommend", "switch", "add", "rename", "remove", "usage", "dashboard", "insights", "budget",
-        "cloud", "mcp", "update", "doctor", "reset", "version", "help", "--help", "-h", "--version",
+        "cloud", "work", "mcp", "update", "doctor", "reset", "version", "help", "--help", "-h", "--version",
     ]
 
     static func handles(_ word: String) -> Bool {
@@ -44,6 +44,7 @@ enum KeyhopCLI {
             case "usage": try await Commands.usage(&args)
             case "budget": try await Commands.budget(&args)
             case "cloud": try await Commands.cloud(&args)
+            case "work": try await Commands.work(&args)
             case "mcp": try await MCPServer.run(&args)
             case "update": try await Commands.update(&args)
             case "doctor": try await Commands.doctor(&args)
@@ -91,6 +92,15 @@ enum KeyhopCLI {
       cloud limits [on|off]                Let a linked phone see how full each account is
       cloud open                           Open your profile on the website
       cloud logout                         Unlink this computer
+
+    Work
+      work status [--json]                 Whether commits are counted, and from which folders
+      work on | off                        Count the commits you author in your own repositories
+      work add <folder> | remove <folder>  Which folders to look for repositories under
+      work subjects [on|off]               Whether commit subject lines leave this computer
+      work scan [--days N] [--json]        Show what would be sent, without sending it
+      work index [--again] [--json]        Read every repository now, and say how far it got
+      work sync [--json]                   Send commit counts now (also runs hourly after a refresh)
 
     Agents
       mcp                                  Serve read-only status, usage and Smart Hop tools over stdio

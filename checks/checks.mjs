@@ -151,7 +151,7 @@ export async function checkLinks(request, origin, hrefs) {
 
 /** Controls nobody should click on a test run: they throw work away or sign someone out. */
 const LEAVE_ALONE =
-  /remove|delete|unlink|sign out|log out|stop|quit|reset|install|update|add account|add \w+ account|private|public|revoke|leave|disband|transfer|regenerate|rename/i;
+  /remove|delete|unlink|sign out|log out|stop|quit|reset|install|update|add account|add \w+ account|add folder|private|public|revoke|leave|disband|transfer|regenerate|rename/i;
 
 /**
  * Presses every control a visitor could press and reports the ones that do nothing at all.

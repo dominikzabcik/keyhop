@@ -319,6 +319,64 @@ a.place-card:hover { border-color: var(--border-strong); }
 .security-report h2 { max-width: 600px; margin: 0 0 13px; font-size: clamp(28px, 4vw, 42px); line-height: 1.06; letter-spacing: -.04em; }
 .security-report p { max-width: 620px; margin: 0; color: var(--muted); line-height: 1.7; }
 
+/* The team's day. One row per person: what the day cost, what came out of it, and the commits
+   behind that. The figures sit on a fixed grid so every person's numbers line up down the page
+   however long their name or their repository list is. */
+.day-nav { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 8px; background: var(--raised); border: 1px solid var(--border); }
+.day-nav a, .day-nav span { height: 28px; padding: 0 11px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 540; }
+.day-nav a:hover { color: var(--text); background: var(--hover); }
+.day-nav .step { min-width: 30px; padding: 0; }
+.day-nav .step svg { width: 13px; height: 13px; }
+.day-nav .off { color: var(--subtle); opacity: .45; }
+.day-nav .now { color: var(--text); background: hsl(0 0% 100% / .08); }
+.day-sum { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 4px 0 0; color: var(--muted); }
+.day-sum b { color: var(--text); font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.day-note { margin: 6px 0 0; color: var(--subtle); font-size: 12.5px; }
+
+.day-person { display: grid; }
+.day-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 14px 16px; }
+/* The person is the heading this card's tasks sit under, so it is a heading, at the size it was. */
+.day-name { margin: 0; font-size: inherit; font-weight: inherit; }
+/* Fixed columns, not content-sized ones, so every person's figures sit on the same four lines
+   down the page however many digits they have. */
+.day-figures { display: grid; grid-template-columns: repeat(3, 66px) 104px; gap: 20px; }
+.day-figures > div { display: grid; gap: 1px; justify-items: end; }
+.day-figures b { font: 600 16px/1.25 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+.day-figures small { color: var(--subtle); font-size: 11.5px; }
+.day-quiet { margin: 0; padding: 0 16px 14px; color: var(--subtle); }
+/* A day that is still filling in says so, in words, with the count it actually has. Deliberately
+   not a second progress bar: one sits right below it for the repositories, and two near-identical
+   bars in a row say less than one sentence does. The bar for a running index belongs in the app,
+   where it is watched; here the useful thing is the caveat on everything under it. */
+.indexing { margin: 0; padding: 0 16px 12px; color: var(--muted); font-size: 12.5px; }
+.diff { display: inline-flex; gap: 7px; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.diff .plus { color: var(--good); }
+.diff .minus { color: var(--bad); }
+
+.repos { padding: 0 16px 12px; display: grid; gap: 8px; }
+.repos .mix { width: 100%; }
+.repo-keys { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); }
+.repo-keys li { display: flex; align-items: center; gap: 7px; }
+.repo-keys .swatch { width: 8px; height: 8px; border-radius: 2px; }
+.repo-keys .n { color: var(--subtle); font-family: var(--mono); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+/* The tasks a day was made of. Each one is titled by what it was, with the commits that landed it
+   kept underneath, so the summary can always be checked against what actually happened. */
+.tasks { list-style: none; margin: 0; padding: 0 16px 14px; display: grid; gap: 14px; }
+.task { display: grid; gap: 5px; }
+.task-head { display: grid; gap: 3px; }
+.task h3 { margin: 0; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+.task-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; color: var(--subtle); font-size: 12px; }
+.task-meta .where { color: var(--muted); }
+.task-meta .diff { font-size: 11.5px; }
+
+.commits { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.commit { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 11px; color: var(--muted); font-size: 13px; }
+.commit .sha { font-family: var(--mono); font-size: 11.5px; color: var(--subtle); }
+.commit .subject { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.commit .where { color: var(--subtle); font-size: 11.5px; white-space: nowrap; }
+.more-commits { color: var(--subtle); font-size: 12.5px; }
+
 @media (max-width: 860px) {
   .podium, .split, .aside-layout { grid-template-columns: 1fr; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -351,6 +409,10 @@ a.place-card:hover { border-color: var(--border-strong); }
   .content-split { padding: 58px 0; }
   .page-cta { align-items: stretch; flex-direction: column; }
   .legal-nav { grid-template-columns: repeat(2, auto); }
+  .day-head { grid-template-columns: 1fr; gap: 12px; }
+  /* The four fixed columns are wider than a phone, so they fold into two that still line up. */
+  .day-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+  .day-figures > div { justify-items: start; }
 }
 /* Sign-in sits in the header until the header runs out of room, then moves into the menu. */
 .pop-panel a.show-xs { display: none; }
@@ -472,7 +534,7 @@ ${schema ? html`<script type="application/ld+json" nonce="${options.nonce}">${ra
 <footer class="site-foot">
   <div class="foot-about">
     <b>Keyhop</b>
-    <span>${publicSite ? "Free, open source and built for the tools you already use." : "The Keyhop app sends tokens, API value and requests per day, plus current limits only if you share them with your phone."}</span>
+    <span>${publicSite ? "Free, open source and built for the tools you already use." : "The Keyhop app sends tokens, API value, requests and commit counts per day. Commit subjects and current limits go only if you turn them on."}</span>
   </div>
   <nav class="foot-links" aria-label="More">
     <a href="/#roadmap">Roadmap</a>
@@ -600,10 +662,23 @@ export function usd(micros: number): string {
 
 export const count = (value: number): string => Math.round(value).toLocaleString("en-US");
 
-export function metricValue(totals: { tokens: number; costMicros: number; requests: number }, metric: Metric): string {
+export function metricValue(
+  totals: { tokens: number; costMicros: number; requests: number; commits?: number; insertions?: number; deletions?: number },
+  metric: Metric,
+): string {
   if (metric === "cost") return usd(totals.costMicros);
   if (metric === "requests") return count(totals.requests);
+  if (metric === "commits") return count(totals.commits ?? 0);
+  if (metric === "lines") return count((totals.insertions ?? 0) + (totals.deletions ?? 0));
   return tokens(totals.tokens);
+}
+
+/**
+ * Lines added and removed, as a diff reads them. Both halves are always drawn, even at zero, so a
+ * column of these lines up instead of jumping around as the numbers change.
+ */
+export function diffStat(insertions: number, deletions: number): Html {
+  return html`<span class="diff"><span class="plus">+${count(insertions)}</span><span class="minus">&minus;${count(deletions)}</span></span>`;
 }
 
 export function mixBar(tools: Record<Tool, number>): Html {

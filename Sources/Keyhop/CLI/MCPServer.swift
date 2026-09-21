@@ -66,7 +66,7 @@ enum MCPServer {
         tool(
             name: "keyhop_usage",
             title: "Keyhop usage",
-            description: "Read cached local token, request and API-value history for a time range. This never reads prompts or source code.",
+            description: "Read cached local token, request and API-value history for a time range, grouped by tool, account and model. This never reads prompts or source code.",
             properties: [
                 "range": ["type": "string", "enum": ["today", "week", "month", "30d"], "default": "week"],
                 "tool": ["type": "string", "enum": Provider.allCases.map(\.rawValue)],
@@ -107,10 +107,12 @@ enum MCPServer {
             let sole = await workspace.service.soleAccounts
             let digest = try await workspace.tracker.digest(interval: range.interval(now: now), previous: range.previous(now: now),
                                                             bucket: range.bucket, provider: provider, sole: sole)
+            var report = digest
+            report.sessions = (try? await workspace.tracker.sessions(in: range.interval(now: now), provider: provider, sole: sole)) ?? []
             let accounts = await workspace.service.accounts
             let budgets = try await workspace.tracker.budgets()
             let spend = try await workspace.tracker.budgetSpend(for: budgets, now: now, sole: sole)
-            return try result(UsageDocument(range: range, now: now, digest: digest, accounts: accounts, budgets: budgets, spend: spend))
+            return try result(UsageDocument(range: range, now: now, digest: report, accounts: accounts, budgets: budgets, spend: spend))
         case "keyhop_recommendation":
             let overview = try await Commands.currentOverview(workspace)
             return try result(RecommendationListDocument(overview, provider: try provider(in: arguments)))

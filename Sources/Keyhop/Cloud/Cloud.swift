@@ -202,7 +202,8 @@ enum CloudSync {
     /// limit sharing can stop them: a website that doesn't take limit readings yet, or refuses one,
     /// costs the phone its countdown and nothing else.
     static func syncIfDue(tracker: TrackerEngine, accounts: [Account] = [], usage: [UUID: UsageSnapshot] = [:],
-                          now: Date = Date(), store: (any SecretStore)? = nil) async {
+                          now: Date = Date(), store: (any SecretStore)? = nil,
+                          progress: ProgressHandler? = nil) async {
         guard var link = CloudLink.load(store: store) else { return }
 
         if link.lastSync.map({ now.timeIntervalSince($0) >= 3600 }) ?? true {
@@ -213,6 +214,22 @@ enum CloudSync {
                 return
             } catch {
                 link.lastSyncError = error.localizedDescription
+                try? link.save(store: store)
+            }
+        }
+
+        // Commits go on the same hourly beat as the totals, and are just as independent: a website
+        // that doesn't take them yet, or a git that isn't installed, costs the day its commits and
+        // nothing else.
+        var work = WorkSettings.load()
+        if work.enabled, GitWork.isAvailable, work.lastSync.map({ now.timeIntervalSince($0) >= 3600 }) ?? true {
+            do {
+                try await runWork(&work, link: link, now: now, progress: progress)
+            } catch let error as CloudError where error.kind == .unlinked {
+                CloudLink.remove(store: store)
+                return
+            } catch {
+                link.lastSyncError = "Sending commits failed: \(error.localizedDescription)"
                 try? link.save(store: store)
             }
         }
@@ -230,6 +247,55 @@ enum CloudSync {
             link.lastSyncError = "Sharing limits failed: \(error.localizedDescription)"
         }
         try? link.save(store: store)
+    }
+
+    /// Reads this computer's repositories and sends what they say about the last stretch of days.
+    ///
+    /// The same eight-day window the usage sync uses, for the same reason: a day can still change
+    /// after it ends, whether because a log arrived late or because the history was rewritten. Each
+    /// day is restated rather than added to, so re-sending one corrects it.
+    ///
+    /// The index makes the pass after the first one cheap, and it is also what lets the website say
+    /// a person's day is still filling in. Someone halfway through their first index has real
+    /// numbers that are not yet the whole truth, and showing those as final would quietly tell
+    /// their team they did less than they did.
+    @discardableResult
+    static func runWork(_ settings: inout WorkSettings, link: CloudLink, now: Date = Date(),
+                        progress: ProgressHandler? = nil) async throws -> Int {
+        let lookback = Double(settings.lastSync == nil ? 30 : 8) * 86400
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        let since = formatter.string(from: now.addingTimeInterval(-lookback))
+
+        let index = WorkIndex.load()
+        let first = !index.isComplete
+        let scan = GitWork.scan(roots: settings.rootURLs, since: since, emails: settings.emails,
+                                login: link.login, shareSubjects: settings.shareSubjects,
+                                index: index, progress: progress)
+        try? scan.index.save()
+
+        let client = CloudClient(server: link.server, token: link.token)
+        let state = CloudWorkIndex(done: scan.index.done, total: scan.index.total, complete: scan.index.isComplete)
+        // A pass that found nothing new still has something to say while a first index is running:
+        // that it is running, and how far it has got.
+        guard !scan.days.isEmpty || first else {
+            settings.lastSync = now
+            try? settings.save()
+            return 0
+        }
+        let saved = try await client.upload(scan.days, index: state)
+        settings.lastSync = now
+        try settings.save()
+        return saved
+    }
+
+    /// Turning subject sharing off takes the words off the website right away, not at the next sync.
+    static func stopSharingSubjects(_ settings: inout WorkSettings, link: CloudLink) async throws {
+        settings.shareSubjects = false
+        try settings.save()
+        try await CloudClient(server: link.server, token: link.token).clearWorkSubjects()
     }
 
     /// Turning limit sharing off takes the readings off the website too, right away.

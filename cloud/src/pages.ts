@@ -1,13 +1,15 @@
 import { type Context, Hono } from "hono";
 import { html, raw } from "hono/html";
 import { pageUser, safeNext } from "./auth";
-import { type AppEnv, type User, now, today } from "./env";
+import { type AppEnv, type User, addDays, now, today } from "./env";
 import { LANDING_CSS, landingPage } from "./landing";
 import { downloadPage, privacyPage, securityPage, termsPage } from "./marketing";
 import { profileBadges, questsFor } from "./quests";
 import { TIERS, currentSeason, daysLeft, isSeason, nextStep, seasonBoard, seasonLabel, seasonList, seasonRange, tierFor } from "./seasons";
 import { type Entry, type Metric, type Period, METRICS, PERIODS, isMetric, isPeriod, leaderboard, profile } from "./stats";
 import { inviteInfo, members, myTeams, teamForMember } from "./teams";
+import { parseSubject, span, tasksForDay } from "./tasks";
+import { type DayRepo, type PersonDay, teamDay } from "./work";
 import {
   type Html,
   PIXEL_MARK,
@@ -15,6 +17,7 @@ import {
   avatar,
   badgeMark,
   count,
+  diffStat,
   githubIcon,
   heatmap,
   layout,
@@ -99,7 +102,9 @@ function controls(base: string, period: Period, metric: Metric): Html {
   </div>`;
 }
 
-function personCell(entry: Entry, viewer: User | null, size: number): Html {
+type Person = Pick<Entry, "userId" | "login" | "name" | "avatarUrl" | "public">;
+
+function personCell(entry: Person, viewer: User | null, size: number): Html {
   const inner = html`${avatar(entry, size)}<span><b>${entry.name || entry.login}</b><small>@${entry.login}</small></span>`;
   // Team boards can list private profiles; those stay unlinked for everyone but their owner.
   return entry.public || viewer?.id === entry.userId
@@ -468,7 +473,13 @@ pages.get("/t/:slug", pageUser, async (c) => {
     `${team.name} · Keyhop`,
     html`
       <div class="head">
-        <div><h1>${team.name}</h1><p class="lede">${people.length} ${people.length === 1 ? "member" : "members"}, ranked by ${METRICS[metric].label.toLowerCase()} ${PERIOD_PHRASES[period]}.</p></div>
+        <div>
+          <h1>${team.name}</h1>
+          <p class="lede">
+            ${people.length} ${people.length === 1 ? "member" : "members"}, ranked by ${METRICS[metric].label.toLowerCase()} ${PERIOD_PHRASES[period]}.
+            <a class="text-link" href="/t/${team.slug}/day">See today</a>
+          </p>
+        </div>
         ${controls(`/t/${team.slug}`, period, metric)}
       </div>
       <section class="aside-layout">
@@ -517,6 +528,200 @@ pages.get("/t/:slug", pageUser, async (c) => {
   );
 });
 
+/** A day, written the way someone would say it out loud. */
+function dayLabel(day: string, reference: string): string {
+  if (day === reference) return "Today";
+  if (day === addDays(reference, -1)) return "Yesterday";
+  const date = new Date(`${day}T00:00:00Z`);
+  const format: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" };
+  // The year only earns its place once the day is no longer in this one.
+  if (day.slice(0, 4) !== reference.slice(0, 4)) format.year = "numeric";
+  return date.toLocaleDateString("en-GB", format);
+}
+
+/** Moving between days. The step into the future is drawn but dead, since that day hasn't happened. */
+function dayNav(slug: string, day: string, reference: string): Html {
+  const chevron = (left: boolean) =>
+    raw(
+      `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${
+        left ? "M10 3 5 8l5 5" : "M6 3l5 5-5 5"
+      }"/></svg>`,
+    );
+  const previous = addDays(day, -1);
+  const next = addDays(day, 1);
+  return html`<nav class="day-nav" aria-label="Day">
+    <a class="step" href="/t/${slug}/day/${previous}" aria-label="${dayLabel(previous, reference)}">${chevron(true)}</a>
+    ${day === reference
+      ? html`<span class="now">Today</span>`
+      : html`<a href="/t/${slug}/day/${reference}">Today</a>`}
+    ${next <= reference
+      ? html`<a class="step" href="/t/${slug}/day/${next}" aria-label="${dayLabel(next, reference)}">${chevron(false)}</a>`
+      : html`<span class="step off" aria-disabled="true">${chevron(false)}</span>`}
+  </nav>`;
+}
+
+/**
+ * Repositories share the tool mix's language: white at falling opacity, brightest first, so the
+ * biggest piece of someone's day reads loudest without a colour being invented for it.
+ */
+const REPO_SHADES = [0.9, 0.55, 0.32, 0.2, 0.13, 0.09];
+const repoShade = (index: number): string => `hsl(0 0% 100% / ${REPO_SHADES[Math.min(index, REPO_SHADES.length - 1)]})`;
+
+function repoMix(repos: DayRepo[]): Html {
+  const total = repos.reduce((sum, entry) => sum + entry.commits, 0);
+  if (total === 0) return html``;
+  return html`<div class="repos">
+    <span class="mix" aria-hidden="true">
+      ${repos.map((entry, index) => html`<span style="width:${((entry.commits / total) * 100).toFixed(2)}%;background:${repoShade(index)}"></span>`)}
+    </span>
+    <ul class="repo-keys">
+      ${repos.map(
+        (entry, index) => html`<li>
+          <i class="swatch" style="background:${repoShade(index)}"></i>${entry.repo.split("/").pop()}
+          <span class="n">${count(entry.commits)}</span>
+        </li>`,
+      )}
+    </ul>
+  </div>`;
+}
+
+/** At most this many tasks per person before the rest are summed up in a line. */
+const SHOWN_TASKS = 6;
+
+/**
+ * One person's day, written as the things they worked on. The commits are still there under each
+ * task, because that is what makes the summary checkable rather than something to be taken on
+ * trust, but the task is what the page is about.
+ */
+function personDay(person: PersonDay, viewer: User | null): Html {
+  const tasks = tasksForDay(person.repos.map((repo) => ({ repo: repo.repo, subjects: repo.subjects })));
+  const quiet = person.commits === 0 && person.tokens === 0;
+  const many = person.repos.length > 1;
+  return html`<article class="card day-person">
+    <header class="day-head">
+      <h2 class="day-name">${personCell(person, viewer, 34)}</h2>
+      <div class="day-figures">
+        <div><b>${count(person.commits)}</b><small>${person.commits === 1 ? "commit" : "commits"}</small></div>
+        <div><b>${count(person.repos.length)}</b><small>${person.repos.length === 1 ? "repo" : "repos"}</small></div>
+        <div><b>${tokens(person.tokens)}</b><small>tokens</small></div>
+        <div>${diffStat(person.insertions, person.deletions)}<small>lines</small></div>
+      </div>
+    </header>
+    ${person.indexing
+      ? html`<p class="indexing">
+          Still reading this computer's repositories, ${count(person.indexing.done)} of ${count(person.indexing.total)}.
+          What's here is real, but it isn't all of it yet.
+        </p>`
+      : ""}
+    ${quiet && !person.indexing
+      ? html`<p class="day-quiet">Nothing synced for this day.</p>`
+      : person.repos.length > 0
+        ? repoMix(person.repos)
+        : ""}
+    ${person.commits > 0 && tasks.length === 0
+      ? html`<p class="day-quiet">Commit subjects aren't shared from this computer.</p>`
+      : ""}
+    ${tasks.length > 0
+      ? html`<ol class="tasks">
+          ${tasks.slice(0, SHOWN_TASKS).map(
+            (task) => html`<li class="task">
+              <div class="task-head">
+                <h3>${task.title}</h3>
+                <span class="task-meta">
+                  ${many ? html`<span class="where">${task.repos.map((repo) => repo.split("/").pop()).join(", ")}</span>` : ""}
+                  ${task.commits.length === 1 ? html`<code class="sha">${task.commits[0].sha.slice(0, 7)}</code>` : ""}
+                  <span>${count(task.commits.length)} ${task.commits.length === 1 ? "commit" : "commits"}</span>
+                  <span>${span(task.from, task.to, task.offset)}</span>
+                  ${diffStat(task.insertions, task.deletions)}
+                </span>
+              </div>
+              ${task.commits.length === 1
+                ? ""
+                : html`<ul class="commits">
+                ${task.commits.map(
+                  (commit) => html`<li class="commit">
+                    <code class="sha">${commit.sha.slice(0, 7)}</code>
+                    <span class="subject">${parseSubject(commit.subject).body}</span>
+                    ${task.repos.length > 1 ? html`<span class="where">${commit.repo.split("/").pop()}</span>` : ""}
+                  </li>`,
+                )}
+              </ul>`}
+            </li>`,
+          )}
+          ${tasks.length > SHOWN_TASKS
+            ? html`<li class="more-commits">and ${count(tasks.length - SHOWN_TASKS)} more</li>`
+            : ""}
+        </ol>`
+      : ""}
+  </article>`;
+}
+
+/**
+ * One day, for one team. The point of the page is that it reads: the commits are there in words, so
+ * a person can see what everyone actually did rather than only how much of it there was.
+ */
+pages.get("/t/:slug/day/:date", pageUser, (c) => teamDayPage(c, c.req.param("date")));
+pages.get("/t/:slug/day", pageUser, (c) => teamDayPage(c, today()));
+
+async function teamDayPage(c: C, date: string) {
+  const user = c.get("user")!;
+  const reference = today();
+  const membership = await teamForMember(c.env.DB, c.req.param("slug") ?? "", user.id);
+  if (!membership) return notFound(c, "This team doesn't exist, or you aren't in it.");
+  const { team } = membership;
+  // A date that isn't a date, or one that hasn't happened, falls back to today rather than erroring.
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(date) && addDays(date, 0) === date && date <= reference ? date : reference;
+
+  const people = await teamDay(c.env.DB, team.id, day);
+  const commits = people.reduce((sum, person) => sum + person.commits, 0);
+  const dayTokens = people.reduce((sum, person) => sum + person.tokens, 0);
+  const repos = new Set(people.flatMap((person) => person.repos.map((repo) => repo.repo)));
+  const worked = people.filter((person) => person.commits > 0 || person.tokens > 0).length;
+  const anySubjects = people.some((person) => person.repos.some((repo) => repo.subjects.length > 0));
+  const stillIndexing = people.filter((person) => person.indexing);
+
+  return render(
+    c,
+    `${dayLabel(day, reference)} · ${team.name} · Keyhop`,
+    html`
+      <div class="head">
+        <div>
+          <h1>${dayLabel(day, reference)}</h1>
+          <p class="day-sum">
+            <span><b>${count(worked)}</b> of ${count(people.length)} working</span>
+            <span><b>${count(commits)}</b> ${commits === 1 ? "commit" : "commits"}</span>
+            <span><b>${count(repos.size)}</b> ${repos.size === 1 ? "repository" : "repositories"}</span>
+            <span><b>${tokens(dayTokens)}</b> tokens</span>
+          </p>
+          ${stillIndexing.length > 0
+            ? html`<p class="day-note">
+                ${stillIndexing.length === 1
+                  ? html`${stillIndexing[0].name || stillIndexing[0].login} is still being indexed, so this day isn't complete.`
+                  : html`${count(stillIndexing.length)} people are still being indexed, so this day isn't complete.`}
+              </p>`
+            : ""}
+        </div>
+        ${dayNav(team.slug, day, reference)}
+      </div>
+      <section class="stack">
+        ${people.length === 0
+          ? html`<div class="card empty">Nobody has joined ${team.name} yet.</div>`
+          : people.map((person) => personDay(person, user))}
+        ${commits === 0
+          ? html`<div class="card empty">
+              No commits synced for this day. Keyhop counts them from the repositories on your own computer, once
+              <a href="/settings">you turn it on</a>.
+            </div>`
+          : anySubjects
+            ? ""
+            : html`<p class="muted" style="margin:0;font-size:13px">
+                Commit subjects stay on each person's computer until they turn sharing on in Keyhop.
+              </p>`}
+      </section>`,
+    { active: "teams", index: false },
+  );
+}
+
 pages.get("/invite/:code", async (c) => {
   const code = c.req.param("code");
   const info = await inviteInfo(c.env.DB, code);
@@ -530,7 +735,7 @@ pages.get("/invite/:code", async (c) => {
       ${raw(PIXEL_MARK)}
       <h1>Join ${info.name}</h1>
       <p class="lede">@${info.owner} invited you. ${info.members} ${info.members === 1 ? "person compares" : "people compare"} their AI usage here.</p>
-      <p class="muted" style="margin:0;font-size:13px">Team members see each other's daily totals: tokens, API value and requests per tool.</p>
+      <p class="muted" style="margin:0;font-size:13px">Team members see each other's daily totals, and each other's day: tokens and API value per tool, and the commits behind them from anyone who shares them.</p>
       ${c.req.query("error") === "full" ? html`<p class="error-text">This team is full.</p>` : ""}
       ${user
         ? html`<form method="post" action="/invite/${code}"><button class="btn" type="submit">Join team</button></form>`
@@ -633,7 +838,7 @@ pages.get("/link", pageUser, async (c) => {
       </form>
       <p class="muted" style="margin:0;font-size:13px">${pending?.access === "read"
         ? html`<b>${pending.label || "This companion"}</b> can read your profile, season, quests and standings. It cannot upload usage or change your profile.`
-        : html`<b>${pending?.label || "Keyhop"}</b> can send tokens, API value and requests per tool per day. Never prompts, emails or account names.`}</p>
+        : html`<b>${pending?.label || "Keyhop"}</b> can send tokens, API value and requests per tool per day, and commit counts if you turn them on. Never prompts, emails or account names.`}</p>
     </section>`,
     { index: false },
   );

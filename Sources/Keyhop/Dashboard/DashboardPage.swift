@@ -307,16 +307,21 @@ select.field option { background: var(--raised); }
 .facts span { color: var(--subtle); font-size: 12px; }
 .mix-bar { display: flex; gap: 2px; height: 8px; border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
 .mix-bar span { min-width: 2px; }
-.m1 { background: hsl(0 0% 100% / .9); } .m2 { background: hsl(0 0% 100% / .55); } .m3 { background: hsl(0 0% 100% / .3); } .m4 { background: hsl(0 0% 100% / .14); }
+.m1 { background: hsl(0 0% 100% / .9); } .m2 { background: hsl(0 0% 100% / .55); } .m3 { background: hsl(0 0% 100% / .3); } .m4 { background: hsl(0 0% 100% / .18); }
+.m5 { background: hsl(0 0% 100% / .1); }
 .table { width: 100%; border-collapse: collapse; }
 .table th { text-align: left; font-weight: 500; color: var(--subtle); font-size: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
 .table td { padding: 10px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .table tr:last-child td { border-bottom: 0; }
 .table tbody tr:hover td { background: hsl(0 0% 100% / .02); }
+.table tbody tr.clickable { cursor: pointer; }
 .table .right { text-align: right; }
 .table .bar-cell { width: 34%; }
 .cell-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .cell-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-group + .model-group { border-top: 1px solid var(--border); }
+.model-group .group-head { padding: 12px 16px 4px; }
+.model-group .table { margin-top: 0; }
 
 /* Leaderboard */
 .avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--raised); color: var(--muted); font-weight: 600; }
@@ -466,7 +471,7 @@ select.field option { background: var(--raised); }
   const wanted = params.get("s") || location.hash.slice(1);
   const ui = {
     section: SECTIONS.includes(wanted) ? wanted : (boot?.section || "overview"),
-    range: "week", metric: "tokens", tool: "all",
+    range: "week", metric: "tokens", tool: "all", group: "account",
     boardPeriod: "week", boardMetric: "tokens", boardTeam: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
     pending: new Map(), loadingUsage: 0,
@@ -520,7 +525,11 @@ select.field option { background: var(--raised); }
     const step = data.state?.activity;
     const title = step ? step.title : text;
     const count = step?.count ? `<span class="count">${esc(step.count)}</span>` : "";
-    const hint = step?.step === "history" ? `<small>The first read goes through every log on this computer. After that, only what is new.</small>` : step?.detail ? `<small>${esc(step.detail)}</small>` : "";
+    const hints = {
+      history: "The first read goes through every log on this computer. After that, only what is new.",
+      repositories: "The first index reads every repository you have. After that, only the ones that changed.",
+    };
+    const hint = hints[step?.step] ? `<small>${hints[step.step]}</small>` : step?.detail ? `<small>${esc(step.detail)}</small>` : "";
     const width = step?.fraction != null ? `style="width:${(step.fraction * 100).toFixed(1)}%"` : "";
     return `<p class="busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span><b>${esc(title)}</b>${count}</p>
       <div class="meter${step?.fraction != null ? "" : " unknown"}" role="progressbar" aria-label="${esc(title)}" ${step?.fraction != null ? `aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(step.fraction * 100)}"` : ""}><span ${width}></span></div>${hint}`;
@@ -816,7 +825,7 @@ select.field option { background: var(--raised); }
     </section>`;
     const weekCard = `<section class="card">
       <div class="card-head"><h2>Last 7 days</h2><button class="btn sm ghost" data-action="goto" data-section="usage">Open usage</button></div>
-      <div class="card-body">${week ? (week.total.requests ? `<div class="chart">${stackedChart(week, "tokens", 180, "half")}</div>` : `<p class="empty-inline">No usage in the last 7 days.</p>`) : loading("Reading usage")}</div>
+      <div class="card-body">${week ? (week.total.requests ? `<div class="chart">${stackedChart(week, "tokens", 180, "half", "account")}</div>` : `<p class="empty-inline">No usage in the last 7 days.</p>`) : loading("Reading usage")}</div>
     </section>`;
     const budgetsCard = `<section class="card">
       <div class="card-head"><h2>Budgets</h2><button class="btn sm ghost" data-action="goto" data-section="budgets">${status.budgets.length ? "Manage" : "Set a budget"}</button></div>
@@ -824,7 +833,7 @@ select.field option { background: var(--raised); }
     </section>`;
     const modelsCard = `<section class="card">
       <div class="card-head"><h2>Top models this week</h2></div>
-      ${week && week.models.length ? modelTable(week.models.slice(0, 4), "tokens", false) : `<p class="empty">No models used this week.</p>`}
+      ${week && week.models.length ? modelTable(week.models.slice(0, 6), "tokens", false) : `<p class="empty">No models used this week.</p>`}
     </section>`;
 
     return { body: `${alerts}${stats}${inUse}<div class="split">${hourCard}${weekCard}</div><div class="split">${budgetsCard}${modelsCard}</div>` };
@@ -913,12 +922,14 @@ select.field option { background: var(--raised); }
   function usagePage(tools) {
     const toolbar = tabs("range", [["today", "Today"], ["week", "7 days"], ["month", "Month"], ["30d", "30 days"]], ui.range)
       + tabs("metric", [["tokens", "Tokens"], ["cost", "API value"]], ui.metric)
-      + `<select class="field" data-action="tool" aria-label="Tool" ${isStatic ? "disabled" : ""}>${[["all", "All tools"], ...tools.map((t) => [t.id, t.name])].map(([v, l]) => `<option value="${v}" ${v === ui.tool ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+      + tabs("group", [["account", "By account"], ["tool", "By tool"], ["model", "By model"]], ui.group)
+      + `<select class="field" data-action="tool" aria-label="Tool" ${isStatic ? "disabled" : ""}>${[["all", "All tools"], ...tools.map((t) => [t.id, t.name])].map(([v, l]) => `<option value="${v}" ${v === ui.tool ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`
+      + (isStatic ? "" : `<button class="btn sm ghost" data-action="export-csv">Download CSV</button>`);
     const usage = data.usage[`${ui.range}:${ui.tool}`] || (isStatic ? data.usage[`${ui.range}:all`] : null);
     if (!usage) return { toolbar, body: `<div class="card">${loading("Reading usage", "empty")}</div>` };
 
     const t = usage.total, p = usage.previous;
-    const inputSide = t.input + t.cacheRead + t.cacheWrite;
+    const inputSide = t.input + t.cacheRead + t.cacheWrite + (t.cacheWrite1h || 0);
     const stats = `<div class="stats">
       <div class="card stat"><div class="label">Tokens ${fmt.change(t.tokens, p.tokens)}</div><div class="value">${fmt.tokens(t.tokens)}</div><div class="foot">vs ${fmt.tokens(p.tokens)} the period before</div></div>
       <div class="card stat"><div class="label">API value ${fmt.change(t.cost, p.cost)}</div><div class="value">${fmt.usd(t.cost)}</div><div class="foot">${t.billed > 0 ? `${fmt.usd(t.billed)} billed on demand` : "At standard API prices"}</div></div>
@@ -929,18 +940,23 @@ select.field option { background: var(--raised); }
     if (!t.requests) {
       return { toolbar, body: `${stats}<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code, Codex, Gemini CLI, OpenCode and Pi records on this computer, and Cursor's usage export after a refresh.</p></div>${heat}` };
     }
-    const legend = `<ul class="legend">${usage.series.map((s) => `<li><span class="swatch" style="background:${s.color}"></span>${esc(s.name)}</li>`).join("")}</ul>`;
+    const grouped = chartGroup(usage);
+    const legend = `<ul class="legend">${grouped.series.map((s) => `<li><span class="swatch" style="background:${s.color}"></span>${esc(s.name)}</li>`).join("")}</ul>`;
     const chart = `<section class="card">
-      <div class="card-head"><h2>${ui.metric === "tokens" ? "Tokens" : "API value"} by ${usage.bucket}</h2>${legend}</div>
-      <div class="card-body chart">${stackedChart(usage, ui.metric, 280, "full")}</div>
+      <div class="card-head"><h2>${ui.metric === "tokens" ? "Tokens" : "API value"} by ${usage.bucket}, stacked ${ui.group === "tool" ? "by tool" : ui.group === "model" ? "by model" : "by account"}</h2>${legend}</div>
+      <div class="card-body chart">${stackedChart(usage, ui.metric, 280, "full", ui.group)}</div>
     </section>`;
     const mix = `<section class="card">
       <div class="card-head"><h2>Token mix</h2><span class="hint mono">${fmt.tokens(t.tokens)}</span></div>
       <div class="card-body">${mixBlock(t)}</div>
     </section>`;
+    const toolsCard = `<section class="card"><div class="card-head"><h2>Tools</h2><span class="hint mono">${(usage.tools || []).length}</span></div>${toolTable(usage.tools || [], ui.metric)}</section>`;
     const models = `<section class="card"><div class="card-head"><h2>Models</h2><span class="hint mono">${usage.models.length}</span></div>${modelTable(usage.models, ui.metric, true)}</section>`;
     const accounts = `<section class="card"><div class="card-head"><h2>Accounts</h2><span class="hint mono">${usage.accounts.length}</span></div>${accountTable(usage.accounts, ui.metric)}</section>`;
-    return { toolbar, body: `${stats}${chart}<div class="split wide-left">${heat}${mix}</div><div class="split">${models}${accounts}</div>` };
+    const sessions = (usage.sessions && usage.sessions.length)
+      ? `<section class="card"><div class="card-head"><h2>Sessions</h2><span class="hint mono">${usage.sessions.length}</span></div>${sessionTable(usage.sessions, ui.metric)}</section>`
+      : "";
+    return { toolbar, body: `${stats}${chart}<div class="split wide-left">${heat}${mix}</div><div class="split">${toolsCard}${models}</div>${accounts}${sessions}` };
   }
 
   function niceCeiling(value) {
@@ -965,24 +981,26 @@ select.field option { background: var(--raised); }
     return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
   }
 
-  function stackedChart(usage, metric, height, size) {
+  function stackedChart(usage, metric, height, size, group) {
+    const grouped = chartGroup(usage, group);
+    const series = grouped.series, buckets = grouped.buckets;
     const W = chartWidth(size), H = height, L = 52, R = 4, T = 8, B = 26;
     const pw = W - L - R, ph = H - T - B;
     const pick = (v) => (v ? (metric === "tokens" ? v.tokens : v.cost) : 0);
-    const columns = usage.buckets.map((b) => usage.series.map((s) => pick(b.values[s.id])));
+    const columns = buckets.map((b) => series.map((s) => pick(b.values[s.id])));
     const ceiling = niceCeiling(Math.max(0, ...columns.map((c) => c.reduce((a, b) => a + b, 0))));
-    const slot = pw / Math.max(1, usage.buckets.length);
+    const slot = pw / Math.max(1, buckets.length);
     const bw = Math.max(3, Math.min(slot * 0.58, 30));
     const label = (v) => (metric === "tokens" ? fmt.tokens(v) : v === 0 ? "$0" : v < 10 ? "$" + v.toFixed(2) : fmt.usd(v));
-    const every = usage.bucket === "hour" ? 3 : usage.buckets.length > 10 ? 5 : 1;
+    const every = usage.bucket === "hour" ? 3 : buckets.length > 10 ? 5 : 1;
     let grid = "", bars = "", hits = "";
     for (let i = 0; i <= 4; i++) {
       const value = (ceiling / 4) * i, y = (T + ph - (value / ceiling) * ph).toFixed(1);
       grid += `<line class="${i ? "grid" : "base"}" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text class="axis" x="${L - 8}" y="${y}" text-anchor="end" dominant-baseline="central">${label(value)}</text>`;
     }
-    usage.buckets.forEach((bucket, i) => {
+    buckets.forEach((bucket, i) => {
       const cx = L + slot * (i + 0.5), x = cx - bw / 2;
-      const present = usage.series.map((s, j) => ({ s, v: columns[i][j] })).filter((e) => e.v > 0);
+      const present = series.map((s, j) => ({ s, v: columns[i][j] })).filter((e) => e.v > 0);
       let base = 0;
       present.forEach((entry, k) => {
         const y0 = T + ph - (base / ceiling) * ph, y1 = T + ph - ((base + entry.v) / ceiling) * ph;
@@ -995,12 +1013,19 @@ select.field option { background: var(--raised); }
           : `<rect x="${x.toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${entry.s.color}"/>`;
       });
       if (i % every === 0) {
-        const options = usage.bucket === "hour" ? { hour: "2-digit" } : usage.buckets.length > 10 ? { month: "short", day: "numeric" } : { weekday: "short" };
+        const options = usage.bucket === "hour" ? { hour: "2-digit" } : buckets.length > 10 ? { month: "short", day: "numeric" } : { weekday: "short" };
         grid += `<text class="axis" x="${cx.toFixed(1)}" y="${H - 7}" text-anchor="middle">${esc(fmt.day(bucket.start, options))}</text>`;
       }
-      hits += `<rect class="hit" x="${(L + slot * i).toFixed(1)}" y="${T}" width="${slot.toFixed(1)}" height="${ph}" data-bucket="${i}" data-metric="${metric}" data-key="${usage.range}:${usage.tool}"/>`;
+      hits += `<rect class="hit" x="${(L + slot * i).toFixed(1)}" y="${T}" width="${slot.toFixed(1)}" height="${ph}" data-bucket="${i}" data-metric="${metric}" data-group="${group || "account"}" data-key="${usage.range}:${usage.tool}"/>`;
     });
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${metric === "tokens" ? "Tokens" : "API value"} by ${usage.bucket}">${grid}<g>${bars}</g>${hits}</svg>`;
+  }
+
+  function chartGroup(usage, group) {
+    const which = group || ui.group || "account";
+    if (which === "tool" && usage.toolSeries && usage.toolBuckets) return { series: usage.toolSeries, buckets: usage.toolBuckets };
+    if (which === "model" && usage.modelSeries && usage.modelBuckets) return { series: usage.modelSeries, buckets: usage.modelBuckets };
+    return { series: usage.series, buckets: usage.buckets };
   }
 
   function heatCard(usage) {
@@ -1042,22 +1067,82 @@ select.field option { background: var(--raised); }
   }
 
   function mixBlock(t) {
-    const parts = [["Input", t.input, "m1"], ["Output", t.output, "m2"], ["Cache reads", t.cacheRead, "m3"], ["Cache writes", t.cacheWrite, "m4"]];
+    const parts = [
+      ["Input", t.input, "m1"],
+      ["Output", t.output, "m2"],
+      ["Cache reads", t.cacheRead, "m3"],
+      ["Cache writes", t.cacheWrite, "m4"],
+      ["1h cache writes", t.cacheWrite1h || 0, "m5"],
+    ];
     const sum = parts.reduce((s, p) => s + p[1], 0) || 1;
-    return `<div class="mix-bar">${parts.filter((p) => p[1] > 0).map((p) => `<span class="${p[2]}" style="width:${((p[1] / sum) * 100).toFixed(2)}%" title="${p[0]}"></span>`).join("")}</div>
-      <table class="table" style="margin:0 -16px -16px;width:calc(100% + 32px)"><tbody>${parts.map((p) => `<tr><td><div class="cell-name"><span class="swatch ${p[2]}"></span><span>${p[0]}</span></div></td><td class="right mono">${fmt.tokens(p[1])}</td><td class="right mono subtle">${Math.round((p[1] / sum) * 100)}%</td></tr>`).join("")}</tbody></table>`;
+    const rows = parts.filter((p) => p[1] > 0 || p[0] !== "1h cache writes");
+    const reasoning = t.reasoning
+      ? `<p class="subtle" style="margin:10px 0 0;font-size:12px">Reasoning is ${fmt.tokens(t.reasoning)} of output, counted once.</p>`
+      : "";
+    return `<div class="mix-bar">${rows.filter((p) => p[1] > 0).map((p) => `<span class="${p[2]}" style="width:${((p[1] / sum) * 100).toFixed(2)}%" title="${p[0]}"></span>`).join("")}</div>
+      <table class="table" style="margin:0 -16px -16px;width:calc(100% + 32px)"><tbody>${rows.map((p) => `<tr><td><div class="cell-name"><span class="swatch ${p[2]}"></span><span>${p[0]}</span></div></td><td class="right mono">${fmt.tokens(p[1])}</td><td class="right mono subtle">${Math.round((p[1] / sum) * 100)}%</td></tr>`).join("")}</tbody></table>${reasoning}`;
   }
 
   function modelTable(models, metric, showBars) {
     const value = (m) => (metric === "tokens" ? m.figures.tokens : m.figures.cost);
-    const sorted = models.slice().sort((a, b) => value(b) - value(a));
-    const peak = Math.max(0.000001, ...sorted.map(value));
-    const rows = sorted.slice(0, 10).map((m) => `<tr>
+    const groups = [];
+    const seen = new Map();
+    models.forEach((m) => {
+      const tool = m.tool || "unknown";
+      if (!seen.has(tool)) { seen.set(tool, groups.length); groups.push({ tool, rows: [] }); }
+      groups[seen.get(tool)].rows.push(m);
+    });
+    const peak = Math.max(0.000001, ...models.map(value));
+    return groups.map((group) => {
+      const sorted = group.rows.slice().sort((a, b) => value(b) - value(a));
+      const rows = sorted.map((m) => `<tr class="clickable" data-action="filter-tool" data-value="${esc(m.tool || "")}">
       <td><span class="mono">${esc(m.model)}</span></td>
       ${showBars ? `<td class="bar-cell">${progress((value(m) / peak) * 100, null, "plain")}</td>` : ""}
       <td class="right mono">${metric === "tokens" ? fmt.tokens(m.figures.tokens) : fmt.usd(m.figures.cost)}</td>
     </tr>`).join("");
-    return `<table class="table"><thead><tr><th>Model</th>${showBars ? "<th></th>" : ""}<th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th></tr></thead><tbody>${rows}</tbody></table>`;
+      return `<div class="model-group">
+        <div class="group-head">${mark(group.tool)}<h2>${esc(toolName(group.tool))}</h2><span class="count">${sorted.length}</span></div>
+        <table class="table"><thead><tr><th>Model</th>${showBars ? "<th></th>" : ""}<th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th></tr></thead><tbody>${rows}</tbody></table>
+      </div>`;
+    }).join("");
+  }
+
+  function toolTable(tools, metric) {
+    if (!tools.length) return `<p class="empty">No tools in this range.</p>`;
+    const value = (t) => (metric === "tokens" ? t.figures.tokens : t.figures.cost);
+    const sorted = tools.slice().sort((a, b) => value(b) - value(a));
+    const rows = sorted.map((t) => `<tr class="clickable" data-action="filter-tool" data-value="${esc(t.id)}">
+      <td><div class="cell-name">${mark(t.id)}<span>${esc(t.name)}</span></div></td>
+      <td class="right mono">${metric === "tokens" ? fmt.tokens(t.figures.tokens) : fmt.usd(t.figures.cost)}</td>
+      <td class="right mono subtle">${fmt.count(t.figures.requests)}</td>
+    </tr>`).join("");
+    return `<table class="table"><thead><tr><th>Tool</th><th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th><th class="right">Requests</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function sessionTable(sessions, metric) {
+    const rows = sessions.map((s) => `<tr>
+      <td><div class="cell-name">${mark(s.tool)}<span>${esc(toolName(s.tool))}</span></div><div class="subtle" style="font-size:12px;margin-left:26px">${esc(s.account)}</div></td>
+      <td><span class="mono">${esc(s.model)}</span></td>
+      <td class="subtle">${esc(fmt.clock(s.from))} to ${esc(fmt.clock(s.to))}</td>
+      <td class="right mono">${metric === "tokens" ? fmt.tokens(s.figures.tokens) : fmt.usd(s.figures.cost)}</td>
+    </tr>`).join("");
+    return `<table class="table"><thead><tr><th>Session</th><th>Model</th><th>When</th><th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function exportCSV(usage) {
+    const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = [["Kind", "Name", "Tool", "Tokens", "API value", "Requests"].map(cell).join(",")];
+    (usage.tools || []).forEach((t) => lines.push(["Tool", t.name, t.id, t.figures.tokens, t.figures.cost.toFixed(4), t.figures.requests].map(cell).join(",")));
+    (usage.models || []).forEach((m) => lines.push(["Model", m.model, m.tool || "", m.figures.tokens, m.figures.cost.toFixed(4), m.figures.requests].map(cell).join(",")));
+    (usage.accounts || []).forEach((a) => lines.push(["Account", a.name, a.tool, a.figures.tokens, a.figures.cost.toFixed(4), a.figures.requests].map(cell).join(",")));
+    (usage.sessions || []).forEach((s) => lines.push(["Session", s.model, s.tool, s.figures.tokens, s.figures.cost.toFixed(4), s.figures.requests].map(cell).join(",")));
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `keyhop-usage-${usage.range}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast(`Saved keyhop-usage-${usage.range}.csv`);
   }
 
   function accountTable(accounts, metric) {
@@ -1278,6 +1363,42 @@ select.field option { background: var(--raised); }
     return `${Math.floor(seconds / 86400)} d ago`;
   }
 
+  function workCard(work) {
+    if (!work) return "";
+    if (!work.gitAvailable) {
+      return `<section class="card"><div class="card-head"><h2>What you shipped</h2></div>
+        <div class="card-body"><p class="empty-inline">git isn't installed, so Keyhop can't count commits on this computer.</p></div></section>`;
+    }
+    const folders = work.roots.length
+      ? `<div class="list">${work.roots.map((path) => `<div class="row setting-row"><div><b class="mono" style="font-size:12.5px">${esc(path)}</b></div>
+          ${isStatic ? "" : `<button class="btn sm ghost" data-action="work-remove" data-path="${esc(path)}">Remove folder</button>`}</div>`).join("")}</div>`
+      : `<p class="empty">No folders yet. Add one below, or Keyhop will offer the usual ones when you turn this on.</p>`;
+    const index = work.index && work.index.total
+      ? (work.index.complete
+        ? `Indexed ${work.index.total} ${work.index.total === 1 ? "repository" : "repositories"}.`
+        : `Indexing: ${work.index.done} of ${work.index.total} repositories, so figures are still filling in.`)
+      : "";
+    const synced = work.lastSync ? `Last sent ${esc(ago(work.lastSync))}.` : "Not sent yet.";
+    const toggle = work.enabled
+      ? `<button class="btn sm ghost" data-action="work-off">Stop counting</button>`
+      : `<button class="btn sm" data-action="work-on">Count commits</button>`;
+    const subjects = work.shareSubjects
+      ? `<div class="card-body setting-row"><div><b>Subject lines are shared</b><p>The first line of each commit goes with the counts, so a day can be read as tasks. Turning this off deletes the ones already sent.</p></div>
+          <button class="btn sm ghost" data-action="work-subjects-off">Keep subjects here</button></div>`
+      : `<div class="card-body setting-row"><div><b>Keep subject lines here</b><p>Counts still go. The words you wrote stay on this computer until you share them.</p></div>
+          <button class="btn sm secondary" data-action="work-subjects-on">Share subject lines</button></div>`;
+    const add = isStatic ? "" : `<form class="form" data-form="work-folder" style="padding-top:0">
+      <label>Folder to scan<input class="field" name="folder" placeholder="~/Projects" autocomplete="off"></label>
+      <div class="row-actions" style="justify-content:flex-start"><button class="btn sm secondary">Add folder</button></div>
+    </form>`;
+    return `<section class="card"><div class="card-head"><h2>What you shipped</h2>${work.enabled ? `<span class="badge live">On</span>` : ""}</div>
+      <div class="card-body setting-row"><div><b>Count the commits you author</b>
+        <p>Token totals say what a day cost. This adds what came out of it, from the git repositories already on this computer. Paths and diffs never leave. ${index} ${synced}</p></div>
+        ${toggle}</div>
+      ${work.enabled ? `${subjects}${folders}${add}` : ""}
+    </section>`;
+  }
+
   function cloudCard(cloud) {
     if (cloud.linking) {
       return `<section class="card"><div class="card-head"><h2>Leaderboard</h2><span class="badge">Waiting</span></div>
@@ -1421,6 +1542,7 @@ select.field option { background: var(--raised); }
 
     return { body: `
       ${!isStatic && state.cloud?.available ? cloudCard(state.cloud) : ""}
+      ${isStatic ? "" : workCard(state.work)}
       ${isStatic ? "" : appearanceCard()}
       <section class="card"><div class="card-head"><h2>Updates</h2></div><div class="card-body">${updateRow}</div></section>
       <div class="split">
@@ -1453,12 +1575,13 @@ select.field option { background: var(--raised); }
     const hit = event.target.closest && event.target.closest(".hit");
     if (!hit) { tip.hidden = true; return; }
     const usage = data.usage[hit.dataset.key] || data.usage[hit.dataset.key.split(":")[0] + ":all"];
-    const bucket = usage?.buckets[+hit.dataset.bucket];
+    const grouped = usage ? chartGroup(usage, hit.dataset.group) : null;
+    const bucket = grouped?.buckets[+hit.dataset.bucket];
     if (!bucket) { tip.hidden = true; return; }
     const metric = hit.dataset.metric;
     const pick = (v) => (metric === "tokens" ? v.tokens : v.cost);
     const show = (v) => (metric === "tokens" ? fmt.tokens(v) : fmt.usd(v));
-    const rows = usage.series.map((s) => ({ s, v: bucket.values[s.id] })).filter((e) => e.v && pick(e.v) > 0).reverse();
+    const rows = grouped.series.map((s) => ({ s, v: bucket.values[s.id] })).filter((e) => e.v && pick(e.v) > 0).reverse();
     const total = rows.reduce((sum, e) => sum + pick(e.v), 0);
     const when = usage.bucket === "hour" ? fmt.day(bucket.start, { weekday: "short", hour: "2-digit", minute: "2-digit" }) : fmt.day(bucket.start, { weekday: "short", month: "short", day: "numeric" });
     tip.innerHTML = `<b>${esc(when)} · <span class="mono">${esc(show(total))}</span></b>${rows.length ? rows.map((e) => `<div><span class="swatch" style="background:${e.s.color}"></span><span>${esc(e.s.name)}</span><span class="mono">${esc(show(pick(e.v)))}</span></div>`).join("") : `<div><span></span><span>No usage</span><span></span></div>`}`;
@@ -1524,11 +1647,28 @@ select.field option { background: var(--raised); }
       case "confirm-remove": ui.confirming = id; ui.editing = null; render(); break;
       case "cancel-remove": ui.confirming = null; render(); break;
       case "remove": act(el, () => api("/api/remove", { id }).finally(() => { ui.confirming = null; }), "Removing"); break;
-      case "range": case "metric":
+      case "range": case "metric": case "group":
         ui[el.dataset.action] = el.dataset.value;
         render();
         if (el.dataset.action === "range") { await loadSection(); render(); }
         break;
+      case "filter-tool":
+        if (!el.dataset.value || el.dataset.value === ui.tool) break;
+        ui.tool = el.dataset.value;
+        render();
+        await loadSection();
+        render();
+        break;
+      case "export-csv": {
+        const usage = data.usage[`${ui.range}:${ui.tool}`];
+        if (usage) exportCSV(usage);
+        break;
+      }
+      case "work-on": act(el, () => api("/api/work", { enabled: true }), "Turning on"); break;
+      case "work-off": act(el, () => api("/api/work", { enabled: false }), "Stopping"); break;
+      case "work-subjects-on": act(el, () => api("/api/work", { shareSubjects: true }), "Sharing"); break;
+      case "work-subjects-off": act(el, () => api("/api/work", { shareSubjects: false }), "Keeping here"); break;
+      case "work-remove": act(el, () => api("/api/work", { remove: el.dataset.path }), "Removing"); break;
       case "edit-budget": ui.budgetEdit = el.dataset.scope; render(); $("form[data-form=budget] input[name=amount]")?.focus(); break;
       case "cancel-budget": ui.budgetEdit = null; render(); break;
       case "delete-budget": act(el, () => api("/api/budget", { scope: el.dataset.scope === "all" ? "all" : el.dataset.scope.replace("account:", ""), amount: null })); break;
@@ -1606,6 +1746,11 @@ select.field option { background: var(--raised); }
       const scope = form.elements.scope.value, period = form.elements.period.value;
       ui.budgetEdit = null;
       act(button, () => api("/api/budget", { scope, amount, period }));
+    }
+    if (form.dataset.form === "work-folder") {
+      const folder = String(form.elements.folder.value || "").trim();
+      if (!folder) { toast("Type a folder to scan, like ~/Projects.", true); return; }
+      act(button, () => api("/api/work", { add: folder }));
     }
   });
 

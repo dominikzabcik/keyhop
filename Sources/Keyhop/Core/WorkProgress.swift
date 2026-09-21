@@ -12,9 +12,13 @@ import ucrt
 /// A refresh is three steps: each tool's login, each account's limits, then the token history
 /// in local logs. `done` and `total` count logins and accounts; for history they count bytes still
 /// to read, which is what a first read of a large history actually spends its time on.
+///
+/// Indexing repositories is its own step, and the only one that runs on its own rather than as part
+/// of a refresh. It counts repositories, because that is the unit a person recognises and the unit
+/// the work is actually divided into.
 struct WorkProgress: Codable, Equatable, Sendable {
     enum Step: String, Codable, Sendable {
-        case logins, limits, history
+        case logins, limits, history, repositories
     }
 
     var step: Step
@@ -28,6 +32,7 @@ struct WorkProgress: Codable, Equatable, Sendable {
         case .logins: return "Checking logins"
         case .limits: return "Reading limits"
         case .history: return "Reading token history"
+        case .repositories: return "Indexing repositories"
         }
     }
 
@@ -40,16 +45,22 @@ struct WorkProgress: Codable, Equatable, Sendable {
     var count: String? {
         guard total > 0 else { return nil }
         switch step {
-        case .logins, .limits: return "\(min(done, total)) of \(total)"
+        case .logins, .limits, .repositories: return "\(min(done, total)) of \(total)"
         case .history: return "\(Int((fraction ?? 0) * 100))%"
         }
     }
 
     /// The same thing in a few characters, for tight places like the menu bar's footer.
     var brief: String {
-        let name = step == .history ? "History" : step == .limits ? "Limits" : "Logins"
+        let name: String
         switch step {
-        case .logins, .limits: return total > 0 ? "\(name) \(min(done, total))/\(total)" : name
+        case .history: name = "History"
+        case .limits: name = "Limits"
+        case .logins: name = "Logins"
+        case .repositories: name = "Repos"
+        }
+        switch step {
+        case .logins, .limits, .repositories: return total > 0 ? "\(name) \(min(done, total))/\(total)" : name
         case .history: return count.map { "\(name) \($0)" } ?? name
         }
     }

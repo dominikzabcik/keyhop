@@ -10,6 +10,19 @@ const people = [
 ];
 const tools = ["claude", "cursor", "codex", "gemini"];
 const pricePerMillion = { claude: 4.2, cursor: 2.1, codex: 3.1, gemini: 2 };
+const repos = ["nightshift/atlas", "nightshift/atlas-web", "nightshift/ledger", "nightshift/runbook", "nightshift/mobile"];
+// Real days are two or three pieces of work, each landed over several commits, so the seed makes
+// days that shape instead of a bag of unrelated subjects.
+const tasks = [
+  { scope: "importer", lines: ["stop a dead job retrying forever", "retry with a ceiling", "log why the job gave up", "cover the retry ceiling"] },
+  { scope: "ledger", lines: ["read the ledger in one pass", "drop the second lookup", "round the totals the way the invoice does", "name the columns after what they hold"] },
+  { scope: "auth", lines: ["keep the session alive when the tab sleeps", "refuse a token that outlived its session", "say which sign-in expired"] },
+  { scope: "sync", lines: ["let a failed upload report itself", "send the last eight days, not the year", "back off when the server is busy"] },
+  { scope: "dates", lines: ["pull the date maths into one place", "count a day in the viewer's zone", "cover the day either side of midnight"] },
+  { scope: "", lines: ["write down what the sync actually does", "say plainly what the empty state means", "spell out what never leaves the computer"] },
+];
+const types = ["feat", "fix", "refactor", "perf", "test", "docs"];
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
 async function request(path, init = {}) {
   return fetch(`${base}${path}`, { redirect: "manual", ...init });
@@ -60,7 +73,56 @@ for (const [index, person] of people.entries()) {
     });
   }
   const saved = await request("/api/usage", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ days }) });
-  console.log(`${person.login}: ${days.length} entries, ${saved.status}`);
+
+  // Commits for the same stretch. The last person shares no subjects, so the page can be seen both
+  // with the words and with only the counts.
+  const work = [];
+  const shares = index < people.length - 1;
+  for (let back = 0; back < 180; back++) {
+    const date = new Date(today);
+    date.setUTCDate(date.getUTCDate() - back);
+    const day = date.toISOString().slice(0, 10);
+    const weekend = [0, 6].includes(date.getUTCDay());
+    if (Math.random() < (weekend ? 0.7 : 0.2)) continue;
+    const mine = repos.slice(0, 1 + Math.floor(Math.random() * 3));
+    for (const repo of mine) {
+      // One or two tasks in this repository today, each landed over a few commits.
+      const todays = [...tasks].sort(() => Math.random() - 0.5).slice(0, 1 + Math.floor(Math.random() * (weekend ? 1 : 2)));
+      let minute = 0;
+      const subjects = todays.flatMap((task) => {
+        const lines = task.lines.slice(0, 1 + Math.floor(Math.random() * task.lines.length));
+        return lines.map((line) => {
+          minute += 20 + Math.floor(Math.random() * 70);
+          return {
+            sha: Math.random().toString(16).slice(2, 9).padEnd(7, "0"),
+            subject: `${pick(types)}${task.scope ? `(${task.scope})` : ""}: ${line}`,
+            insertions: 3 + Math.floor(Math.random() * 180),
+            deletions: Math.floor(Math.random() * 90),
+            at: Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 1000) + 9 * 3600 + minute * 60,
+            offset: 0,
+          };
+        });
+      });
+      const commits = subjects.length;
+      work.push({
+        day,
+        repo,
+        commits,
+        insertions: subjects.reduce((sum, entry) => sum + entry.insertions, 0),
+        deletions: subjects.reduce((sum, entry) => sum + entry.deletions, 0),
+        ...(shares ? { subjects } : {}),
+      });
+    }
+  }
+  // Everyone is finished except one, who is left mid-index so that state can be seen on the page.
+  const indexing = person.login === "tomas";
+  const indexState = indexing ? { done: 11, total: 40, complete: false } : { done: 40, total: 40, complete: true };
+  const committed = await request("/api/work", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+    body: JSON.stringify({ days: work, index: indexState }),
+  });
+  console.log(`${person.login}: ${days.length} usage entries (${saved.status}), ${work.length} commit days (${committed.status})`);
 }
 
 const created = await post("/teams", cookies.mira, { name: "Night Shift" });

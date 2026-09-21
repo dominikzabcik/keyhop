@@ -25,12 +25,13 @@ const BROKEN = ["undefined", "NaN", "(null)", "Optional(", "nil)", "—"];
  */
 const COMMANDS = [
   { name: "version", args: ["version"], says: ["."] },
-  { name: "help", args: ["help"], says: ["Usage: keyhop", "status", "usage", "mcp", "doctor"] },
+  { name: "help", args: ["help"], says: ["Usage: keyhop", "status", "usage", "mcp", "doctor", "work"] },
   { name: "status", args: ["status", "--sample"], says: ["Claude Code", "%"] },
   { name: "status --json", args: ["status", "--sample", "--json"], json: true, has: ["tools", "today", "version"] },
   { name: "recommend", args: ["recommend", "--sample", "--json"], json: true, allowFailure: true },
-  { name: "usage", args: ["usage", "--range", "today", "--no-read", "--json"], json: true, has: ["total"] },
+  { name: "usage", args: ["usage", "--range", "today", "--no-read", "--json"], json: true, has: ["total", "tools", "sessions"] },
   { name: "usage week", args: ["usage", "--range", "week", "--no-read"], says: ["tokens"] },
+  { name: "work status", args: ["work", "status", "--json"], json: true, has: ["enabled", "roots"] },
   { name: "budget list", args: ["budget", "list", "--json"], json: true },
   { name: "doctor", args: ["doctor", "--json"], json: true, has: ["tools"] },
   { name: "cloud status", args: ["cloud", "status", "--json"], json: true },

@@ -36,6 +36,13 @@ interface DayRow {
   tokens: number;
 }
 
+/** Every day this person has committed on, one row per repository. */
+export interface WorkRow {
+  day: string;
+  repo: string;
+  commits: number;
+}
+
 /** Every day this person has synced, one row per tool. */
 async function dayRows(db: D1Database, userId: string): Promise<DayRow[]> {
   const { results } = await db
@@ -45,12 +52,31 @@ async function dayRows(db: D1Database, userId: string): Promise<DayRow[]> {
   return results;
 }
 
+async function workRows(db: D1Database, userId: string): Promise<WorkRow[]> {
+  const { results } = await db
+    .prepare("SELECT day, repo, SUM(commits) AS commits FROM daily_work WHERE user_id = ? GROUP BY day, repo ORDER BY day")
+    .bind(userId)
+    .all<WorkRow>();
+  return results;
+}
+
 const byDay = (rows: DayRow[]) => {
   const days = new Map<string, { tokens: number; tools: Set<Tool> }>();
   for (const row of rows) {
     const entry = days.get(row.day) ?? { tokens: 0, tools: new Set<Tool>() };
     entry.tokens += row.tokens;
     if (row.tokens > 0) entry.tools.add(row.tool);
+    days.set(row.day, entry);
+  }
+  return days;
+};
+
+const byWorkDay = (rows: WorkRow[]) => {
+  const days = new Map<string, { commits: number; repos: Set<string> }>();
+  for (const row of rows) {
+    const entry = days.get(row.day) ?? { commits: 0, repos: new Set<string>() };
+    entry.commits += row.commits;
+    if (row.commits > 0) entry.repos.add(row.repo);
     days.set(row.day, entry);
   }
   return days;
@@ -71,9 +97,11 @@ const quest = (key: string, name: string, note: string, period: "day" | "week", 
 });
 
 /** Today's and this week's goals, with how far along they are. */
-export function questsFrom(rows: DayRow[], reference = today()): Quest[] {
+export function questsFrom(rows: DayRow[], work: WorkRow[] = [], reference = today()): Quest[] {
   const days = byDay(rows);
+  const workDays = byWorkDay(work);
   const on = (day: string) => days.get(day) ?? { tokens: 0, tools: new Set<Tool>() };
+  const committedOn = (day: string) => workDays.get(day) ?? { commits: 0, repos: new Set<string>() };
   const todayEntry = on(reference);
   const yesterday = on(addDays(reference, -1));
 
@@ -90,6 +118,14 @@ export function questsFrom(rows: DayRow[], reference = today()): Quest[] {
   }
   const lastWeekTokens = lastWeek.reduce((sum, day) => sum + on(day).tokens, 0);
 
+  const weekRepos = new Set<string>();
+  let weekCommits = 0;
+  for (const day of week) {
+    const entry = committedOn(day);
+    weekCommits += entry.commits;
+    for (const repo of entry.repos) weekRepos.add(repo);
+  }
+
   return [
     quest("today", "Get going", "Use any tool today.", "day", todayEntry.tokens > 0 ? 1 : 0, 1),
     quest("two-tools", "Two tools", "Use two different tools today.", "day", measuredCount(todayEntry.tools), 2),
@@ -101,7 +137,10 @@ export function questsFrom(rows: DayRow[], reference = today()): Quest[] {
       Math.min(todayEntry.tokens, Math.max(yesterday.tokens, 1)),
       Math.max(yesterday.tokens, 1),
     ),
+    quest("ship-today", "Ship it", "Land a commit today.", "day", Math.min(committedOn(reference).commits, 1), 1),
     quest("five-days", "Five days", "Use Keyhop on five days this week.", "week", weekActive, 5),
+    quest("week-commits", "Twenty commits", "Land twenty commits this week.", "week", weekCommits, 20),
+    quest("three-repos", "Three repositories", "Commit to three repositories this week.", "week", weekRepos.size, 3),
     quest("every-tool", "Every tool", `Use all ${MEASURED_TOOLS.length} tracked tools this week.`, "week", weekTools.size, MEASURED_TOOLS.length),
     quest(
       "beat-last-week",
@@ -142,7 +181,12 @@ function dayCompletingStreak(active: Set<string>, length: number): string | unde
 }
 
 /** What this person's own history has earned them. `podium` comes from the season standings. */
-export function badgesFrom(rows: DayRow[], podium: { top3: boolean; bestTier: string | null }, reference = today()): Badge[] {
+export function badgesFrom(
+  rows: DayRow[],
+  podium: { top3: boolean; bestTier: string | null },
+  reference = today(),
+  work: WorkRow[] = [],
+): Badge[] {
   const days = byDay(rows);
   const active = new Set([...days.entries()].filter(([, entry]) => entry.tokens > 0).map(([day]) => day));
   const { longest } = streaks(active, reference);
@@ -150,6 +194,30 @@ export function badgesFrom(rows: DayRow[], podium: { top3: boolean; bestTier: st
   const allTools = [...days.entries()].find(([, entry]) => hasEveryMeasuredTool(entry.tools));
   const biggest = [...days.entries()].sort(([, a], [, b]) => b.tokens - a.tokens)[0];
   const firstDay = [...active].sort()[0];
+
+  const workDays = [...byWorkDay(work).entries()].sort(([a], [b]) => (a < b ? -1 : 1));
+  const firstCommitDay = workDays.find(([, entry]) => entry.commits > 0)?.[0];
+  const busiest = [...workDays].sort(([, a], [, b]) => b.commits - a.commits)[0];
+  const allCommits = workDays.reduce((sum, [, entry]) => sum + entry.commits, 0);
+  const allWorkRepos = new Set(work.filter((row) => row.commits > 0).map((row) => row.repo));
+  /** The first day the running commit count passes a mark. */
+  const dayCommitsReaching = (target: number): string | undefined => {
+    let total = 0;
+    for (const [day, entry] of workDays) {
+      total += entry.commits;
+      if (total >= target) return day;
+    }
+    return undefined;
+  };
+  /** The first day this many repositories had been committed to. */
+  const dayRepoCountReaching = (target: number): string | undefined => {
+    const seen = new Set<string>();
+    for (const row of [...work].filter((entry) => entry.commits > 0).sort((a, b) => (a.day < b.day ? -1 : 1))) {
+      seen.add(row.repo);
+      if (seen.size >= target) return row.day;
+    }
+    return undefined;
+  };
 
   return [
     badge("first-sync", "First light", "Synced a day of usage.", active.size > 0, firstDay),
@@ -160,6 +228,11 @@ export function badgesFrom(rows: DayRow[], podium: { top3: boolean; bestTier: st
     badge("big-day", "Big day", "A billion tokens in a single day.", !!biggest && biggest[1].tokens >= 1_000_000_000, biggest?.[0]),
     badge("billion", "Billion", "A billion tokens all told.", allTime >= 1_000_000_000, dayReaching(rows, 1_000_000_000)),
     badge("ten-billion", "Ten billion", "Ten billion tokens all told.", allTime >= 10_000_000_000, dayReaching(rows, 10_000_000_000)),
+    badge("first-commit", "First commit", "Synced a day of commits.", !!firstCommitDay, firstCommitDay),
+    badge("busy-day", "Busy day", "Twenty commits in a single day.", !!busiest && busiest[1].commits >= 20, busiest?.[0]),
+    badge("commits-100", "A hundred commits", "A hundred commits all told.", allCommits >= 100, dayCommitsReaching(100)),
+    badge("commits-1000", "A thousand commits", "A thousand commits all told.", allCommits >= 1000, dayCommitsReaching(1000)),
+    badge("ten-repos", "Ten repositories", "Committed to ten repositories.", allWorkRepos.size >= 10, dayRepoCountReaching(10)),
     badge("climber", "Climber", "Reached Gold or above in a season.", podium.bestTier !== null, undefined),
     badge("podium", "Podium", "Finished a season in the top three.", podium.top3, undefined),
   ];
@@ -199,24 +272,25 @@ export async function seasonHonours(
 
 /** Everything a profile needs: today's and this week's quests, and the badges earned so far. */
 export async function questsAndBadges(db: D1Database, userId: string, reference = today()) {
-  const rows = await dayRows(db, userId);
+  const [rows, work] = await Promise.all([dayRows(db, userId), workRows(db, userId)]);
   const honours = await seasonHonours(db, userId, rows, reference);
   return {
-    quests: questsFrom(rows, reference),
-    badges: badgesFrom(rows, honours, reference),
+    quests: questsFrom(rows, work, reference),
+    badges: badgesFrom(rows, honours, reference, work),
     bestTier: honours.bestTier,
   };
 }
 
 /** One person's badges, for their profile. */
 export async function profileBadges(db: D1Database, userId: string, reference = today()): Promise<Badge[]> {
-  const rows = await dayRows(db, userId);
-  return badgesFrom(rows, await seasonHonours(db, userId, rows, reference), reference);
+  const [rows, work] = await Promise.all([dayRows(db, userId), workRows(db, userId)]);
+  return badgesFrom(rows, await seasonHonours(db, userId, rows, reference), reference, work);
 }
 
 /** One person's quests, for the season page and the app's window. */
 export async function questsFor(db: D1Database, userId: string, reference = today()): Promise<Quest[]> {
-  return questsFrom(await dayRows(db, userId), reference);
+  const [rows, work] = await Promise.all([dayRows(db, userId), workRows(db, userId)]);
+  return questsFrom(rows, work, reference);
 }
 
 export const quests = new Hono<AppEnv>();

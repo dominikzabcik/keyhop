@@ -205,18 +205,20 @@ struct SampleUsage {
                 let totals = Totals(tokens: TokenCounts(input: tokens / 20, cacheRead: tokens * 3 / 4, output: tokens / 5), cost: cost,
                                     billed: account.provider == .cursor ? cost * 0.08 : 0, requests: tokens / 9000)
                 let key = AccountKey(provider: account.provider, account: account.id)
-                digest.points.append(UsageDigest.Point(start: start, key: key, totals: totals))
-                digest.byAccount[key, default: Totals()] += totals
-                digest.total += totals
                 let modelIndex = account.provider == .claude ? (Int(index) % 5 == 0 ? 3 : 0) : account.provider == .codex ? 1 : account.provider == .gemini ? 5 : 2
-                digest.byModel[models[modelIndex], default: Totals()] += totals
+                let modelName = models[modelIndex]
+                digest.points.append(UsageDigest.Point(start: start, key: key, model: modelName, totals: totals))
+                digest.byAccount[key, default: Totals()] += totals
+                digest.byModel[ModelKey(provider: account.provider, model: modelName), default: Totals()] += totals
+                digest.byProvider[account.provider, default: Totals()] += totals
+                digest.total += totals
             }
             start = start.addingTimeInterval(step)
             index += 1
         }
         if accounts.contains(where: { $0.provider == .claude }) {
             let haiku = Totals(tokens: TokenCounts(input: 40_000, cacheRead: 300_000, output: 60_000), cost: 0.6, requests: 80)
-            digest.byModel[models[4], default: Totals()] += haiku
+            digest.byModel[ModelKey(provider: .claude, model: models[4]), default: Totals()] += haiku
         }
         digest.previous = Totals(tokens: TokenCounts(output: Int(Double(digest.total.tokens.total) * 0.86)), cost: digest.total.cost * 0.88)
         return digest

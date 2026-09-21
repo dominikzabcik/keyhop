@@ -182,10 +182,18 @@ struct UsageDocument: Encodable {
     let accounts: [AccountUsage]
     let tools: [ToolUsage]
     let models: [ModelUsage]
+    let makers: [MakerUsage]
     let projects: [ProjectUsage]
     let sessions: [SessionUsage]
     let points: [Point]
     let budgets: [BudgetDocument]
+
+    /// Everything one company's models did, whichever tools ran them.
+    struct MakerUsage: Encodable {
+        let maker: String
+        let models: [String]
+        let spend: SpendDocument
+    }
 
     /// A repository or folder, by where it is on this computer and the short name it goes by.
     /// Usage no tool placed in a folder has neither.
@@ -268,6 +276,7 @@ struct UsageDocument: Encodable {
                            cacheWrite: totals.tokens.cacheWrite, cacheWrite1h: totals.tokens.cacheWrite1h,
                            reasoning: totals.tokens.reasoning)
             }
+        makers = Reports.makers(digest).map { MakerUsage(maker: $0.maker, models: $0.models, spend: SpendDocument($0.totals)) }
         projects = Reports.projects(digest).map { path, name, totals in
             ProjectUsage(path: path, name: name, spend: SpendDocument(totals))
         }
@@ -408,6 +417,12 @@ enum Reports {
             let name = "\(key.model) · \(key.provider.shortName)"
             lines.append("  \(name.padding(toLength: 38, withPad: " ", startingAt: 0)) \(Numbers.tokens(totals.tokens.total).leftPadded(8))  \(Numbers.usd(totals.cost).leftPadded(9))")
         }
+        lines.append("")
+        lines.append("Makers")
+        for (maker, models, totals) in Self.makers(digest) {
+            let name = "\(maker) · \(models.count) model\(models.count == 1 ? "" : "s")"
+            lines.append("  \(name.padding(toLength: 38, withPad: " ", startingAt: 0)) \(Numbers.tokens(totals.tokens.total).leftPadded(8))  \(Numbers.usd(totals.cost).leftPadded(9))")
+        }
         let projects = Self.projects(digest)
         if projects.contains(where: { $0.path != nil }) {
             lines.append("")
@@ -418,6 +433,21 @@ enum Reports {
             if projects.count > 12 { lines.append("  and \(projects.count - 12) more") }
         }
         return lines.joined(separator: "\n")
+    }
+
+    /// Makers, most used first, each with its models by name. The same model run through two
+    /// tools is one model here.
+    static func makers(_ digest: UsageDigest) -> [(maker: String, models: [String], totals: Totals)] {
+        var totals: [String: Totals] = [:]
+        var models: [String: Set<String>] = [:]
+        for (key, value) in digest.byModel {
+            let maker = Makers.maker(of: key.model)
+            totals[maker, default: Totals()] += value
+            models[maker, default: []].insert(Pricing.normalize(key.model))
+        }
+        return totals
+            .sorted { $0.value.tokens.total > $1.value.tokens.total }
+            .map { (maker: $0.key, models: (models[$0.key] ?? []).sorted(), totals: $0.value) }
     }
 
     /// Projects, most used first, each with the short name it goes by. Usage no tool placed in a

@@ -957,10 +957,14 @@ select.field option { background: var(--raised); }
     const projects = placed.length
       ? `<section class="card"><div class="card-head"><h2>Projects</h2><span class="hint mono">${placed.length}</span></div>${projectTable(usage.projects, ui.metric)}</section>`
       : "";
+    const makerList = usage.makers || [];
+    const makers = makerList.length
+      ? `<section class="card"><div class="card-head"><h2>Makers</h2><span class="hint mono">${makerList.length}</span></div>${makerTable(makerList, ui.metric)}</section>`
+      : "";
     const sessions = (usage.sessions && usage.sessions.length)
       ? `<section class="card"><div class="card-head"><h2>Sessions</h2><span class="hint mono">${usage.sessions.length}</span></div>${sessionTable(usage.sessions, ui.metric)}</section>`
       : "";
-    return { toolbar, body: `${stats}${chart}<div class="split wide-left">${heat}${mix}</div><div class="split">${toolsCard}${models}</div>${projects}${accounts}${sessions}` };
+    return { toolbar, body: `${stats}${chart}<div class="split wide-left">${heat}${mix}</div><div class="split">${toolsCard}${models}</div>${makers && projects ? `<div class="split">${makers}${projects}</div>` : makers + projects}${accounts}${sessions}` };
   }
 
   function niceCeiling(value) {
@@ -1109,6 +1113,20 @@ select.field option { background: var(--raised); }
         <table class="table"><thead><tr><th>Model</th>${showBars ? "<th></th>" : ""}<th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th></tr></thead><tbody>${rows}</tbody></table>
       </div>`;
     }).join("");
+  }
+
+  // Whose models did the work, whichever tool ran them, with each maker's share of the range.
+  function makerTable(makers, metric) {
+    const value = (m) => (metric === "tokens" ? m.figures.tokens : m.figures.cost);
+    const sum = makers.reduce((s, m) => s + value(m), 0) || 1;
+    const peak = Math.max(0.000001, ...makers.map(value));
+    const rows = makers.slice().sort((a, b) => value(b) - value(a)).map((m) => `<tr>
+      <td><b>${esc(m.name)}</b><div class="subtle" style="font-size:11.5px" title="${esc(m.models.join(", "))}">${m.models.length} model${m.models.length === 1 ? "" : "s"}</div></td>
+      <td class="bar-cell">${progress((value(m) / peak) * 100, null, "plain")}</td>
+      <td class="right mono">${metric === "tokens" ? fmt.tokens(m.figures.tokens) : fmt.usd(m.figures.cost)}</td>
+      <td class="right mono subtle">${Math.round((value(m) / sum) * 100)}%</td>
+    </tr>`).join("");
+    return `<table class="table"><thead><tr><th>Maker</th><th></th><th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th><th class="right">Share</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   // Each repository or folder, most used first. Usage no tool placed in a folder closes the list

@@ -182,3 +182,31 @@ final class ProjectStorageTests: XCTestCase {
         XCTAssertFalse(sent.contains("project"))
     }
 }
+
+/// Usage by the company that made the model, across tools.
+final class MakerTests: XCTestCase {
+    func testModelsAreFiledUnderTheirMaker() {
+        XCTAssertEqual(Makers.maker(of: "claude-opus-5"), "Anthropic")
+        XCTAssertEqual(Makers.maker(of: "anthropic/claude-sonnet-5"), "Anthropic")
+        XCTAssertEqual(Makers.maker(of: "gpt-5.6-sol"), "OpenAI")
+        XCTAssertEqual(Makers.maker(of: "openrouter/openai/o3"), "OpenAI")
+        XCTAssertEqual(Makers.maker(of: "gemini-3.1-pro-preview"), "Google")
+        XCTAssertEqual(Makers.maker(of: "glm-5"), "Z.ai")
+        XCTAssertEqual(Makers.maker(of: "kimi-k2"), "Moonshot AI")
+        XCTAssertEqual(Makers.maker(of: "composer-2"), "Cursor")
+        XCTAssertEqual(Makers.maker(of: "something-new"), "Other")
+    }
+
+    func testOneModelThroughTwoToolsCountsOnceUnderItsMaker() {
+        var digest = UsageDigest()
+        let a = Totals(tokens: TokenCounts(output: 100), cost: 1, requests: 1)
+        digest.byModel[ModelKey(provider: .claude, model: "claude-sonnet-5")] = a
+        digest.byModel[ModelKey(provider: .opencode, model: "anthropic/claude-sonnet-5")] = a
+        digest.byModel[ModelKey(provider: .opencode, model: "openai/gpt-5.6-sol")] = a
+        let makers = Reports.makers(digest)
+        XCTAssertEqual(makers.first?.maker, "Anthropic")
+        XCTAssertEqual(makers.first?.models, ["claude-sonnet-5"])
+        XCTAssertEqual(makers.first?.totals.tokens.output, 200)
+        XCTAssertEqual(makers.last?.maker, "OpenAI")
+    }
+}

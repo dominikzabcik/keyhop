@@ -398,6 +398,13 @@ struct DashboardUsage: Encodable {
         let figures: Figures
     }
 
+    /// One company's models, whichever tools ran them.
+    struct MakerRow: Encodable {
+        let name: String
+        let models: [String]
+        let figures: Figures
+    }
+
     /// A repository or folder the work happened in. `path` is shown with the home folder as `~`, and
     /// is nil for usage no tool placed in a folder.
     struct ProjectRow: Encodable {
@@ -453,6 +460,7 @@ struct DashboardUsage: Encodable {
     let accounts: [AccountRow]
     let tools: [ToolRow]
     let models: [ModelRow]
+    let makers: [MakerRow]
     let projects: [ProjectRow]
     let sessions: [SessionRow]
     let heatmap: [Day]
@@ -528,6 +536,7 @@ struct DashboardUsage: Encodable {
             let entry = Self.modelSeries(for: point, named: namedModels, collapse: false)
             return ModelRow(model: key.model, tool: key.provider.rawValue, color: entry.color, figures: Figures(totals))
         }
+        makers = Reports.makers(digest).map { MakerRow(name: $0.maker, models: $0.models, figures: Figures($0.totals)) }
         projects = Reports.projects(digest).map { project in
             ProjectRow(name: project.name, path: project.path.map(Projects.display), figures: Figures(project.totals))
         }

@@ -206,8 +206,11 @@ export async function pokeControls(page, screen) {
       dead.push({ screen: screen.name, width: "laptop", kind: "dead-control", detail: `"${label}" does nothing when pressed` });
     }
     pressed.push(label);
-    // A press that opened a menu or a dialog would cover the next control; Escape closes it.
-    try { await page.keyboard.press("Escape"); await page.waitForTimeout(120); } catch {}
+    // Keyhop's window opens the Jump to palette and the range menu over the page, where they would
+    // cover the next control; Escape closes them. Other screens keep their own flow.
+    try {
+      if (await page.$("#palette:not([hidden]), .range-menu")) { await page.keyboard.press("Escape"); await page.waitForTimeout(120); }
+    } catch {}
   }
   return { dead, pressed };
 }

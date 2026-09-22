@@ -171,15 +171,15 @@ private struct InUseCard: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
-                    EditableName(account: account, font: .system(size: 15, weight: .semibold), renaming: $renaming)
+                    EditableName(account: account, font: Brand.heading(18), renaming: $renaming)
                         .foregroundStyle(Brand.text)
                     Spacer(minLength: 8)
-                    HStack(spacing: 6) {
-                        Circle().fill(Brand.good).frame(width: 5, height: 5)
-                        Text("In use")
-                            .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(Brand.muted)
-                    }
+                    Text("In use")
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(Brand.text)
+                        .padding(.horizontal, 8)
+                        .frame(height: 20)
+                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.white.opacity(0.1)))
                 }
                 if let detail {
                     Text(detail)
@@ -254,8 +254,10 @@ private struct LimitCell: View {
                     Spacer(minLength: 4)
                     // The number is what the eye comes for, so it carries the weight.
                     Text("\(Int(window.usedPercent.rounded()))%")
-                        .font(Brand.mono(13, weight: .semibold))
+                        .font(Brand.figure(17))
+                        .tracking(0.3)
                         .foregroundStyle(Brand.text)
+                        .contentTransition(.numericText())
                 }
                 .padding(.bottom, 7)
                 LimitBar(fraction: window.usedPercent / 100, pace: window.pace(at: context.date))
@@ -292,12 +294,17 @@ private struct SpendLine: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            (Text("Today  ").foregroundStyle(Brand.muted)
-                + Text(Numbers.tokens(spend.tokens.total)).font(Brand.mono(11.5)).foregroundStyle(Brand.text)
-                + Text(" tokens · ").foregroundStyle(Brand.muted)
-                + Text(Numbers.usd(spend.cost)).font(Brand.mono(11.5)).foregroundStyle(Brand.text)
-                + Text(" at API prices").foregroundStyle(Brand.subtle))
-                .lineLimit(1)
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                Text(Numbers.tokens(spend.tokens.total))
+                    .font(Brand.figure(17))
+                    .tracking(0.3)
+                    .foregroundStyle(Brand.text)
+                    .contentTransition(.numericText())
+                (Text("tokens today · ").foregroundStyle(Brand.muted)
+                    + Text(Numbers.usd(spend.cost)).foregroundStyle(Brand.text)
+                    + Text(" at API prices").foregroundStyle(Brand.subtle))
+                    .lineLimit(1)
+            }
             if let budget = tracker.budget(for: Budget.scope(for: account.id)), budget.amount > 0 {
                 let share = (tracker.budgetSpend[budget.scope] ?? 0) / budget.amount
                 Text("\(Int((share * 100).rounded()))% of the \(budget.period.adjective) budget of \(Numbers.usd(budget.amount))")
@@ -359,7 +366,8 @@ private struct AlternativeRow: View {
                 } else if let room, snapshot?.error == nil {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("\(Int(room.rounded()))%")
-                            .font(Brand.mono(13, weight: .medium))
+                            .font(Brand.figure(15))
+                            .tracking(0.3)
                             .foregroundStyle(Brand.text)
                         Text("left")
                             .font(.system(size: 11.5))

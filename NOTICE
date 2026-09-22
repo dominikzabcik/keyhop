@@ -15,4 +15,5 @@ public domain, in Sources/CSQLite.
 
 The dashboard's display faces are Basteleur Bold and Moonlight by Keussel (https://velvetyne.fr),
 released under the SIL Open Font License 1.1 (Assets/Fonts/Basteleur-OFL.txt).
-They are embedded unmodified by scripts/embed-font.py.
+They are embedded unmodified by scripts/embed-font.py: WOFF2 for the dashboard page
+and OpenType for the Mac app, registered for Keyhop's process only.

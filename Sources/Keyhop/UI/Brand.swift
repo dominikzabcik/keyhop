@@ -30,6 +30,34 @@ enum Brand {
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }
+
+    /// Basteleur Bold, the window's face for figures, so a number reads the same in the menu as
+    /// in Keyhop's window.
+    static func figure(_ size: CGFloat) -> Font {
+        DisplayFonts.register()
+        return .custom("Basteleur-Bold", fixedSize: size)
+    }
+
+    /// Basteleur Moonlight, the window's face for headings and names.
+    static func heading(_ size: CGFloat) -> Font {
+        DisplayFonts.register()
+        return .custom("Basteleur-Moonlight", fixedSize: size)
+    }
+}
+
+/// Registers the embedded Basteleur faces with Core Text once, for this process only, so nothing
+/// is installed on the computer.
+enum DisplayFonts {
+    private static let done: Void = {
+        for encoded in [DisplayFont.boldOTF, DisplayFont.moonlightOTF] {
+            guard let data = Data(base64Encoded: encoded),
+                  let provider = CGDataProvider(data: data as CFData),
+                  let font = CGFont(provider) else { continue }
+            CTFontManagerRegisterGraphicsFont(font, nil)
+        }
+    }()
+
+    static func register() { _ = done }
 }
 
 extension Color {
@@ -60,7 +88,7 @@ struct RowDivider: View {
     }
 }
 
-/// A small status label, as in the dashboard. `live` adds the green dot.
+/// A small status label, as in the dashboard: plain words on a quiet surface. `live` tints it green.
 struct Badge: View {
     let text: String
     var live = false
@@ -71,18 +99,13 @@ struct Badge: View {
     }
 
     var body: some View {
-        HStack(spacing: 5) {
-            if live {
-                Circle().fill(Brand.good).frame(width: 6, height: 6)
-            }
-            Text(text.uppercased())
-                .font(.system(size: 10.5, weight: .semibold))
-                .tracking(0.3)
-        }
-        .foregroundStyle(Brand.muted)
-        .padding(.horizontal, 7)
-        .frame(height: 20)
-        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.white.opacity(0.07)))
+        Text(text)
+            .font(.system(size: 11.5, weight: .medium))
+            .foregroundStyle(live ? Color(red: 0.66, green: 0.82, blue: 0.72) : Brand.muted)
+            .padding(.horizontal, 8)
+            .frame(height: 20)
+            .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(live ? Brand.good.opacity(0.1) : Color.white.opacity(0.07)))
     }
 }
 

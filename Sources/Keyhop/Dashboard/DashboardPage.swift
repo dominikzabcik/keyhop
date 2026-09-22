@@ -207,11 +207,12 @@ a.btn { text-decoration: none; }
 .main p a:not(.btn) { color: var(--text); text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
+/* A contained status, used sparingly: plain words on a quiet surface, no dot and no capitals. */
 .badge {
-  display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 7px; border-radius: 6px;
-  background: hsl(0 0% 100% / .07); color: var(--muted); font-size: 10.5px; font-weight: 650; letter-spacing: .03em; text-transform: uppercase; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 6px;
+  background: hsl(0 0% 100% / .07); color: var(--muted); font-size: 11.5px; font-weight: 560; white-space: nowrap;
 }
-.badge.live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+.badge.live { color: hsl(145 28% 72%); background: hsl(145 30% 50% / .1); }
 .badge.sample { color: var(--warn); background: hsl(36 72% 60% / .1); }
 
 .tabs { position: relative; isolation: isolate; display: inline-flex; padding: 3px; gap: 2px; border-radius: 8px; background: var(--raised); border: 1px solid var(--border); }
@@ -293,11 +294,25 @@ select.field option { background: var(--raised); }
 .group-head .count { color: var(--subtle); font-family: var(--mono); font-size: 12px; }
 .group-head .btn { margin-left: auto; }
 /* Fixed outer columns, so every row's limits and figures line up whatever its buttons are. */
-.account-row { display: grid; grid-template-columns: minmax(200px, 1.1fr) minmax(260px, 1.5fr) 130px 250px; gap: 20px; align-items: center; }
+.account-row { display: grid; grid-template-columns: minmax(220px, 1.1fr) minmax(280px, 1.6fr) 150px 132px; gap: 20px; align-items: center; }
 .account-row .row-actions { flex-wrap: nowrap; }
-.account-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.account-name { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.account-meta { margin-top: 3px; color: var(--subtle); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.in-use { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 6px; background: hsl(0 0% 100% / .1); color: var(--text); font-size: 11.5px; font-weight: 600; }
+.account-row.active { background: hsl(0 0% 100% / .018); }
+.account-row .today { display: grid; gap: 1px; font-family: var(--sans); }
+.account-row .today b { font-family: var(--display); font-size: 18px; font-weight: 700; letter-spacing: .02em; color: var(--text); line-height: 1.2; }
+.account-row .today span { color: var(--subtle); font-size: 12px; }
+.menu-anchor { position: relative; display: inline-flex; }
+.btn.icon-only { width: 28px; padding: 0; }
+.btn.icon-only .icon { width: 16px; height: 16px; }
+.row-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 190px; padding: 5px; display: grid; gap: 2px; border-radius: 10px; border: 1px solid var(--border-strong); background: hsl(0 0% 12.5%); box-shadow: 0 8px 20px -10px rgba(0, 0, 0, .6); animation: menu-in .14s cubic-bezier(.2, .8, .2, 1); }
+.row-menu button { height: 30px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--text); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.row-menu button:hover { background: hsl(0 0% 100% / .06); }
+.row-menu button.danger { color: var(--bad); }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } }
 .account-name b { font-weight: 600; font-size: 14px; }
-.account-email { color: var(--subtle); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .today { color: var(--muted); font-size: 12px; font-family: var(--mono); line-height: 1.5; }
 .rename { display: flex; gap: 8px; align-items: center; }
 .rename .field { max-width: 260px; }
@@ -322,7 +337,11 @@ select.field option { background: var(--raised); }
 
 /* Usage */
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none; margin: 0; padding: 0; font-size: 12px; color: var(--muted); }
-.legend li { display: flex; align-items: center; gap: 6px; }
+.legend li { display: flex; align-items: center; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; padding: 2px 6px; margin: -2px -6px; border: 0; border-radius: 5px; background: transparent; color: inherit; font: inherit; cursor: pointer; transition: color .15s ease, opacity .15s ease, background .15s ease; }
+.legend-item:hover { color: var(--text); background: hsl(0 0% 100% / .04); }
+.legend-item[aria-pressed="false"] { opacity: .45; }
+.legend-item[aria-pressed="false"] .swatch { background: transparent !important; box-shadow: inset 0 0 0 1.5px var(--subtle); }
 .swatch { width: 8px; height: 8px; border-radius: 2px; flex: none; }
 .chart { overflow-x: auto; }
 .chart svg { display: block; }
@@ -330,7 +349,13 @@ select.field option { background: var(--raised); }
 .chart .base { stroke: hsl(0 0% 100% / .16); }
 .chart .axis { fill: var(--subtle); font: 11px var(--mono); }
 .chart .hit { fill: transparent; }
-.chart .hit:hover { fill: hsl(0 0% 100% / .035); }
+.chart .hit:hover { fill: hsl(0 0% 100% / .03); }
+.chart .col { transition: opacity .18s ease; }
+.chart svg[data-hover] .col { opacity: .4; }
+.chart svg[data-hover] .col.on { opacity: 1; }
+.heat rect[data-action] { cursor: pointer; }
+.heat rect[data-action]:hover { stroke: hsl(0 0% 100% / .7); stroke-width: 1.2; }
+::view-transition-group(usage-chart) { animation-duration: .24s; }
 .heat rect.l0 { fill: hsl(0 0% 100% / .05); }
 .heat rect.l1 { fill: hsl(0 0% 100% / .18); }
 .heat rect.l2 { fill: hsl(0 0% 100% / .36); }
@@ -470,6 +495,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .palette-item .mark, .palette-item .icon { width: 15px; height: 15px; color: var(--muted); fill: var(--muted); }
 .palette-item .icon { fill: none; }
 .palette-item small { margin-left: auto; color: var(--subtle); font-size: 12px; }
+.palette-item kbd { margin-left: auto; }
+.palette-item small + kbd { margin-left: 8px; }
 .palette-item[aria-selected="true"] { background: hsl(0 0% 100% / .07); }
 .palette-dot { width: 15px; display: grid; place-items: center; }
 .palette-dot::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: hsl(0 0% 100% / .28); }
@@ -592,6 +619,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   const wanted = params.get("s") || location.hash.slice(1);
   const ui = {
     section: SECTIONS.includes(wanted) ? wanted : (boot?.section || "overview"),
+    menu: null, hidden: { account: [], tool: [], model: [] },
     range: "week", rangeOpen: false, metric: "tokens", tool: "all", group: "account", breakdown: "periods", allPeriods: false,
     boardPeriod: "week", boardMetric: "tokens", boardTeam: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
@@ -813,6 +841,13 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   }
 
   // The sidebar's current section, on the same kind of thumb, running down the list.
+  function labelNav() {
+    shownSections().forEach((section, i) => {
+      const link = $(`#nav a[data-section="${section}"]`);
+      if (link) link.title = `${TITLES[section]} · press ${i + 1}`;
+    });
+  }
+
   function slideNav() {
     const nav = $("#nav"), on = nav?.querySelector('a[aria-current="page"]');
     if (!on || !on.offsetHeight) return;
@@ -866,12 +901,16 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   let palette = null;
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
+  // The sections the sidebar shows, in its order; key 1 opens the first, 2 the second, and so on.
+  const shownSections = () => [...document.querySelectorAll("#nav a")].filter((a) => !a.hidden).map((a) => a.dataset.section);
+
   function paletteItems() {
     const items = [];
     const tools = data.state?.status.tools || [];
     for (const section of SECTIONS) {
       if (section === "leaderboard" && (isStatic || !data.state?.cloud?.available)) continue;
-      items.push({ group: "Go to", label: TITLES[section], icon: section, run: () => go(section) });
+      const place = shownSections().indexOf(section);
+      items.push({ group: "Go to", label: TITLES[section], icon: section, key: place >= 0 && place < 9 ? String(place + 1) : "", run: () => go(section) });
     }
     for (const [value, label] of RANGES) {
       if (isStatic && !data.usage[`${value}:all`]) continue;
@@ -932,7 +971,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const rows = matches.map((item, i) => {
       const head = item.group !== group ? `<div class="palette-group">${esc((group = item.group))}</div>` : "";
       const glyph = item.mark ? mark(item.mark) : item.icon ? `<svg class="icon"><use href="#i-${item.icon}"/></svg>` : `<span class="palette-dot"></span>`;
-      return `${head}<button type="button" class="palette-item" role="option" data-palette="${i}" aria-selected="${i === palette.index}">${glyph}<span>${esc(item.label)}</span>${item.detail ? `<small>${esc(item.detail)}</small>` : ""}</button>`;
+      return `${head}<button type="button" class="palette-item" role="option" data-palette="${i}" aria-selected="${i === palette.index}">${glyph}<span>${esc(item.label)}</span>${item.detail ? `<small>${esc(item.detail)}</small>` : ""}${item.key ? `<kbd>${item.key}</kbd>` : ""}</button>`;
     }).join("");
     const list = rows || `<p class="palette-empty">Nothing matches "${esc(palette.query)}".</p>`;
     if (!host.firstElementChild) {
@@ -1076,6 +1115,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     renderActivity();
     $("#update-title").textContent = data.update?.available ? `Update to ${data.update.latest}` : "Check for updates";
     $("#version").textContent = state ? `v${state.version} · ${state.platform}` : "";
+    labelNav();
     slideNav();
   }
 
@@ -1259,36 +1299,49 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   function accountsPage(tools) {
     const body = tools.map((tool) => {
       const adding = data.state.adding.includes(tool.id);
-      const rows = tool.accounts.map((account) => accountRow(account, tool.limitsNote)).join("");
+      const rows = tool.accounts.map((account) => accountRow(account, tool)).join("");
       const waiting = adding ? `<div class="row waiting-row"><div class="waiting"><span class="pulse"><i></i><i></i><i></i></span><span>Waiting for a new ${esc(tool.name)} login ${waited(tool.id)}<br><small>${esc(tool.signInHint)} Keyhop saves it the moment it appears.</small></span></div>
         ${isStatic ? "" : `<button class="btn sm ghost" data-action="add-stop" data-tool="${esc(tool.id)}">Stop waiting</button>`}</div>` : "";
       const empty = !tool.accounts.length && !adding ? `<p class="empty">${esc(tool.signInHint)}</p>` : "";
       return `<section class="group">
         <div class="group-head">${mark(tool.id)}<h2>${esc(tool.name)}</h2><span class="count">${tool.accounts.length}</span>
-          ${isStatic ? "" : `<button class="btn sm secondary" data-action="add" data-tool="${esc(tool.id)}" ${adding ? "disabled" : ""}>${icon("plus")}Add account</button>`}</div>
+          ${isStatic ? "" : `<button class="btn sm ghost" data-action="add" data-tool="${esc(tool.id)}" ${adding ? "disabled" : ""}>${icon("plus")}Add account</button>`}</div>
         <div class="card list">${waiting}${rows}${empty}</div>
       </section>`;
     }).join("");
     return { body: `<p class="lede">Every login Keyhop keeps. Switching saves the login in use first, so none is ever lost.</p>${body}` };
   }
 
-  function accountRow(account, limitsNote) {
+  // One saved login: who it is, how much room its limits have, what it used today, and what can be
+  // done with it. The login in use carries a mark that moves to the next one when you switch.
+  function accountRow(account, tool) {
     const editing = ui.editing === account.id;
     const confirming = ui.confirming === account.id;
+    const meta = [account.plan, account.label ? account.email : ""].filter(Boolean).map(esc).join(" · ");
     const name = editing
       ? `<form class="rename" data-form="rename" data-id="${esc(account.id)}"><input class="field" name="name" value="${esc(account.label || "")}" placeholder="${esc(account.email)}" maxlength="60" aria-label="Name"><button class="btn sm">Save</button><button type="button" class="btn sm ghost" data-action="cancel-edit">Cancel</button></form>`
-      : `<div class="account-name"><b>${esc(account.name)}</b>${account.plan ? `<span class="badge">${esc(account.plan)}</span>` : ""}${account.active ? `<span class="badge live">In use</span>` : ""}</div>
-         <div class="account-email mono">${esc(account.label ? account.email : "")}</div>`;
+      : `<div class="account-name"><b>${esc(account.name)}</b>${account.active ? `<span class="in-use" style="view-transition-name:in-use-${esc(tool.id)}">In use</span>` : ""}</div>
+         ${meta ? `<div class="account-meta">${meta}</div>` : ""}`;
     let actions = "";
     if (!isStatic && !editing) {
-      actions = confirming
-        ? `<span class="subtle" style="font-size:12.5px">Delete saved login?</span><button class="btn sm secondary danger" data-action="remove" data-id="${esc(account.id)}">Remove</button><button class="btn sm ghost" data-action="cancel-remove">Keep</button>`
-        : `${account.active ? "" : `<button class="btn sm secondary" data-action="switch" data-id="${esc(account.id)}">Switch</button>`}<button class="btn sm ghost" data-action="edit" data-id="${esc(account.id)}">Rename</button>${account.active ? "" : `<button class="btn sm ghost danger" data-action="confirm-remove" data-id="${esc(account.id)}">Remove</button>`}`;
+      if (confirming) {
+        actions = `<span class="subtle" style="font-size:12.5px">Delete this saved login?</span><button class="btn sm secondary danger" data-action="remove" data-id="${esc(account.id)}">Remove</button><button class="btn sm ghost" data-action="cancel-remove">Keep</button>`;
+      } else {
+        const open = ui.menu === account.id;
+        const menu = open ? `<div class="row-menu" role="menu">
+            <button type="button" role="menuitem" data-action="edit" data-id="${esc(account.id)}">Rename</button>
+            ${account.active ? "" : `<button type="button" role="menuitem" class="danger" data-action="confirm-remove" data-id="${esc(account.id)}">Remove saved login</button>`}
+          </div>` : "";
+        actions = `${account.active ? "" : `<button class="btn sm secondary" data-action="switch" data-id="${esc(account.id)}">Switch</button>`}
+          <span class="menu-anchor"><button type="button" class="btn sm ghost icon-only" data-action="account-menu" data-id="${esc(account.id)}" aria-haspopup="true" aria-expanded="${open}" aria-label="More for ${esc(account.name)}">${icon("more")}</button>${menu}</span>`;
+      }
     }
-    const today = account.today ? `${fmt.tokens(account.today.tokens)} tokens<br>${fmt.usd(account.today.cost)} today` : `<span class="subtle">No usage today</span>`;
-    return `<div class="row account-row">
-      <div>${name}</div>
-      <div>${limits(account, 2, limitsNote)}</div>
+    const today = account.today
+      ? `<b data-count="${account.today.tokens}" data-count-key="acct:${esc(account.id)}" data-format="tokens">${fmt.tokens(account.today.tokens)}</b><span>tokens today · ${fmt.usd(account.today.cost)}</span>`
+      : `<span>No usage today</span>`;
+    return `<div class="row account-row${account.active ? " active" : ""}" style="view-transition-name:acct-${esc(account.id)}">
+      <div class="account-id">${name}</div>
+      <div>${limits(account, 2, tool.limitsNote)}</div>
       <div class="today">${today}</div>
       <div class="row-actions">${actions}</div>
     </div>`;
@@ -1309,10 +1362,12 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       return { toolbar, body: `${top}<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code, Codex, Gemini CLI, OpenCode and Pi records on this computer, and Cursor's usage export after a refresh.</p></div>${heatCard(usage)}` };
     }
     const grouped = chartGroup(usage);
-    const legend = `<ul class="legend">${grouped.series.map((s) => `<li><span class="swatch" style="background:${s.color}"></span>${esc(s.name)}</li>`).join("")}</ul>`;
+    // The legend doubles as a filter: each entry hides or shows its part of every bar.
+    const hidden = ui.hidden[ui.group] || [];
+    const legend = `<ul class="legend">${grouped.series.map((s) => `<li><button type="button" class="legend-item" data-action="series" data-value="${esc(s.id)}" aria-pressed="${!hidden.includes(s.id)}" title="${hidden.includes(s.id) ? "Show" : "Hide"} ${esc(s.name)}"><span class="swatch" style="background:${s.color}"></span>${esc(s.name)}</button></li>`).join("")}</ul>`;
     const chart = `<section class="card">
       <div class="card-head"><h2>${ui.metric === "tokens" ? "Tokens" : "API value"} by ${usage.bucket}</h2>${tabs("group", [["account", "Accounts"], ["tool", "Tools"], ["model", "Models"]], ui.group)}</div>
-      <div class="card-body chart-body">${legend}<div class="chart">${stackedChart(usage, ui.metric, 260, "full", ui.group)}</div></div>
+      <div class="card-body chart-body">${legend}<div class="chart" style="view-transition-name:usage-chart">${stackedChart(usage, ui.metric, 260, "full", ui.group, hidden)}</div></div>
     </section>`;
     const mix = `<section class="card">
       <div class="card-head"><h2>Token mix</h2><span class="hint mono">${fmt.tokens(t.tokens)}</span></div>
@@ -1517,9 +1572,9 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
   }
 
-  function stackedChart(usage, metric, height, size, group) {
+  function stackedChart(usage, metric, height, size, group, hidden = []) {
     const grouped = chartGroup(usage, group);
-    const series = grouped.series, buckets = grouped.buckets;
+    const series = grouped.series.filter((s) => !hidden.includes(s.id)), buckets = grouped.buckets;
     const W = chartWidth(size), H = height, L = 52, R = 4, T = 8, B = 26;
     const pw = W - L - R, ph = H - T - B;
     const pick = (v) => (v ? (metric === "tokens" ? v.tokens : v.cost) : 0);
@@ -1545,6 +1600,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       const cx = L + slot * (i + 0.5), x = cx - bw / 2;
       const present = series.map((s, j) => ({ s, v: columns[i][j] })).filter((e) => e.v > 0);
       let base = 0;
+      bars += `<g class="col" data-col="${i}">`;
       present.forEach((entry, k) => {
         const y0 = T + ph - (base / ceiling) * ph, y1 = T + ph - ((base + entry.v) / ceiling) * ph;
         base += entry.v;
@@ -1555,6 +1611,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
           ? `<path d="${roundedTop(+x.toFixed(1), +y1.toFixed(1), +bw.toFixed(1), +h.toFixed(1))}" fill="${entry.s.color}"/>`
           : `<rect x="${x.toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${entry.s.color}"/>`;
       });
+      bars += `</g>`;
       if (i % every === 0) {
         grid += `<text class="axis" x="${cx.toFixed(1)}" y="${H - 7}" text-anchor="middle">${esc(fmt.day(bucket.start, axisOptions))}</text>`;
       }
@@ -1603,7 +1660,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         labels.push({ col, text: fmt.day(date, { month: "short" }) });
         lastMonth = date.getMonth();
       }
-      cells += `<rect class="l${level}" x="${col * (size + gap)}" y="${top + row * (size + gap)}" width="${size}" height="${size}" rx="2.5"${tipAttr(fmt.day(date, { weekday: "short", month: "short", day: "numeric" }), day.tokens ? [["Tokens", fmt.tokens(day.tokens)], ["API value", fmt.usd(day.cost)], ["Requests", fmt.count(day.requests)]] : [["No usage", ""]])}/>`;
+      cells += `<rect class="l${level}" x="${col * (size + gap)}" y="${top + row * (size + gap)}" width="${size}" height="${size}" rx="2.5"${day.tokens && !isStatic && ui.section === "usage" ? ` data-action="day" data-value="${day.day}"` : ""}${tipAttr(fmt.day(date, { weekday: "short", month: "short", day: "numeric" }), day.tokens ? [["Tokens", fmt.tokens(day.tokens)], ["API value", fmt.usd(day.cost)], ["Requests", fmt.count(day.requests)]] : [["No usage", ""]])}/>`;
     });
     // A month that starts a column or two before the next one has no room for its name; the
     // next month's name wins rather than the two running into each other.
@@ -2136,6 +2193,17 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const card = event.target.closest && event.target.closest("[data-tip]");
     if (card) { tip.innerHTML = card.dataset.tip; placeTip(tip, event); return; }
     const hit = event.target.closest && event.target.closest(".hit");
+    // The hovered day stays lit and the rest step back.
+    for (const svg of document.querySelectorAll(".chart svg[data-hover]")) {
+      if (!hit || hit.ownerSVGElement !== svg || svg.dataset.hover !== hit.dataset.bucket) {
+        delete svg.dataset.hover;
+        svg.querySelector(".col.on")?.classList.remove("on");
+      }
+    }
+    if (hit && !hit.ownerSVGElement.dataset.hover) {
+      hit.ownerSVGElement.dataset.hover = hit.dataset.bucket;
+      hit.ownerSVGElement.querySelector(`.col[data-col="${hit.dataset.bucket}"]`)?.classList.add("on");
+    }
     if (!hit) { tip.hidden = true; return; }
     const usage = data.usage[hit.dataset.key] || data.usage[hit.dataset.key.split(":")[0] + ":all"];
     const grouped = usage ? chartGroup(usage, hit.dataset.group) : null;
@@ -2156,9 +2224,11 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 
   // MARK: Actions
 
-  const editing = () => ui.editing || ui.confirming || ui.rangeOpen || palette || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
+  const editing = () => ui.editing || ui.confirming || ui.rangeOpen || ui.menu || palette || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
 
-  async function act(button, call, label) {
+  // `morph` cross-fades the page into its new state once the call is done, for changes that move
+  // things around, like switching which login is in use.
+  async function act(button, call, label, morph = false) {
     const key = button ? pendingKey(button) : null;
     if (key) { ui.pending.set(key, label || ""); applyPending(); }
     try {
@@ -2173,7 +2243,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       if (data.state) { data.state.refreshing = false; data.state.activity = null; }
     } finally {
       if (key) ui.pending.delete(key);
-      render();
+      if (morph) transition(render); else render();
       watchActivity();
     }
   }
@@ -2201,6 +2271,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     if (link) { event.preventDefault(); if (link.dataset.section !== ui.section) go(link.dataset.section); return; }
     // A click anywhere outside the open range menu closes it.
     if (ui.rangeOpen && !event.target.closest(".range-pick")) { ui.rangeOpen = false; render(); }
+    if (ui.menu && !event.target.closest(".menu-anchor")) { ui.menu = null; render(); }
     const el = event.target.closest("[data-action]");
     if (!el || el.disabled || el.tagName === "SELECT") return;
     const id = el.dataset.id;
@@ -2211,12 +2282,13 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         if (data.state?.refreshing) break;
         act(null, () => { data.state.refreshing = true; renderActivity(); return api("/api/refresh", {}); });
         break;
-      case "switch": act(el, () => api("/api/switch", { id }), "Switching"); break;
+      case "switch": act(el, () => api("/api/switch", { id }), "Switching", true); break;
+      case "account-menu": ui.menu = ui.menu === id ? null : id; ui.confirming = null; render(); break;
       case "add": act(el, () => api("/api/add", { tool: el.dataset.tool }), "Signing out"); break;
       case "add-stop": act(el, () => api("/api/add/stop", { tool: el.dataset.tool }), "Stopping"); break;
-      case "edit": ui.editing = id; ui.confirming = null; render(); $("form[data-form=rename] input")?.focus(); break;
+      case "edit": ui.editing = id; ui.confirming = null; ui.menu = null; render(); $("form[data-form=rename] input")?.focus(); break;
       case "cancel-edit": ui.editing = null; render(); break;
-      case "confirm-remove": ui.confirming = id; ui.editing = null; render(); break;
+      case "confirm-remove": ui.confirming = id; ui.editing = null; ui.menu = null; render(); break;
       case "cancel-remove": ui.confirming = null; render(); break;
       case "remove": act(el, () => api("/api/remove", { id }).finally(() => { ui.confirming = null; }), "Removing"); break;
       case "range-menu":
@@ -2225,11 +2297,21 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         if (ui.rangeOpen) $(".range-list [aria-checked=true]")?.focus();
         break;
       case "all-periods": ui.allPeriods = true; render(); break;
+      case "series": {
+        const hidden = ui.hidden[ui.group] || (ui.hidden[ui.group] = []);
+        const at = hidden.indexOf(el.dataset.value);
+        const total = chartGroup(data.usage[`${ui.range}:${ui.tool}`] || {}, ui.group).series?.length || 0;
+        if (at >= 0) hidden.splice(at, 1);
+        else if (hidden.length < total - 1) hidden.push(el.dataset.value); // At least one part stays.
+        transition(render);
+        break;
+      }
+      case "day": showUsage({ range: `${el.dataset.value}..${el.dataset.value}` }); break;
       case "breakdown": ui.breakdown = el.dataset.value; ui.allPeriods = false; render(); break;
       case "range": case "metric": case "group":
         ui[el.dataset.action] = el.dataset.value;
         if (el.dataset.action === "range") ui.rangeOpen = false;
-        render();
+        if (el.dataset.action === "group") transition(render); else render();
         if (el.dataset.action === "range") { await loadSection(); render(); }
         break;
       case "filter-tool":
@@ -2360,6 +2442,13 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       if (event.key === "Enter") { event.preventDefault(); runPalette(palette.index); return; }
       return;
     }
+    // Number keys jump between sections, unless someone is typing.
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "");
+    if (!typing && !event.metaKey && !event.ctrlKey && !event.altKey && /^[1-9]$/.test(event.key)) {
+      const section = shownSections()[+event.key - 1];
+      if (section && section !== ui.section) { event.preventDefault(); go(section); return; }
+    }
+    if (event.key === "Escape" && ui.menu) { ui.menu = null; render(); return; }
     if (event.key === "Escape" && ui.rangeOpen) { ui.rangeOpen = false; render(); $(".range-button")?.focus(); return; }
     if (event.key === "Escape" && (ui.editing || ui.confirming || ui.budgetEdit)) { ui.editing = ui.confirming = ui.budgetEdit = null; render(); }
   });

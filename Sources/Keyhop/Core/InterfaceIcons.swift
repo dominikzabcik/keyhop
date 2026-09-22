@@ -15,6 +15,8 @@ enum InterfaceIcons {
         ("alert", #"<path d="M8 2.2 14.3 13H1.7z"/><path d="M8 6.5v3"/><path d="M8 11.4v.1"/>"#),
         ("plus", #"<path d="M8 3.5v9M3.5 8h9"/>"#),
         ("more", #"<g stroke-width="2.2"><path d="M3.5 8h.01"/><path d="M8 8h.01"/><path d="M12.5 8h.01"/></g>"#),
+        // Keyhop's own: a hop from one key to another, for jumping anywhere in the window.
+        ("hop", #"<rect x="1.8" y="9.6" width="4" height="4" rx="1"/><rect x="10.2" y="9.6" width="4" height="4" rx="1"/><path d="M3.8 7.6C4.6 3.6 11.4 3.6 12.2 7.6"/><path d="M10.2 6.6l2 1.1 1.1-2"/>"#),
     ]
 
     /// `<symbol>` elements for the dashboard page, used as `#i-<name>`.

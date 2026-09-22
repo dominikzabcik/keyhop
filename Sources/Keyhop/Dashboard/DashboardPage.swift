@@ -12,7 +12,8 @@ enum DashboardPage {
             .replacingOccurrences(of: "{{marks}}", with: marks)
             .replacingOccurrences(of: "{{icons}}", with: InterfaceIcons.symbols)
             .replacingOccurrences(of: "{{backdrop}}", with: Backdrop.script)
-            .replacingOccurrences(of: "{{displayFont}}", with: DisplayFont.woff2Base64)
+            .replacingOccurrences(of: "{{fontBold}}", with: DisplayFont.bold)
+            .replacingOccurrences(of: "{{fontMoonlight}}", with: DisplayFont.moonlight)
         // Inside a script element, "<" could close it early; JSON allows it escaped.
         let data = boot.map { $0.replacingOccurrences(of: "<", with: "\\u003c") } ?? "null"
         return page.replacingOccurrences(of: "{{boot}}", with: data)
@@ -28,8 +29,10 @@ enum DashboardPage {
 <title>Keyhop</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171717'/%3E%3Cg fill='%23EBEBEB'%3E%3Crect x='3.3' y='3.3' width='8' height='26' rx='2'/%3E%3Crect x='12.8' y='12.3' width='8' height='8' rx='2'/%3E%3Crect x='21.3' y='1.3' width='8' height='8' rx='2'/%3E%3Crect x='21.3' y='22.7' width='8' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E">
 <style>
-/* Basteleur Bold, by Keussel, SIL Open Font License 1.1. Only numbers and titles wear it. */
-@font-face { font-family: "Basteleur"; src: url(data:font/woff2;base64,{{displayFont}}) format("woff2"); font-weight: 700; font-display: block; }
+/* Basteleur, by Keussel, SIL Open Font License 1.1: Bold for figures and page titles, Moonlight for
+   section headings. Running text stays in the system face. */
+@font-face { font-family: "Basteleur"; src: url(data:font/woff2;base64,{{fontBold}}) format("woff2"); font-weight: 700; font-display: block; }
+@font-face { font-family: "Basteleur"; src: url(data:font/woff2;base64,{{fontMoonlight}}) format("woff2"); font-weight: 400; font-display: block; }
 :root {
   --bg: hsl(0 0% 9%);
   --sidebar: hsl(0 0% 7.2%);
@@ -85,7 +88,15 @@ button, input, select { font: inherit; color: inherit; }
 .brand svg { width: 17px; height: 17px; flex: none; }
 .brand b { font-weight: 650; font-size: 14px; letter-spacing: .01em; }
 .brand .badge { margin-left: auto; }
-.nav { display: grid; gap: 2px; padding: 12px 10px; }
+.jump { display: flex; align-items: center; gap: 10px; margin: 12px 10px 0; height: 34px; padding: 0 8px 0 10px; border-radius: 8px; border: 1px solid hsl(0 0% 100% / .07); background: hsl(0 0% 100% / .025); color: var(--muted); font: inherit; font-weight: 520; cursor: pointer; transition: background .14s ease, color .14s ease, border-color .14s ease; }
+.jump:hover { background: hsl(0 0% 100% / .05); color: var(--text); border-color: hsl(0 0% 100% / .11); }
+.jump span { flex: 1; text-align: left; }
+/* Keys drawn as keys: a cap with a lip along its bottom edge. */
+kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; background: hsl(0 0% 100% / .07); box-shadow: inset 0 -1.5px 0 hsl(0 0% 100% / .09); color: var(--muted); font: 600 11px var(--sans); letter-spacing: .02em; }
+.nav { position: relative; isolation: isolate; display: grid; gap: 2px; padding: 6px 10px 12px; }
+.nav.has-thumb::before { content: ""; position: absolute; z-index: -1; left: 10px; right: 10px; top: 0; height: var(--nav-h); transform: translateY(var(--nav-y)); border-radius: 8px; background: hsl(0 0% 100% / .08); transition: transform .3s cubic-bezier(.3, .8, .25, 1); }
+.nav.no-slide::before { transition: none; }
+.nav.has-thumb a[aria-current="page"] { background: transparent; }
 .nav a {
   display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px;
   color: hsl(0 0% 56%); text-decoration: none; font-weight: 520; transition: background .12s ease, color .12s ease;
@@ -165,7 +176,7 @@ button, input, select { font: inherit; color: inherit; }
 /* A soft shadow right behind the words keeps them clear of bright dots, without a band behind them. */
 .has-backdrop .hero-figure, .has-backdrop .hero-line { text-shadow: 0 1px 20px hsl(0 0% 9% / .95), 0 0 2px hsl(0 0% 9% / .8); }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid hsl(0 0% 100% / .05); min-height: 50px; flex-wrap: wrap; }
-.card-head h2 { margin: 0; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.card-head h2 { margin: 0; font-family: var(--display); font-size: 17px; font-weight: 400; letter-spacing: .005em; display: flex; align-items: center; gap: 8px; }
 .card-head .hint { color: var(--subtle); font-size: 12.5px; }
 .card-body { padding: 16px; }
 .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -189,6 +200,9 @@ button, input, select { font: inherit; color: inherit; }
 .btn.danger:hover { color: var(--bad); }
 .btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
 .btn:disabled { opacity: .45; cursor: default; }
+/* A press gives way a little; nothing moves on hover. */
+.btn:active:not(:disabled), .tabs button:active, button.tile:active, .jump:active { transform: scale(.975); }
+.btn, button.tile, .jump { transition-property: background, border-color, color, transform; transition-duration: .14s, .14s, .14s, .08s; }
 a.btn { text-decoration: none; }
 .main p a:not(.btn) { color: var(--text); text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -200,8 +214,12 @@ a.btn { text-decoration: none; }
 .badge.live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
 .badge.sample { color: var(--warn); background: hsl(36 72% 60% / .1); }
 
-.tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: 8px; background: var(--raised); border: 1px solid var(--border); }
-.tabs button { height: 26px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12.5px; font-weight: 540; }
+.tabs { position: relative; isolation: isolate; display: inline-flex; padding: 3px; gap: 2px; border-radius: 8px; background: var(--raised); border: 1px solid var(--border); }
+/* The pressed option rides a thumb that slides to the next one; without it, the option keeps its own fill. */
+.tabs.has-thumb::before { content: ""; position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 0; width: var(--thumb-w); transform: translateX(var(--thumb-x)); border-radius: 5px; background: hsl(0 0% 100% / .1); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .06); transition: transform .28s cubic-bezier(.3, .8, .25, 1), width .28s cubic-bezier(.3, .8, .25, 1); }
+.tabs.no-slide::before { transition: none; }
+.tabs.has-thumb button[aria-pressed="true"] { background: transparent; }
+.tabs button { height: 26px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12.5px; font-weight: 540; transition: color .18s ease; }
 .tabs button:hover { color: var(--text); }
 .tabs button[aria-pressed="true"] { background: hsl(0 0% 100% / .1); color: var(--text); }
 .tabs button:disabled { opacity: .4; cursor: default; }
@@ -271,7 +289,7 @@ select.field option { background: var(--raised); }
 .group { display: grid; gap: 10px; }
 .group-head { display: flex; align-items: center; gap: 10px; }
 .group-head .mark { width: 18px; height: 18px; fill: var(--text); }
-.group-head h2 { margin: 0; font-size: 14px; font-weight: 620; }
+.group-head h2 { margin: 0; font-family: var(--display); font-size: 18px; font-weight: 400; letter-spacing: .005em; }
 .group-head .count { color: var(--subtle); font-family: var(--mono); font-size: 12px; }
 .group-head .btn { margin-left: auto; }
 /* Fixed outer columns, so every row's limits and figures line up whatever its buttons are. */
@@ -350,7 +368,10 @@ svg.heat { display: block; margin: 0 auto; }
 .total-figure { font-family: var(--display); font-weight: 700; font-size: clamp(40px, 5.6vw, 72px); line-height: 1; letter-spacing: .02em; overflow-wrap: anywhere; padding-top: 2px; }
 .total-facts { margin: -4px 0 0; color: var(--muted); font-size: 13px; }
 .share-bar { display: flex; gap: 3px; height: 10px; margin-top: 4px; }
-.share-bar span { min-width: 4px; border-radius: 99px; }
+.share-bar span { min-width: 4px; border-radius: 99px; flex-basis: 0; transition: flex-grow .7s cubic-bezier(.2, .8, .2, 1); }
+.progress > span, .ranked-track span, .mix-bar span { transition: width .7s cubic-bezier(.2, .8, .2, 1); }
+.tile-mid { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; min-width: 0; }
+.spark { width: 64px; height: 24px; flex: none; overflow: visible; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px; }
 .tile { display: grid; gap: 6px; align-content: start; padding: 11px 12px 12px; border-radius: 10px; border: 1px solid hsl(0 0% 100% / .055); background: hsl(0 0% 100% / .022); color: var(--text); text-align: left; font: inherit; min-width: 0; }
 button.tile { cursor: pointer; transition: background .14s ease, border-color .14s ease; }
@@ -433,6 +454,38 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .setting-row p { margin: 2px 0 0; color: var(--muted); }
 
+/* Jump to */
+#palette { position: fixed; inset: 0; z-index: 40; }
+.palette-scrim { position: absolute; inset: 0; background: hsl(0 0% 4% / .55); animation: fade-in .14s ease; }
+.palette { position: absolute; left: 50%; top: 14vh; width: min(560px, calc(100vw - 32px)); transform: translateX(-50%); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; max-height: min(520px, 72vh);
+  border-radius: 14px; border: 1px solid hsl(0 0% 100% / .1); background: hsl(0 0% 11.5%); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .06), 0 12px 24px -14px rgba(0, 0, 0, .75); animation: palette-in .16s cubic-bezier(.2, .8, .2, 1); overflow: hidden; }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes palette-in { from { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(.985); } }
+.palette-search { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 52px; border-bottom: 1px solid hsl(0 0% 100% / .06); color: var(--muted); }
+.palette-search input { flex: 1; height: 100%; border: 0; background: transparent; outline: none; font-size: 15px; color: var(--text); }
+.palette-search input::placeholder { color: var(--subtle); }
+.palette-list { overflow-y: auto; padding: 6px; }
+.palette-group { padding: 10px 10px 4px; color: var(--subtle); font-size: 11.5px; }
+.palette-item { display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.palette-item .mark, .palette-item .icon { width: 15px; height: 15px; color: var(--muted); fill: var(--muted); }
+.palette-item .icon { fill: none; }
+.palette-item small { margin-left: auto; color: var(--subtle); font-size: 12px; }
+.palette-item[aria-selected="true"] { background: hsl(0 0% 100% / .07); }
+.palette-dot { width: 15px; display: grid; place-items: center; }
+.palette-dot::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: hsl(0 0% 100% / .28); }
+.palette-empty { margin: 0; padding: 18px 12px; color: var(--muted); }
+.palette-foot { display: flex; gap: 16px; padding: 10px 16px; border-top: 1px solid hsl(0 0% 100% / .06); color: var(--subtle); font-size: 12px; }
+.palette-foot span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Moving between sections: the page settles in place of the last one. */
+.main { view-transition-name: main-view; }
+.topbar h1 { view-transition-name: page-title; }
+::view-transition-old(main-view) { animation: page-out .14s ease both; }
+::view-transition-new(main-view) { animation: page-in .26s cubic-bezier(.2, .8, .2, 1) both; }
+::view-transition-old(page-title), ::view-transition-new(page-title) { animation-duration: .2s; }
+@keyframes page-out { to { opacity: 0; } }
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } }
+
 /* Overlays */
 .tip {
   position: fixed; z-index: 20; pointer-events: none; min-width: 190px; max-width: 320px; padding: 10px 12px;
@@ -493,6 +546,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       <b>Keyhop</b>
       <span id="mode"></span>
     </div>
+    <button class="jump" data-action="palette" aria-keyshortcuts="Meta+K Control+K"><svg class="icon"><use href="#i-hop"/></svg><span>Jump to</span><kbd id="jump-key">⌘K</kbd></button>
     <nav class="nav" id="nav" aria-label="Sections">
       <a href="#overview" data-section="overview"><svg><use href="#i-overview"/></svg>Overview</a>
       <a href="#accounts" data-section="accounts"><svg><use href="#i-accounts"/></svg>Accounts</a>
@@ -513,6 +567,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   </div>
 </div>
 <div class="tip" id="tip" hidden></div>
+<div id="palette" hidden></div>
 <div class="toast away" id="toast" role="status" aria-live="polite"></div>
 <script>{{backdrop}}</script>
 <script id="boot" type="application/json">{{boot}}</script>
@@ -677,6 +732,228 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 
   // MARK: Shell
 
+  // MARK: Motion
+
+  // Motion only ever carries a change the page already shows. Every value is written into the
+  // markup first, then eased there from where it was, so a skipped, throttled or reduced animation
+  // leaves the page right, never blank or half-way.
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  const memory = new Map();
+  const ease = (t) => 1 - Math.pow(1 - t, 3);
+  const FORMATS = {
+    count: fmt.count,
+    tokens: fmt.tokens,
+    usd: fmt.usd,
+    usdExact: (v) => "$" + (v || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    pct: (v) => (v > 0 && v < 1 ? "<1%" : `${Math.round(v)}%`),
+  };
+
+  // Numbers count from their last value to the new one; on first sight, marked ones count up.
+  function countNumbers(root) {
+    for (const el of root.querySelectorAll("[data-count]")) {
+      const key = "n:" + el.dataset.countKey, to = +el.dataset.count, final = el.textContent;
+      const from = memory.has(key) ? memory.get(key) : el.hasAttribute("data-count-intro") ? to * 0.35 : to;
+      memory.set(key, to);
+      if (still.matches || !isFinite(from) || !isFinite(to) || from === to) continue;
+      const format = FORMATS[el.dataset.format] || fmt.count;
+      const began = performance.now(), length = 760;
+      const frame = (now) => {
+        if (!el.isConnected) return;
+        const t = Math.min(1, (now - began) / length);
+        el.textContent = t < 1 ? format(from + (to - from) * ease(t)) : final;
+        if (t < 1) requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+      // Whatever happens to the frames, the exact value is back when the count should be done.
+      setTimeout(() => { if (el.isConnected) el.textContent = final; }, length + 240);
+    }
+  }
+
+  // Bars grow from their last length to the new one, and from nothing the first time.
+  function growBars(root) {
+    const grown = [];
+    for (const el of root.querySelectorAll("[data-grow]")) {
+      const key = "g:" + el.dataset.grow, prop = el.dataset.growProp || "width";
+      const to = el.style[prop];
+      const from = memory.has(key) ? memory.get(key) : prop === "flexGrow" ? "0" : "0%";
+      memory.set(key, to);
+      if (still.matches || from === to) continue;
+      el.style.transition = "none";
+      el.style[prop] = from;
+      grown.push([el, prop, to]);
+    }
+    if (!grown.length) return;
+    // One layout read, so every bar starts from its old length before easing to the new one.
+    void document.body.offsetWidth;
+    for (const [el, prop, to] of grown) { el.style.transition = ""; el.style[prop] = to; }
+  }
+
+  // A segmented control's pressed option sits on a thumb that slides between options.
+  function slideThumbs(root) {
+    for (const group of root.querySelectorAll(".tabs[data-tabs]")) {
+      const on = group.querySelector('[aria-pressed="true"]');
+      if (!on || !on.offsetWidth) continue;
+      const key = "t:" + group.dataset.tabs, next = { x: on.offsetLeft, w: on.offsetWidth };
+      placeThumb(group, key, next, "--thumb-x", "--thumb-w", (p) => `${p.x}px`, (p) => `${p.w}px`);
+    }
+  }
+
+  function placeThumb(group, key, next, xVar, sizeVar, x, size) {
+    const last = memory.get(key);
+    memory.set(key, next);
+    group.classList.add("has-thumb");
+    const set = (p) => { group.style.setProperty(xVar, x(p)); group.style.setProperty(sizeVar, size(p)); };
+    if (last && !still.matches && (last.x !== next.x || last.w !== next.w)) {
+      group.classList.add("no-slide");
+      set(last);
+      group.getBoundingClientRect();
+      group.classList.remove("no-slide");
+    }
+    set(next);
+  }
+
+  // The sidebar's current section, on the same kind of thumb, running down the list.
+  function slideNav() {
+    const nav = $("#nav"), on = nav?.querySelector('a[aria-current="page"]');
+    if (!on || !on.offsetHeight) return;
+    placeThumb(nav, "nav", { x: on.offsetTop, w: on.offsetHeight }, "--nav-y", "--nav-h", (p) => `${p.x}px`, (p) => `${p.w}px`);
+  }
+
+  function animate(root = document) {
+    growBars(root);
+    countNumbers(root);
+    slideThumbs(root);
+  }
+
+  // Moving between sections cross-fades and settles the page, where the browser can. Elsewhere the
+  // page simply changes, as it always has.
+  function transition(change) {
+    if (!document.startViewTransition || still.matches) { change(); return; }
+    try { document.startViewTransition(change); } catch { change(); }
+  }
+
+  // A small line of how something moved across the range, drawn to fill its box. Long ranges are
+  // averaged into fewer steps, so it shows the trend rather than every weekday dip.
+  function sparkline(values, color, per) {
+    if (values.length < 3 || !values.some((v) => v > 0)) return "";
+    // `per` groups a fixed number of buckets into one step, like whole weeks of days.
+    const steps = per ? Math.ceil(values.length / per) : Math.min(20, values.length), size = values.length / steps;
+    const points = Array.from({ length: steps }, (_, i) => {
+      const slice = values.slice(Math.floor(i * size), Math.max(Math.floor(i * size) + 1, Math.floor((i + 1) * size)));
+      return slice.reduce((s, v) => s + v, 0) / slice.length;
+    });
+    const peak = Math.max(...points) || 1, n = points.length - 1;
+    const xy = points.map((v, i) => [(i / n) * 100, 21 - (v / peak) * 18]);
+    // Through the midpoints between samples, so the line bends instead of kinking.
+    let line = `M${xy[0][0].toFixed(1)},${xy[0][1].toFixed(1)}`;
+    for (let i = 1; i < xy.length; i++) {
+      const [px, py] = xy[i - 1], [x, y] = xy[i];
+      line += `Q${px.toFixed(1)},${py.toFixed(1)} ${((px + x) / 2).toFixed(1)},${((py + y) / 2).toFixed(1)}`;
+    }
+    line += `L${xy[n][0].toFixed(1)},${xy[n][1].toFixed(1)}`;
+    return `<svg class="spark" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+      <path d="${line}L100,24L0,24Z" fill="${color}" fill-opacity=".14"/>
+      <path d="${line}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    </svg>`;
+  }
+
+  // A hover card's content, kept in the element and shown by the shared tip.
+  const tipAttr = (title, lines = []) => ` data-tip="${esc(`<b>${esc(title)}</b>${lines.map(([k, v]) => `<div><span></span><span>${esc(k)}</span><span class="mono">${esc(v)}</span></div>`).join("")}`)}"`;
+
+  // MARK: Jump to
+
+  // One keystroke to anywhere: a section, a range, a tool, an account to switch to, or an action.
+  let palette = null;
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
+  function paletteItems() {
+    const items = [];
+    const tools = data.state?.status.tools || [];
+    for (const section of SECTIONS) {
+      if (section === "leaderboard" && (isStatic || !data.state?.cloud?.available)) continue;
+      items.push({ group: "Go to", label: TITLES[section], icon: section, run: () => go(section) });
+    }
+    for (const [value, label] of RANGES) {
+      if (isStatic && !data.usage[`${value}:all`]) continue;
+      items.push({ group: "Usage over", label, run: () => showUsage({ range: value }) });
+    }
+    items.push({ group: "Usage for", label: "All tools", run: () => showUsage({ tool: "all" }) });
+    if (!isStatic) for (const tool of tools) items.push({ group: "Usage for", label: tool.name, mark: tool.id, run: () => showUsage({ tool: tool.id }) });
+    items.push({ group: "Usage in", label: "Tokens", run: () => showUsage({ metric: "tokens" }) });
+    items.push({ group: "Usage in", label: "API value", run: () => showUsage({ metric: "cost" }) });
+    if (!isStatic) {
+      for (const tool of tools) {
+        for (const account of tool.accounts.filter((a) => !a.active)) {
+          items.push({ group: "Switch", label: account.name, detail: tool.name, mark: tool.id,
+            run: () => act(null, () => api("/api/switch", { id: account.id }), "Switching") });
+        }
+      }
+      items.push({ group: "Do", label: "Read limits and usage now", icon: "refresh", run: () => { if (!data.state?.refreshing) act(null, () => { data.state.refreshing = true; renderActivity(); return api("/api/refresh", {}); }); } });
+      items.push({ group: "Do", label: "Check for updates", icon: "update", run: () => go("settings") });
+    }
+    return items;
+  }
+
+  async function showUsage(change) {
+    Object.assign(ui, change);
+    if (ui.section !== "usage") { await go("usage"); return; }
+    render();
+    await loadSection();
+    render();
+  }
+
+  if ($("#jump-key")) $("#jump-key").textContent = isMac ? "⌘K" : "Ctrl K";
+
+  function openPalette() {
+    palette = { query: "", index: 0 };
+    drawPalette();
+    $("#palette input")?.focus();
+  }
+
+  function closePalette() {
+    palette = null;
+    $("#palette").innerHTML = "";
+    $("#palette").hidden = true;
+  }
+
+  function paletteMatches() {
+    const words = palette.query.toLowerCase().split(/\s+/).filter(Boolean);
+    return paletteItems().filter((item) => {
+      const text = `${item.group} ${item.label} ${item.detail || ""}`.toLowerCase();
+      return words.every((w) => text.includes(w));
+    });
+  }
+
+  function drawPalette() {
+    const host = $("#palette");
+    const matches = paletteMatches();
+    palette.index = Math.max(0, Math.min(palette.index, matches.length - 1));
+    let group = "";
+    const rows = matches.map((item, i) => {
+      const head = item.group !== group ? `<div class="palette-group">${esc((group = item.group))}</div>` : "";
+      const glyph = item.mark ? mark(item.mark) : item.icon ? `<svg class="icon"><use href="#i-${item.icon}"/></svg>` : `<span class="palette-dot"></span>`;
+      return `${head}<button type="button" class="palette-item" role="option" data-palette="${i}" aria-selected="${i === palette.index}">${glyph}<span>${esc(item.label)}</span>${item.detail ? `<small>${esc(item.detail)}</small>` : ""}</button>`;
+    }).join("");
+    const list = rows || `<p class="palette-empty">Nothing matches "${esc(palette.query)}".</p>`;
+    if (!host.firstElementChild) {
+      host.hidden = false;
+      host.innerHTML = `<div class="palette-scrim" data-palette-close></div>
+        <div class="palette" role="dialog" aria-modal="true" aria-label="Jump to">
+          <label class="palette-search"><svg class="icon"><use href="#i-hop"/></svg><input type="text" autocomplete="off" spellcheck="false" placeholder="Jump to a section, range, tool or account" aria-label="Jump to"></label>
+          <div class="palette-list" role="listbox"></div>
+          <div class="palette-foot"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>esc</kbd> close</span></div>
+        </div>`;
+    }
+    host.querySelector(".palette-list").innerHTML = list;
+    host.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
+  }
+
+  function runPalette(index) {
+    const item = paletteMatches()[index];
+    closePalette();
+    if (item) item.run();
+  }
+
   let linkPoll = null;
 
   function render() {
@@ -703,6 +980,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     $("#main").innerHTML = `<div class="page">${offline}${page.body}</div>`;
     applyPending();
     renderActivity();
+    animate();
   }
 
   // MARK: Progress
@@ -798,18 +1076,20 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     renderActivity();
     $("#update-title").textContent = data.update?.available ? `Update to ${data.update.latest}` : "Check for updates";
     $("#version").textContent = state ? `v${state.version} · ${state.platform}` : "";
+    slideNav();
   }
 
   function tabs(name, options, current, disabled = false) {
-    return `<div class="tabs" role="group">${options.map(([value, label]) =>
+    return `<div class="tabs" role="group" data-tabs="${esc(name)}">${options.map(([value, label]) =>
       `<button type="button" data-action="${name}" data-value="${value}" aria-pressed="${value === current}" ${disabled ? "disabled" : ""}>${esc(label)}</button>`).join("")}</div>`;
   }
 
-  function progress(percent, pace, tone) {
+  // `grow`, when given, names the bar so it grows from its last length (see growBars).
+  function progress(percent, pace, tone, grow) {
     const width = Math.min(100, Math.max(0, percent));
     // "plain" is for rankings, where a full bar means the largest, not a limit running out.
     const state = tone === "plain" ? "" : tone || (width >= 90 ? "bad" : pace != null && width > pace * 100 + 6 ? "warn" : "");
-    return `<div class="progress ${state}"><span style="width:${width.toFixed(1)}%"></span>${pace != null ? `<i style="left:${Math.min(100, pace * 100).toFixed(1)}%" title="Time passed"></i>` : ""}</div>`;
+    return `<div class="progress ${state}"><span style="width:${width.toFixed(1)}%"${grow ? ` data-grow="${esc(ui.section + ":" + grow)}"` : ""}></span>${pace != null ? `<i style="left:${Math.min(100, pace * 100).toFixed(1)}%" title="Time passed"></i>` : ""}</div>`;
   }
 
   function limitFoot(limit) {
@@ -826,7 +1106,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     return `<div class="limits">${account.limits.slice(0, count).map((limit) => `
       <div>
         <div class="limit-top"><span>${esc(windowName(limit.label))}</span><b>${Math.round(limit.usedPercent)}%</b></div>
-        ${progress(limit.usedPercent, limit.pace)}
+        ${progress(limit.usedPercent, limit.pace, undefined, `limit:${account.id}:${limit.label}`)}
         <div class="limit-foot">${esc(limitFoot(limit))}</div>
       </div>`).join("")}</div>`;
   }
@@ -874,7 +1154,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 
     const streak = (week || today)?.streak;
     const hero = `<section class="hero">
-      <h2 class="hero-figure"><span class="num">${fmt.tokens(status.today.tokens)}</span><span class="unit">tokens today</span></h2>
+      <h2 class="hero-figure"><span class="num" data-count="${status.today.tokens}" data-count-key="today" data-format="tokens" data-count-intro>${fmt.tokens(status.today.tokens)}</span><span class="unit">tokens today</span></h2>
       <p class="hero-line">${today ? `${fmt.change(today.total.tokens, today.previous.tokens)} on yesterday · ` : ""}${fmt.count(status.today.requests)} requests${today && today.total.requests ? ` · ${esc(busiestHour(today))}` : ""}</p>
       <div class="hero-run${data.state.refreshing ? " on" : ""}" aria-hidden="true">${window.KeyhopBackdrop ? window.KeyhopBackdrop.sprite("blip", "top:0") : ""}</div>
     </section>`;
@@ -928,7 +1208,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     </section>`;
     const modelsCard = `<section class="card">
       <div class="card-head"><h2>Top models this week</h2></div>
-      ${week && week.models.length ? `<div class="card-body">${rankedList(week.models.slice().sort((a, b) => b.figures.tokens - a.figures.tokens).slice(0, 6),
+      ${week && week.models.length ? `<div class="card-body">${rankedList("overview-models", week.models.slice().sort((a, b) => b.figures.tokens - a.figures.tokens).slice(0, 6),
         (m) => m.figures.tokens / (week.total.tokens || 1),
         (m) => `${mark(m.tool)}<span class="mono">${esc(m.model)}</span><span class="subtle ranked-value">${fmt.tokens(m.figures.tokens)}</span>`)}</div>` : `<p class="empty">No models used this week.</p>`}
     </section>`;
@@ -969,7 +1249,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const elapsed = periodProgress(budget.period).elapsed;
     return `<div class="row budget-row">
       <div class="budget-top"><b>${esc(budget.name)}</b><span class="mono">${fmt.usd(budget.spent)} <span class="subtle">/ ${fmt.usd(budget.amount)}</span></span></div>
-      ${progress(share * 100, elapsed, share >= 1 ? "bad" : share >= .8 ? "warn" : "")}
+      ${progress(share * 100, elapsed, share >= 1 ? "bad" : share >= .8 ? "warn" : "", `budget:${budget.scope}`)}
       <div class="subtle" style="font-size:12px">Per ${esc(budget.period)} · ${Math.round(share * 100)}% used · on pace for ${fmt.usd(budget.spent / elapsed)}</div>
     </div>`;
   }
@@ -1071,20 +1351,26 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const sum = parts.reduce((s, x) => s + value(x), 0) || 1;
     const share = (x) => (value(x) / sum) * 100;
     const pct = (x) => { const v = share(x); return v > 0 && v < 1 ? "<1%" : `${Math.round(v)}%`; };
+    const show = (x) => (tokens ? fmt.tokens(x.figures.tokens) : fmt.usd(x.figures.cost));
+    const tipFor = (x) => tipAttr(x.name, [["Share", pct(x)], [tokens ? "Tokens" : "API value", show(x)], ["Requests", fmt.count(x.figures.requests)]]);
+    const scope = `${ui.tool}:${ui.metric}`;
     const bar = `<div class="share-bar" role="img" aria-label="Share of ${tokens ? "tokens" : "API value"}">${parts.filter((x) => share(x) >= 0.4)
-      .map((x) => `<span style="flex:${share(x).toFixed(3)} 1 0;background:${x.color}" title="${esc(x.name)} · ${pct(x)}"></span>`).join("")}</div>`;
+      .map((x) => `<span style="flex-grow:${share(x).toFixed(3)};background:${x.color}" data-grow="share:${esc(scope)}:${esc(x.id)}" data-grow-prop="flexGrow"${tipFor(x)}></span>`).join("")}</div>`;
+    // Each part's line across the range, from the same buckets the chart draws.
+    const buckets = narrowed ? usage.modelBuckets || [] : usage.toolBuckets || [];
+    const trend = (x) => sparkline(buckets.map((b) => { const v = b.values[narrowed ? `${ui.tool}:${x.id}` : x.id]; return v ? (tokens ? v.tokens : v.cost) : 0; }), x.color, usage.bucket === "day" && buckets.length >= 21 ? 7 : 0);
     const tiles = parts.map((x) => {
       const inner = `<span class="tile-name">${x.tool ? mark(x.tool) : ""}<span class="${x.mono ? "mono" : ""}">${esc(x.name)}</span></span>
-        <span class="tile-share">${pct(x)}</span>
-        <span class="tile-foot"><span class="swatch" style="background:${x.color}"></span>${tokens ? fmt.tokens(x.figures.tokens) : fmt.usd(x.figures.cost)}${x.models ? ` · ${x.models} ${x.models === 1 ? "model" : "models"}` : ""}</span>`;
+        <span class="tile-mid"><span class="tile-share" data-count="${share(x).toFixed(2)}" data-count-key="tile:${esc(scope)}:${esc(x.id)}" data-format="pct">${pct(x)}</span>${trend(x)}</span>
+        <span class="tile-foot"><span class="swatch" style="background:${x.color}"></span>${show(x)}${x.models ? ` · ${x.models} ${x.models === 1 ? "model" : "models"}` : ""}</span>`;
       return x.tool && !isStatic
-        ? `<button type="button" class="tile" data-action="filter-tool" data-value="${esc(x.tool)}" title="Show only ${esc(x.name)}">${inner}</button>`
-        : `<div class="tile">${inner}</div>`;
+        ? `<button type="button" class="tile" data-action="filter-tool" data-value="${esc(x.tool)}" aria-label="Show only ${esc(x.name)}"${tipFor(x)}>${inner}</button>`
+        : `<div class="tile"${tipFor(x)}>${inner}</div>`;
     }).join("");
     const title = `${tokens ? "Tokens" : "API value"}, ${esc((usage.title || "").toLowerCase() === "today" ? "today" : usage.title)}${narrowed ? ` · ${esc(toolName(ui.tool))}` : ""}`;
     return `<section class="card total-card">
       <div class="total-head"><span>${title}</span>${narrowed && !isStatic ? `<button type="button" class="btn sm ghost" data-action="filter-tool" data-value="all">All tools</button>` : `<span class="total-change">${change}<span class="subtle">${before}</span></span>`}</div>
-      <div class="total-figure">${exact}</div>
+      <div class="total-figure" data-count="${tokens ? t.tokens : (t.cost || 0).toFixed(2)}" data-count-key="total:${esc(ui.metric)}" data-format="${tokens ? "count" : "usdExact"}" data-count-intro>${exact}</div>
       <p class="total-facts">${facts.map(esc).join(" · ")}</p>
       ${parts.length ? bar : ""}
       <div class="tiles">${tiles}</div>
@@ -1109,25 +1395,25 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const perDay = active.length ? active.reduce((s, d) => s + (ui.metric === "tokens" ? d.tokens : d.cost), 0) / active.length : 0;
     const show = (v) => (ui.metric === "tokens" ? fmt.tokens(v) : fmt.usd(v));
     const chips = [["Today", lastN(1)], ["7 days", lastN(7)], ["30 days", lastN(30)], ["Per active day", perDay]]
-      .map(([label, v]) => `<div class="chip"><b>${show(v)}</b><span>${label}</span></div>`).join("");
+      .map(([label, v]) => `<div class="chip"><b data-count="${v}" data-count-key="chip:${label}:${ui.tool}:${ui.metric}" data-format="${ui.metric === "tokens" ? "tokens" : "usd"}" data-count-intro>${show(v)}</b><span>${label}</span></div>`).join("");
     const value = (m) => (ui.metric === "tokens" ? m.figures.tokens : m.figures.cost);
     const models = usage.models.slice().sort((a, b) => value(b) - value(a));
     const sum = models.reduce((s, m) => s + value(m), 0) || 1;
     const s = usage.streak;
     return `<section class="card summary-card">
       <div class="chips">${chips}</div>
-      ${models.length ? rankedList(models.slice(0, 5), (m) => value(m) / sum, (m) => `${m.tool ? mark(m.tool) : ""}<span class="mono">${esc(m.model)}</span>`) : `<p class="empty-inline subtle">No models in this range.</p>`}
+      ${models.length ? rankedList(`summary:${ui.tool}:${ui.metric}`, models.slice(0, 5), (m) => value(m) / sum, (m) => `${m.tool ? mark(m.tool) : ""}<span class="mono">${esc(m.model)}</span>`) : `<p class="empty-inline subtle">No models in this range.</p>`}
       <div class="summary-foot"><span>${fmt.count(s.activeDays)} active days in 26 weeks</span><span>${s.current ? `${s.current}-day streak` : "No streak running"}</span></div>
     </section>`;
   }
 
   // A ranked list: place, name, share, and a track filled to that share.
-  function rankedList(items, shareOf, nameOf) {
+  function rankedList(key, items, shareOf, nameOf) {
     return `<ol class="ranked">${items.map((item, i) => {
       const share = Math.max(0, Math.min(1, shareOf(item)));
       const pct = share > 0 && share < 0.01 ? "<1%" : `${Math.round(share * 100)}%`;
       return `<li><span class="place">${i + 1}</span><span class="ranked-name">${nameOf(item)}</span><span class="ranked-share">${pct}</span>
-        <span class="ranked-track"><span style="width:${(share * 100).toFixed(1)}%"></span></span></li>`;
+        <span class="ranked-track"><span style="width:${(share * 100).toFixed(1)}%" data-grow="${esc(key)}:${i}"></span></span></li>`;
     }).join("")}</ol>`;
   }
 
@@ -1181,7 +1467,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const rows = sorted.map((m, i) => `<tr${isStatic ? "" : ` class="clickable" data-action="filter-tool" data-value="${esc(m.tool || "")}"`}>
       <td class="place-cell mono subtle">${i + 1}</td>
       <td><div class="cell-name">${mark(m.tool)}<span class="mono">${esc(m.model)}</span></div></td>
-      <td class="bar-cell">${progress((value(m) / peak) * 100, null, "plain")}</td>
+      <td class="bar-cell">${progress((value(m) / peak) * 100, null, "plain", `row:${ui.tool}:${metric}:${m.tool || ""}:${m.model || m.name}`)}</td>
       <td class="right mono">${metric === "tokens" ? fmt.tokens(m.figures.tokens) : fmt.usd(m.figures.cost)}</td>
       <td class="right mono subtle">${Math.round((value(m) / sum) * 100)}%</td>
     </tr>`).join("");
@@ -1317,7 +1603,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         labels.push({ col, text: fmt.day(date, { month: "short" }) });
         lastMonth = date.getMonth();
       }
-      cells += `<rect class="l${level}" x="${col * (size + gap)}" y="${top + row * (size + gap)}" width="${size}" height="${size}" rx="2.5"><title>${esc(fmt.day(date, { weekday: "short", month: "short", day: "numeric" }))} · ${day.tokens ? `${fmt.tokens(day.tokens)} tokens, ${fmt.usd(day.cost)}` : "no usage"}</title></rect>`;
+      cells += `<rect class="l${level}" x="${col * (size + gap)}" y="${top + row * (size + gap)}" width="${size}" height="${size}" rx="2.5"${tipAttr(fmt.day(date, { weekday: "short", month: "short", day: "numeric" }), day.tokens ? [["Tokens", fmt.tokens(day.tokens)], ["API value", fmt.usd(day.cost)], ["Requests", fmt.count(day.requests)]] : [["No usage", ""]])}/>`;
     });
     // A month that starts a column or two before the next one has no room for its name; the
     // next month's name wins rather than the two running into each other.
@@ -1340,7 +1626,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const reasoning = t.reasoning
       ? `<p class="subtle" style="margin:10px 0 0;font-size:12px">Reasoning is ${fmt.tokens(t.reasoning)} of output, counted once.</p>`
       : "";
-    return `<div class="mix-bar">${rows.filter((p) => p[1] > 0).map((p) => `<span class="${p[2]}" style="width:${((p[1] / sum) * 100).toFixed(2)}%" title="${p[0]}"></span>`).join("")}</div>
+    return `<div class="mix-bar">${rows.filter((p) => p[1] > 0).map((p) => `<span class="${p[2]}" style="width:${((p[1] / sum) * 100).toFixed(2)}%" data-grow="mix:${esc(ui.tool)}:${p[2]}"${tipAttr(p[0], [["Tokens", fmt.tokens(p[1])], ["Share", `${Math.round((p[1] / sum) * 100)}%`]])}></span>`).join("")}</div>
       <table class="table" style="margin:0 -16px -16px;width:calc(100% + 32px)"><tbody>${rows.map((p) => `<tr><td><div class="cell-name"><span class="swatch ${p[2]}"></span><span>${p[0]}</span></div></td><td class="right mono">${fmt.tokens(p[1])}</td><td class="right mono subtle">${Math.round((p[1] / sum) * 100)}%</td></tr>`).join("")}</tbody></table>${reasoning}`;
   }
 
@@ -1352,7 +1638,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const peak = Math.max(0.000001, ...makers.map(value));
     const rows = makers.slice().sort((a, b) => value(b) - value(a)).map((m) => `<tr>
       <td><b>${esc(m.name)}</b><div class="subtle" style="font-size:11.5px" title="${esc(m.models.join(", "))}">${m.models.length} model${m.models.length === 1 ? "" : "s"}</div></td>
-      <td class="bar-cell">${progress((value(m) / peak) * 100, null, "plain")}</td>
+      <td class="bar-cell">${progress((value(m) / peak) * 100, null, "plain", `row:${ui.tool}:${metric}:${m.tool || ""}:${m.model || m.name}`)}</td>
       <td class="right mono">${metric === "tokens" ? fmt.tokens(m.figures.tokens) : fmt.usd(m.figures.cost)}</td>
       <td class="right mono subtle">${Math.round((value(m) / sum) * 100)}%</td>
     </tr>`).join("");
@@ -1367,7 +1653,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const shown = projects.slice(0, 12);
     const rows = shown.map((p) => `<tr>
       <td>${p.path ? `<b>${esc(p.name)}</b><div class="subtle mono" style="font-size:11px">${esc(p.path)}</div>` : `<span class="subtle">${esc(p.name)}</span>`}</td>
-      <td class="bar-cell">${progress((value(p) / peak) * 100, null, "plain")}</td>
+      <td class="bar-cell">${progress((value(p) / peak) * 100, null, "plain", `project:${ui.tool}:${metric}:${p.path || ""}`)}</td>
       <td class="right mono">${metric === "tokens" ? fmt.tokens(p.figures.tokens) : fmt.usd(p.figures.cost)}</td>
     </tr>`).join("");
     const more = projects.length > shown.length ? `<p class="empty-inline" style="padding:10px 16px">and ${projects.length - shown.length} more</p>` : "";
@@ -1469,7 +1755,9 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       points.push({ i, total: running });
     });
     const days = usage.buckets.length;
-    const W = chartWidth("wide"), H = 220, L = 52, R = 8, T = 16, B = 26;
+    // As tall as the spend list beside it (a row per account), so the two cards end together.
+    const rows = (usage.accounts || []).length;
+    const W = chartWidth("wide"), H = Math.max(220, Math.min(440, 59 * rows - 72)), L = 52, R = 8, T = 16, B = 26;
     const pw = W - L - R, ph = H - T - B;
     const ceiling = niceCeiling(Math.max(running, budget ? budget.amount : 0) * 1.08);
     const x = (i) => L + (days > 1 ? (i / (days - 1)) * pw : pw / 2);
@@ -1499,6 +1787,11 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       <div class="card-head"><h2>This month</h2><span class="hint mono">${running > 0 ? `${fmt.usd(running)} · pace ${fmt.usd(running / elapsed)}` : "$0"}</span></div>
       <div class="card-body chart"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Spend this month, added up by day">${grid}${marks}${line}</svg>
       ${budget ? "" : `<p class="empty-inline subtle" style="margin-top:8px">Add a monthly budget for all accounts to compare against it.</p>`}</div>
+      <div class="facts">
+        <div><b data-count="${running}" data-count-key="budget-spent" data-format="usd">${fmt.usd(running)}</b><span>spent so far</span></div>
+        <div><b data-count="${running / elapsed}" data-count-key="budget-pace" data-format="usd">${fmt.usd(running / elapsed)}</b><span>on pace for the month</span></div>
+        <div><b>${Math.max(0, Math.ceil((periodProgress("month").end - Date.now()) / 86400000))}</b><span>${budget ? `days left of ${fmt.usd(budget.amount)}` : "days left"}</span></div>
+      </div>
     </section>`;
   }
 
@@ -1828,8 +2121,20 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     toastTimer = setTimeout(() => node.classList.add("away"), error ? 8000 : 5000);
   }
 
+  function placeTip(tip, event) {
+    tip.hidden = false;
+    const box = tip.getBoundingClientRect();
+    let x = event.clientX + 14, y = event.clientY + 14;
+    if (x + box.width > innerWidth - 10) x = event.clientX - box.width - 14;
+    if (y + box.height > innerHeight - 10) y = event.clientY - box.height - 14;
+    tip.style.left = Math.max(10, x) + "px";
+    tip.style.top = Math.max(10, y) + "px";
+  }
+
   document.addEventListener("pointermove", (event) => {
     const tip = $("#tip");
+    const card = event.target.closest && event.target.closest("[data-tip]");
+    if (card) { tip.innerHTML = card.dataset.tip; placeTip(tip, event); return; }
     const hit = event.target.closest && event.target.closest(".hit");
     if (!hit) { tip.hidden = true; return; }
     const usage = data.usage[hit.dataset.key] || data.usage[hit.dataset.key.split(":")[0] + ":all"];
@@ -1846,18 +2151,12 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       : usage.bucket === "month" ? fmt.day(bucket.start, { month: "long", year: "numeric" })
       : fmt.day(bucket.start, { weekday: "short", month: "short", day: "numeric" });
     tip.innerHTML = `<b>${esc(when)} · <span class="mono">${esc(show(total))}</span></b>${rows.length ? rows.map((e) => `<div><span class="swatch" style="background:${e.s.color}"></span><span>${esc(e.s.name)}</span><span class="mono">${esc(show(pick(e.v)))}</span></div>`).join("") : `<div><span></span><span>No usage</span><span></span></div>`}`;
-    tip.hidden = false;
-    const box = tip.getBoundingClientRect();
-    let x = event.clientX + 14, y = event.clientY + 14;
-    if (x + box.width > innerWidth - 10) x = event.clientX - box.width - 14;
-    if (y + box.height > innerHeight - 10) y = event.clientY - box.height - 14;
-    tip.style.left = Math.max(10, x) + "px";
-    tip.style.top = Math.max(10, y) + "px";
+    placeTip(tip, event);
   });
 
   // MARK: Actions
 
-  const editing = () => ui.editing || ui.confirming || ui.rangeOpen || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
+  const editing = () => ui.editing || ui.confirming || ui.rangeOpen || palette || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
 
   async function act(button, call, label) {
     const key = button ? pendingKey(button) : null;
@@ -1882,13 +2181,22 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   async function go(section) {
     ui.section = section;
     history.replaceState(null, "", "#" + section);
-    render();
-    $("#main").scrollTop = 0;
+    transition(() => { render(); $("#main").scrollTop = 0; });
     await loadSection();
     render();
   }
 
+  document.addEventListener("input", (event) => {
+    if (!palette || !event.target.closest("#palette")) return;
+    palette.query = event.target.value;
+    palette.index = 0;
+    drawPalette();
+  });
+
   document.addEventListener("click", async (event) => {
+    if (event.target.closest("[data-palette-close]")) { closePalette(); return; }
+    const option = event.target.closest("[data-palette]");
+    if (option) { runPalette(+option.dataset.palette); return; }
     const link = event.target.closest("#nav a");
     if (link) { event.preventDefault(); if (link.dataset.section !== ui.section) go(link.dataset.section); return; }
     // A click anywhere outside the open range menu closes it.
@@ -1897,6 +2205,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     if (!el || el.disabled || el.tagName === "SELECT") return;
     const id = el.dataset.id;
     switch (el.dataset.action) {
+      case "palette": openPalette(); break;
       case "goto": go(el.dataset.section); break;
       case "refresh":
         if (data.state?.refreshing) break;
@@ -2034,6 +2343,23 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   });
 
   document.addEventListener("keydown", (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      if (palette) closePalette(); else openPalette();
+      return;
+    }
+    if (palette) {
+      const count = paletteMatches().length;
+      if (event.key === "Escape") { event.preventDefault(); closePalette(); return; }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        palette.index = (palette.index + (event.key === "ArrowDown" ? 1 : -1) + count) % Math.max(1, count);
+        drawPalette();
+        return;
+      }
+      if (event.key === "Enter") { event.preventDefault(); runPalette(palette.index); return; }
+      return;
+    }
     if (event.key === "Escape" && ui.rangeOpen) { ui.rangeOpen = false; render(); $(".range-button")?.focus(); return; }
     if (event.key === "Escape" && (ui.editing || ui.confirming || ui.budgetEdit)) { ui.editing = ui.confirming = ui.budgetEdit = null; render(); }
   });

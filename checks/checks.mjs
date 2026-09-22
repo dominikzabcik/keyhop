@@ -206,6 +206,8 @@ export async function pokeControls(page, screen) {
       dead.push({ screen: screen.name, width: "laptop", kind: "dead-control", detail: `"${label}" does nothing when pressed` });
     }
     pressed.push(label);
+    // A press that opened a menu or a dialog would cover the next control; Escape closes it.
+    try { await page.keyboard.press("Escape"); await page.waitForTimeout(120); } catch {}
   }
   return { dead, pressed };
 }

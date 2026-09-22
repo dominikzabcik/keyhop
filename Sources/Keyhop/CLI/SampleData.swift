@@ -59,17 +59,14 @@ enum SampleData {
             accounts[10].id: UsageSnapshot(windows: [window("Credits", 25, 1_140_000, 2_592_000), window("Week", 30, 421_000, 604_800)], fetchedAt: read),
         ]
 
+        // Today from the same sample history the charts and the heatmap show, so every figure for
+        // today agrees.
+        let day = digest(interval: InsightsRange.today.interval(now: now), bucket: .day, accounts: accounts, now: now)
         var today: [UUID: Totals] = [:]
-        var todayAll = Totals()
-        for (index, account) in accounts.enumerated() {
-            let tokens = [4_200_000, 1_900_000, 2_600_000, 0, 3_100_000, 2_300_000, 1_700_000, 1_400_000, 0, 0, 0][index]
-            guard tokens > 0 else { continue }
-            let totals = Totals(tokens: TokenCounts(input: tokens / 20, cacheRead: tokens * 3 / 4, output: tokens / 5),
-                                cost: Double(tokens) / 1_000_000 * [3.1, 2.4, 1.2, 0, 1.6, 2.0, 1.7, 2.2, 0, 0, 0][index],
-                                requests: tokens / 9000)
-            today[account.id] = totals
-            todayAll += totals
+        for (key, totals) in day.byAccount {
+            if let id = key.account { today[id, default: Totals()] += totals }
         }
+        let todayAll = day.total
 
         // Budget spend comes from the same sample usage the charts show, so the numbers agree.
         let monthCost = digest(range: .month, accounts: accounts, now: now).total.cost
@@ -117,10 +114,19 @@ enum SampleData {
         let models = ["claude-opus-5", "gpt-5.6-sol", "composer-2", "claude-sonnet-5", "claude-haiku-4-5",
                       "gemini-3.1-pro-preview", "openai/gpt-5.6-sol", "anthropic/claude-sonnet-5"]
         var start = interval.start
-        var index = 0.0
         // At least one bucket, so even just after midnight there's something to show.
         let end = min(interval.end, max(now, calendar.date(byAdding: component, value: 1, to: interval.start) ?? now))
+        let step: Double = switch bucket {
+        case .hour: 3600
+        case .day: 86_400
+        case .week: 604_800
+        case .month: 2_629_800
+        }
         while start < end {
+            // The pattern follows the calendar, not the loop, so a day has the same figures in
+            // every range that includes it.
+            let local = start.timeIntervalSince1970 + Double(TimeZone.current.secondsFromGMT(for: start))
+            let index = (local / step).rounded(.down)
             for (i, account) in accounts.enumerated() {
                 // Copilot, Windsurf and Codebuff expose limits, not a complete token ledger.
                 guard account.provider != .copilot, account.provider != .windsurf, account.provider != .codebuff else { continue }
@@ -163,7 +169,6 @@ enum SampleData {
             }
             guard let next = calendar.date(byAdding: component, value: 1, to: start) else { break }
             start = next
-            index += 1
         }
         if digest.total.requests > 0 {
             digest.byModel[ModelKey(provider: .claude, model: models[4]), default: Totals()] +=

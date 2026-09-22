@@ -430,6 +430,11 @@ struct DashboardUsage: Encodable {
         let figures: Figures
     }
 
+    struct Period: Encodable {
+        let start: Date
+        let figures: Figures
+    }
+
     struct Day: Encodable, Equatable {
         let day: String
         let tokens: Int
@@ -468,6 +473,9 @@ struct DashboardUsage: Encodable {
     let projects: [ProjectRow]
     let sessions: [SessionRow]
     let heatmap: [Day]
+    /// Each hour, day, week or month of the range that had usage, newest first, with its full
+    /// token breakdown, for the table under the chart.
+    let periods: [Period]
     let streak: Streak
 
     /// Same fixed order as the Mac app, validated for color-vision and normal-vision separation on
@@ -542,6 +550,9 @@ struct DashboardUsage: Encodable {
             let entry = Self.modelSeries(for: point, named: namedModels, collapse: false)
             return ModelRow(model: key.model, tool: key.provider.rawValue, color: entry.color, figures: Figures(totals))
         }
+        var perPeriod: [Date: Totals] = [:]
+        for point in digest.points { perPeriod[point.start, default: Totals()] += point.totals }
+        periods = perPeriod.sorted { $0.key > $1.key }.map { Period(start: $0.key, figures: Figures($0.value)) }
         makers = Reports.makers(digest).map { MakerRow(name: $0.maker, models: $0.models, figures: Figures($0.totals)) }
         projects = Reports.projects(digest).map { project in
             ProjectRow(name: project.name, path: project.path.map(Projects.display), figures: Figures(project.totals))

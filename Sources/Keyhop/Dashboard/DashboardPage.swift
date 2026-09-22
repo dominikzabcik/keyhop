@@ -12,6 +12,7 @@ enum DashboardPage {
             .replacingOccurrences(of: "{{marks}}", with: marks)
             .replacingOccurrences(of: "{{icons}}", with: InterfaceIcons.symbols)
             .replacingOccurrences(of: "{{backdrop}}", with: Backdrop.script)
+            .replacingOccurrences(of: "{{displayFont}}", with: DisplayFont.woff2Base64)
         // Inside a script element, "<" could close it early; JSON allows it escaped.
         let data = boot.map { $0.replacingOccurrences(of: "<", with: "\\u003c") } ?? "null"
         return page.replacingOccurrences(of: "{{boot}}", with: data)
@@ -27,6 +28,8 @@ enum DashboardPage {
 <title>Keyhop</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171717'/%3E%3Cg fill='%23EBEBEB'%3E%3Crect x='3.3' y='3.3' width='8' height='26' rx='2'/%3E%3Crect x='12.8' y='12.3' width='8' height='8' rx='2'/%3E%3Crect x='21.3' y='1.3' width='8' height='8' rx='2'/%3E%3Crect x='21.3' y='22.7' width='8' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E">
 <style>
+/* Basteleur Bold, by Keussel, SIL Open Font License 1.1. Only numbers and titles wear it. */
+@font-face { font-family: "Basteleur"; src: url(data:font/woff2;base64,{{displayFont}}) format("woff2"); font-weight: 700; font-display: block; }
 :root {
   --bg: hsl(0 0% 9%);
   --sidebar: hsl(0 0% 7.2%);
@@ -37,7 +40,7 @@ enum DashboardPage {
   --border-strong: hsl(0 0% 100% / .14);
   --text: hsl(0 0% 92%);
   --muted: hsl(0 0% 63%);
-  --subtle: hsl(0 0% 46%);
+  --subtle: hsl(0 0% 53%);
   --faint: hsl(0 0% 100% / .08);
   --primary: hsl(0 0% 95%);
   --on-primary: hsl(0 0% 9%);
@@ -46,6 +49,7 @@ enum DashboardPage {
   --warn: #E3A64F;
   --bad: #EE7A69;
   --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, Cantarell, "Noto Sans", sans-serif;
+  --display: "Basteleur", var(--sans);
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   color-scheme: dark;
 }
@@ -66,6 +70,8 @@ button, input, select { font: inherit; color: inherit; }
 ::-webkit-scrollbar-thumb { background: hsl(0 0% 100% / .12); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-track { background: transparent; }
 .mono { font-family: var(--mono); font-size: 12px; }
+.mark { width: 16px; height: 16px; flex: none; fill: currentColor; }
+.nowrap { white-space: nowrap; }
 .muted { color: var(--muted); }
 .subtle { color: var(--subtle); }
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -82,7 +88,7 @@ button, input, select { font: inherit; color: inherit; }
 .nav { display: grid; gap: 2px; padding: 12px 10px; }
 .nav a {
   display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px;
-  color: var(--muted); text-decoration: none; font-weight: 520; transition: background .12s ease, color .12s ease;
+  color: hsl(0 0% 56%); text-decoration: none; font-weight: 520; transition: background .12s ease, color .12s ease;
 }
 .nav a:hover { background: var(--hover); color: var(--text); }
 .nav a[aria-current="page"] { background: hsl(0 0% 100% / .08); color: var(--text); }
@@ -123,7 +129,7 @@ button, input, select { font: inherit; color: inherit; }
 .topbar { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; padding: 10px 24px; border-bottom: 1px solid var(--border); flex: none; }
 /* Nothing scrolls under the top bar, so over the Field it simply gets out of the way. */
 .has-backdrop .topbar { background: transparent; border-bottom-color: transparent; }
-.topbar h1 { margin: 0; font-size: 15px; font-weight: 620; }
+.topbar h1 { margin: 0; font-family: var(--display); font-size: 21px; font-weight: 700; letter-spacing: .01em; line-height: 1.1; }
 /* The whole window's progress, along the bottom edge of the top bar. */
 .topbar .meter { position: absolute; left: 24px; right: 24px; bottom: -2px; height: 3px; background: transparent; opacity: 0; transition: opacity .25s ease; }
 .topbar .meter.on { opacity: 1; }
@@ -133,7 +139,7 @@ button, input, select { font: inherit; color: inherit; }
 .lede { margin: 0 0 4px; color: var(--muted); }
 
 /* Components */
-.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid hsl(0 0% 100% / .06); border-radius: 12px; min-width: 0; box-shadow: inset 0 1px 0 hsl(0 0% 100% / .045); }
 /* Over a scene, panels are tinted sheets: the scene reads through them, softened just enough to keep text crisp. */
 .has-backdrop .card { background: hsl(0 0% 9.5% / .64); border-color: hsl(0 0% 100% / .07); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
 /* In the Mac app the whole window can be glass: the desktop shows through, blurred, under one tint at
@@ -153,12 +159,12 @@ button, input, select { font: inherit; color: inherit; }
 .hero-run { position: absolute; left: 0; right: 0; bottom: 12px; height: 24px; opacity: 0; transition: opacity .3s ease; pointer-events: none; }
 .hero-run.on { opacity: 1; }
 .hero-figure { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 0; font-weight: 400; }
-.hero-figure .num { font-size: 60px; font-weight: 640; letter-spacing: -.005em; line-height: 1; font-variant-numeric: tabular-nums; }
+.hero-figure .num { font-family: var(--display); font-size: 68px; font-weight: 700; letter-spacing: .012em; line-height: 1; }
 .hero-figure .unit { font-size: 19px; color: var(--muted); font-weight: 520; }
 .hero-line { margin: 0; color: var(--muted); font-size: 14px; }
 /* A soft shadow right behind the words keeps them clear of bright dots, without a band behind them. */
 .has-backdrop .hero-figure, .has-backdrop .hero-line { text-shadow: 0 1px 20px hsl(0 0% 9% / .95), 0 0 2px hsl(0 0% 9% / .8); }
-.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); min-height: 50px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid hsl(0 0% 100% / .05); min-height: 50px; flex-wrap: wrap; }
 .card-head h2 { margin: 0; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .card-head .hint { color: var(--subtle); font-size: 12.5px; }
 .card-body { padding: 16px; }
@@ -167,7 +173,7 @@ button, input, select { font: inherit; color: inherit; }
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .stat { padding: 14px 16px 16px; }
 .stat .label { color: var(--muted); font-size: 12.5px; display: flex; justify-content: space-between; gap: 8px; }
-.stat .value { margin-top: 6px; font-size: 24px; font-weight: 620; letter-spacing: -.01em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.stat .value { margin-top: 8px; font-family: var(--display); font-size: 26px; font-weight: 700; letter-spacing: .015em; line-height: 1.15; }
 .stat .foot { margin-top: 4px; font-size: 12px; color: var(--subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .btn {
@@ -313,12 +319,13 @@ select.field option { background: var(--raised); }
 .heat rect.l3 { fill: hsl(0 0% 100% / .6); }
 .heat rect.l4 { fill: hsl(0 0% 100% / .9); }
 .heat text { fill: var(--subtle); font: 10.5px var(--mono); }
+svg.heat { display: block; margin: 0 auto; }
 .scale { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--subtle); }
 .scale i { width: 10px; height: 10px; border-radius: 2px; }
 .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--border); }
 .facts div { padding: 12px 16px; }
 .facts div + div { border-left: 1px solid var(--border); }
-.facts b { display: block; font-size: 18px; font-weight: 620; font-variant-numeric: tabular-nums; }
+.facts b { display: block; font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: .015em; }
 .facts span { color: var(--subtle); font-size: 12px; }
 .mix-bar { display: flex; gap: 2px; height: 8px; border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
 .mix-bar span { min-width: 2px; }
@@ -326,7 +333,7 @@ select.field option { background: var(--raised); }
 .m5 { background: hsl(0 0% 100% / .1); }
 .table { width: 100%; border-collapse: collapse; }
 .table th { text-align: left; font-weight: 500; color: var(--subtle); font-size: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
-.table td { padding: 10px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.table td { padding: 10px 16px; border-bottom: 1px solid hsl(0 0% 100% / .045); vertical-align: middle; font-variant-numeric: tabular-nums; }
 .table tr:last-child td { border-bottom: 0; }
 .table tbody tr:hover td { background: hsl(0 0% 100% / .02); }
 .table tbody tr.clickable { cursor: pointer; }
@@ -334,9 +341,50 @@ select.field option { background: var(--raised); }
 .table .bar-cell { width: 34%; }
 .cell-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .cell-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.model-group + .model-group { border-top: 1px solid var(--border); }
-.model-group .group-head { padding: 12px 16px 4px; }
-.model-group .table { margin-top: 0; }
+/* Usage: the total, the quick figures, the ranking and the breakdown. */
+.usage-top { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr); gap: 16px; align-items: stretch; }
+.total-card { padding: 20px 22px 22px; display: grid; gap: 14px; align-content: start; }
+.total-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; color: var(--muted); font-size: 13px; }
+.total-change { display: inline-flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
+.total-change .mono { font-size: 12.5px; }
+.total-figure { font-family: var(--display); font-weight: 700; font-size: clamp(40px, 5.6vw, 72px); line-height: 1; letter-spacing: .02em; overflow-wrap: anywhere; padding-top: 2px; }
+.total-facts { margin: -4px 0 0; color: var(--muted); font-size: 13px; }
+.share-bar { display: flex; gap: 3px; height: 10px; margin-top: 4px; }
+.share-bar span { min-width: 4px; border-radius: 99px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px; }
+.tile { display: grid; gap: 6px; align-content: start; padding: 11px 12px 12px; border-radius: 10px; border: 1px solid hsl(0 0% 100% / .055); background: hsl(0 0% 100% / .022); color: var(--text); text-align: left; font: inherit; min-width: 0; }
+button.tile { cursor: pointer; transition: background .14s ease, border-color .14s ease; }
+button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100% / .1); }
+.tile-name { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; color: var(--muted); }
+.tile-name > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-name .mark { width: 14px; height: 14px; fill: var(--text); }
+.tile-share { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: .02em; line-height: 1.1; }
+.tile-foot { display: flex; align-items: center; gap: 6px; color: var(--subtle); font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile-foot .swatch { width: 6px; height: 6px; border-radius: 50%; }
+.summary-card { padding: 16px; display: grid; gap: 16px; align-content: start; }
+.chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.chip { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: hsl(0 0% 100% / .03); }
+.chip b { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: .02em; line-height: 1.15; }
+.chip span { color: var(--subtle); font-size: 11.5px; }
+.ranked { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.ranked li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 6px; align-items: center; }
+.ranked .place { color: var(--subtle); font: 11.5px var(--mono); text-align: center; }
+.ranked-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ranked-name .mark { width: 14px; height: 14px; fill: var(--muted); }
+.ranked-name .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranked-share { font: 12px var(--mono); color: var(--text); }
+.ranked-value { margin-left: auto; font: 11.5px var(--mono); }
+.ranked-track { grid-column: 2 / -1; height: 3px; border-radius: 99px; background: var(--faint); overflow: hidden; }
+.ranked-track span { display: block; height: 100%; border-radius: inherit; background: hsl(0 0% 100% / .55); }
+.summary-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 12px; border-top: 1px solid hsl(0 0% 100% / .05); color: var(--subtle); font-size: 12px; }
+.chart-body { display: grid; gap: 14px; }
+.table-wrap { overflow-x: auto; }
+.table.data th, .table.data td { padding-left: 14px; padding-right: 14px; }
+.table .strong { color: var(--text); font-weight: 600; }
+.table td.mono { color: var(--muted); }
+.table td.mono.strong { color: var(--text); }
+.place-cell { width: 36px; text-align: center; }
+.table-more { display: flex; justify-content: center; padding: 10px; border-top: 1px solid hsl(0 0% 100% / .045); }
 
 /* Leaderboard */
 .avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--raised); color: var(--muted); font-weight: 600; }
@@ -366,7 +414,7 @@ select.field option { background: var(--raised); }
 .podium-card { padding: 16px; display: grid; gap: 12px; }
 .podium-card .place { color: var(--subtle); font-size: 12px; }
 .podium-card.you { border-color: var(--border-strong); }
-.podium-value { font-size: 24px; font-weight: 620; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.podium-value { font-family: var(--display); font-size: 26px; font-weight: 700; letter-spacing: .015em; line-height: 1.15; }
 .podium .mix-bar, .table .mix-bar { margin: 0; height: 6px; }
 .table tr.me td { background: hsl(0 0% 100% / .035); }
 .plain-link { color: inherit; text-decoration: none; }
@@ -403,6 +451,8 @@ select.field option { background: var(--raised); }
 .toast.error { border-color: hsl(8 80% 67% / .45); }
 
 @media (max-width: 1180px) {
+  .usage-top { grid-template-columns: 1fr; }
+  .chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .split, .split.wide-left { grid-template-columns: 1fr; }
   .account-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); }
@@ -420,6 +470,7 @@ select.field option { background: var(--raised); }
   .sidebar-foot { display: none; }
   .main { overflow: visible; }
   .stats, .limits, .account-row, .tool-row { grid-template-columns: 1fr; }
+  .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kv { grid-template-columns: 1fr; gap: 2px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -486,7 +537,7 @@ select.field option { background: var(--raised); }
   const wanted = params.get("s") || location.hash.slice(1);
   const ui = {
     section: SECTIONS.includes(wanted) ? wanted : (boot?.section || "overview"),
-    range: "week", rangeOpen: false, metric: "tokens", tool: "all", group: "account",
+    range: "week", rangeOpen: false, metric: "tokens", tool: "all", group: "account", breakdown: "periods", allPeriods: false,
     boardPeriod: "week", boardMetric: "tokens", boardTeam: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
     pending: new Map(), loadingUsage: 0,
@@ -877,7 +928,9 @@ select.field option { background: var(--raised); }
     </section>`;
     const modelsCard = `<section class="card">
       <div class="card-head"><h2>Top models this week</h2></div>
-      ${week && week.models.length ? modelTable(week.models.slice(0, 6), "tokens", false) : `<p class="empty">No models used this week.</p>`}
+      ${week && week.models.length ? `<div class="card-body">${rankedList(week.models.slice().sort((a, b) => b.figures.tokens - a.figures.tokens).slice(0, 6),
+        (m) => m.figures.tokens / (week.total.tokens || 1),
+        (m) => `${mark(m.tool)}<span class="mono">${esc(m.model)}</span><span class="subtle ranked-value">${fmt.tokens(m.figures.tokens)}</span>`)}</div>` : `<p class="empty">No models used this week.</p>`}
     </section>`;
 
     return { body: `${alerts}${outages}${stats}${inUse}<div class="split">${hourCard}${weekCard}</div><div class="split">${budgetsCard}${modelsCard}</div>` };
@@ -966,49 +1019,173 @@ select.field option { background: var(--raised); }
   function usagePage(tools) {
     const toolbar = rangePicker(data.usage[`${ui.range}:${ui.tool}`])
       + tabs("metric", [["tokens", "Tokens"], ["cost", "API value"]], ui.metric)
-      + tabs("group", [["account", "By account"], ["tool", "By tool"], ["model", "By model"]], ui.group)
-      + `<select class="field" data-action="tool" aria-label="Tool" ${isStatic ? "disabled" : ""}>${[["all", "All tools"], ...tools.map((t) => [t.id, t.name])].map(([v, l]) => `<option value="${v}" ${v === ui.tool ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`
-      + (isStatic ? "" : `<button class="btn sm ghost" data-action="export-csv">Download CSV</button>`);
+      + `<select class="field" data-action="tool" aria-label="Tool" ${isStatic ? "disabled" : ""}>${[["all", "All tools"], ...tools.map((t) => [t.id, t.name])].map(([v, l]) => `<option value="${v}" ${v === ui.tool ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
     const usage = data.usage[`${ui.range}:${ui.tool}`] || (isStatic ? data.usage[`${ui.range}:all`] : null);
     if (!usage) return { toolbar, body: `<div class="card">${loading("Reading usage", "empty")}</div>` };
 
-    const t = usage.total, p = usage.previous;
-    const inputSide = t.input + t.cacheRead + t.cacheWrite + (t.cacheWrite1h || 0);
-    const stats = `<div class="stats">
-      <div class="card stat"><div class="label">Tokens ${fmt.change(t.tokens, p.tokens)}</div><div class="value">${fmt.tokens(t.tokens)}</div><div class="foot">${usage.compared === false ? `Since ${esc(fmt.day(usage.since || usage.start, { month: "short", day: "numeric", year: "numeric" }))}` : `vs ${fmt.tokens(p.tokens)} the period before`}</div></div>
-      <div class="card stat"><div class="label">API value ${fmt.change(t.cost, p.cost)}</div><div class="value">${fmt.usd(t.cost)}</div><div class="foot">${t.billed > 0 ? `${fmt.usd(t.billed)} billed on demand` : "At standard API prices"}</div></div>
-      <div class="card stat"><div class="label">Requests</div><div class="value">${fmt.count(t.requests)}</div><div class="foot">${t.requests ? `${fmt.tokens(t.tokens / t.requests)} tokens per request` : "None yet"}</div></div>
-      <div class="card stat"><div class="label">From cache</div><div class="value">${inputSide ? Math.round((t.cacheRead / inputSide) * 100) : 0}%</div><div class="foot">of input was cached context</div></div>
-    </div>`;
-    const heat = heatCard(usage);
+    const t = usage.total;
+    const top = `<div class="usage-top">${totalCard(usage)}${summaryCard(usage)}</div>`;
     if (!t.requests) {
-      return { toolbar, body: `${stats}<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code, Codex, Gemini CLI, OpenCode and Pi records on this computer, and Cursor's usage export after a refresh.</p></div>${heat}` };
+      return { toolbar, body: `${top}<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code, Codex, Gemini CLI, OpenCode and Pi records on this computer, and Cursor's usage export after a refresh.</p></div>${heatCard(usage)}` };
     }
     const grouped = chartGroup(usage);
     const legend = `<ul class="legend">${grouped.series.map((s) => `<li><span class="swatch" style="background:${s.color}"></span>${esc(s.name)}</li>`).join("")}</ul>`;
     const chart = `<section class="card">
-      <div class="card-head"><h2>${ui.metric === "tokens" ? "Tokens" : "API value"} by ${usage.bucket}, stacked ${ui.group === "tool" ? "by tool" : ui.group === "model" ? "by model" : "by account"}</h2>${legend}</div>
-      <div class="card-body chart">${stackedChart(usage, ui.metric, 280, "full", ui.group)}</div>
+      <div class="card-head"><h2>${ui.metric === "tokens" ? "Tokens" : "API value"} by ${usage.bucket}</h2>${tabs("group", [["account", "Accounts"], ["tool", "Tools"], ["model", "Models"]], ui.group)}</div>
+      <div class="card-body chart-body">${legend}<div class="chart">${stackedChart(usage, ui.metric, 260, "full", ui.group)}</div></div>
     </section>`;
     const mix = `<section class="card">
       <div class="card-head"><h2>Token mix</h2><span class="hint mono">${fmt.tokens(t.tokens)}</span></div>
       <div class="card-body">${mixBlock(t)}</div>
     </section>`;
-    const toolsCard = `<section class="card"><div class="card-head"><h2>Tools</h2><span class="hint mono">${(usage.tools || []).length}</span></div>${toolTable(usage.tools || [], ui.metric)}</section>`;
-    const models = `<section class="card"><div class="card-head"><h2>Models</h2><span class="hint mono">${usage.models.length}</span></div>${modelTable(usage.models, ui.metric, true)}</section>`;
-    const accounts = `<section class="card"><div class="card-head"><h2>Accounts</h2><span class="hint mono">${usage.accounts.length}</span></div>${accountTable(usage.accounts, ui.metric)}</section>`;
+    return { toolbar, body: `${top}${chart}<div class="split wide-left">${heatCard(usage)}${mix}</div>${breakdownCard(usage)}` };
+  }
+
+  // The range's total, exact, set large; what it was worth; and how it splits across tools, or
+  // across one tool's models once the page is narrowed to that tool.
+  function totalCard(usage) {
+    const t = usage.total, p = usage.previous;
+    const tokens = ui.metric === "tokens";
+    const exact = tokens ? fmt.count(t.tokens) : "$" + (t.cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const change = usage.compared === false ? "" : tokens ? fmt.change(t.tokens, p.tokens) : fmt.change(t.cost, p.cost);
+    const inputSide = t.input + t.cacheRead + t.cacheWrite + (t.cacheWrite1h || 0);
+    const facts = [
+      tokens ? `${fmt.usd(t.cost)} at API prices` : `${fmt.tokens(t.tokens)} tokens`,
+      `${fmt.count(t.requests)} requests`,
+      inputSide ? `${Math.round((t.cacheRead / inputSide) * 100)}% from cache` : "",
+      t.billed > 0 ? `${fmt.usd(t.billed)} billed on demand` : "",
+    ].filter(Boolean);
+    const before = usage.compared === false
+      ? `Since ${esc(fmt.day(usage.since || usage.start, { month: "short", day: "numeric", year: "numeric" }))}`
+      : `vs ${tokens ? fmt.tokens(p.tokens) : fmt.usd(p.cost)} the period before`;
+
+    const narrowed = ui.tool !== "all";
+    const value = (x) => (tokens ? x.figures.tokens : x.figures.cost);
+    const parts = narrowed
+      ? usage.models.map((m) => ({ id: m.model, name: m.model, color: m.color, figures: m.figures, mono: true }))
+      : (usage.tools || []).map((tool) => ({ id: tool.id, name: tool.name, color: tool.color, figures: tool.figures, tool: tool.id,
+          models: usage.models.filter((m) => m.tool === tool.id).length }));
+    parts.sort((a, b) => value(b) - value(a));
+    // One tool's models share its colour, so each steps a shade lighter by rank to stay apart.
+    if (narrowed) parts.forEach((x, i) => { x.color = shade(x.color, Math.min(0.6, i * 0.2)); });
+    const sum = parts.reduce((s, x) => s + value(x), 0) || 1;
+    const share = (x) => (value(x) / sum) * 100;
+    const pct = (x) => { const v = share(x); return v > 0 && v < 1 ? "<1%" : `${Math.round(v)}%`; };
+    const bar = `<div class="share-bar" role="img" aria-label="Share of ${tokens ? "tokens" : "API value"}">${parts.filter((x) => share(x) >= 0.4)
+      .map((x) => `<span style="flex:${share(x).toFixed(3)} 1 0;background:${x.color}" title="${esc(x.name)} · ${pct(x)}"></span>`).join("")}</div>`;
+    const tiles = parts.map((x) => {
+      const inner = `<span class="tile-name">${x.tool ? mark(x.tool) : ""}<span class="${x.mono ? "mono" : ""}">${esc(x.name)}</span></span>
+        <span class="tile-share">${pct(x)}</span>
+        <span class="tile-foot"><span class="swatch" style="background:${x.color}"></span>${tokens ? fmt.tokens(x.figures.tokens) : fmt.usd(x.figures.cost)}${x.models ? ` · ${x.models} ${x.models === 1 ? "model" : "models"}` : ""}</span>`;
+      return x.tool && !isStatic
+        ? `<button type="button" class="tile" data-action="filter-tool" data-value="${esc(x.tool)}" title="Show only ${esc(x.name)}">${inner}</button>`
+        : `<div class="tile">${inner}</div>`;
+    }).join("");
+    const title = `${tokens ? "Tokens" : "API value"}, ${esc((usage.title || "").toLowerCase() === "today" ? "today" : usage.title)}${narrowed ? ` · ${esc(toolName(ui.tool))}` : ""}`;
+    return `<section class="card total-card">
+      <div class="total-head"><span>${title}</span>${narrowed && !isStatic ? `<button type="button" class="btn sm ghost" data-action="filter-tool" data-value="all">All tools</button>` : `<span class="total-change">${change}<span class="subtle">${before}</span></span>`}</div>
+      <div class="total-figure">${exact}</div>
+      <p class="total-facts">${facts.map(esc).join(" · ")}</p>
+      ${parts.length ? bar : ""}
+      <div class="tiles">${tiles}</div>
+    </section>`;
+  }
+
+  // A hex colour mixed toward white by `amount` (0 to 1).
+  function shade(hex, amount) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+    if (!m || !amount) return hex;
+    const n = parseInt(m[1], 16), mix = (c) => Math.round(c + (255 - c) * amount);
+    return `rgb(${mix(n >> 16)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`;
+  }
+
+  // Quick figures from the daily record, whatever range is shown, and the models that carried it.
+  function summaryCard(usage) {
+    const days = usage.heatmap || [];
+    const today = localDay(new Date());
+    const upto = days.filter((d) => d.day <= today);
+    const lastN = (n) => upto.slice(-n).reduce((s, d) => s + (ui.metric === "tokens" ? d.tokens : d.cost), 0);
+    const active = upto.filter((d) => d.tokens > 0);
+    const perDay = active.length ? active.reduce((s, d) => s + (ui.metric === "tokens" ? d.tokens : d.cost), 0) / active.length : 0;
+    const show = (v) => (ui.metric === "tokens" ? fmt.tokens(v) : fmt.usd(v));
+    const chips = [["Today", lastN(1)], ["7 days", lastN(7)], ["30 days", lastN(30)], ["Per active day", perDay]]
+      .map(([label, v]) => `<div class="chip"><b>${show(v)}</b><span>${label}</span></div>`).join("");
+    const value = (m) => (ui.metric === "tokens" ? m.figures.tokens : m.figures.cost);
+    const models = usage.models.slice().sort((a, b) => value(b) - value(a));
+    const sum = models.reduce((s, m) => s + value(m), 0) || 1;
+    const s = usage.streak;
+    return `<section class="card summary-card">
+      <div class="chips">${chips}</div>
+      ${models.length ? rankedList(models.slice(0, 5), (m) => value(m) / sum, (m) => `${m.tool ? mark(m.tool) : ""}<span class="mono">${esc(m.model)}</span>`) : `<p class="empty-inline subtle">No models in this range.</p>`}
+      <div class="summary-foot"><span>${fmt.count(s.activeDays)} active days in 26 weeks</span><span>${s.current ? `${s.current}-day streak` : "No streak running"}</span></div>
+    </section>`;
+  }
+
+  // A ranked list: place, name, share, and a track filled to that share.
+  function rankedList(items, shareOf, nameOf) {
+    return `<ol class="ranked">${items.map((item, i) => {
+      const share = Math.max(0, Math.min(1, shareOf(item)));
+      const pct = share > 0 && share < 0.01 ? "<1%" : `${Math.round(share * 100)}%`;
+      return `<li><span class="place">${i + 1}</span><span class="ranked-name">${nameOf(item)}</span><span class="ranked-share">${pct}</span>
+        <span class="ranked-track"><span style="width:${(share * 100).toFixed(1)}%"></span></span></li>`;
+    }).join("")}</ol>`;
+  }
+
+  // Everything under the chart, one table at a time.
+  function breakdownCard(usage) {
+    const step = { hour: "Hours", day: "Days", week: "Weeks", month: "Months" }[usage.bucket] || "Days";
     const placed = (usage.projects || []).filter((p) => p.path);
-    const projects = placed.length
-      ? `<section class="card"><div class="card-head"><h2>Projects</h2><span class="hint mono">${placed.length}</span></div>${projectTable(usage.projects, ui.metric)}</section>`
-      : "";
-    const makerList = usage.makers || [];
-    const makers = makerList.length
-      ? `<section class="card"><div class="card-head"><h2>Makers</h2><span class="hint mono">${makerList.length}</span></div>${makerTable(makerList, ui.metric)}</section>`
-      : "";
-    const sessions = (usage.sessions && usage.sessions.length)
-      ? `<section class="card"><div class="card-head"><h2>Sessions</h2><span class="hint mono">${usage.sessions.length}</span></div>${sessionTable(usage.sessions, ui.metric)}</section>`
-      : "";
-    return { toolbar, body: `${stats}${chart}<div class="split wide-left">${heat}${mix}</div><div class="split">${toolsCard}${models}</div>${makers && projects ? `<div class="split">${makers}${projects}</div>` : makers + projects}${accounts}${sessions}` };
+    const views = [["periods", step], ["models", "Models"], ["makers", "Makers"], ["projects", "Projects"], ["accounts", "Accounts"], ["sessions", "Sessions"]]
+      .filter(([id]) => id !== "projects" || placed.length)
+      .filter(([id]) => id !== "sessions" || (usage.sessions || []).length)
+      .filter(([id]) => id !== "makers" || (usage.makers || []).length);
+    const view = views.some(([id]) => id === ui.breakdown) ? ui.breakdown : "periods";
+    const body = view === "models" ? rankedModelTable(usage.models, ui.metric)
+      : view === "makers" ? makerTable(usage.makers, ui.metric)
+      : view === "projects" ? projectTable(usage.projects, ui.metric)
+      : view === "accounts" ? accountTable(usage.accounts, ui.metric)
+      : view === "sessions" ? sessionTable(usage.sessions, ui.metric)
+      : periodTable(usage);
+    return `<section class="card">
+      <div class="card-head">${tabs("breakdown", views, view)}${isStatic ? "" : `<button class="btn sm ghost" data-action="export-csv">Download CSV</button>`}</div>
+      <div class="table-wrap">${body}</div>
+    </section>`;
+  }
+
+  // Each period with usage, newest first, in full: a number here is to be read, not glanced at.
+  function periodTable(usage) {
+    const rows = usage.periods || [];
+    if (!rows.length) return `<p class="empty">Nothing in this range.</p>`;
+    const shown = ui.allPeriods ? rows : rows.slice(0, 14);
+    const when = (start) => usage.bucket === "hour" ? fmt.day(start, { weekday: "short", hour: "2-digit", minute: "2-digit" })
+      : usage.bucket === "week" ? `Week of ${fmt.day(start, { month: "short", day: "numeric", year: "numeric" })}`
+      : usage.bucket === "month" ? fmt.day(start, { month: "long", year: "numeric" })
+      : fmt.day(start, { weekday: "short", month: "short", day: "numeric" });
+    const n = (v) => `<td class="right mono">${fmt.count(v)}</td>`;
+    const body = shown.map((r) => { const f = r.figures; return `<tr>
+      <td class="nowrap">${esc(when(r.start))}</td>
+      <td class="right mono strong">${fmt.count(f.tokens)}</td>${n(f.input)}${n(f.output)}${n(f.cacheRead)}${n(f.cacheWrite + (f.cacheWrite1h || 0))}${n(f.requests)}
+      <td class="right mono">${fmt.usd(f.cost)}</td>
+    </tr>`; }).join("");
+    const more = rows.length > shown.length
+      ? `<div class="table-more"><button type="button" class="btn sm ghost" data-action="all-periods">Show all ${rows.length}</button></div>` : "";
+    return `<table class="table data"><thead><tr><th>${{ hour: "Hour", day: "Day", week: "Week", month: "Month" }[usage.bucket] || "Day"}</th><th class="right">Total</th><th class="right">Input</th><th class="right">Output</th><th class="right">Cache read</th><th class="right">Cache write</th><th class="right">Requests</th><th class="right">API value</th></tr></thead><tbody>${body}</tbody></table>${more}`;
+  }
+
+  // Every model in one ranking, whichever tool ran it.
+  function rankedModelTable(models, metric) {
+    const value = (m) => (metric === "tokens" ? m.figures.tokens : m.figures.cost);
+    const sorted = models.slice().sort((a, b) => value(b) - value(a));
+    const sum = sorted.reduce((s, m) => s + value(m), 0) || 1;
+    const peak = Math.max(0.000001, ...sorted.map(value));
+    const rows = sorted.map((m, i) => `<tr${isStatic ? "" : ` class="clickable" data-action="filter-tool" data-value="${esc(m.tool || "")}"`}>
+      <td class="place-cell mono subtle">${i + 1}</td>
+      <td><div class="cell-name">${mark(m.tool)}<span class="mono">${esc(m.model)}</span></div></td>
+      <td class="bar-cell">${progress((value(m) / peak) * 100, null, "plain")}</td>
+      <td class="right mono">${metric === "tokens" ? fmt.tokens(m.figures.tokens) : fmt.usd(m.figures.cost)}</td>
+      <td class="right mono subtle">${Math.round((value(m) / sum) * 100)}%</td>
+    </tr>`).join("");
+    return `<table class="table"><thead><tr><th></th><th>Model</th><th></th><th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th><th class="right">Share</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   // One button for the range, opening the fixed ranges and a pair of dates. Tabs for seven ranges
@@ -1167,29 +1344,6 @@ select.field option { background: var(--raised); }
       <table class="table" style="margin:0 -16px -16px;width:calc(100% + 32px)"><tbody>${rows.map((p) => `<tr><td><div class="cell-name"><span class="swatch ${p[2]}"></span><span>${p[0]}</span></div></td><td class="right mono">${fmt.tokens(p[1])}</td><td class="right mono subtle">${Math.round((p[1] / sum) * 100)}%</td></tr>`).join("")}</tbody></table>${reasoning}`;
   }
 
-  function modelTable(models, metric, showBars) {
-    const value = (m) => (metric === "tokens" ? m.figures.tokens : m.figures.cost);
-    const groups = [];
-    const seen = new Map();
-    models.forEach((m) => {
-      const tool = m.tool || "unknown";
-      if (!seen.has(tool)) { seen.set(tool, groups.length); groups.push({ tool, rows: [] }); }
-      groups[seen.get(tool)].rows.push(m);
-    });
-    const peak = Math.max(0.000001, ...models.map(value));
-    return groups.map((group) => {
-      const sorted = group.rows.slice().sort((a, b) => value(b) - value(a));
-      const rows = sorted.map((m) => `<tr class="clickable" data-action="filter-tool" data-value="${esc(m.tool || "")}">
-      <td><span class="mono">${esc(m.model)}</span></td>
-      ${showBars ? `<td class="bar-cell">${progress((value(m) / peak) * 100, null, "plain")}</td>` : ""}
-      <td class="right mono">${metric === "tokens" ? fmt.tokens(m.figures.tokens) : fmt.usd(m.figures.cost)}</td>
-    </tr>`).join("");
-      return `<div class="model-group">
-        <div class="group-head">${mark(group.tool)}<h2>${esc(toolName(group.tool))}</h2><span class="count">${sorted.length}</span></div>
-        <table class="table"><thead><tr><th>Model</th>${showBars ? "<th></th>" : ""}<th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th></tr></thead><tbody>${rows}</tbody></table>
-      </div>`;
-    }).join("");
-  }
 
   // Whose models did the work, whichever tool ran them, with each maker's share of the range.
   function makerTable(makers, metric) {
@@ -1220,17 +1374,6 @@ select.field option { background: var(--raised); }
     return `<table class="table"><thead><tr><th>Project</th><th></th><th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th></tr></thead><tbody>${rows}</tbody></table>${more}`;
   }
 
-  function toolTable(tools, metric) {
-    if (!tools.length) return `<p class="empty">No tools in this range.</p>`;
-    const value = (t) => (metric === "tokens" ? t.figures.tokens : t.figures.cost);
-    const sorted = tools.slice().sort((a, b) => value(b) - value(a));
-    const rows = sorted.map((t) => `<tr class="clickable" data-action="filter-tool" data-value="${esc(t.id)}">
-      <td><div class="cell-name">${mark(t.id)}<span>${esc(t.name)}</span></div></td>
-      <td class="right mono">${metric === "tokens" ? fmt.tokens(t.figures.tokens) : fmt.usd(t.figures.cost)}</td>
-      <td class="right mono subtle">${fmt.count(t.figures.requests)}</td>
-    </tr>`).join("");
-    return `<table class="table"><thead><tr><th>Tool</th><th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th><th class="right">Requests</th></tr></thead><tbody>${rows}</tbody></table>`;
-  }
 
   function sessionTable(sessions, metric) {
     const rows = sessions.map((s) => `<tr>
@@ -1244,7 +1387,8 @@ select.field option { background: var(--raised); }
 
   function exportCSV(usage) {
     const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const lines = [["Kind", "Name", "Tool", "Tokens", "API value", "Requests"].map(cell).join(",")];
+    const lines = [["Kind", "Name", "Tool", "Tokens", "API value", "Requests", "Input", "Output", "Cache read", "Cache write"].map(cell).join(",")];
+    (usage.periods || []).slice().reverse().forEach((r) => { const f = r.figures; lines.push([usage.bucket[0].toUpperCase() + usage.bucket.slice(1), new Date(r.start).toISOString(), usage.tool, f.tokens, f.cost.toFixed(4), f.requests, f.input, f.output, f.cacheRead, f.cacheWrite + (f.cacheWrite1h || 0)].map(cell).join(",")); });
     (usage.tools || []).forEach((t) => lines.push(["Tool", t.name, t.id, t.figures.tokens, t.figures.cost.toFixed(4), t.figures.requests].map(cell).join(",")));
     (usage.models || []).forEach((m) => lines.push(["Model", m.model, m.tool || "", m.figures.tokens, m.figures.cost.toFixed(4), m.figures.requests].map(cell).join(",")));
     (usage.accounts || []).forEach((a) => lines.push(["Account", a.name, a.tool, a.figures.tokens, a.figures.cost.toFixed(4), a.figures.requests].map(cell).join(",")));
@@ -1771,6 +1915,8 @@ select.field option { background: var(--raised); }
         render();
         if (ui.rangeOpen) $(".range-list [aria-checked=true]")?.focus();
         break;
+      case "all-periods": ui.allPeriods = true; render(); break;
+      case "breakdown": ui.breakdown = el.dataset.value; ui.allPeriods = false; render(); break;
       case "range": case "metric": case "group":
         ui[el.dataset.action] = el.dataset.value;
         if (el.dataset.action === "range") ui.rangeOpen = false;

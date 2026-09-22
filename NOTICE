@@ -12,3 +12,7 @@ scripts/update-pricing.py.
 
 Linux and Windows builds include SQLite (https://sqlite.org), which is in the
 public domain, in Sources/CSQLite.
+
+The dashboard's display face is Basteleur Bold by Keussel (https://velvetyne.fr),
+released under the SIL Open Font License 1.1 (Assets/Fonts/Basteleur-OFL.txt).
+It is embedded unmodified by scripts/embed-font.py.

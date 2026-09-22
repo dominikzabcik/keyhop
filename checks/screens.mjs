@@ -49,7 +49,7 @@ export const ACCOUNT_SCREENS = [
 export const APP_SCREENS = [
   { name: "overview", section: "overview", mustSay: ["In use"] },
   { name: "accounts", section: "accounts", mustSay: ["Add account"] },
-  { name: "usage", section: "usage", mustSay: ["Tokens", "By tool", "Sessions"] },
+  { name: "usage", section: "usage", mustSay: ["Tokens", "Tools", "Sessions", "Cache read", "API value"] },
   { name: "budgets", section: "budgets", mustSay: ["Budget"] },
   { name: "leaderboard", section: "leaderboard", mustSay: [] },
   // Asking GitHub for the latest release needs the network. A machine without it still has to

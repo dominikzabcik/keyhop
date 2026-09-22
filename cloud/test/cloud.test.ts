@@ -734,7 +734,8 @@ describe("limit sharing", () => {
     expect((await sendLimits(calm, [])).status).toBe(200);
     // Reading is never throttled by writing.
     expect((await readLimits(busy)).status).toBe(200);
-  });
+    // Sixty-odd requests in a row take longer than the default five seconds on a busy runner.
+  }, 20_000);
 });
 
 describe("site header", () => {

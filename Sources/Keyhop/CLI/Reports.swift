@@ -298,7 +298,30 @@ struct DoctorDocument: Encodable {
     let dataDirectory: String
     let secretStore: String
     let savedAccounts: Int
+    let prices: Prices
     let tools: [Tool]
+
+    /// Which model prices API value is worked out with: the ones built into this release, or
+    /// those read from models.dev since, and when.
+    struct Prices: Encodable {
+        let models: Int
+        let source: String
+        let updated: Date?
+
+        static var current: Prices {
+            if let read = PriceCatalog.summary {
+                return Prices(models: Set(Pricing.table.keys).union(PriceCatalog.names).count, source: "models.dev", updated: read.updated)
+            }
+            return Prices(models: Pricing.table.count, source: "built in", updated: nil)
+        }
+
+        var words: String {
+            guard let updated else { return "\(models) models, built into this release" }
+            let day = DateFormatter()
+            day.dateStyle = .medium
+            return "\(models) models, from models.dev on \(day.string(from: updated))"
+        }
+    }
     let trayInstalled: Bool
     let statusNotifierHost: Bool?
 
@@ -486,6 +509,7 @@ enum Reports {
             "Keyhop \(document.version) on \(document.platform)",
             "Data:          \(document.dataDirectory)",
             "Saved logins:  \(document.savedAccounts) in \(document.secretStore)",
+            "Prices:        \(document.prices.words)",
         ]
         for tool in document.tools {
             let state: String

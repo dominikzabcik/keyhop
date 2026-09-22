@@ -150,7 +150,7 @@ Keyhop keeps its own record of what every account uses.
 | Pi | `~/.pi/agent/sessions/**/*.jsonl` (or `$PI_CODING_AGENT_SESSION_DIR`), assistant responses plus compaction and branch summaries, with exact token buckets and reported cost |
 
 - **Per account:** each request is credited to the account that was in use at that moment. Keyhop records every switch, including logins you change outside it. Usage from before Keyhop started goes to the tool's only saved account when there's one.
-- **API value:** requests are priced at each provider's standard API rates, from a table generated from [models.dev](https://models.dev). Subscriptions don't bill per token, so API value measures how much use you get, not what you pay. Cursor's on-demand charges are shown separately as billed.
+- **API value:** requests are priced at each provider's standard API rates, from a table generated from [models.dev](https://models.dev) and refreshed from it once a day, so new models are priced without waiting for a release. Usage read before its model had a price is priced once one is known; anything already priced keeps its value. Subscriptions don't bill per token, so API value measures how much use you get, not what you pay. Cursor's on-demand charges are shown separately as billed.
 - **Per project:** Claude Code, Codex, OpenCode and Pi record the folder they ran in, and Keyhop files that work under the git repository the folder belongs to, or the folder itself outside one. Gemini CLI and Cursor record no folder. Project paths stay on your computer; they're never part of what a linked computer sends.
 - **Per maker:** usage is also totalled by the company that made each model, read from its name, so OpenCode's or Pi's mix of Anthropic, OpenAI and Google models is split the same way as everything else.
 - **Budgets:** set one per account or across all accounts, per day, week or month, in the Budgets section of Keyhop's window or with `keyhop budget` anywhere. The Linux and Windows trays set a monthly budget across all accounts. Keyhop notifies you at 80% and at 100%.
@@ -255,6 +255,7 @@ There's no analytics and no telemetry. Keyhop's network requests are:
 - **Token refresh:** for accounts that aren't in use, the providers' own sign-in services: `platform.claude.com` and `auth.openai.com`.
 - **Cursor usage export:** `cursor.com`, per saved Cursor account.
 - **Updates:** `api.github.com` and `github.com`, for release information and downloads.
+- **Model prices:** `models.dev`, at most once a day, for the standard API prices of models released since your version of Keyhop. Only the price list is fetched; nothing is sent.
 - **Service status:** the public status pages of the tools you have accounts for, `status.claude.com`, `status.openai.com`, `status.cursor.com`, `www.githubstatus.com` and `status.windsurf.com`, while Overview is open or when you run `keyhop services`. Nothing about you or your accounts goes with them.
 - **Leaderboards:** only after you link a computer, Keyhop cloud receives your daily totals per tool.
 

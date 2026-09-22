@@ -73,6 +73,8 @@ final class UsageTracker: ObservableObject {
                 try await engine.noteActive(provider, account: store.active[provider], at: now)
             }
             defer { store.progress.set(nil) }
+            // New prices first, so the logs read next are priced with them.
+            await engine.refreshPrices(now: now)
             try await engine.ingestLocalLogs(progress: store.progress.handler)
 
             // Cursor keeps no local logs, so each account's own usage export fills in, at most twice an hour.

@@ -11,10 +11,11 @@ struct ModelPrice: Equatable {
 enum Pricing {
     static func price(for model: String) -> ModelPrice? {
         let name = normalize(model)
-        if let exact = table[name] { return exact }
+        // Prices read from models.dev since this release was built come first.
+        if let exact = PriceCatalog.price(exact: name) ?? table[name] { return exact }
         // Variants such as "claude-opus-4-5-thinking" or "gpt-5.6-sol-high" price like their base model.
-        let base = table.keys.filter { name.hasPrefix($0 + "-") }.max { $0.count < $1.count }
-        return base.flatMap { table[$0] }
+        let base = (Array(PriceCatalog.names) + Array(table.keys)).filter { name.hasPrefix($0 + "-") }.max { $0.count < $1.count }
+        return base.flatMap { PriceCatalog.price(exact: $0) ?? table[$0] }
     }
 
     /// The cost at standard API prices. Zero for models without a known price.

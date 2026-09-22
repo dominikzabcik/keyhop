@@ -42,6 +42,9 @@ final class Database {
         guard sqlite3_exec(handle, sql, nil, nil, nil) == SQLITE_OK else { throw failure() }
     }
 
+    /// Rows changed by the last INSERT, UPDATE or DELETE.
+    var changes: Int { Int(sqlite3_changes(handle)) }
+
     func execute(_ sql: String, _ values: [SQL] = []) throws {
         let statement = try prepare(sql, values)
         defer { sqlite3_finalize(statement) }

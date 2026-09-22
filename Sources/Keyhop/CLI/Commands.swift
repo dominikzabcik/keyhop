@@ -131,6 +131,8 @@ enum Commands {
         for provider in Provider.allCases {
             try await tracker.noteActive(provider, account: active[provider], at: now)
         }
+        // New prices first, so the logs read next are priced with them.
+        await tracker.refreshPrices(now: now)
         try await tracker.ingestLocalLogs(progress: progress)
         for account in accounts where account.provider == .cursor {
             let key = account.id.uuidString
@@ -333,6 +335,7 @@ enum Commands {
         if !skipLogs {
             let terminal = TerminalProgress()
             defer { terminal.finish() }
+            await workspace.tracker.refreshPrices()
             try await workspace.tracker.ingestLocalLogs(progress: terminal.handler)
         }
         let now = Date()
@@ -493,6 +496,7 @@ enum Commands {
 
     /// What Keyhop can see on this computer. Sample data reads no logins.
     static func doctorDocument(sample: Bool) async -> DoctorDocument {
+        if !sample { PriceCatalog.load(from: Platform.dataDirectory) }
         var tools: [DoctorDocument.Tool] = []
         let sampleEmails: [Provider: String] = [.claude: "me@personal.dev", .cursor: "me@personal.dev", .codex: "me@personal.dev", .gemini: "me@personal.dev"]
         for provider in Provider.allCases {
@@ -519,6 +523,7 @@ enum Commands {
             dataDirectory: Platform.dataDirectory.path,
             secretStore: sample ? "sample data" : Vault().storeName,
             savedAccounts: sample ? SampleData.accounts().count : AccountService.loadAccounts(from: Platform.dataDirectory).count,
+            prices: .current,
             tools: tools,
             trayInstalled: ToolDetection.trayInstalled,
             statusNotifierHost: ToolDetection.statusNotifierHost

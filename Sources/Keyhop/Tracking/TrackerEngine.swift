@@ -5,10 +5,45 @@ import Foundation
 actor TrackerEngine {
     private let db: Database
 
+    private let directory: URL
+
     init(url: URL) throws {
         db = try Database(url: url)
+        directory = url.deletingLastPathComponent()
         try db.script(Self.schema)
         try Self.addProjects(to: db)
+        PriceCatalog.load(from: directory)
+    }
+
+    /// Reads models.dev when the saved prices are a day old, then prices whatever was stored at
+    /// nothing because its model had no price yet. Returns how many records gained a price.
+    @discardableResult
+    func refreshPrices(now: Date = Date()) async -> Int {
+        await PriceCatalog.refreshIfStale(in: directory, now: now)
+        return (try? priceUnpriced()) ?? 0
+    }
+
+    /// Records stored at no cost that now have a price get one, at the same rates `Pricing.cost`
+    /// uses. Anything that already has a cost keeps it: history is valued at the price it was
+    /// read with, and a tool's own reported cost is never replaced.
+    func priceUnpriced() throws -> Int {
+        var models: [String] = []
+        try db.query("""
+            SELECT DISTINCT model FROM events
+            WHERE cost = 0 AND (input + cache_write + cache_write_1h + cache_read + output) > 0
+            """) { row in if let model = row.text(0) { models.append(model) } }
+        var priced = 0
+        for model in models {
+            guard let price = Pricing.price(for: model) else { continue }
+            let cacheWrite = price.cacheWrite ?? price.input * 1.25
+            try db.execute("""
+                UPDATE events SET cost = (input * ?1 + cache_write * ?2 + cache_write_1h * ?3 + cache_read * ?4 + output * ?5) / 1000000.0
+                WHERE model = ?6 AND cost = 0 AND (input + cache_write + cache_write_1h + cache_read + output) > 0
+                """, [.real(price.input), .real(cacheWrite), .real(price.input * 2), .real(price.cacheRead ?? price.input),
+                      .real(price.output), .text(model)])
+            priced += db.changes
+        }
+        return priced
     }
 
     /// A database made before projects existed gets the column, and its logs are read again once so

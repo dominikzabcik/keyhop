@@ -54,7 +54,7 @@ final class RangeTests: XCTestCase {
         XCTAssertEqual(range.previous(now: now).duration, 0)
         XCTAssertFalse(range.hasPrevious)
         XCTAssertEqual(range.argument, "all")
-        XCTAssertEqual(InsightsRange.all(since: nil).resolved(firstUse: nil).interval(now: now).start,
+        XCTAssertEqual(InsightsRange.all(since: nil).resolved(firstUse: nil).interval(now: Date()).start,
                        Calendar.current.startOfDay(for: Date()), "no history yet is just today")
     }
 

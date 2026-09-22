@@ -1664,7 +1664,8 @@ select.field option { background: var(--raised); }
           <div class="list">
             <div class="row kv"><span>Data folder</span><span class="mono">${esc(doctor?.dataDirectory || state.dataDirectory)}</span></div>
             <div class="row kv"><span>Saved logins</span><span>${esc(doctor ? `${doctor.savedAccounts} in ${doctor.secretStore}` : state.status.secretStore)}</span></div>
-            <div class="row kv"><span>Network</span><span>The providers' own usage and sign-in services, GitHub for updates${state.cloud?.linked ? `, and Keyhop cloud for your daily totals${state.cloud.sharesLimits ? " and current limits" : ""}` : ""}. No analytics.</span></div>
+            ${doctor?.prices ? `<div class="row kv"><span>Model prices</span><span>${fmt.count(doctor.prices.models)} models, ${doctor.prices.updated ? `from models.dev ${esc(ago(doctor.prices.updated))}` : "built into this release"}</span></div>` : ""}
+            <div class="row kv"><span>Network</span><span>The providers' own usage and sign-in services, their public status pages, models.dev for prices once a day, GitHub for updates${state.cloud?.linked ? `, and Keyhop cloud for your daily totals${state.cloud.sharesLimits ? " and current limits" : ""}` : ""}. No analytics.</span></div>
             <div class="row kv"><span>This window</span><span>Served by keyhop on 127.0.0.1 only, with a private session key.</span></div>
           </div>
         </section>

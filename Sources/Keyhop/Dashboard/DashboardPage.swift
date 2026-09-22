@@ -165,7 +165,18 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .has-glass .tip, .has-glass .toast { background: hsl(0 0% 12.5% / .95); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
 .has-glass select.field option { background: hsl(0 0% 13.5%); }.range { width: 180px; accent-color: hsl(0 0% 92%); }
 /* Overview opens on today's figure, set large over the Field. */
-.hero { position: relative; container-type: inline-size; padding: 52px 4px 40px; display: grid; gap: 10px; }
+.hero { position: relative; padding: 44px 4px 36px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 24px 40px; }
+.hero-main { display: grid; gap: 10px; min-width: 0; }
+.hero-hours { margin: 0; display: grid; gap: 8px; justify-items: start; }
+.hero-hours figcaption { color: var(--subtle); font-size: 12px; }
+.has-backdrop .hero-hours figcaption { text-shadow: 0 1px 12px hsl(0 0% 9% / .9); }
+.notices { display: grid; border-radius: 12px; border: 1px solid hsl(36 72% 60% / .24); background: hsl(36 40% 12% / .55); box-shadow: inset 0 1px 0 hsl(36 72% 70% / .06); }
+.notice-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.notice-row + .notice-row { border-top: 1px solid hsl(36 72% 60% / .12); }
+.notice-row > .icon { color: var(--warn); }
+.notice-row > div { flex: 1; min-width: 0; }
+.notice-row b { font-weight: 600; }
+.notice-row p { margin: 0; color: var(--muted); }
 /* While a refresh runs, a pixel runner hops along the bottom of the hero. */
 .hero-run { position: absolute; left: 0; right: 0; bottom: 12px; height: 24px; opacity: 0; transition: opacity .3s ease; pointer-events: none; }
 .hero-run.on { opacity: 1; }
@@ -531,6 +542,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .toast.error { border-color: hsl(8 80% 67% / .45); }
 
 @media (max-width: 1180px) {
+  .hero { grid-template-columns: 1fr; }
   .usage-top { grid-template-columns: 1fr; }
   .chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1175,7 +1187,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const week = data.usage["week:all"];
 
     const alerts = (status.alerts || []).map((alert) => `
-      <div class="notice">${icon("alert")}<div><b>${esc(alert.title)}</b><p>${esc(alert.body)}</p></div>
+      <div class="notice-row">${icon("alert")}<div><b>${esc(alert.title)}</b><p>${esc(alert.body)}</p></div>
       ${alert.switchTo && !isStatic ? `<button class="btn sm" data-action="switch" data-id="${esc(alert.switchTo)}">Switch</button>` : ""}</div>`).join("");
 
     // A provider's own outage, which no account switch gets around. Maintenance is said plainly,
@@ -1187,15 +1199,20 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       const incident = s.incidents[0];
       const detail = incident ? `${esc(incident.name)}. ${esc(incident.stage[0].toUpperCase() + incident.stage.slice(1))}${incident.updated ? ` ${esc(ago(incident.updated))}` : ""}.` : "";
       const advice = s.level === "maintenance" ? "" : " Every account is affected, so switching won't help.";
-      return `<div class="notice">${icon("alert")}<div><b>${esc(toolName(s.tool))}: ${levelWords[s.level]}</b><p>${detail}${advice}</p></div>
+      return `<div class="notice-row">${icon("alert")}<div><b>${esc(toolName(s.tool))}: ${levelWords[s.level]}</b><p>${detail}${advice}</p></div>
         <a class="btn sm secondary" href="${esc(incident?.link || s.page)}" target="_blank" rel="noopener">Status page</a></div>`;
     }).join("");
     const serviceHint = services.length && !troubled.length && services.some((s) => s.level === "operational") ? " · Services operational" : "";
 
     const streak = (week || today)?.streak;
+    // Everything that needs a look, in one place instead of a stack of boxes.
+    const notices = alerts + outages ? `<section class="notices" aria-label="Needs a look">${alerts}${outages}</section>` : "";
     const hero = `<section class="hero">
+      <div class="hero-main">
       <h2 class="hero-figure"><span class="num" data-count="${status.today.tokens}" data-count-key="today" data-format="tokens" data-count-intro>${fmt.tokens(status.today.tokens)}</span><span class="unit">tokens today</span></h2>
       <p class="hero-line">${today ? `${fmt.change(today.total.tokens, today.previous.tokens)} on yesterday · ` : ""}${fmt.count(status.today.requests)} requests${today && today.total.requests ? ` · ${esc(busiestHour(today))}` : ""}</p>
+      </div>
+      ${today && today.total.requests ? `<figure class="hero-hours"><figcaption>Today by hour</figcaption>${dotHours(today)}</figure>` : ""}
       <div class="hero-run${data.state.refreshing ? " on" : ""}" aria-hidden="true">${window.KeyhopBackdrop ? window.KeyhopBackdrop.sprite("blip", "top:0") : ""}</div>
     </section>`;
     const stats = hero + `<div class="stats">
@@ -1234,13 +1251,9 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       </div>` : ""}</div>
     </section>`;
 
-    const hourCard = `<section class="card">
-      <div class="card-head"><h2>Today by hour</h2><span class="hint">${today ? esc(busiestHour(today)) : ""}</span></div>
-      <div class="card-body">${today ? dotHours(today) : loading("Reading usage")}</div>
-    </section>`;
     const weekCard = `<section class="card">
       <div class="card-head"><h2>Last 7 days</h2><button class="btn sm ghost" data-action="goto" data-section="usage">Open usage</button></div>
-      <div class="card-body">${week ? (week.total.requests ? `<div class="chart">${stackedChart(week, "tokens", 180, "half", "account")}</div>` : `<p class="empty-inline">No usage in the last 7 days.</p>`) : loading("Reading usage")}</div>
+      <div class="card-body">${week ? (week.total.requests ? `<div class="chart">${stackedChart(week, "tokens", 214, "half", "account")}</div>` : `<p class="empty-inline">No usage in the last 7 days.</p>`) : loading("Reading usage")}</div>
     </section>`;
     const budgetsCard = `<section class="card">
       <div class="card-head"><h2>Budgets</h2><button class="btn sm ghost" data-action="goto" data-section="budgets">${status.budgets.length ? "Manage" : "Set a budget"}</button></div>
@@ -1253,7 +1266,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         (m) => `${mark(m.tool)}<span class="mono">${esc(m.model)}</span><span class="subtle ranked-value">${fmt.tokens(m.figures.tokens)}</span>`)}</div>` : `<p class="empty">No models used this week.</p>`}
     </section>`;
 
-    return { body: `${alerts}${outages}${stats}${inUse}<div class="split">${hourCard}${weekCard}</div><div class="split">${budgetsCard}${modelsCard}</div>` };
+    return { body: `${notices}${stats}${inUse}<div class="split">${weekCard}${modelsCard}</div>${budgetsCard}` };
   }
 
   function busiestHour(usage) {

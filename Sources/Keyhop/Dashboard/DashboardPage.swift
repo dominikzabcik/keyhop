@@ -12,8 +12,6 @@ enum DashboardPage {
             .replacingOccurrences(of: "{{marks}}", with: marks)
             .replacingOccurrences(of: "{{icons}}", with: InterfaceIcons.symbols)
             .replacingOccurrences(of: "{{backdrop}}", with: Backdrop.script)
-            .replacingOccurrences(of: "{{fontBold}}", with: DisplayFont.bold)
-            .replacingOccurrences(of: "{{fontMoonlight}}", with: DisplayFont.moonlight)
         // Inside a script element, "<" could close it early; JSON allows it escaped.
         let data = boot.map { $0.replacingOccurrences(of: "<", with: "\\u003c") } ?? "null"
         return page.replacingOccurrences(of: "{{boot}}", with: data)
@@ -29,10 +27,6 @@ enum DashboardPage {
 <title>Keyhop</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171717'/%3E%3Cg fill='%23EBEBEB'%3E%3Crect x='3.3' y='3.3' width='8' height='26' rx='2'/%3E%3Crect x='12.8' y='12.3' width='8' height='8' rx='2'/%3E%3Crect x='21.3' y='1.3' width='8' height='8' rx='2'/%3E%3Crect x='21.3' y='22.7' width='8' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E">
 <style>
-/* Basteleur, by Keussel, SIL Open Font License 1.1: Bold for figures and page titles, Moonlight for
-   section headings. Running text stays in the system face. */
-@font-face { font-family: "Basteleur"; src: url(data:font/woff2;base64,{{fontBold}}) format("woff2"); font-weight: 700; font-display: block; }
-@font-face { font-family: "Basteleur"; src: url(data:font/woff2;base64,{{fontMoonlight}}) format("woff2"); font-weight: 400; font-display: block; }
 :root {
   --bg: hsl(0 0% 9%);
   --sidebar: hsl(0 0% 7.2%);
@@ -51,8 +45,7 @@ enum DashboardPage {
   --good: #5CC98A;
   --warn: #E3A64F;
   --bad: #EE7A69;
-  --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, Cantarell, "Noto Sans", sans-serif;
-  --display: "Basteleur", var(--sans);
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, Cantarell, "Noto Sans", sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   color-scheme: dark;
 }
@@ -78,6 +71,7 @@ button, input, select { font: inherit; color: inherit; }
 .muted { color: var(--muted); }
 .subtle { color: var(--subtle); }
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+[data-count], .mono, .table td, .ranked-share, .tile-foot, .limit-top b, .quest-state { font-variant-numeric: tabular-nums; }
 .up { color: var(--good); }
 .down { color: var(--bad); }
 
@@ -140,7 +134,7 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .topbar { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; padding: 10px 24px; border-bottom: 1px solid var(--border); flex: none; }
 /* Nothing scrolls under the top bar, so over the Field it simply gets out of the way. */
 .has-backdrop .topbar { background: transparent; border-bottom-color: transparent; }
-.topbar h1 { margin: 0; font-family: var(--display); font-size: 21px; font-weight: 700; letter-spacing: .01em; line-height: 1.1; }
+.topbar h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; }
 /* The whole window's progress, along the bottom edge of the top bar. */
 .topbar .meter { position: absolute; left: 24px; right: 24px; bottom: -2px; height: 3px; background: transparent; opacity: 0; transition: opacity .25s ease; }
 .topbar .meter.on { opacity: 1; }
@@ -181,13 +175,13 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .hero-run { position: absolute; left: 0; right: 0; bottom: 12px; height: 24px; opacity: 0; transition: opacity .3s ease; pointer-events: none; }
 .hero-run.on { opacity: 1; }
 .hero-figure { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 0; font-weight: 400; }
-.hero-figure .num { font-family: var(--display); font-size: 68px; font-weight: 700; letter-spacing: .012em; line-height: 1; }
+.hero-figure .num { font-size: 56px; font-weight: 600; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 .hero-figure .unit { font-size: 19px; color: var(--muted); font-weight: 520; }
 .hero-line { margin: 0; color: var(--muted); font-size: 14px; }
 /* A soft shadow right behind the words keeps them clear of bright dots, without a band behind them. */
 .has-backdrop .hero-figure, .has-backdrop .hero-line { text-shadow: 0 1px 20px hsl(0 0% 9% / .95), 0 0 2px hsl(0 0% 9% / .8); }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid hsl(0 0% 100% / .05); min-height: 50px; flex-wrap: wrap; }
-.card-head h2 { margin: 0; font-family: var(--display); font-size: 17px; font-weight: 400; letter-spacing: .005em; display: flex; align-items: center; gap: 8px; }
+.card-head h2 { margin: 0; font-size: 14px; font-weight: 560; display: flex; align-items: center; gap: 8px; }
 .card-head .hint { color: var(--subtle); font-size: 12.5px; }
 .card-body { padding: 16px; }
 .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -195,7 +189,7 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .stat { padding: 14px 16px 16px; }
 .stat .label { color: var(--muted); font-size: 12.5px; display: flex; justify-content: space-between; gap: 8px; }
-.stat .value { margin-top: 8px; font-family: var(--display); font-size: 26px; font-weight: 700; letter-spacing: .015em; line-height: 1.15; }
+.stat .value { margin-top: 6px; font-size: 24px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .stat .foot { margin-top: 4px; font-size: 12px; color: var(--subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .btn {
@@ -301,7 +295,7 @@ select.field option { background: var(--raised); }
 .group { display: grid; gap: 10px; }
 .group-head { display: flex; align-items: center; gap: 10px; }
 .group-head .mark { width: 18px; height: 18px; fill: var(--text); }
-.group-head h2 { margin: 0; font-family: var(--display); font-size: 18px; font-weight: 400; letter-spacing: .005em; }
+.group-head h2 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
 .group-head .count { color: var(--subtle); font-family: var(--mono); font-size: 12px; }
 .group-head .btn { margin-left: auto; }
 /* Fixed outer columns, so every row's limits and figures line up whatever its buttons are. */
@@ -312,7 +306,7 @@ select.field option { background: var(--raised); }
 .in-use { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 6px; background: hsl(0 0% 100% / .1); color: var(--text); font-size: 11.5px; font-weight: 600; }
 .account-row.active { background: hsl(0 0% 100% / .018); }
 .account-row .today { display: grid; gap: 1px; font-family: var(--sans); }
-.account-row .today b { font-family: var(--display); font-size: 18px; font-weight: 700; letter-spacing: .02em; color: var(--text); line-height: 1.2; }
+.account-row .today b { font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: var(--text); line-height: 1.3; font-variant-numeric: tabular-nums; }
 .account-row .today span { color: var(--subtle); font-size: 12px; }
 .menu-anchor { position: relative; display: inline-flex; }
 .btn.icon-only { width: 28px; padding: 0; }
@@ -379,7 +373,7 @@ svg.heat { display: block; margin: 0 auto; }
 .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--border); }
 .facts div { padding: 12px 16px; }
 .facts div + div { border-left: 1px solid var(--border); }
-.facts b { display: block; font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: .015em; }
+.facts b { display: block; font-size: 18px; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .facts span { color: var(--subtle); font-size: 12px; }
 .mix-bar { display: flex; gap: 2px; height: 8px; border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
 .mix-bar span { min-width: 2px; }
@@ -401,7 +395,7 @@ svg.heat { display: block; margin: 0 auto; }
 .total-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; color: var(--muted); font-size: 13px; }
 .total-change { display: inline-flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
 .total-change .mono { font-size: 12.5px; }
-.total-figure { font-family: var(--display); font-weight: 700; font-size: clamp(40px, 5.6vw, 72px); line-height: 1; letter-spacing: .02em; overflow-wrap: anywhere; padding-top: 2px; }
+.total-figure { font-weight: 600; font-size: clamp(36px, 4.4vw, 54px); line-height: 1.05; letter-spacing: -.035em; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .total-facts { margin: -4px 0 0; color: var(--muted); font-size: 13px; }
 .share-bar { display: flex; gap: 3px; height: 10px; margin-top: 4px; }
 .share-bar span { min-width: 4px; border-radius: 99px; flex-basis: 0; transition: flex-grow .7s cubic-bezier(.2, .8, .2, 1); }
@@ -415,13 +409,13 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .tile-name { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; color: var(--muted); }
 .tile-name > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tile-name .mark { width: 14px; height: 14px; fill: var(--text); }
-.tile-share { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: .02em; line-height: 1.1; }
+.tile-share { font-weight: 600; font-size: 20px; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .tile-foot { display: flex; align-items: center; gap: 6px; color: var(--subtle); font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile-foot .swatch { width: 6px; height: 6px; border-radius: 50%; }
 .summary-card { padding: 16px; display: grid; gap: 16px; align-content: start; }
 .chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .chip { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: hsl(0 0% 100% / .03); }
-.chip b { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: .02em; line-height: 1.15; }
+.chip b { font-weight: 600; font-size: 18px; letter-spacing: -.015em; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .chip span { color: var(--subtle); font-size: 11.5px; }
 .ranked { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .ranked li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 6px; align-items: center; }
@@ -471,7 +465,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .podium-card { padding: 16px; display: grid; gap: 12px; }
 .podium-card .place { color: var(--subtle); font-size: 12px; }
 .podium-card.you { border-color: var(--border-strong); }
-.podium-value { font-family: var(--display); font-size: 26px; font-weight: 700; letter-spacing: .015em; line-height: 1.15; }
+.podium-value { font-size: 24px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .podium .mix-bar, .table .mix-bar { margin: 0; height: 6px; }
 .table tr.me td { background: hsl(0 0% 100% / .035); }
 .plain-link { color: inherit; text-decoration: none; }

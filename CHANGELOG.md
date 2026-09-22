@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Keyhop's window, menu and welcome window go back to the system typeface (SF Pro on a Mac), in regular, medium and semibold only, on a calmer size scale. Basteleur is gone. Every figure that changes, from the total counting up to a limit's percentage, uses digits of one width, so a number never shifts what stands beside it.
+
 ## [0.12.0]
 
 - Keyhop's window has a new face. Usage opens on the range's exact total, set large, with what it was worth, a bar of how it splits across tools, and a tile per tool with its share and a trend line; a tile narrows the page to that tool and then to its models. Beside it sit today, 7 days, 30 days and per active day, the top models ranked, and the streak. Under the chart, one table does what six stacked cards did: every day (or hour, week or month) in full, then models ranked across tools, makers, projects, accounts and sessions, with the CSV export including each period.

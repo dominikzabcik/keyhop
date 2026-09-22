@@ -31,33 +31,16 @@ enum Brand {
         .system(size: size, weight: weight, design: .monospaced)
     }
 
-    /// Basteleur Bold, the window's face for figures, so a number reads the same in the menu as
-    /// in Keyhop's window.
+    /// Figures: the system face at medium weight with digits of one width, so a number that
+    /// changes never shifts what stands beside it.
     static func figure(_ size: CGFloat) -> Font {
-        DisplayFonts.register()
-        return .custom("Basteleur-Bold", fixedSize: size)
+        .system(size: size, weight: .semibold).monospacedDigit()
     }
 
-    /// Basteleur Moonlight, the window's face for headings and names.
+    /// Names and headings: the system face, a step heavier than the text around it.
     static func heading(_ size: CGFloat) -> Font {
-        DisplayFonts.register()
-        return .custom("Basteleur-Moonlight", fixedSize: size)
+        .system(size: size, weight: .semibold)
     }
-}
-
-/// Registers the embedded Basteleur faces with Core Text once, for this process only, so nothing
-/// is installed on the computer.
-enum DisplayFonts {
-    private static let done: Void = {
-        for encoded in [DisplayFont.boldOTF, DisplayFont.moonlightOTF] {
-            guard let data = Data(base64Encoded: encoded),
-                  let provider = CGDataProvider(data: data as CFData),
-                  let font = CGFont(provider) else { continue }
-            CTFontManagerRegisterGraphicsFont(font, nil)
-        }
-    }()
-
-    static func register() { _ = done }
 }
 
 extension Color {

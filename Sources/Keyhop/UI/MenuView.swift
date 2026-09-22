@@ -171,7 +171,7 @@ private struct InUseCard: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
-                    EditableName(account: account, font: Brand.heading(18), renaming: $renaming)
+                    EditableName(account: account, font: Brand.heading(15), renaming: $renaming)
                         .foregroundStyle(Brand.text)
                     Spacer(minLength: 8)
                     Text("In use")
@@ -254,8 +254,7 @@ private struct LimitCell: View {
                     Spacer(minLength: 4)
                     // The number is what the eye comes for, so it carries the weight.
                     Text("\(Int(window.usedPercent.rounded()))%")
-                        .font(Brand.figure(17))
-                        .tracking(0.3)
+                        .font(Brand.figure(14))
                         .foregroundStyle(Brand.text)
                         .contentTransition(.numericText())
                 }
@@ -296,8 +295,7 @@ private struct SpendLine: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline, spacing: 7) {
                 Text(Numbers.tokens(spend.tokens.total))
-                    .font(Brand.figure(17))
-                    .tracking(0.3)
+                    .font(Brand.figure(14))
                     .foregroundStyle(Brand.text)
                     .contentTransition(.numericText())
                 (Text("tokens today · ").foregroundStyle(Brand.muted)
@@ -366,8 +364,7 @@ private struct AlternativeRow: View {
                 } else if let room, snapshot?.error == nil {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("\(Int(room.rounded()))%")
-                            .font(Brand.figure(15))
-                            .tracking(0.3)
+                            .font(Brand.figure(13))
                             .foregroundStyle(Brand.text)
                         Text("left")
                             .font(.system(size: 11.5))

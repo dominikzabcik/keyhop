@@ -90,8 +90,7 @@ struct WelcomeView: View {
                 .padding(.top, 58)
 
             Text("Keyhop")
-                .font(Brand.figure(32))
-                .tracking(0.4)
+                .font(.system(size: 26, weight: .semibold))
                 .foregroundStyle(Brand.text)
                 .padding(.top, 24)
             Text("Your AI accounts, one click apart.")

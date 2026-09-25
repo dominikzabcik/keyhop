@@ -169,6 +169,24 @@ struct UpdateLine: View {
             .card()
             .padding(.horizontal, 12)
             .padding(.bottom, 12)
+        } else if case .checking = updater.phase {
+            HStack(spacing: 9) {
+                ProgressView()
+                    .controlSize(.small)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Checking for Updates…")
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .foregroundStyle(Brand.text)
+                    Text("Limit refresh continues separately.")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Brand.muted)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .card()
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
         } else if case .failed(let message) = updater.phase {
             HStack(alignment: .top, spacing: 8) {
                 Icon("alert", size: 14)

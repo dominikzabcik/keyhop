@@ -1,7 +1,7 @@
 import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { randomToken, sha256, userCode } from "./crypto";
-import { type AppEnv, type Env, type User, now } from "./env";
+import { type AppEnv, type User, now } from "./env";
 
 export const SESSION_COOKIE = "keyhop_session";
 const OAUTH_COOKIE = "keyhop_oauth";
@@ -295,5 +295,3 @@ auth.post("/link", pageUser, async (c) => {
 export function publicUser(user: User) {
   return { login: user.login, name: user.name, avatarUrl: user.avatar_url, public: user.public === 1 };
 }
-
-export type { Env };

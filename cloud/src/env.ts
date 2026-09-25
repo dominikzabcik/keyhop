@@ -1,16 +1,3 @@
-export interface Env {
-  DB: D1Database;
-  DEVICE_START_LIMITER: RateLimit;
-  DEVICE_POLL_LIMITER: RateLimit;
-  /** Uploads per signed-in account: usage and limits. */
-  UPLOAD_LIMITER: RateLimit;
-  /** GitHub OAuth app credentials, set with `wrangler secret put`. */
-  GITHUB_CLIENT_ID: string;
-  GITHUB_CLIENT_SECRET: string;
-  /** "true" enables /auth/dev, which signs in without GitHub. Honored only on localhost. */
-  DEV_LOGIN?: string;
-}
-
 export interface User {
   id: string;
   github_id: number;
@@ -27,7 +14,8 @@ export interface User {
 }
 
 export type AppEnv = {
-  Bindings: Env;
+  // Wrangler generates this from wrangler.jsonc, keeping runtime bindings and TypeScript in sync.
+  Bindings: Cloudflare.Env;
   Variables: {
     user: User | null;
     sessionKind: "web" | "app" | null;

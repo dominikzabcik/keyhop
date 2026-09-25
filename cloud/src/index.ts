@@ -44,7 +44,12 @@ app.route("/", pages);
 
 app.notFound((c) => (c.req.path.startsWith("/api/") ? c.json({ error: "Not found." }, 404) : notFound(c)));
 app.onError((error, c) => {
-  console.error(error);
+  console.error({
+    event: "request_error",
+    method: c.req.method,
+    path: c.req.path,
+    message: error instanceof Error ? error.message : String(error),
+  });
   return c.req.path.startsWith("/api/") ? c.json({ error: "Something went wrong." }, 500) : c.text("Something went wrong.", 500);
 });
 

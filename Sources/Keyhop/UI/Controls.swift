@@ -2,7 +2,7 @@
 import SwiftUI
 
 /// The dashboard's buttons: primary is near-white, secondary sits on a raised surface, ghost has no
-/// chrome until hovered. None of them move.
+/// chrome until hovered. A tiny, interruptible press confirms contact unless Reduce Motion is on.
 struct AppButtonStyle: ButtonStyle {
     enum Kind { case primary, secondary, ghost }
     enum Size { case small, regular, large }
@@ -19,6 +19,7 @@ struct AppButtonStyle: ButtonStyle {
         let configuration: ButtonStyleConfiguration
         let style: AppButtonStyle
         @Environment(\.isEnabled) private var isEnabled
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @State private var hovering = false
 
         var body: some View {
@@ -34,9 +35,11 @@ struct AppButtonStyle: ButtonStyle {
                 .background(shape.fill(fill(hot)))
                 .overlay(shape.strokeBorder(stroke(hot)))
                 .opacity(isEnabled ? (configuration.isPressed ? 0.78 : 1) : 0.45)
+                .scaleEffect(reduceMotion ? 1 : configuration.isPressed ? 0.97 : 1)
                 .contentShape(shape)
                 .onHover { hovering = $0 }
                 .animation(.easeOut(duration: 0.12), value: hovering)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: configuration.isPressed)
         }
 
         private var height: CGFloat {
@@ -141,6 +144,7 @@ struct RowButtonStyle: ButtonStyle {
 struct LimitBar: View {
     let fraction: Double
     var pace: Double?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
@@ -160,7 +164,7 @@ struct LimitBar: View {
                 }
             }
             .frame(width: width, height: height)
-            .animation(.smooth(duration: 0.5), value: value)
+            .animation(reduceMotion ? nil : .smooth(duration: 0.5), value: value)
         }
         .frame(height: 5)
     }

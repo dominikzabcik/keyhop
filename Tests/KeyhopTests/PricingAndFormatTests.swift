@@ -28,6 +28,12 @@ final class PricingTests: XCTestCase {
         XCTAssertEqual(cost({ $0.input = 1_000_000 }, fast: true), 10, accuracy: 1e-9)
         XCTAssertEqual(Pricing.cost(model: "unknown-model", tokens: TokenCounts(input: 1_000_000)), 0)
     }
+
+    func testCacheSavingsCompareReadsWithTheFullInputRate() {
+        let tokens = TokenCounts(cacheRead: 1_000_000)
+        XCTAssertEqual(Pricing.cacheSavings(model: "gpt-4.1", tokens: tokens), 1.5, accuracy: 1e-9)
+        XCTAssertEqual(Pricing.cacheSavings(model: "unknown-model", tokens: tokens), 0)
+    }
 }
 
 final class NumbersTests: XCTestCase {

@@ -460,6 +460,8 @@ struct DashboardUsage: Encodable {
     let compared: Bool
     /// For everything since the start, the first day Keyhop has usage for.
     let since: Date?
+    /// Estimated amount saved at current API prices by serving cached input tokens.
+    let cacheSavings: Double
     let series: [Series]
     let buckets: [Bucket]
     let toolSeries: [Series]
@@ -501,6 +503,9 @@ struct DashboardUsage: Encodable {
         previous = Figures(digest.previous)
         compared = range.hasPrevious
         since = range.since
+        cacheSavings = digest.byModel.reduce(0) { total, entry in
+            total + Pricing.cacheSavings(model: entry.key.model, tokens: entry.value.tokens)
+        }
 
         let calendar = Calendar.current
         let keyFormat = DateFormatter()

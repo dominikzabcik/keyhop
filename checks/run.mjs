@@ -207,7 +207,7 @@ async function checkApp(browser) {
   });
   const url = new URL(found);
   try {
-    return await walk({
+    const result = await walk({
       browser,
       origin: url.origin,
       screens: APP_SCREENS,
@@ -219,6 +219,63 @@ async function checkApp(browser) {
         return null;
       },
     });
+    // Hop is the app's fastest repeated path. Check its keyboard entry, live filtering,
+    // empty state and Enter-to-open behavior instead of relying only on static screenshots.
+    try {
+      await withPage(browser, APP_WIDTHS[1], async (page) => {
+        await page.goto(`${url.origin}/${url.hash}`, { waitUntil: "networkidle" });
+        await page.keyboard.press("Tab");
+        if ((await page.locator(":focus").innerText()) !== "Skip to content") throw new Error("skip control is not first in the focus order");
+        await page.keyboard.press("Enter");
+        if ((await page.locator(":focus").getAttribute("id")) !== "main") throw new Error("skip control did not focus the main content");
+        await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
+        const search = page.locator("#palette input");
+        await search.waitFor({ state: "visible" });
+        await search.fill("Usage");
+        const matches = page.locator("[data-palette]:visible");
+        if ((await matches.count()) < 1 || !(await matches.first().innerText()).includes("Usage")) {
+          throw new Error("search did not narrow Hop to the Usage section");
+        }
+        await search.press("Enter");
+        await page.waitForURL(/#usage$/);
+        await page.getByRole("heading", { name: "Usage", exact: true }).waitFor({ state: "visible" });
+
+        // Returning to Keyhop should refresh at once rather than showing figures up to 20 seconds old.
+        const resumed = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/state");
+        await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+        await resumed;
+
+        await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
+        await search.fill("no-such-account-or-section");
+        await page.getByText(/Nothing matches/).waitFor({ state: "visible" });
+        await page.keyboard.press("Escape");
+        if ((await page.locator("#palette").getAttribute("hidden")) === null) throw new Error("Escape did not close Hop");
+
+        // Hop stays at one physical anchor while section-specific tools change around it.
+        const rightEdges = [];
+        for (const section of ["overview", "usage", "settings"]) {
+          await page.locator(`#nav a[data-section="${section}"]`).click();
+          const box = await page.locator(".hop").boundingBox();
+          rightEdges.push(Math.round(box.x + box.width));
+        }
+        if (new Set(rightEdges).size !== 1) throw new Error(`Hop moved between sections: ${rightEdges.join(", ")}`);
+
+        // An update check gets a local wait and must not light the limits progress bar.
+        await page.route("**/api/update", async (route) => {
+          await new Promise((resolve) => setTimeout(resolve, 700));
+          await route.continue();
+        });
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.locator('[data-action="settings-pane"][data-value="app"]').click();
+        await page.getByText("Checking for updates…", { exact: true }).waitFor({ state: "visible" });
+        if (await page.locator("#top-meter").evaluate((meter) => meter.classList.contains("on"))) {
+          throw new Error("update check borrowed the limits progress bar");
+        }
+      });
+    } catch (error) {
+      result.found.push({ screen: "quick-hop", width: "laptop", kind: "interaction", detail: error.message });
+    }
+    return result;
   } finally {
     child.kill();
   }
@@ -257,7 +314,9 @@ async function phoneScreens() {
         target: "phone",
         screen: said.screen,
         title: said.title,
-        headings: [],
+        // A native navigation title is the screen's first-level heading even though XCTest records
+        // it separately from the visible accessibility text.
+        headings: said.title ? [{ level: 1, text: said.title }] : [],
         controls: (said.controls ?? []).map((text) => ({ text })),
         text: said.text ?? "",
         pressed: [],

@@ -39,18 +39,23 @@ final class ScreenTests: XCTestCase {
         shot.lifetime = .keepAlways
         add(shot)
 
-        let screen = app.frame
+        // A presented sheet is the screen under review. Scoping its tree keeps the season behind
+        // Alerts from being mistaken for part of the sheet's message.
+        let surface: XCUIElement = app.sheets.firstMatch.exists ? app.sheets.firstMatch : app.windows.firstMatch
+        let screen = surface.frame
         func texts(_ query: XCUIElementQuery) -> [String] {
             query.allElementsBoundByIndex
-                .filter { $0.exists && screen.contains($0.frame) }
+                // SwiftUI keeps the view behind a presented sheet in the accessibility tree. It
+                // is not hittable, which is the same distinction VoiceOver and a person get.
+                .filter { $0.exists && $0.isHittable && screen.contains($0.frame) }
                 .map { $0.label.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
         }
         let said: [String: Any] = [
             "screen": name,
-            "title": texts(app.navigationBars.staticTexts).first ?? name,
-            "text": texts(app.staticTexts).joined(separator: " · "),
-            "controls": Array(Set(texts(app.buttons) + texts(app.switches))).sorted(),
+            "title": texts(surface.navigationBars.staticTexts).first ?? name,
+            "text": texts(surface.staticTexts).joined(separator: " · "),
+            "controls": Array(Set(texts(surface.buttons) + texts(surface.switches))).sorted(),
         ]
         guard let folder = ProcessInfo.processInfo.environment["KEYHOP_SCREEN_TEXT"] ?? defaultFolder,
               let data = try? JSONSerialization.data(withJSONObject: said, options: [.prettyPrinted, .sortedKeys]) else { return }
@@ -108,6 +113,7 @@ final class ScreenTests: XCTestCase {
     func testTheSeasonScreenShowsLimitsSeasonAndQuests() {
         launch(["--sample"])
         XCTAssertTrue(app.staticTexts["Limits"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Season & limits"].exists)
         XCTAssertTrue(app.staticTexts["Quests"].exists)
         // A limit is only useful with its countdown next to it.
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] 'back in'")).count > 0
@@ -130,6 +136,7 @@ final class ScreenTests: XCTestCase {
     func testAlertsOpenAndEachSwitchSaysWhatItDoes() {
         launch(["--sample", "--show-alerts"])
         XCTAssertTrue(app.staticTexts["Alerts"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] 'Choose when Keyhop'")).count > 0)
         let switches = reachable(app.switches)
         XCTAssertGreaterThanOrEqual(switches.count, 2, "both alert settings have to be named and offered")
         XCTAssertTrue(switches.contains { $0.label.contains("limit comes back") }, "the limit alert is missing")

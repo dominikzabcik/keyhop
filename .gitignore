@@ -3,11 +3,15 @@
 .swiftpm/
 build/
 __pycache__/
+# Local editor state.
+.cursor/
 
 # Xcode, for the iOS app. The project is generated from project.yml, so it is not committed.
 *.xcodeproj/
 *.xcworkspace/
 DerivedData/
+# xcodebuild -derivedDataPath output from device builds.
+ios/build-device/
 xcuserdata/
 # xcodegen writes this from project.yml, so it is not a source.
 ios/Sources/Info.plist

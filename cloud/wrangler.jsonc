@@ -2,7 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "switchr",
   "main": "src/index.ts",
-  "compatibility_date": "2026-08-01",
+  // Latest date supported by the repository's pinned Workers test runtime.
+  "compatibility_date": "2026-08-22",
   // Served at https://keyhop.app, with the workers.dev address kept as a fallback. Per-version
   // preview URLs stay off. The Worker itself keeps its original name: renaming it would create a
   // different Worker and leave the live one, and its database, behind.

@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/dashboard.png" width="860" alt="The Keyhop dashboard with sample accounts: today's tokens and API value, each tool's account in use with its limits, today by hour and the last 7 days">
+  <img src="docs/dashboard.png" width="860" alt="The Keyhop dashboard with sample accounts: a limit, budget and outage alert, today's tokens beside an hour-by-hour dot matrix, the streak, API value, this week and the closest limit, then each tool's account in use">
 </p>
 
 <p align="center">
@@ -158,7 +158,7 @@ Keyhop keeps its own record of what every account uses.
 - **Smart Hop:** the recommendation combines remaining limit room, budget room, reset timing and projected runout, with stable tie-breaking so the same data always gives the same answer.
 
 <p align="center">
-  <img src="docs/dashboard-usage.png" width="860" alt="The dashboard's Usage section with sample data: tokens, API value, requests and cache share, a stacked chart by account, 26 weeks of activity, token mix, models and accounts">
+  <img src="docs/dashboard-usage.png" width="860" alt="The dashboard's Usage section with sample data: the 7-day token total with its API value and what prompt caching saved, a tile per tool with its share and trend, the top models, and tokens by day">
 </p>
 
 ## Leaderboards

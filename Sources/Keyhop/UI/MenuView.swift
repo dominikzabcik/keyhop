@@ -49,7 +49,7 @@ private struct ToolTabs: View {
     let namespace: Namespace.ID
 
     var body: some View {
-        HStack(spacing: 1) {
+        HStack(spacing: 3) {
             ForEach(Provider.allCases) { provider in
                 ToolTab(provider: provider, selected: provider == selection, namespace: namespace) {
                     withAnimation(.snappy(duration: 0.24)) { selection = provider }
@@ -69,20 +69,11 @@ private struct ToolTab: View {
     var body: some View {
         let lit = selected || hovering
         Button(action: action) {
-            // Nine tools in a 340-point menu leave no room for nine names, so only the tool being
-            // shown is named; the rest stand on their own marks.
-            HStack(spacing: 6) {
-                ProviderMark(provider: provider, tint: lit ? Brand.text : Brand.muted)
-                    .frame(width: 12, height: 12)
-                if selected {
-                    Text(provider.shortName)
-                        .font(.system(size: 12.5, weight: .medium))
-                        .fixedSize()
-                }
-            }
+            ProviderMark(provider: provider, tint: lit ? Brand.text : Brand.muted)
+                .frame(width: 14, height: 14)
             .foregroundStyle(lit ? Brand.text : Brand.muted)
             .frame(maxWidth: .infinity)
-            .frame(height: 30)
+            .frame(height: 32)
             .background {
                 if selected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -131,6 +122,19 @@ private struct ToolPanel: View {
         }()
 
         VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                ProviderMark(provider: provider, tint: Brand.text)
+                    .frame(width: 14, height: 14)
+                Text(provider.name)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(Brand.text)
+                Spacer(minLength: 8)
+                Text("\(accounts.count) \(accounts.count == 1 ? "account" : "accounts")")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(Brand.subtle)
+            }
+            .padding(.horizontal, 3)
+
             if store.addingFor == provider {
                 AddingPanel(provider: provider)
             } else if accounts.isEmpty {
@@ -560,23 +564,26 @@ private struct MenuFooter: View {
     @Environment(\.staticSnapshot) private var staticSnapshot
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             Button("Open Keyhop") { AppWindow.show() }
                 .buttonStyle(AppButtonStyle(kind: .primary, size: .small))
                 .help("Open Keyhop's window")
 
             Spacer(minLength: 8)
 
+            TimelineView(.periodic(from: .now, by: store.isRefreshing || tracker.isUpdating ? 0.25 : 30)) { context in
+                Text(updatedText(context.date))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(Brand.subtle)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .accessibilityLabel(updatedAccessibilityText(context.date))
+            }
+
             Button { store.refresh() } label: {
-                HStack(spacing: 6) {
-                    TimelineView(.animation(paused: !store.isRefreshing)) { context in
-                        Icon("refresh", size: 13)
-                            .rotationEffect(.degrees(store.isRefreshing ? context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360 : 0))
-                    }
-                    TimelineView(.periodic(from: .now, by: store.isRefreshing || tracker.isUpdating ? 0.25 : 30)) { context in
-                        Text(updatedText(context.date))
-                            .fixedSize()
-                    }
+                TimelineView(.animation(paused: !store.isRefreshing)) { context in
+                    Icon("refresh", size: 13)
+                        .rotationEffect(.degrees(store.isRefreshing ? context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360 : 0))
                 }
             }
             .buttonStyle(AppButtonStyle(kind: .ghost, size: .small))
@@ -637,11 +644,18 @@ private struct MenuFooter: View {
 
     private func updatedText(_ now: Date) -> String {
         if let step = store.progress.value { return step.brief }
-        if store.isRefreshing { return "Updating" }
-        if tracker.isUpdating { return "Reading usage" }
-        guard let last = store.lastRefresh else { return "Refresh" }
+        if store.isRefreshing { return "Refreshing limits…" }
+        if tracker.isUpdating { return "Reading usage…" }
+        guard let last = store.lastRefresh else { return "Not refreshed" }
         let minutes = Int(now.timeIntervalSince(last) / 60)
-        return minutes < 1 ? "Just now" : "\(minutes)m ago"
+        return minutes < 1 ? "Updated now" : "Updated \(minutes)m ago"
+    }
+
+    private func updatedAccessibilityText(_ now: Date) -> String {
+        if store.isRefreshing { return "Refreshing account limits" }
+        if tracker.isUpdating { return "Reading local usage" }
+        guard let last = store.lastRefresh else { return "Limits have not been refreshed" }
+        return "Limits updated \(last.formatted(.relative(presentation: .named)))"
     }
 }
 #endif

@@ -32,6 +32,14 @@ enum Pricing {
         return dollars * multiplier / 1_000_000
     }
 
+    /// What cache reads avoided at standard API prices, compared with paying the model's full
+    /// input rate for the same tokens. Cache writes are already included in `cost`; this number is
+    /// deliberately the read discount only, so it never claims savings a provider did not report.
+    static func cacheSavings(model: String, tokens: TokenCounts) -> Double {
+        guard let price = price(for: model), let cacheRead = price.cacheRead else { return 0 }
+        return Double(tokens.cacheRead) * max(0, price.input - cacheRead) / 1_000_000
+    }
+
     static func normalize(_ model: String) -> String {
         var name = model.lowercased().trimmingCharacters(in: .whitespaces)
         if let slash = name.lastIndex(of: "/") { name = String(name[name.index(after: slash)...]) }

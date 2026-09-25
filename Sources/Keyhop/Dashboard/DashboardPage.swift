@@ -48,6 +48,9 @@ enum DashboardPage {
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, Cantarell, "Noto Sans", sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   color-scheme: dark;
+  /* Only the named content surfaces transition. The browser's implicit `root` snapshot includes
+     the sidebar and cross-fades its old and new selection states over the moving thumb. */
+  view-transition-name: none;
 }
 
 * { box-sizing: border-box; }
@@ -61,6 +64,7 @@ body {
   overflow: hidden;
 }
 button, input, select { font: inherit; color: inherit; }
+button, a, input, select, summary { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: hsl(0 0% 100% / .12); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
@@ -74,6 +78,8 @@ button, input, select { font: inherit; color: inherit; }
 [data-count], .mono, .table td, .ranked-share, .tile-foot, .limit-top b, .quest-state { font-variant-numeric: tabular-nums; }
 .up { color: var(--good); }
 .down { color: var(--bad); }
+.skip-link { position: fixed; left: 12px; top: 12px; z-index: 100; padding: 8px 11px; border: 0; border-radius: 7px; background: var(--primary); color: var(--on-primary); font-weight: 600; cursor: pointer; transform: translateY(calc(-100% - 18px)); transition: transform .14s ease-out; }
+.skip-link:focus-visible { transform: translateY(0); }
 
 /* Shell */
 .shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); height: 100vh; }
@@ -82,12 +88,9 @@ button, input, select { font: inherit; color: inherit; }
 .brand svg { width: 17px; height: 17px; flex: none; }
 .brand b { font-weight: 650; font-size: 14px; letter-spacing: .01em; }
 .brand .badge { margin-left: auto; }
-.jump { display: flex; align-items: center; gap: 10px; margin: 12px 10px 0; height: 34px; padding: 0 8px 0 10px; border-radius: 8px; border: 1px solid hsl(0 0% 100% / .07); background: hsl(0 0% 100% / .025); color: var(--muted); font: inherit; font-weight: 520; cursor: pointer; transition: background .14s ease, color .14s ease, border-color .14s ease; }
-.jump:hover { background: hsl(0 0% 100% / .05); color: var(--text); border-color: hsl(0 0% 100% / .11); }
-.jump span { flex: 1; text-align: left; }
 /* Keys drawn as keys: a cap with a lip along its bottom edge. */
 kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; background: hsl(0 0% 100% / .07); box-shadow: inset 0 -1.5px 0 hsl(0 0% 100% / .09); color: var(--muted); font: 600 11px var(--sans); letter-spacing: .02em; }
-.nav { position: relative; isolation: isolate; display: grid; gap: 2px; padding: 6px 10px 12px; }
+.nav { position: relative; isolation: isolate; display: grid; gap: 2px; padding: 12px 10px; }
 .nav.has-thumb::before { content: ""; position: absolute; z-index: -1; left: 10px; right: 10px; top: 0; height: var(--nav-h); transform: translateY(var(--nav-y)); border-radius: 8px; background: hsl(0 0% 100% / .08); transition: transform .3s cubic-bezier(.3, .8, .25, 1); }
 .nav.no-slide::before { transition: none; }
 .nav.has-thumb a[aria-current="page"] { background: transparent; }
@@ -135,6 +138,10 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 /* Nothing scrolls under the top bar, so over the Field it simply gets out of the way. */
 .has-backdrop .topbar { background: transparent; border-bottom-color: transparent; }
 .topbar h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; }
+.top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.hop { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px 0 11px; border: 1px solid hsl(0 0% 100% / .1); border-radius: 8px; background: hsl(0 0% 100% / .045); color: var(--text); font-weight: 560; white-space: nowrap; cursor: pointer; transition: background-color .14s ease, border-color .14s ease, transform .08s ease-out; }
+.hop:hover { background: hsl(0 0% 100% / .08); border-color: hsl(0 0% 100% / .16); }
+.hop:active { transform: scale(.97); }
 /* The whole window's progress, along the bottom edge of the top bar. */
 .topbar .meter { position: absolute; left: 24px; right: 24px; bottom: -2px; height: 3px; background: transparent; opacity: 0; transition: opacity .25s ease; }
 .topbar .meter.on { opacity: 1; }
@@ -206,8 +213,8 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
 .btn:disabled { opacity: .45; cursor: default; }
 /* A press gives way a little; nothing moves on hover. */
-.btn:active:not(:disabled), .tabs button:active, button.tile:active, .jump:active { transform: scale(.975); }
-.btn, button.tile, .jump { transition-property: background, border-color, color, transform; transition-duration: .14s, .14s, .14s, .08s; }
+.btn:active:not(:disabled), .tabs button:active, button.tile:active { transform: scale(.975); }
+.btn, button.tile { transition-property: background, border-color, color, transform; transition-duration: .14s, .14s, .14s, .08s; }
 a.btn { text-decoration: none; }
 .main p a:not(.btn) { color: var(--text); text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -483,6 +490,17 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .kv .mono { overflow-wrap: anywhere; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .setting-row p { margin: 2px 0 0; color: var(--muted); }
+.settings-shell { display: grid; grid-template-columns: 176px minmax(0, 1fr); gap: 16px; align-items: start; }
+.settings-nav { position: sticky; top: 0; display: grid; gap: 3px; padding: 6px; }
+.settings-nav button { display: flex; align-items: center; gap: 9px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); text-align: left; cursor: pointer; transition: background-color .12s ease, color .12s ease; }
+.settings-nav button:hover { background: var(--hover); color: var(--text); }
+.settings-nav button[aria-current="page"] { background: hsl(0 0% 100% / .08); color: var(--text); }
+.settings-pane { display: grid; gap: 16px; min-width: 0; }
+.settings-intro { padding: 4px 2px 2px; }
+.settings-intro h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.settings-intro p { max-width: 62ch; margin: 4px 0 0; color: var(--muted); }
+.update-status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+.update-status .ring { width: 12px; height: 12px; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: turn .8s linear infinite; }
 
 /* Jump to */
 #palette { position: fixed; inset: 0; z-index: 40; }
@@ -492,6 +510,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes palette-in { from { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(.985); } }
 .palette-search { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 52px; border-bottom: 1px solid hsl(0 0% 100% / .06); color: var(--muted); }
+.palette-search:focus-within { box-shadow: inset 0 0 0 2px var(--focus); }
 .palette-search input { flex: 1; height: 100%; border: 0; background: transparent; outline: none; font-size: 15px; color: var(--text); }
 .palette-search input::placeholder { color: var(--subtle); }
 .palette-list { overflow-y: auto; padding: 6px; }
@@ -557,6 +576,10 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   .main { overflow: visible; }
   .stats, .limits, .account-row, .tool-row { grid-template-columns: 1fr; }
   .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .top-actions { flex: 1; flex-wrap: wrap; }
+  .hop kbd { display: none; }
+  .settings-shell { grid-template-columns: 1fr; }
+  .settings-nav { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kv { grid-template-columns: 1fr; gap: 2px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -564,9 +587,14 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   /* A bar that can't travel would read as stuck part-way, so the words carry it alone. */
   .meter.unknown > span { display: none; }
 }
+@media (prefers-reduced-transparency: reduce) {
+  .has-backdrop .card, .has-glass .tip, .has-glass .toast { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .has-backdrop .card { background: hsl(0 0% 10% / .98); }
+}
 </style>
 </head>
 <body>
+<button class="skip-link" type="button" data-action="skip-content">Skip to content</button>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   {{marks}}
   {{icons}}
@@ -579,7 +607,6 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       <b>Keyhop</b>
       <span id="mode"></span>
     </div>
-    <button class="jump" data-action="palette" aria-keyshortcuts="Meta+K Control+K"><svg class="icon"><use href="#i-hop"/></svg><span>Jump to</span><kbd id="jump-key">⌘K</kbd></button>
     <nav class="nav" id="nav" aria-label="Sections">
       <a href="#overview" data-section="overview"><svg><use href="#i-overview"/></svg>Overview</a>
       <a href="#accounts" data-section="accounts"><svg><use href="#i-accounts"/></svg>Accounts</a>
@@ -590,13 +617,12 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     </nav>
     <div class="sidebar-foot">
       <button class="foot-row" id="refresh" data-action="refresh"><svg class="icon"><use href="#i-refresh"/></svg><span style="flex:1"><b>Refresh</b><small id="read">Limits not read yet</small><span class="meter" id="foot-meter" hidden><span></span></span></span></button>
-      <button class="foot-row" data-action="goto" data-section="settings"><svg class="icon"><use href="#i-update"/></svg><span><b id="update-title">Check for updates</b><small id="version"></small></span></button>
     </div>
   </aside>
   <div class="content">
     <div class="backdrop" id="backdrop" aria-hidden="true"></div>
-    <header class="topbar"><h1 id="title">Overview</h1><div class="toolbar" id="toolbar"></div><div class="meter" id="top-meter" role="progressbar" aria-label="Keyhop is reading" aria-hidden="true"><span></span></div></header>
-    <main class="main" id="main"><div class="page"><p class="lede busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span>Reading your accounts</p></div></main>
+    <header class="topbar"><h1 id="title">Overview</h1><div class="top-actions"><div class="toolbar" id="toolbar"></div><button class="hop" type="button" data-action="palette" aria-keyshortcuts="Meta+K Control+K" aria-haspopup="dialog" aria-controls="palette"><svg class="icon" aria-hidden="true"><use href="#i-hop"/></svg><span>Hop</span><kbd id="hop-key">⌘K</kbd></button></div><div class="meter" id="top-meter" role="progressbar" aria-label="Keyhop is reading" aria-hidden="true"><span></span></div></header>
+    <main class="main" id="main" tabindex="-1" aria-busy="true"><div class="page"><p class="lede busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span>Reading your accounts…</p></div></main>
   </div>
 </div>
 <div class="tip" id="tip" hidden></div>
@@ -629,10 +655,11 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     range: "week", rangeOpen: false, metric: "tokens", tool: "all", group: "account", breakdown: "periods", allPeriods: false,
     boardPeriod: "week", boardMetric: "tokens", boardTeam: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
+    settingsPane: "general", checkingUpdate: false,
     pending: new Map(), loadingUsage: 0,
   };
   history.replaceState(null, "", "#" + ui.section);
-  const data = { state: boot?.state || null, usage: {}, doctor: null, update: null, updateError: null };
+  const data = { state: boot?.state || null, usage: {}, usageErrors: {}, doctor: null, update: null, updateError: null };
   if (isStatic) for (const [range, doc] of Object.entries(boot.usage || {})) data.usage[range + ":all"] = doc;
 
   // MARK: Formatting
@@ -650,10 +677,11 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     count(n) { return Math.round(n || 0).toLocaleString("en-US"); },
     relative(date) {
       const s = Math.round((Date.now() - new Date(date)) / 1000);
-      if (s < 60) return "just now";
-      if (s < 3600) return Math.floor(s / 60) + " min ago";
-      if (s < 86400) return Math.floor(s / 3600) + " h ago";
-      return Math.floor(s / 86400) + " d ago";
+      const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto", style: "narrow" });
+      if (s < 60) return formatter.format(0, "second");
+      if (s < 3600) return formatter.format(-Math.floor(s / 60), "minute");
+      if (s < 86400) return formatter.format(-Math.floor(s / 3600), "hour");
+      return formatter.format(-Math.floor(s / 86400), "day");
     },
     until(date) {
       const s = Math.max(0, Math.round((new Date(date) - Date.now()) / 1000));
@@ -698,10 +726,19 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   // MARK: Data
 
   async function api(path, body) {
-    const init = { method: body === undefined ? "GET" : "POST", headers: { Authorization: "Bearer " + token } };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+    const init = { method: body === undefined ? "GET" : "POST", headers: { Authorization: "Bearer " + token }, signal: controller.signal };
     if (body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(body); }
     let response;
-    try { response = await fetch(path, init); } catch { throw new Error("Keyhop isn't running anymore. Open it again from the tray or with keyhop dashboard."); }
+    try {
+      response = await fetch(path, init);
+    } catch (error) {
+      if (error.name === "AbortError") throw new Error("Keyhop took too long to answer. Try again.");
+      throw new Error("Keyhop isn't running anymore. Open it again from the tray or with keyhop dashboard.");
+    } finally {
+      clearTimeout(timeout);
+    }
     let payload = {};
     try { payload = await response.json(); } catch {}
     if (!response.ok) throw new Error(payload.error || `Keyhop answered ${response.status}.`);
@@ -723,6 +760,10 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     if (first) { ui.loadingUsage = (ui.loadingUsage || 0) + 1; watchActivity(); }
     try {
       data.usage[key] = await api(`/api/usage?range=${encodeURIComponent(range)}&tool=${encodeURIComponent(tool)}`);
+      delete data.usageErrors[key];
+    } catch (error) {
+      data.usageErrors[key] = error.message;
+      if (!data.usage[key]) throw error;
     } finally {
       if (first) ui.loadingUsage -= 1;
     }
@@ -741,6 +782,23 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       .finally(() => { servicesLoading = false; });
   }
 
+  // Release checks have their own state. They never borrow the limits progress bar or make the
+  // rest of the window look busy.
+  async function loadUpdate(force = false) {
+    if (isStatic || ui.checkingUpdate || (!force && (data.update || data.updateError))) return;
+    ui.checkingUpdate = true;
+    data.updateError = null;
+    if (ui.section === "settings") render();
+    try {
+      data.update = await api("/api/update");
+    } catch (error) {
+      data.updateError = error.message;
+    } finally {
+      ui.checkingUpdate = false;
+      if (ui.section === "settings") render();
+    }
+  }
+
   async function loadSection() {
     try {
       if (ui.section === "overview") { loadServices(); await Promise.all([loadUsage("today"), loadUsage("week")]); }
@@ -755,8 +813,9 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         }
       }
       if (ui.section === "settings" && !isStatic) {
-        data.doctor = await api("/api/doctor");
-        try { data.update = await api("/api/update"); data.updateError = null; } catch (error) { data.updateError = error.message; }
+        const doctor = api("/api/doctor");
+        loadUpdate();
+        data.doctor = await doctor;
       }
     } catch (error) {
       ui.offline = error.message;
@@ -934,7 +993,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         }
       }
       items.push({ group: "Do", label: "Read limits and usage now", icon: "refresh", run: () => { if (!data.state?.refreshing) act(null, () => { data.state.refreshing = true; renderActivity(); return api("/api/refresh", {}); }); } });
-      items.push({ group: "Do", label: "Check for updates", icon: "update", run: () => go("settings") });
+      items.push({ group: "Do", label: "Check for updates", icon: "update", run: () => { ui.settingsPane = "app"; go("settings"); } });
     }
     return items;
   }
@@ -947,7 +1006,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     render();
   }
 
-  if ($("#jump-key")) $("#jump-key").textContent = isMac ? "⌘K" : "Ctrl K";
+  if ($("#hop-key")) $("#hop-key").textContent = isMac ? "⌘K" : "Ctrl K";
 
   function openPalette() {
     palette = { query: "", index: 0 };
@@ -983,8 +1042,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     if (!host.firstElementChild) {
       host.hidden = false;
       host.innerHTML = `<div class="palette-scrim" data-palette-close></div>
-        <div class="palette" role="dialog" aria-modal="true" aria-label="Jump to">
-          <label class="palette-search"><svg class="icon"><use href="#i-hop"/></svg><input type="text" autocomplete="off" spellcheck="false" placeholder="Jump to a section, range, tool or account" aria-label="Jump to"></label>
+        <div class="palette" role="dialog" aria-modal="true" aria-label="Hop">
+          <label class="palette-search"><svg class="icon"><use href="#i-hop"/></svg><input type="text" name="hop-search" autocomplete="off" spellcheck="false" placeholder="Search sections, ranges, tools, or accounts…" aria-label="Search Hop"></label>
           <div class="palette-list" role="listbox"></div>
           <div class="palette-foot"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>esc</kbd> close</span></div>
         </div>`;
@@ -1023,6 +1082,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     $("#toolbar").innerHTML = page.toolbar || "";
     const offline = ui.offline ? `<div class="notice">${icon("alert")}<div><p>${esc(ui.offline)}</p></div></div>` : "";
     $("#main").innerHTML = `<div class="page">${offline}${page.body}</div>`;
+    $("#main").setAttribute("aria-busy", (ui.loadingUsage || data.state.refreshing) ? "true" : "false");
     applyPending();
     renderActivity();
     animate();
@@ -1049,12 +1109,14 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const read = state?.status?.refreshedAt;
     const label = step ? `${step.title}${step.count ? ` · ${step.count}` : ""}` : state?.refreshing ? "Starting…" : ui.loadingUsage ? "Reading usage" : read ? `Limits read ${fmt.relative(read)}` : "Limits not read yet";
     $("#read").textContent = label;
+    $("#main")?.setAttribute("aria-busy", busyNow ? "true" : "false");
     for (const meter of [$("#foot-meter"), $("#top-meter")]) {
       if (!meter) continue;
       const known = step?.fraction != null;
       meter.classList.toggle("unknown", busyNow && !known);
       meter.firstElementChild.style.width = known ? `${(step.fraction * 100).toFixed(1)}%` : "";
       if (meter.id === "foot-meter") meter.hidden = !busyNow; else meter.classList.toggle("on", busyNow);
+      meter.setAttribute("aria-hidden", busyNow ? "false" : "true");
       if (known) meter.setAttribute("aria-valuenow", Math.round(step.fraction * 100)); else meter.removeAttribute("aria-valuenow");
     }
     for (const node of document.querySelectorAll("[data-loading]")) node.innerHTML = loadingInner(node.dataset.loading);
@@ -1119,8 +1181,6 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     $("#refresh").classList.toggle("spin", !!state?.refreshing);
     $("#refresh").setAttribute("aria-busy", state?.refreshing ? "true" : "false");
     renderActivity();
-    $("#update-title").textContent = data.update?.available ? `Update to ${data.update.latest}` : "Check for updates";
-    $("#version").textContent = state ? `v${state.version} · ${state.platform}` : "";
     labelNav();
     slideNav();
   }
@@ -1362,11 +1422,13 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       + `<select class="field" data-action="tool" aria-label="Tool" ${isStatic ? "disabled" : ""}>${[["all", "All tools"], ...tools.map((t) => [t.id, t.name])].map(([v, l]) => `<option value="${v}" ${v === ui.tool ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
     const usage = data.usage[`${ui.range}:${ui.tool}`] || (isStatic ? data.usage[`${ui.range}:all`] : null);
     if (!usage) return { toolbar, body: `<div class="card">${loading("Reading usage", "empty")}</div>` };
+    const stale = data.usageErrors[`${ui.range}:${ui.tool}`]
+      ? `<div class="notice">${icon("alert")}<div><b>Showing the last complete reading</b><p>${esc(data.usageErrors[`${ui.range}:${ui.tool}`])}</p></div></div>` : "";
 
     const t = usage.total;
     const top = `<div class="usage-top">${totalCard(usage)}${summaryCard(usage)}</div>`;
     if (!t.requests) {
-      return { toolbar, body: `${top}<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code, Codex, Gemini CLI, OpenCode and Pi records on this computer, and Cursor's usage export after a refresh.</p></div>${heatCard(usage)}` };
+      return { toolbar, body: `${stale}${top}<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code, Codex, Gemini CLI, OpenCode and Pi records on this computer, and Cursor's usage export after a refresh.</p></div>${heatCard(usage)}` };
     }
     const grouped = chartGroup(usage);
     // The legend doubles as a filter: each entry hides or shows its part of every bar.
@@ -1380,7 +1442,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       <div class="card-head"><h2>Token mix</h2><span class="hint mono">${fmt.tokens(t.tokens)}</span></div>
       <div class="card-body">${mixBlock(t)}</div>
     </section>`;
-    return { toolbar, body: `${top}${chart}<div class="split wide-left">${heatCard(usage)}${mix}</div>${breakdownCard(usage)}` };
+    return { toolbar, body: `${stale}${top}${chart}<div class="split wide-left">${heatCard(usage)}${mix}</div>${breakdownCard(usage)}` };
   }
 
   // The range's total, exact, set large; what it was worth; and how it splits across tools, or
@@ -1395,6 +1457,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       tokens ? `${fmt.usd(t.cost)} at API prices` : `${fmt.tokens(t.tokens)} tokens`,
       `${fmt.count(t.requests)} requests`,
       inputSide ? `${Math.round((t.cacheRead / inputSide) * 100)}% from cache` : "",
+      usage.cacheSavings > 0 ? `${fmt.usd(usage.cacheSavings)} saved by prompt caching` : "",
       t.billed > 0 ? `${fmt.usd(t.billed)} billed on demand` : "",
     ].filter(Boolean);
     const before = usage.compared === false
@@ -1951,7 +2014,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       image: "Your picture, softly behind everything.",
       off: "A plain surface.",
     }[look.scene];
-    return `<section class="card"><div class="card-head"><h2>Appearance</h2><span class="hint">The scene behind this window</span></div>
+    return `<section class="card"><div class="card-head"><h2>Backdrop</h2><span class="hint">Window scene & material</span></div>
       <div class="list">
         <div class="row setting-row"><div><b>Scene</b><p>${about}</p></div>${pick("scene", [["leaves", "Leaves"], ["dunes", "Dunes"], ["orbit", "Orbit"], ["arcade", "Arcade"], ["image", "Picture"], ["off", "Off"]], look.scene)}</div>
         <div class="row setting-row"><div><b>Show on</b><p>${look.scope === "overview" ? "Only behind Overview." : "Behind every section."}</p></div>${pick("scope", [["all", "Everywhere"], ["overview", "Overview only"]], look.scope)}</div>
@@ -2144,33 +2207,37 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const state = data.state, doctor = data.doctor, update = data.update;
     let updateRow;
     if (isStatic) updateRow = `<div class="setting-row"><div><b>Version</b><p>Saved from Keyhop ${esc(state.version)}</p></div></div>`;
-    else if (data.updateError) updateRow = `<div class="setting-row"><div><b>Updates</b><p>${esc(data.updateError)}</p></div><button class="btn sm secondary" data-action="check-update">Try again</button></div>`;
-    else if (!update) updateRow = `<div class="setting-row"><div><b>Checking for a new version</b>${busy("Asking GitHub for the latest release", "busy-note")}</div></div>`;
-    else if (update.available) updateRow = `<div class="setting-row"><div><b>Keyhop ${esc(update.latest)} is available</b><p>You have ${esc(update.current)}. The download is checked against its SHA-256 before it installs.</p></div><button class="btn sm" data-action="install-update">Install update</button></div>`;
-    else updateRow = `<div class="setting-row"><div><b>Up to date</b><p>Keyhop ${esc(update.current)} is the latest version.</p></div><button class="btn sm secondary" data-action="check-update">Check again</button></div>`;
+    else if (ui.checkingUpdate) updateRow = `<div class="setting-row"><div><b>Checking for updates…</b><p class="update-status" role="status"><span class="ring" aria-hidden="true"></span>Asking GitHub for the latest release</p></div></div>`;
+    else if (data.updateError) updateRow = `<div class="setting-row"><div><b>Couldn’t check for updates</b><p>${esc(data.updateError)} Try again when you’re connected.</p></div><button class="btn sm secondary" data-action="check-update">Try Again</button></div>`;
+    else if (update?.available) updateRow = `<div class="setting-row"><div><b>Keyhop ${esc(update.latest)} is available</b><p>You have ${esc(update.current)}. The download is checked against its SHA-256 before it installs.</p></div><button class="btn sm" data-action="install-update">Install Update</button></div>`;
+    else if (update) updateRow = `<div class="setting-row"><div><b>Keyhop is up to date</b><p>Version ${esc(update.current)} is the latest release.</p></div><button class="btn sm secondary" data-action="check-update">Check Again</button></div>`;
+    else updateRow = `<div class="setting-row"><div><b>Keyhop ${esc(state.version)}</b><p>Update checks run separately from limit and usage refreshes.</p></div><button class="btn sm secondary" data-action="check-update">Check for Updates</button></div>`;
 
     const tools = doctor ? `<div class="list">${doctor.tools.map((t) => `<div class="row">
         <div class="who">${mark(t.id)}<div><b>${esc(t.name)}</b><small>${t.signedInAs ? `Signed in as ${esc(t.signedInAs)}` : t.problem ? esc(t.problem) : t.installed ? "Signed out" : "Not found on this computer"}</small></div></div>
         <div class="mono subtle" style="margin:8px 0 0 30px;overflow-wrap:anywhere">${esc(t.loginLocation)}</div>
       </div>`).join("")}</div>` : (isStatic ? `<p class="empty">Not included in a saved page.</p>` : busy("Looking for tools on this computer", "empty"));
 
-    return { body: `
-      ${!isStatic && state.cloud?.available ? cloudCard(state.cloud) : ""}
-      ${isStatic ? "" : workCard(state.work)}
-      ${isStatic ? "" : appearanceCard()}
-      <section class="card"><div class="card-head"><h2>Updates</h2></div><div class="card-body">${updateRow}</div></section>
-      <div class="split">
-        <section class="card"><div class="card-head"><h2>Tools on this computer</h2></div>${tools}</section>
-        <section class="card"><div class="card-head"><h2>Storage and privacy</h2></div>
-          <div class="list">
-            <div class="row kv"><span>Data folder</span><span class="mono">${esc(doctor?.dataDirectory || state.dataDirectory)}</span></div>
-            <div class="row kv"><span>Saved logins</span><span>${esc(doctor ? `${doctor.savedAccounts} in ${doctor.secretStore}` : state.status.secretStore)}</span></div>
-            ${doctor?.prices ? `<div class="row kv"><span>Model prices</span><span>${fmt.count(doctor.prices.models)} models, ${doctor.prices.updated ? `from models.dev ${esc(ago(doctor.prices.updated))}` : "built into this release"}</span></div>` : ""}
-            <div class="row kv"><span>Network</span><span>The providers' own usage and sign-in services, their public status pages, models.dev for prices once a day, GitHub for updates${state.cloud?.linked ? `, and Keyhop cloud for your daily totals${state.cloud.sharesLimits ? " and current limits" : ""}` : ""}. No analytics.</span></div>
-            <div class="row kv"><span>This window</span><span>Served by keyhop on 127.0.0.1 only, with a private session key.</span></div>
-          </div>
-        </section>
-      </div>` };
+    const privacy = `<section class="card"><div class="card-head"><h2>Storage & Privacy</h2></div>
+      <div class="list">
+        <div class="row kv"><span>Data folder</span><span class="mono">${esc(doctor?.dataDirectory || state.dataDirectory)}</span></div>
+        <div class="row kv"><span>Saved logins</span><span>${esc(doctor ? `${doctor.savedAccounts} in ${doctor.secretStore}` : state.status.secretStore)}</span></div>
+        ${doctor?.prices ? `<div class="row kv"><span>Model prices</span><span>${fmt.count(doctor.prices.models)} models, ${doctor.prices.updated ? `from models.dev ${esc(ago(doctor.prices.updated))}` : "built into this release"}</span></div>` : ""}
+        <div class="row kv"><span>Network</span><span>Provider usage and sign-in services, public status pages, models.dev for prices, GitHub for updates${state.cloud?.linked ? `, and Keyhop cloud for your daily totals${state.cloud.sharesLimits ? " and current limits" : ""}` : ""}. No analytics.</span></div>
+        <div class="row kv"><span>This window</span><span>Served by Keyhop on 127.0.0.1 with a private session key.</span></div>
+      </div></section>`;
+    const panes = {
+      general: `<div class="settings-intro"><h2>Window Appearance</h2><p>Choose how Keyhop sits alongside the rest of your Mac.</p></div>${isStatic ? "" : appearanceCard()}`,
+      activity: `<div class="settings-intro"><h2>Activity</h2><p>Control what Keyhop reads locally and see where each tool is signed in.</p></div>${isStatic ? "" : workCard(state.work)}<section class="card"><div class="card-head"><h2>Tools on This Mac</h2></div>${tools}</section>`,
+      cloud: `<div class="settings-intro"><h2>Keyhop Cloud</h2><p>Manage the optional leaderboard and the data shared with it.</p></div>${cloudCard(state.cloud)}`,
+      app: `<div class="settings-intro"><h2>App & Privacy</h2><p>Version ${esc(state.version)} on ${esc(state.platform)}. Updates and limit refreshes stay independent.</p></div><section class="card"><div class="card-head"><h2>Updates</h2></div><div class="card-body">${updateRow}</div></section>${privacy}`,
+    };
+    if (ui.settingsPane === "cloud" && (isStatic || !state.cloud?.available)) ui.settingsPane = "general";
+    const choices = [["general", "settings", "Appearance"], ["activity", "usage", "Activity"]];
+    if (!isStatic && state.cloud?.available) choices.push(["cloud", "leaderboard", "Cloud"]);
+    choices.push(["app", "update", "App & Privacy"]);
+    const nav = choices.map(([value, glyph, label]) => `<button type="button" data-action="settings-pane" data-value="${value}" aria-current="${value === ui.settingsPane ? "page" : "false"}">${icon(glyph)}<span>${label}</span></button>`).join("");
+    return { body: `<div class="settings-shell"><nav class="card settings-nav" aria-label="Settings categories">${nav}</nav><div class="settings-pane">${panes[ui.settingsPane]}</div></div>` };
   }
 
   // MARK: Overlays
@@ -2285,6 +2352,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     switch (el.dataset.action) {
       case "palette": openPalette(); break;
       case "goto": go(el.dataset.section); break;
+      case "skip-content": $("#main")?.focus(); break;
+      case "settings-pane": ui.settingsPane = el.dataset.value; render(); break;
       case "refresh":
         if (data.state?.refreshing) break;
         act(null, () => { data.state.refreshing = true; renderActivity(); return api("/api/refresh", {}); });
@@ -2341,7 +2410,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       case "edit-budget": ui.budgetEdit = el.dataset.scope; render(); $("form[data-form=budget] input[name=amount]")?.focus(); break;
       case "cancel-budget": ui.budgetEdit = null; render(); break;
       case "delete-budget": act(el, () => api("/api/budget", { scope: el.dataset.scope === "all" ? "all" : el.dataset.scope.replace("account:", ""), amount: null })); break;
-      case "check-update": data.update = null; data.updateError = null; render(); await loadSection(); render(); break;
+      case "check-update": await loadUpdate(true); break;
       case "install-update": act(el, () => api("/api/update", {}), "Installing"); break;
       case "cloud-link": act(el, () => api("/api/cloud/link", {}), "Opening GitHub"); break;
       case "cloud-sync": act(el, () => api("/api/cloud/sync", {}), "Syncing"); break;
@@ -2460,7 +2529,19 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     if (event.key === "Escape" && (ui.editing || ui.confirming || ui.budgetEdit)) { ui.editing = ui.confirming = ui.budgetEdit = null; render(); }
   });
   const followVisibility = () => document.documentElement.toggleAttribute("data-away", document.hidden);
-  document.addEventListener("visibilitychange", followVisibility);
+  async function resumeRefresh() {
+    followVisibility();
+    if (document.hidden || isStatic || !data.state) return;
+    try {
+      await loadState();
+      if (ui.section === "overview" || ui.section === "usage") await loadSection();
+      if (!editing()) render(); else renderSidebar();
+    } catch (error) {
+      ui.offline = error.message;
+      if (!editing()) render();
+    }
+  }
+  document.addEventListener("visibilitychange", resumeRefresh);
   followVisibility();
   addEventListener("hashchange", () => {
     const section = location.hash.slice(1);

@@ -282,6 +282,7 @@ final class DashboardTests: XCTestCase {
         XCTAssertFalse(usage.tools.isEmpty)
         XCTAssertFalse(usage.models.contains { $0.tool.isEmpty })
         XCTAssertFalse(usage.sessions.isEmpty)
+        XCTAssertGreaterThan(usage.cacheSavings, 0)
     }
 
     /// Stopping a wait for a new login puts the tool back on the account it had.
@@ -342,6 +343,22 @@ final class DashboardTests: XCTestCase {
         XCTAssertFalse(page.contains("{{mark-"))
         XCTAssertFalse(page.contains("{{boot}}"))
         XCTAssertFalse(page.contains("—"))
+    }
+
+    func testThePageCarriesTheResilientDashboardContract() {
+        let page = DashboardPage.render(boot: nil)
+        for marker in [
+            ">Hop<", "Search sections, ranges, tools, or accounts", "Skip to content",
+            "cacheSavings", "aria-haspopup=\"dialog\"", "AbortController", "checkingUpdate", "settingsPane",
+            "startViewTransition", "prefers-reduced-motion", "prefers-reduced-transparency",
+            "view-transition-name: none",
+            "usageErrors", "Showing the last complete reading",
+            "RelativeTimeFormat", "resumeRefresh", "No saved",
+        ] {
+            XCTAssertTrue(page.contains(marker), marker)
+        }
+        XCTAssertFalse(page.contains("transition: all"))
+        XCTAssertFalse(page.contains(#"<tr class="clickable""#))
     }
 
     func testStaticSampleExportHasEveryRange() async throws {

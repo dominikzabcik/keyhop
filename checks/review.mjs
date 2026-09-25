@@ -77,7 +77,7 @@ const QUESTIONS = {
   },
   empty_parts_say_why: {
     wants: "yes",
-    question: noul("Does every empty list or missing figure on this screen say what would fill it?", {
+    question: noul("Does every explicitly empty list or missing figure on this screen say what would fill it? Do not infer an empty part merely because a section is absent from this accessibility transcript.", {
       true: "Each empty part explains what would put something there, or nothing on the screen is empty.",
       false: "Something is empty and the screen does not say what would fill it.",
     }),
@@ -85,6 +85,17 @@ const QUESTIONS = {
   a_stranger_could_use_it: {
     wants: "yes",
     question: noul("Could someone who has never seen Keyhop tell what to do on this screen without help?"),
+  },
+  avoids_overload: {
+    wants: "yes",
+    question: noul("Does this screen keep related information together and avoid presenting too many unrelated choices at once?", {
+      true: "The screen has a clear hierarchy, or it is short enough that grouping is unnecessary.",
+      false: "Unrelated settings, facts or actions compete without a clear grouping or priority.",
+    }),
+  },
+  status_and_actions_are_distinct: {
+    wants: "yes",
+    question: noul("Can a first-time reader distinguish status text from controls they can press?"),
   },
   clarity: {
     wants: "score",
@@ -169,7 +180,8 @@ export async function review(readings) {
     // Which part is weakest is a forced choice between four: on a page that is mostly prose, the
     // body wins whatever its quality. It is only worth raising about a screen that reads poorly,
     // so the two answers are combined here rather than reported apart.
-    const readsPoorly = (answers.clarity?.score ?? 3) < 2.5;
+    const readsPoorly = (answers.clarity?.score ?? 3) < 2.5
+      && (answers.clarity?.confidence ?? 1) >= CERTAIN;
 
     for (const [name, answer] of Object.entries(answers)) {
       let { text, passed, unsure } = verdict(QUESTIONS[name].wants, answer);

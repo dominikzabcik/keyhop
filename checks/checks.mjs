@@ -69,6 +69,8 @@ export async function readScreen(page) {
     return {
       title: document.title,
       description: document.querySelector('meta[name="description"]')?.content ?? null,
+      rootViewTransition: getComputedStyle(document.documentElement).viewTransitionName,
+      hasSidebarNavigation: !!document.querySelector("#nav"),
       headings,
       controls,
       overflow,
@@ -125,6 +127,12 @@ export function faults({ screen, width, reading, status, consoleErrors, failedRe
   for (const one of reading.imagesWithoutText) fault("image-without-text", one);
   for (const one of reading.namelessControls) fault("control-without-name", one);
 
+  // The default root view-transition snapshot includes fixed navigation chrome. On Keyhop's
+  // dashboard that duplicates the sidebar while its selection thumb moves, causing a bright flash.
+  if (reading.hasSidebarNavigation && reading.rootViewTransition !== "none") {
+    fault("motion", `sidebar is captured by the ${reading.rootViewTransition || "default"} view transition`);
+  }
+
   const h1s = reading.headings.filter((h) => h.level === 1);
   if (h1s.length === 0 && reading.textLength > 200) fault("headings", "no first-level heading");
   if (h1s.length > 1) fault("headings", `${h1s.length} first-level headings`);
@@ -180,6 +188,7 @@ export async function pokeControls(page, screen) {
       before = await page.evaluate(() => ({
         html: document.body.innerHTML.length + ":" + document.body.innerText.length,
         url: location.href,
+        focus: document.activeElement?.id || document.activeElement?.getAttribute?.("data-action") || document.activeElement?.tagName,
       }));
     } catch {
       continue;
@@ -195,6 +204,7 @@ export async function pokeControls(page, screen) {
       after = await page.evaluate(() => ({
         html: document.body.innerHTML.length + ":" + document.body.innerText.length,
         url: location.href,
+        focus: document.activeElement?.id || document.activeElement?.getAttribute?.("data-action") || document.activeElement?.tagName,
         said: document.querySelector("#toast:not(.away), [role=status]")?.textContent?.trim() ?? "",
       }));
     } catch {
@@ -202,7 +212,7 @@ export async function pokeControls(page, screen) {
       pressed.push(label);
       continue;
     }
-    if (before.html === after.html && before.url === after.url && !after.said) {
+    if (before.html === after.html && before.url === after.url && before.focus === after.focus && !after.said) {
       dead.push({ screen: screen.name, width: "laptop", kind: "dead-control", detail: `"${label}" does nothing when pressed` });
     }
     pressed.push(label);

@@ -1,0 +1,19 @@
+PackageIdentifier: dominikzabcik.Keyhop
+PackageVersion: 0.13.0
+PackageLocale: en-US
+Publisher: dominikzabcik
+PublisherUrl: https://github.com/dominikzabcik
+PackageName: Keyhop
+PackageUrl: https://github.com/dominikzabcik/keyhop
+License: MIT
+LicenseUrl: https://github.com/dominikzabcik/keyhop/blob/main/LICENSE
+ShortDescription: Switch AI coding accounts in one click and track exact usage where available.
+Tags:
+  - claude
+  - cursor
+  - codex
+  - gemini
+  - accounts
+  - usage
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

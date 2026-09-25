@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.13.0]
 
 - Keyhop's window, menu and welcome window go back to the system typeface (SF Pro on a Mac), in regular, medium and semibold only, on a calmer size scale. Basteleur is gone. Every figure that changes, from the total counting up to a limit's percentage, uses digits of one width, so a number never shifts what stands beside it.
 - Jump to is now Hop, on Cmd-K or Ctrl-K. It searches sections, ranges, tools and accounts, and its button stays in the same place on every section.

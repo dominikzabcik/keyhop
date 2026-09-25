@@ -40,10 +40,10 @@ struct SeasonView: View {
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 8) {
                         HopMark(size: 16, hopping: store.loading, period: 0.9)
-                        Text("Keyhop").font(.ui(16, .semibold, .headline)).foregroundStyle(Brand.text)
+                        Text("Season & limits").font(.ui(16, .semibold, .headline)).foregroundStyle(Brand.text)
                     }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(store.loading ? "Keyhop, updating" : "Keyhop")
+                    .accessibilityLabel(store.loading ? "Season and limits, updating" : "Season and limits")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -224,7 +224,7 @@ struct SeasonView: View {
                     }
                 } else {
                     CardHead(title: "Season")
-                    Text("No season to show yet.")
+                    Text("No season to show yet. Pull down to check keyhop.app again.")
                         .font(.ui(13, .regular, .footnote))
                         .foregroundStyle(Brand.muted)
                 }
@@ -249,6 +249,8 @@ struct SeasonView: View {
                 }
                 .padding(18)
             }
+        } else {
+            emptyCard("Quests", "New quests appear when Keyhop reads the current season. Pull down to check again.")
         }
     }
 
@@ -269,6 +271,8 @@ struct SeasonView: View {
                 }
                 .padding(18)
             }
+        } else {
+            emptyCard("Badges", "Milestones fill this list as you use Keyhop across a season.")
         }
     }
 
@@ -287,6 +291,21 @@ struct SeasonView: View {
                 }
                 .padding(18)
             }
+        } else {
+            emptyCard("This week", "No standings yet. Sync this week's usage from a linked computer to take a place.")
+        }
+    }
+
+    private func emptyCard(_ title: String, _ message: String) -> some View {
+        Card {
+            VStack(alignment: .leading, spacing: 6) {
+                CardHead(title: title)
+                Text(message)
+                    .font(.ui(12.5, .regular, .footnote))
+                    .foregroundStyle(Brand.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(18)
         }
     }
 }

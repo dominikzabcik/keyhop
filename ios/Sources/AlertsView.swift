@@ -11,6 +11,12 @@ struct AlertsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
+                    Text("Choose when Keyhop should remind you about an account or season.")
+                        .font(.ui(13, .regular, .footnote))
+                        .foregroundStyle(Brand.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 4)
                     if store.notificationsAllowed == false {
                         blocked
                     }
@@ -28,7 +34,7 @@ struct AlertsView: View {
                     }
                     .opacity(store.notificationsAllowed == false ? 0.55 : 1)
 
-                    Text("Alerts are set on this phone, against moments Keyhop already knows. Nothing is pushed to you, and nothing you asked or wrote leaves your computer.")
+                    Text("These alerts are scheduled on this phone from times Keyhop already knows. No alert content or prompt text is sent to a server.")
                         .font(.ui(12.5, .regular, .footnote))
                         .foregroundStyle(Brand.subtle)
                         .fixedSize(horizontal: false, vertical: true)

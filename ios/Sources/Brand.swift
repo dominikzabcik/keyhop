@@ -214,6 +214,7 @@ struct CardHead<Trailing: View>: View {
             Text(title)
                 .font(.ui(15, .semibold, .headline))
                 .foregroundStyle(Brand.text)
+                .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 8)
             trailing
                 .font(.ui(12.5, .regular, .footnote).monospacedDigit())

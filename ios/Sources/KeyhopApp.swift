@@ -62,6 +62,8 @@ struct LinkView: View {
             }
             .font(.ui(34, .semibold, .largeTitle))
             .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
 
             Text("Your season, standings and limits, read from Keyhop on your computer.")
                 .font(.ui(15, .regular, .subheadline))
@@ -112,6 +114,7 @@ struct LinkView: View {
                     Text("Approve this code in your browser")
                         .font(.ui(14, .medium, .subheadline))
                         .foregroundStyle(Brand.muted)
+                        .accessibilityAddTraits(.isHeader)
                     Text(pending.userCode)
                         .font(.system(size: 30, weight: .semibold, design: .monospaced))
                         .tracking(3)

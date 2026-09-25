@@ -3,6 +3,13 @@
 ## [Unreleased]
 
 - Keyhop's window, menu and welcome window go back to the system typeface (SF Pro on a Mac), in regular, medium and semibold only, on a calmer size scale. Basteleur is gone. Every figure that changes, from the total counting up to a limit's percentage, uses digits of one width, so a number never shifts what stands beside it.
+- Jump to is now Hop, on Cmd-K or Ctrl-K. It searches sections, ranges, tools and accounts, and its button stays in the same place on every section.
+- Settings shows one category at a time (Appearance, Activity, App & Privacy) instead of one long page. Checking for updates shows its own wait and no longer lights the limits progress bar.
+- Usage says what prompt caching saved: cache reads priced against each model's full input rate. Cache writes are already part of the API value, so the figure only counts the read discount.
+- Switching sections no longer flashes the sidebar.
+- The menu's tool tabs show just each tool's mark, and the panel below names the tool and how many accounts it has. When limits were last updated is shown as plain text beside the refresh button, and a check for updates says it is checking. Buttons dip slightly when pressed, except with Reduce Motion on.
+- The welcome window fits again now that Keyhop supports nine tools. Each login it found gets a row, up to three, and one line names the rest.
+- iPhone: screen titles and card titles are headings for VoiceOver. Empty Quests, Badges and This week cards say what fills them. Alerts says what it is for, and the season screen is titled Season & limits.
 
 ## [0.12.0]
 

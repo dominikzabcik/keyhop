@@ -98,10 +98,23 @@ struct WelcomeView: View {
                 .foregroundStyle(Brand.muted)
                 .padding(.top, 4)
 
+            // Nine tools do not fit a 540-point window as rows. The logins found get a row each,
+            // up to three, and one line names everything else, so the window keeps its size
+            // however many tools Keyhop learns.
             VStack(spacing: 0) {
-                ForEach(Array(Provider.allCases.enumerated()), id: \.offset) { index, provider in
+                ForEach(Array(shown.enumerated()), id: \.offset) { index, provider in
                     if index > 0 { RowDivider() }
                     DetectionRow(provider: provider)
+                }
+                if let summary {
+                    if !shown.isEmpty { RowDivider() }
+                    Text(summary)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Brand.subtle)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
                 }
             }
             .card()
@@ -211,6 +224,26 @@ struct WelcomeView: View {
         // Held on the type, since the window reads it after this view is gone.
         Self.leaderboardWanted = openingLeaderboard
         dismiss()
+    }
+
+    private static let rowLimit = 3
+
+    private var found: [Provider] { Provider.allCases.filter { !store.accounts(for: $0).isEmpty } }
+    private var shown: [Provider] { Array(found.prefix(Self.rowLimit)) }
+
+    private var summary: String? {
+        if store.lastRefresh == nil && found.isEmpty { return "Looking for AI-tool logins on this Mac…" }
+        let alsoFound = found.dropFirst(Self.rowLimit).map(\.name)
+        let rest = Provider.allCases.filter { !found.contains($0) }.map(\.name)
+        var parts: [String] = []
+        if found.isEmpty { parts.append("No AI-tool logins found yet.") }
+        if !alsoFound.isEmpty { parts.append("Also found \(Self.list(alsoFound)).") }
+        if !rest.isEmpty { parts.append("Works with \(Self.list(rest)) once you sign in.") }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
+    }
+
+    private static func list(_ names: [String]) -> String {
+        names.count < 2 ? names.joined() : names.dropLast().joined(separator: ", ") + " and " + names.last!
     }
 
     private var footnote: String {

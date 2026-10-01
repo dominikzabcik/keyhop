@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.0]
+
+- A linked account has one pet, counted from the daily totals it already syncs. Tokens set the stage, from Speck to Monument. The tool with at least half the tokens sets the colour. The current streak sets the pose, and commits add bricks under it. It shows on the profile, the team page, the menu and the iPhone season screen. A public profile shares the image at `/u/<login>/pet.svg`.
+- A public profile can be dropped into a README. `badge.svg`, `card.svg`, `streak.svg` and `tools.svg` sit beside the pet. `keyhop cloud badge` prints the markdown, and the same lines are on the profile and in the window under Settings, Leaderboard. A badge takes a metric and a period, and `?theme=light` draws it for a light page.
+- A team's owner can publish the team's totals the same way. The images sum the members and say how many there are, and never name anyone. They are not found until the owner turns that on.
+- Keyhop's window shows the same day the website draws, under Leaderboard, on Day. It also edits the display name, bio and link, manages the team, and lists the computers linked to the account.
+- On Fedora, the package now depends on `gobject-introspection`, so the tray's libraries load. Gtk's typelib needs the Xlib one, and Fedora no longer installs that with gtk3.
+
 ## [0.13.0]
 
 - Keyhop's window, menu and welcome window go back to the system typeface (SF Pro on a Mac), in regular, medium and semibold only, on a calmer size scale. Basteleur is gone. Every figure that changes, from the total counting up to a limit's percentage, uses digits of one width, so a number never shifts what stands beside it.

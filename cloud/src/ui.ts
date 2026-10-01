@@ -744,8 +744,11 @@ export function yearSquares(days: { day: string; tokens: number }[], reference: 
   for (let column = 0; column < HEAT_WEEKS; column++) {
     const first = addDays(start, column * 7);
     const month = Number(first.slice(5, 7)) - 1;
-    // A label needs about two columns of room, so none squeezes in at the right edge.
+    // A label needs about two columns of room, so none squeezes in at the right edge, and a month
+    // that starts a column after the year's first, partial one takes its place instead of
+    // printing over it ("Sep" and "Oct" one column apart read as "SeOct").
     if (month !== lastMonth && column < HEAT_WEEKS - 2) {
+      if (months.length > 0 && column - months[months.length - 1].column < 2) months.pop();
       months.push({ column, label: MONTHS[month] });
       lastMonth = month;
     }

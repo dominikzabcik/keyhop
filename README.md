@@ -25,6 +25,15 @@
   <img src="docs/menu.png" width="300" alt="Keyhop's Mac menu on the Claude tab: the account in use with its 5-hour and weekly limits, and another account to switch to">
 </p>
 
+## At a glance
+
+- **Nine tools, one click.** Claude Code, Cursor, Codex, Gemini CLI, OpenCode, Pi, GitHub Copilot, Windsurf and Codebuff move to another saved login without signing out anywhere else.
+- **Logins stay in the system's own store.** Keychain on macOS, Secret Service on Linux, DPAPI on Windows. The login in use is saved before every switch, so none is ever lost.
+- **Limits, usage and budgets in one place.** 5-hour and weekly limits where providers expose them, exact token history for six tools by account, model and project, and budgets that warn at 80%.
+- **Smart Hop.** Ranks your accounts by limit room, resets, forecasts and budgets, offline and deterministic, and offers the switch before a limit runs out.
+- **Native on every desktop.** A SwiftUI app and menu bar on macOS, a tray on Linux and Windows, one `keyhop` command everywhere, and a read-only MCP server for your AI clients.
+- **Keyhop Cloud, if you want it.** Leaderboards, monthly ranked seasons, teams and a public profile with README images. Only daily totals leave the computer, never prompts, emails or logins.
+
 ## Install
 
 **macOS and Linux**
@@ -179,6 +188,13 @@ A public profile can be dropped into a README, a GitHub profile, or any page tha
 ```markdown
 [![Badge](https://keyhop.app/u/YOUR-LOGIN/badge.svg)](https://keyhop.app/u/YOUR-LOGIN)
 ```
+
+This is the maintainer's year, live:
+
+<p align="center">
+  <a href="https://keyhop.app/u/dominikzabcik#gh-dark-mode-only"><img src="https://keyhop.app/u/dominikzabcik/graph.svg#gh-dark-mode-only" width="860" alt="A year of days on Keyhop, shaded by how many tokens each day used"></a>
+  <a href="https://keyhop.app/u/dominikzabcik#gh-light-mode-only"><img src="https://keyhop.app/u/dominikzabcik/graph.svg?theme=light#gh-light-mode-only" width="860" alt="A year of days on Keyhop, shaded by how many tokens each day used"></a>
+</p>
 
 | Image | What it shows |
 | --- | --- |

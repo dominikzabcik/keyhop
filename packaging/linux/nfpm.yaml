@@ -54,6 +54,8 @@ overrides:
     depends:
       - python3-gobject
       - gtk3
+      # Gtk's typelib imports xlib. Fedora no longer pulls that file in with gtk3.
+      - gobject-introspection
       - libayatana-appindicator-gtk3
       - libnotify
       - ca-certificates

@@ -29,7 +29,7 @@ esac
 
 if ! python3 -c 'import gi; gi.require_version("Gtk", "3.0"); gi.require_version("AyatanaAppIndicator3", "0.1")' >/dev/null 2>&1; then
   echo "The tray also needs GTK 3, AppIndicator and libnotify for Python:"
-  echo "  Fedora:        sudo dnf install python3-gobject gtk3 libayatana-appindicator-gtk3 libnotify"
+  echo "  Fedora:        sudo dnf install python3-gobject gtk3 gobject-introspection libayatana-appindicator-gtk3 libnotify"
   echo "  Debian/Ubuntu: sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-ayatanaappindicator3-0.1 gir1.2-notify-0.7"
   echo "  Arch:          sudo pacman -S python-gobject gtk3 libayatana-appindicator libnotify"
   echo "  openSUSE:      sudo zypper install python3-gobject-Gdk typelib-1_0-AyatanaAppIndicator3-0_1 typelib-1_0-Notify-0_7"

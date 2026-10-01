@@ -90,7 +90,8 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .brand .badge { margin-left: auto; }
 /* Keys drawn as keys: a cap with a lip along its bottom edge. */
 kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; background: hsl(0 0% 100% / .07); box-shadow: inset 0 -1.5px 0 hsl(0 0% 100% / .09); color: var(--muted); font: 600 11px var(--sans); letter-spacing: .02em; }
-.nav { position: relative; isolation: isolate; display: grid; gap: 2px; padding: 12px 10px; }
+.nav { position: relative; isolation: isolate; display: grid; gap: 2px; padding: 12px 10px; flex: 1; min-height: 0; overflow-y: auto; }
+.nav-label { margin: 14px 10px 4px; color: var(--subtle); font-size: 12px; font-weight: 560; }
 .nav.has-thumb::before { content: ""; position: absolute; z-index: -1; left: 10px; right: 10px; top: 0; height: var(--nav-h); transform: translateY(var(--nav-y)); border-radius: 8px; background: hsl(0 0% 100% / .08); transition: transform .3s cubic-bezier(.3, .8, .25, 1); }
 .nav.no-slide::before { transition: none; }
 .nav.has-thumb a[aria-current="page"] { background: transparent; }
@@ -204,6 +205,7 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .split.wide-left { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.stats.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .stat { padding: 14px 16px 16px; }
 .stat .label { color: var(--muted); font-size: 12.5px; display: flex; justify-content: space-between; gap: 8px; }
 .stat .value { margin-top: 6px; font-size: 24px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
@@ -583,7 +585,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   .hero { grid-template-columns: 1fr; }
   .usage-top { grid-template-columns: 1fr; }
   .chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats, .stats.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .split, .split.wide-left { grid-template-columns: 1fr; }
   .account-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); }
   .account-row .today { display: none; }
@@ -596,7 +598,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   body { overflow: auto; }
   .shell { height: auto; min-height: 100vh; }
   .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
-  .nav { grid-auto-flow: column; overflow-x: auto; }
+  .nav { grid-auto-flow: column; overflow-x: auto; flex: none; min-height: auto; }
+  .nav-label { margin: 0 4px 0 12px; align-self: center; white-space: nowrap; }
   .sidebar-foot { display: none; }
   .main { overflow: visible; }
   .stats, .limits, .account-row, .tool-row { grid-template-columns: 1fr; }
@@ -637,7 +640,11 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       <a href="#accounts" data-section="accounts"><svg><use href="#i-accounts"/></svg>Accounts</a>
       <a href="#usage" data-section="usage"><svg><use href="#i-usage"/></svg>Usage</a>
       <a href="#budgets" data-section="budgets"><svg><use href="#i-budgets"/></svg>Budgets</a>
+      <span class="nav-label" id="cloud-label" hidden>Cloud</span>
       <a href="#leaderboard" data-section="leaderboard" hidden><svg><use href="#i-leaderboard"/></svg>Leaderboard</a>
+      <a href="#season" data-section="season" hidden><svg><use href="#i-season"/></svg>Season</a>
+      <a href="#teams" data-section="teams" hidden><svg><use href="#i-teams"/></svg>Teams</a>
+      <a href="#profile" data-section="profile" hidden><svg><use href="#i-profile"/></svg>Profile</a>
       <a href="#settings" data-section="settings"><svg><use href="#i-settings"/></svg>Settings</a>
     </nav>
     <div class="sidebar-foot">
@@ -658,8 +665,9 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 <script>
 (() => {
   "use strict";
-  const SECTIONS = ["overview", "accounts", "usage", "budgets", "leaderboard", "settings"];
-  const TITLES = { overview: "Overview", accounts: "Accounts", usage: "Usage", budgets: "Budgets", leaderboard: "Leaderboard", settings: "Settings" };
+  const SECTIONS = ["overview", "accounts", "usage", "budgets", "leaderboard", "season", "teams", "profile", "settings"];
+  const TITLES = { overview: "Overview", accounts: "Accounts", usage: "Usage", budgets: "Budgets", leaderboard: "Leaderboard", season: "Season", teams: "Teams", profile: "Profile", settings: "Settings" };
+  const CLOUD_SECTIONS = ["leaderboard", "season", "teams", "profile"];
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const store = {
@@ -837,27 +845,31 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     try {
       if (ui.section === "overview") {
         loadServices();
-        const jobs = [loadUsage("today"), loadUsage("week")];
-        if (!isStatic && data.state?.cloud?.linked) jobs.push(loadPet());
-        await Promise.all(jobs);
+        await Promise.all([loadUsage("today"), loadUsage("week")]);
       }
       if (ui.section === "usage") await loadUsage(ui.range, ui.tool);
       if (ui.section === "budgets") await loadUsage("month");
-      if (ui.section === "leaderboard" && !isStatic && data.state?.cloud?.linked) {
+      if (!isStatic && data.state?.cloud?.linked && CLOUD_SECTIONS.includes(ui.section)) {
+        const petReady = ui.section === "profile" ? loadPet() : null;
+        const boardURL = (team) => `/api/cloud/leaderboard?period=${ui.boardPeriod}&metric=${ui.boardMetric}&team=${encodeURIComponent(team)}&season=${encodeURIComponent(ui.boardSeason)}`;
         try {
-          if (ui.boardView === "day") {
+          if (ui.section === "teams" && ui.boardView === "day") {
             data.day = await api(`/api/cloud/day?team=${encodeURIComponent(ui.boardTeam)}&date=${encodeURIComponent(ui.boardDate)}`);
             data.dayError = null;
             if (data.day.team) ui.boardTeam = data.day.team.slug;
             if (data.day.day) ui.boardDate = data.day.day;
+          } else if (ui.section === "teams" && ui.boardTeam) {
+            data.board = await api(boardURL(ui.boardTeam));
+            data.boardError = null;
           } else {
-            data.board = await api(`/api/cloud/leaderboard?period=${ui.boardPeriod}&metric=${ui.boardMetric}&team=${encodeURIComponent(ui.boardTeam)}&season=${encodeURIComponent(ui.boardSeason)}`);
+            data.board = await api(boardURL(""));
             data.boardError = null;
           }
         } catch (error) {
-          if (ui.boardView === "day") data.dayError = error.message;
+          if (ui.section === "teams" && ui.boardView === "day") data.dayError = error.message;
           else data.boardError = error.message;
         }
+        if (petReady) await petReady;
       }
       if (ui.section === "settings" && !isStatic) {
         const doctor = api("/api/doctor");
@@ -1024,9 +1036,9 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const items = [];
     const tools = data.state?.status.tools || [];
     for (const section of SECTIONS) {
-      if (section === "leaderboard" && (isStatic || !data.state?.cloud?.available)) continue;
       const place = shownSections().indexOf(section);
-      items.push({ group: "Go to", label: TITLES[section], icon: section, key: place >= 0 && place < 9 ? String(place + 1) : "", run: () => go(section) });
+      if (place < 0) continue;
+      items.push({ group: "Go to", label: TITLES[section], icon: section, key: place < 9 ? String(place + 1) : "", run: () => go(section) });
     }
     for (const [value, label] of RANGES) {
       if (isStatic && !data.usage[`${value}:all`]) continue;
@@ -1045,7 +1057,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       }
       items.push({ group: "Do", label: "Read limits and usage now", icon: "refresh", run: () => { if (!data.state?.refreshing) act(null, () => { data.state.refreshing = true; renderActivity(); return api("/api/refresh", {}); }); } });
       items.push({ group: "Do", label: "Check for updates", icon: "update", run: () => { ui.settingsPane = "app"; go("settings"); } });
-      if (data.state?.cloud?.linked) items.push({ group: "Go to", label: "Today's work", icon: "leaderboard", run: () => showDay() });
+      if (data.state?.cloud?.linked) items.push({ group: "Go to", label: "Today's work", icon: "teams", run: () => showDay() });
     }
     return items;
   }
@@ -1118,9 +1130,15 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const tools = data.state.status.tools;
     const cloud = data.state.cloud;
     $("#backdrop")?.classList.toggle("scoped-out", data.state.appearance?.scope === "overview" && ui.section !== "overview");
-    const boardLink = $('#nav a[data-section="leaderboard"]');
-    if (boardLink) boardLink.hidden = isStatic || !cloud?.available;
-    if (ui.section === "leaderboard" && (isStatic || !cloud?.available)) ui.section = "overview";
+    const cloudOn = !isStatic && !!cloud?.available;
+    const linked = cloudOn && !!cloud.linked && !cloud.linking;
+    const cloudLabel = $("#cloud-label");
+    if (cloudLabel) cloudLabel.hidden = !cloudOn;
+    for (const name of CLOUD_SECTIONS) {
+      const link = $(`#nav a[data-section="${name}"]`);
+      if (link) link.hidden = name === "leaderboard" ? !cloudOn : !linked;
+    }
+    if (CLOUD_SECTIONS.includes(ui.section) && $(`#nav a[data-section="${ui.section}"]`)?.hidden) ui.section = "overview";
     // While a link waits for approval in the browser, check every few seconds instead of every 20.
     if (cloud?.linking && !linkPoll) {
       linkPoll = setTimeout(async () => {
@@ -1129,7 +1147,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         render();
       }, 3000);
     }
-    const page = { overview: overviewPage, accounts: accountsPage, usage: usagePage, budgets: budgetsPage, leaderboard: leaderboardPage, settings: settingsPage }[ui.section](tools);
+    const page = { overview: overviewPage, accounts: accountsPage, usage: usagePage, budgets: budgetsPage, leaderboard: leaderboardPage, season: seasonPage, teams: teamsPage, profile: profilePage, settings: settingsPage }[ui.section](tools);
     $("#title").textContent = TITLES[ui.section];
     $("#toolbar").innerHTML = page.toolbar || "";
     const offline = ui.offline ? `<div class="notice">${icon("alert")}<div><p>${esc(ui.offline)}</p></div></div>` : "";
@@ -1357,22 +1375,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       </div>` : ""}</div>
     </section>`;
 
-    const weekCard = `<section class="card">
-      <div class="card-head"><h2>Last 7 days</h2><button class="btn sm ghost" data-action="goto" data-section="usage">Open usage</button></div>
-      <div class="card-body">${week ? (week.total.requests ? `<div class="chart">${stackedChart(week, "tokens", 214, "half", "account")}</div>` : `<p class="empty-inline">No usage in the last 7 days.</p>`) : loading("Reading usage")}</div>
-    </section>`;
-    const budgetsCard = `<section class="card">
-      <div class="card-head"><h2>Budgets</h2><button class="btn sm ghost" data-action="goto" data-section="budgets">${status.budgets.length ? "Manage" : "Set a budget"}</button></div>
-      ${status.budgets.length ? `<div class="list">${status.budgets.slice(0, 3).map(budgetRow).join("")}</div>` : `<p class="empty">No budgets yet. A budget warns you at 80% and 100%.</p>`}
-    </section>`;
-    const modelsCard = `<section class="card">
-      <div class="card-head"><h2>Top models this week</h2></div>
-      ${week && week.models.length ? `<div class="card-body">${rankedList("overview-models", week.models.slice().sort((a, b) => b.figures.tokens - a.figures.tokens).slice(0, 6),
-        (m) => m.figures.tokens / (week.total.tokens || 1),
-        (m) => `${mark(m.tool)}<span class="mono">${esc(m.model)}</span><span class="subtle ranked-value">${fmt.tokens(m.figures.tokens)}</span>`)}</div>` : `<p class="empty">No models used this week.</p>`}
-    </section>`;
-
-    return { body: `${notices}${stats}${petCard()}${inUse}<div class="split">${weekCard}${modelsCard}</div>${budgetsCard}` };
+    return { body: `${notices}${stats}${inUse}` };
   }
 
   function petCard() {
@@ -2128,7 +2131,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       ? `<button class="btn sm ghost" data-action="work-off">Stop counting</button>`
       : `<button class="btn sm" data-action="work-on">Count commits</button>`;
     const subjects = work.shareSubjects
-      ? `<div class="card-body setting-row"><div><b>Subject lines are shared</b><p>The first line of each commit goes with the counts. Leaderboard, on Day, reads them as tasks, and so does the team's day on the website. Turning this off deletes the ones already sent.</p></div>
+      ? `<div class="card-body setting-row"><div><b>Subject lines are shared</b><p>The first line of each commit goes with the counts. Teams reads them as tasks, and so does the team's day on the website. Turning this off deletes the ones already sent.</p></div>
           <button class="btn sm ghost" data-action="work-subjects-off">Keep subjects here</button></div>`
       : `<div class="card-body setting-row"><div><b>Keep subject lines here</b><p>Counts still go. The words you wrote stay on this computer until you share them.</p></div>
           <button class="btn sm secondary" data-action="work-subjects-on">Share subject lines</button></div>`;
@@ -2181,16 +2184,16 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 
   function cloudCard(cloud) {
     if (cloud.linking) {
-      return `<section class="card"><div class="card-head"><h2>Leaderboard</h2><span class="badge">Waiting</span></div>
+      return `<section class="card"><div class="card-head"><h2>Link with GitHub</h2><span class="badge">Waiting</span></div>
         <div class="card-body setting-row"><div><b>Approve <span class="mono">${esc(cloud.linking.userCode)}</span> in your browser</b>
           <p>Sign in with GitHub, check that the code matches, and approve it. This page notices by itself.</p></div>
           <div class="row-actions"><a class="btn sm" href="${esc(cloud.linking.verifyUrl)}" target="_blank" rel="noopener">Open sign-in</a>
           <button class="btn sm ghost" data-action="cloud-unlink">Cancel</button></div></div></section>`;
     }
     if (!cloud.linked) {
-      return `<section class="card"><div class="card-head"><h2>Leaderboard</h2></div>
+      return `<section class="card"><div class="card-head"><h2>Link with GitHub</h2></div>
         <div class="card-body setting-row"><div><b>Compare your usage with friends and teams</b>
-          <p>Link with GitHub to join leaderboards and get a profile you can share. Keyhop sends tokens, API value and requests per tool per day. Never prompts, emails or account names.</p></div>
+          <p>Linking joins leaderboards and gives you a profile you can share. Keyhop sends tokens, API value and requests per tool per day. Never prompts, emails or account names.</p></div>
           <button class="btn sm" data-action="cloud-link">Link with GitHub</button></div></section>`;
     }
     const synced = cloud.lastSyncError ? `The last sync failed: ${esc(cloud.lastSyncError)}` : cloud.lastSync ? `Synced ${esc(ago(cloud.lastSync))}` : "Not synced yet";
@@ -2201,14 +2204,20 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       : `<div class="card-body setting-row"><div><b>Let your phone see your limits</b>
           <p>The Keyhop app on your phone can then tell you when an account comes back. It sends how full each account is and the name you gave it, never an email.</p></div>
           <button class="btn sm secondary" data-action="cloud-limits-on">Share limits</button></div>`;
-    return `<section class="card"><div class="card-head"><h2>Leaderboard</h2><span class="badge live">Linked</span></div>
+    const images = cloud.isPublic && cloud.profile
+      ? `<section class="card"><div class="card-head"><h2>README images</h2></div><div class="form card-body">${shareLines(cloud.profile, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"], ["Year", "graph.svg"], ["Pet", "pet.svg"]])}
+        <p class="empty-inline subtle">The badge shows tokens for the last 7 days. Add ?metric= and ?period= to the image address, and ?theme=light on a light page. <a href="https://github.com/dominikzabcik/keyhop#readme-images" target="_blank" rel="noopener">How the images work</a></p></div></section>`
+      : "";
+    return `<section class="card"><div class="card-head"><h2>This computer</h2><span class="badge live">Linked</span></div>
       <div class="card-body setting-row"><div><b>@${esc(cloud.login)}${cloud.isPublic ? "" : " · private profile"}</b>
         <p>${synced}. Daily totals go out hourly, after a refresh.</p></div>
-        <div class="row-actions"><a class="btn sm secondary" href="${esc(cloud.profile)}" target="_blank" rel="noopener">Open profile</a>
-        <button class="btn sm secondary" data-action="cloud-sync">Sync now</button>
-        <button class="btn sm ghost danger" data-action="cloud-unlink">Unlink</button></div></div>
-      ${profileForm()}${cloud.isPublic && cloud.profile ? `<div class="form card-body">${shareLines(cloud.profile, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"], ["Year", "graph.svg"], ["Pet", "pet.svg"]])}
-        <p class="empty-inline subtle">The badge shows tokens for the last 7 days. Add ?metric= and ?period= to the image address, and ?theme=light on a light page. <a href="https://github.com/dominikzabcik/keyhop#readme-images" target="_blank" rel="noopener">How the images work</a></p></div>` : ""}${appsCard()}${deleteAccountForm()}${limits}</section>`;
+        <div class="row-actions"><button class="btn sm secondary" data-action="cloud-sync">Sync now</button>
+        <button class="btn sm ghost danger" data-action="cloud-unlink">Unlink</button></div></div></section>
+      <section class="card"><div class="card-head"><h2>How you appear</h2></div>${profileForm()}</section>
+      ${images}
+      <section class="card">${appsCard()}</section>
+      <section class="card"><div class="card-head"><h2>Phone</h2></div>${limits}</section>
+      <section class="card"><div class="card-head"><h2>Delete account</h2></div>${deleteAccountForm()}</section>`;
   }
 
   // Six squares climbing to the right, lit as far as the tier has come.
@@ -2226,8 +2235,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     return `<span class="tier tier-${esc(tier.key)}${size === "sm" ? " sm" : ""}">${tierMark(tier.key)}<span>${esc(tier.name)}${roman ? ` ${roman}` : ""}</span></span>`;
   }
 
-  // This month's ranked season, above the board.
-  function seasonRow(season, website) {
+  // This month's ranked season.
+  function seasonRow(season) {
     if (!season) return "";
     const you = season.you;
     const left = season.over ? "Finished" : season.daysLeft === 1 ? "Ends today" : `${season.daysLeft} days left`;
@@ -2244,7 +2253,6 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     return `<section class="card season-row">
       ${tierTag(you ? you.tier : { key: "bronze", name: "Bronze", division: 3 })}
       <div class="grow"><b>${esc(season.label)} · ${esc(left)}</b><p>${place}${note}</p>${tabs}</div>
-      <a class="btn sm secondary" href="${esc(website)}/season${season.season ? `/${esc(season.season)}` : ""}" target="_blank" rel="noopener">Open season</a>
     </section>`;
   }
 
@@ -2296,34 +2304,55 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     return files.map(([label, file]) => `<label>${esc(label)}<input class="field mono" readonly value="[![${esc(label)}](${esc(page)}/${file})](${esc(page)})"></label>`).join("");
   }
 
-  function teamsCard(website) {
-    const teams = data.day?.teams || data.board?.teams || [];
-    const current = teams.find((team) => team.slug === ui.boardTeam);
+  function boardChoice(action, options, current) {
+    return `<div class="tabs">${options.map(([value, label]) => `<button data-action="${action}" data-value="${value}" aria-pressed="${value === current}">${label}</button>`).join("")}</div>`;
+  }
+
+  function knownTeams() {
+    return data.day?.teams || data.board?.teams || [];
+  }
+
+  function teamMenu() {
+    const teams = knownTeams();
+    if (!teams.length) return "";
+    const options = [`<option value="">All teams</option>`].concat(teams.map((team) => `<option value="${esc(team.slug)}"${team.slug === ui.boardTeam ? " selected" : ""}>${esc(team.name)}</option>`));
+    return `<select class="field" data-action="board-team">${options.join("")}</select>`;
+  }
+
+  function teamList(website) {
+    const teams = knownTeams();
     const rows = teams.map((team) => `<div class="row setting-row"><div><b>${esc(team.name)}</b><p>${team.members} ${team.members === 1 ? "member" : "members"}${team.role === "owner" ? " · owner" : ""}</p></div>
       <button class="btn sm ghost" type="button" data-action="board-pick" data-value="${esc(team.slug)}">Open</button></div>`).join("");
-    const roster = current ? ((ui.boardView === "day" ? data.day?.members : data.board?.members) || []) : [];
-    const people = roster.map((person) => `<div class="row setting-row"><div><b>${esc(person.name || person.login)}</b><p>@${esc(person.login)}${person.role === "owner" ? " · owner" : ""}</p></div>
-      ${current && current.role === "owner" && person.role !== "owner" ? `<button class="btn sm ghost" type="button" data-action="team-remove" data-login="${esc(person.login)}">Remove</button>` : ""}</div>`).join("");
-    const invite = data.invite ? `<label>Share this link<input class="field" readonly value="${esc(data.invite)}"></label>` : "";
-    const publish = current && current.role === "owner"
-      ? `<label class="check"><input type="checkbox" data-action="team-public" ${current.public ? "checked" : ""}> Publish this team's totals</label>
-         <p class="empty-inline subtle">The image shows summed totals and how many members there are. Anyone with the link can load it.</p>`
-      : "";
-    const snippets = current && current.public
-      ? `<div class="form">${shareLines(`${website}/t/${current.slug}`, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"], ["Year", "graph.svg"]])}
-         <p class="empty-inline subtle">The badge shows this team's tokens for the last 7 days. A team image takes tokens, cost, requests, commits, lines or streak.</p></div>`
-      : "";
-    const manage = !current ? "" : `${publish}${snippets}${current.role === "owner"
-      ? `${people}<div class="row-actions" style="justify-content:flex-start"><button class="btn sm secondary" type="button" data-action="team-invite">Create invite link</button><button class="btn sm ghost" type="button" data-action="team-revoke">Turn off invite links</button></div>${invite}
-        <form class="form" data-form="team-delete"><label>Delete this team<input class="field" name="confirm" placeholder="Type ${esc(current.slug)} to confirm" autocomplete="off"></label><button class="btn sm secondary danger">Delete team</button></form>`
-      : `${people}<div class="row-actions" style="justify-content:flex-start"><button class="btn sm ghost" type="button" data-action="team-leave">Leave ${esc(current.name)}</button></div>`}`;
-    return `<section class="card"><div class="card-head"><h2>Teams</h2></div>
-      ${rows ? `<div class="list">${rows}</div>` : `<p class="empty">You aren't on a team yet.</p>`}
-      <div class="card-body">${manage}
+    return `<section class="card"><div class="card-head"><h2>Your teams</h2>${teams.length ? `<span class="hint">${teams.length}</span>` : ""}</div>
+      ${rows ? `<div class="list">${rows}</div>` : `<p class="empty">You aren't on a team yet. Create one, or paste an invite from a teammate.</p>`}
+      <div class="card-body">
         <form class="form" data-form="team-create"><label>New team<input class="field" name="name" maxlength="40" placeholder="Studio" autocomplete="off"></label><button class="btn sm">Create team</button></form>
         <form class="form" data-form="team-join"><label>Invite link or code<input class="field" name="code" placeholder="https://keyhop.app/invite/…" autocomplete="off"></label><button class="btn sm secondary">Join team</button></form>
         <p class="empty-inline subtle"><a href="${esc(website)}/teams" target="_blank" rel="noopener">The same teams are on the website</a></p>
       </div></section>`;
+  }
+
+  function teamManage(website) {
+    const current = knownTeams().find((team) => team.slug === ui.boardTeam);
+    if (!current) return "";
+    const roster = (data.board?.team === ui.boardTeam ? data.board.members : data.day?.team?.slug === ui.boardTeam ? data.day.members : null) || [];
+    const people = roster.map((person) => `<div class="row setting-row"><div><b>${esc(person.name || person.login)}</b><p>@${esc(person.login)}${person.role === "owner" ? " · owner" : ""}</p></div>
+      ${current.role === "owner" && person.role !== "owner" ? `<button class="btn sm ghost" type="button" data-action="team-remove" data-login="${esc(person.login)}">Remove</button>` : ""}</div>`).join("");
+    const invite = data.invite ? `<label>Share this link<input class="field" readonly value="${esc(data.invite)}"></label>` : "";
+    const publish = current.role === "owner"
+      ? `<label class="check"><input type="checkbox" data-action="team-public" ${current.public ? "checked" : ""}> Publish this team's totals</label>
+         <p class="empty-inline subtle">The image shows summed totals and how many members there are. Anyone with the link can load it.</p>`
+      : "";
+    const snippets = current.public
+      ? `<div class="form">${shareLines(`${website}/t/${current.slug}`, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"], ["Year", "graph.svg"]])}
+         <p class="empty-inline subtle">The badge shows this team's tokens for the last 7 days. A team image takes tokens, cost, requests, commits, lines or streak.</p></div>`
+      : "";
+    const actions = current.role === "owner"
+      ? `${people}<div class="row-actions" style="justify-content:flex-start"><button class="btn sm secondary" type="button" data-action="team-invite">Create invite link</button><button class="btn sm ghost" type="button" data-action="team-revoke">Turn off invite links</button></div>${invite}
+        <form class="form" data-form="team-delete"><label>Delete this team<input class="field" name="confirm" placeholder="Type ${esc(current.slug)} to confirm" autocomplete="off"></label><button class="btn sm secondary danger">Delete team</button></form>`
+      : `${people}<div class="row-actions" style="justify-content:flex-start"><button class="btn sm ghost" type="button" data-action="team-leave">Leave ${esc(current.name)}</button></div>`;
+    return `<section class="card"><div class="card-head"><h2>${esc(current.name)}</h2><span class="hint">${current.members} ${current.members === 1 ? "member" : "members"}</span></div>
+      <div class="card-body">${publish}${snippets}${actions}</div></section>`;
   }
 
   function boardValue(entry) {
@@ -2344,9 +2373,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     if (data.dayError) return { toolbar, body: `<div class="notice">${icon("alert")}<div><p>${esc(data.dayError)}</p></div></div>` };
     if (!data.day) return { toolbar, body: busy("Reading the day", "lede") };
     const day = data.day;
-    if (!day.team) {
-      return { toolbar, body: teamsCard(day.website) };
-    }
+    if (!day.team) return { body: teamList(day.website) };
+    if (ui.boardTeam && day.team.slug !== ui.boardTeam) return { toolbar, body: busy("Reading the day", "lede") };
     const label = day.day === day.today ? "Today" : day.day;
     const previous = `<button class="btn sm ghost" type="button" data-action="day-step" data-value="${esc(day.previous)}" aria-label="Previous day">Previous</button>`;
     const following = day.next
@@ -2374,25 +2402,11 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     };
     const empty = commits === 0 ? `<section class="card"><p class="empty">No commits synced for this day. Turn counting on under Settings, Activity.</p></section>` : "";
     const note = `<p class="empty-inline subtle"><a href="${esc(day.website)}/t/${esc(day.team.slug)}/day/${esc(day.day)}" target="_blank" rel="noopener">Open this day on the website</a></p>`;
-    return { toolbar: `${toolbar}${nav}`, body: sum + people.map(card).join("") + empty + note + teamsCard(day.website) };
+    return { toolbar: `${toolbar}${nav}`, body: sum + people.map(card).join("") + empty + note };
   }
 
-  function leaderboardPage() {
+  function ranksBody(entries, scope) {
     const cloud = data.state.cloud;
-    if (!cloud.linked || cloud.linking) return { body: cloudCard(cloud) };
-    const choice = (action, options, current) => `<div class="tabs">${options.map(([value, label]) => `<button data-action="${action}" data-value="${value}" aria-pressed="${value === current}">${label}</button>`).join("")}</div>`;
-    const teams = (data.day?.teams || data.board?.teams || []);
-    const teamSelect = teams.length ? `<select class="field" data-action="board-team">${ui.boardView === "day" ? "" : `<option value="">Everyone</option>`}${teams.map((team) => `<option value="${esc(team.slug)}"${team.slug === ui.boardTeam ? " selected" : ""}>${esc(team.name)}</option>`).join("")}</select>` : "";
-    const view = choice("board-view", [["ranks", "Ranks"], ["day", "Day"]], ui.boardView);
-    if (ui.boardView === "day") return dayView(`${teamSelect}${view}`);
-    const toolbar = `${teamSelect}${view}
-      ${choice("board-period", [["today", "Today"], ["week", "7 days"], ["month", "30 days"], ["all", "All time"]], ui.boardPeriod)}
-      ${choice("board-metric", [["tokens", "Tokens"], ["cost", "API value"], ["requests", "Requests"], ["commits", "Commits"], ["lines", "Lines"]], ui.boardMetric)}`;
-    if (data.boardError) return { toolbar, body: `<div class="notice">${icon("alert")}<div><p>${esc(data.boardError)}</p></div></div>` };
-    if (!data.board) return { toolbar, body: busy("Reading the leaderboard", "lede") };
-
-    const entries = data.board.board.entries;
-    const site = data.board.website;
     const value = boardValue;
     const avatar = (e, size) => `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px" aria-hidden="true">${esc(e.login.slice(0, 1).toUpperCase())}</span>`;
     const person = (e, size) => `<div class="who">${avatar(e, size)}<div><b>${esc(e.name || e.login)}</b><small>@${esc(e.login)}</small></div></div>`;
@@ -2403,18 +2417,15 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     };
     const me = entries.find((e) => e.isYou);
     const ahead = me && me.rank > 1 ? entries[me.rank - 2] : null;
-    const scope = ui.boardTeam ? (teams.find((team) => team.slug === ui.boardTeam)?.name || "your team") : "the global board";
     const gap = ahead ? value({ tokens: ahead.tokens - me.tokens, cost: ahead.cost - me.cost, requests: ahead.requests - me.requests, commits: (ahead.commits || 0) - (me.commits || 0), insertions: (ahead.insertions || 0) - (me.insertions || 0), deletions: (ahead.deletions || 0) - (me.deletions || 0) }) : null;
-
-    const stats = `<div class="stats">
+    const onTeam = scope !== "the global board";
+    const stats = `<div class="stats three">
       <div class="card stat"><div class="label">Your rank</div><div class="value">${me ? `#${me.rank}` : "Unranked"}</div>
-        <div class="foot">${me ? `of ${entries.length} on ${esc(scope)}` : cloud.isPublic || ui.boardTeam ? "Nothing synced for this period" : "Private profiles rank only on teams"}</div></div>
+        <div class="foot">${me ? `of ${entries.length} on ${esc(scope)}` : cloud.isPublic || onTeam ? "Nothing synced for this period" : "Private profiles rank only on teams"}</div></div>
       <div class="card stat"><div class="label">You</div><div class="value">${me ? esc(value(me)) : "0"}</div>
         <div class="foot">${me ? `${me.activeDays} active ${me.activeDays === 1 ? "day" : "days"}` : "&nbsp;"}</div></div>
       <div class="card stat"><div class="label">${ahead ? `To catch @${esc(ahead.login)}` : "Ahead of you"}</div><div class="value">${gap ? esc(gap) : me ? "Nobody" : "&nbsp;"}</div>
         <div class="foot">${ahead ? `They're #${ahead.rank}` : me ? "You lead this board" : "&nbsp;"}</div></div>
-      <div class="card stat"><div class="label">Profile</div><div class="value"><a class="plain-link" href="${esc(cloud.profile)}" target="_blank" rel="noopener">@${esc(cloud.login)}</a></div>
-        <div class="foot">${cloud.lastSync ? `Synced ${esc(ago(cloud.lastSync))}` : "Not synced yet"}</div></div>
     </div>`;
     const podium = entries.length ? `<div class="podium">${entries.slice(0, 3).map((e) => `<div class="card podium-card${e.isYou ? " you" : ""}">
         <span class="place mono">#${e.rank}</span>${person(e, 36)}<div class="podium-value">${esc(value(e))}</div>${mix(e)}</div>`).join("")}</div>` : "";
@@ -2424,8 +2435,67 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
           <tbody>${entries.map((e) => `<tr class="${e.isYou ? "me" : ""}"><td class="mono subtle">${e.rank}</td><td>${person(e, 26)}</td><td class="bar-cell">${mix(e)}</td>
           <td class="right mono subtle">${e.activeDays}</td><td class="right mono">${esc(value(e))}</td></tr>`).join("")}</tbody></table></section>`
       : `<section class="card"><p class="empty">No usage yet for this period. It fills in as the computers on your board refresh.</p></section>`;
-    const note = `<p class="empty-inline subtle">Day shows what each person shipped.${cloud.isPublic ? "" : " Your profile is private. Make it public in Settings, Cloud, to join the global board."}</p>`;
-    return { toolbar, body: seasonRow(data.board.season, site) + seasonStandings(data.board.season) + stats + claimCard(data.board.quests) + questsCard(data.board.quests) + badgesCard(data.board.quests) + podium + table + teamsCard(site) + note };
+    return stats + podium + table;
+  }
+
+  function periodChoices() {
+    return boardChoice("board-period", [["today", "Today"], ["week", "7 days"], ["month", "30 days"], ["all", "All time"]], ui.boardPeriod)
+      + boardChoice("board-metric", [["tokens", "Tokens"], ["cost", "API value"], ["requests", "Requests"], ["commits", "Commits"], ["lines", "Lines"]], ui.boardMetric);
+  }
+
+  function boardProblem() {
+    return `<div class="notice">${icon("alert")}<div><p>${esc(data.boardError)}</p></div></div>`;
+  }
+
+  function leaderboardPage() {
+    const cloud = data.state.cloud;
+    if (!cloud.linked || cloud.linking) return { body: cloudCard(cloud) };
+    const toolbar = periodChoices();
+    if (data.boardError) return { toolbar, body: boardProblem() };
+    if (!data.board || data.board.team) return { toolbar, body: busy("Reading the leaderboard", "lede") };
+    const note = cloud.isPublic ? "" : `<p class="empty-inline subtle">Your profile is private. Make it public in Settings, Cloud, to join the global board.</p>`;
+    return { toolbar, body: ranksBody(data.board.board.entries, "the global board") + note };
+  }
+
+  function seasonPage() {
+    if (data.boardError) return { body: boardProblem() };
+    if (!data.board) return { body: busy("Reading the season", "lede") };
+    if (!data.board.season) return { body: `<section class="card"><p class="empty">No season to show yet.</p></section>` };
+    return { body: seasonRow(data.board.season) + seasonStandings(data.board.season) };
+  }
+
+  function profilePage() {
+    const cloud = data.state.cloud;
+    if (data.boardError) return { body: boardProblem() };
+    if (!data.board) return { body: busy("Reading your profile", "lede") };
+    const link = cloud.profile ? `<p class="empty-inline subtle"><a href="${esc(cloud.profile)}" target="_blank" rel="noopener">Open the full profile</a></p>` : "";
+    return { body: petCard() + claimCard(data.board.quests) + questsCard(data.board.quests) + badgesCard(data.board.quests) + link };
+  }
+
+  function teamsPage() {
+    const website = data.day?.website || data.board?.website || "https://keyhop.app";
+    if (ui.boardView !== "day" && !ui.boardTeam) {
+      if (data.boardError && !knownTeams().length) return { body: boardProblem() };
+      if (!data.board && !data.day) return { body: busy("Reading your teams", "lede") };
+      return { body: teamList(website) };
+    }
+    const mode = ui.boardView === "ranks" ? "ranks" : ui.boardView === "members" ? "members" : "day";
+    const view = boardChoice("board-view", [["day", "Day"], ["ranks", "Ranks"], ["members", "Members"]], mode);
+    if (mode === "members") {
+      const toolbar = `${teamMenu()}${view}`;
+      const ready = data.board?.team === ui.boardTeam || data.day?.team?.slug === ui.boardTeam;
+      if (data.boardError && !ready) return { toolbar, body: boardProblem() };
+      if (!ready) return { toolbar, body: busy("Reading the team", "lede") };
+      return { toolbar, body: teamManage(data.board?.website || data.day?.website || website) };
+    }
+    if (mode === "ranks") {
+      const toolbar = `${teamMenu()}${view}${periodChoices()}`;
+      const name = knownTeams().find((team) => team.slug === ui.boardTeam)?.name || "your team";
+      if (data.boardError) return { toolbar, body: boardProblem() };
+      if (!data.board || data.board.team !== ui.boardTeam) return { toolbar, body: busy("Reading the board", "lede") };
+      return { toolbar, body: ranksBody(data.board.board.entries, name) };
+    }
+    return dayView(`${teamMenu()}${view}`);
   }
 
   // MARK: Settings
@@ -2456,7 +2526,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const panes = {
       general: `<div class="settings-intro"><h2>Window Appearance</h2><p>Choose how Keyhop sits alongside the rest of your Mac.</p></div>${isStatic ? "" : appearanceCard()}`,
       activity: `<div class="settings-intro"><h2>Activity</h2><p>Control what Keyhop reads locally and see where each tool is signed in.</p></div>${isStatic ? "" : workCard(state.work)}<section class="card"><div class="card-head"><h2>Tools on This Mac</h2></div>${tools}</section>`,
-      cloud: `<div class="settings-intro"><h2>Keyhop Cloud</h2><p>Manage the optional leaderboard and the data shared with it.</p></div>${cloudCard(state.cloud)}`,
+      cloud: `<div class="settings-intro"><h2>Keyhop Cloud</h2><p>The link, what this computer sends, and who else can read it.</p></div>${cloudCard(state.cloud)}`,
       app: `<div class="settings-intro"><h2>App & Privacy</h2><p>Version ${esc(state.version)} on ${esc(state.platform)}. Updates and limit refreshes stay independent.</p></div><section class="card"><div class="card-head"><h2>Updates</h2></div><div class="card-body">${updateRow}</div></section>${privacy}`,
     };
     if (ui.settingsPane === "cloud" && (isStatic || !state.cloud?.available)) ui.settingsPane = "general";
@@ -2553,7 +2623,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     ui.boardView = "day";
     ui.boardDate = "";
     data.day = null;
-    if (ui.section !== "leaderboard") { await go("leaderboard"); return; }
+    if (ui.section !== "teams") { await go("teams"); return; }
     render();
     await loadSection();
     render();
@@ -2561,6 +2631,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 
   async function go(section) {
     ui.section = section;
+    data.boardError = null;
+    data.dayError = null;
     history.replaceState(null, "", "#" + section);
     transition(() => { render(); $("#main").scrollTop = 0; });
     await loadSection();
@@ -2695,7 +2767,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         ui.boardDate = "";
         data.invite = null;
         data.day = null;
-        if (ui.section !== "leaderboard") { await go("leaderboard"); break; }
+        if (ui.section !== "teams") { await go("teams"); break; }
         render();
         await loadSection();
         render();
@@ -2763,6 +2835,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const team = event.target.closest("select[data-action=board-team]");
     if (team) {
       ui.boardTeam = team.value;
+      if (!team.value) ui.boardView = "ranks";
       team.blur();
       data.board = null;
       data.day = null;

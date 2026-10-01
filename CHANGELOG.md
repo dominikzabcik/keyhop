@@ -2,7 +2,8 @@
 
 ## [Unreleased]
 
-- The streak still counts itself from a day with tokens or a commit. Claiming that day opens a keep: Spark, then Glow, Ember, Flare and Beacon as the run gets longer. Each day can be claimed once. The keeps sit on your profile and on the season page, and in the window under Leaderboard.
+- The streak still counts itself from a day with tokens or a commit. Claiming that day opens a keep: Spark, then Glow, Ember, Flare and Beacon as the run gets longer. Each day can be claimed once. The keeps sit on your profile and on the season page, and in the window under Profile.
+- The window's Leaderboard is the ranks. Season, Teams and Profile are their own places. Overview is this computer today. Profile holds the pet, keeps, quests and badges. A team's day, its ranks and its members are separate. Settings, Cloud is the link, the profile text, the README images, linked apps and the phone.
 
 ## [0.14.1]
 

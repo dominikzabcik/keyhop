@@ -9,6 +9,7 @@ import { badgesFrom, questsFrom } from "../src/quests";
 import { webLink } from "../src/account";
 import { keepFor } from "../src/keeps";
 import { petFrom } from "../src/pet";
+import { yearSquares } from "../src/ui";
 import { INDEX_TTL_SECONDS, parseIndex, parseWork } from "../src/work";
 import { parseSubject, sharpen, span, tasksFor, tasksForDay } from "../src/tasks";
 
@@ -912,6 +913,12 @@ describe("widgets", () => {
     expect(quiet).toBe("#414141");
     expect(svg).toContain("50M tokens in the last year");
     expect(svg).toContain(">Mon</text>");
+
+    // Month labels never sit closer than two columns, whatever day the year starts on.
+    for (let offset = 0; offset < 400; offset += 3) {
+      const { months } = yearSquares([], addDays("2026-10-01", -offset));
+      for (let i = 1; i < months.length; i++) expect(months[i].column - months[i - 1].column).toBeGreaterThanOrEqual(2);
+    }
 
     const light = await (await call("/u/widge-year/graph.svg?theme=light")).text();
     expect(light).toContain("#f6f6f6");

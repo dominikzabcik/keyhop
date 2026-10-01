@@ -19,7 +19,7 @@ enum Dashboard {
         let token: String
     }
 
-    static let sections = ["overview", "accounts", "usage", "budgets", "leaderboard", "settings"]
+    static let sections = ["overview", "accounts", "usage", "budgets", "leaderboard", "season", "teams", "profile", "settings"]
 
     private static var launchFile: URL { Platform.dataDirectory.appendingPathComponent("dashboard.json") }
 
@@ -306,7 +306,7 @@ struct DashboardCloudLinkAction: Encodable {
     let verifyUrl: String
 }
 
-/// A team's day, as Leaderboard shows it: the same reading the website draws.
+/// A team's day, as Teams shows it: the same reading the website draws.
 struct DashboardDay: Encodable {
     let teams: [CloudTeam]
     let team: CloudTeamDay.Team?

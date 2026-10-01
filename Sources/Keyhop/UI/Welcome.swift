@@ -63,7 +63,7 @@ struct WelcomeView: View {
     fileprivate static let capabilities = [
         Capability(icon: "usage", title: "Limits and usage", detail: "What each account used, and what it cost."),
         Capability(icon: "refresh", title: "Smart Hop", detail: "The account with the most runway, named for you."),
-        Capability(icon: "leaderboard", title: "Leaderboard", detail: "Seasons, quests and badges with friends."),
+        Capability(icon: "leaderboard", title: "Leaderboard", detail: "Your rank, this month's season, and your teams."),
         Capability(icon: "settings", title: "For your agents", detail: "keyhop mcp, read-only, over stdio."),
     ]
 

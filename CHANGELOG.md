@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.14.1]
 
-- A public profile can share a year of days at `graph.svg`, shaded by that day's tokens, Monday at the top. A published team gets the same image, with every member's tokens on the day's square. `keyhop cloud badge` prints it with the other README lines.
+- A public profile can share a year of days at `graph.svg`, shaded by that day's tokens, Monday at the top. A published team gets the same image, with every member's tokens on the day's square. `keyhop cloud badge` prints it with the other README lines, and the window lists it under Settings, Leaderboard.
 
 ## [0.14.0]
 

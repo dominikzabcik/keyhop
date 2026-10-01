@@ -713,39 +713,66 @@ export function toolRows(totals: Totals): Html {
 }
 
 const HEAT_WEEKS = 53;
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/** A year of days, Monday at the top, shaded by quartile of the active days. Drawn at its real size. */
-export function heatmap(days: { day: string; tokens: number }[], reference: string): Html {
-  const byDay = new Map(days.map((entry) => [entry.day, entry.tokens]));
+export interface YearSquare {
+  day: string;
+  column: number;
+  row: number;
+  tokens: number;
+  level: number;
+}
+
+/** First Monday of the 53-week window that ends on `reference`. */
+export function yearStart(reference: string): string {
   const weekday = (new Date(`${reference}T00:00:00Z`).getUTCDay() + 6) % 7;
-  const start = addDays(reference, -((HEAT_WEEKS - 1) * 7 + weekday));
+  return addDays(reference, -((HEAT_WEEKS - 1) * 7 + weekday));
+}
+
+/** A year of days, Monday at the top, shaded by quartile of the days that had tokens. */
+export function yearSquares(days: { day: string; tokens: number }[], reference: string): { squares: YearSquare[]; months: { column: number; label: string }[]; total: number } {
+  const byDay = new Map(days.map((entry) => [entry.day, entry.tokens]));
+  const start = yearStart(reference);
   const values = days.map((entry) => entry.tokens).filter((value) => value > 0).sort((a, b) => a - b);
   const quantile = (q: number) => values[Math.min(values.length - 1, Math.floor(q * values.length))] ?? 0;
   const [q1, q2, q3] = [quantile(0.25), quantile(0.5), quantile(0.75)];
   const level = (value: number) => (value <= 0 ? 0 : value <= q1 ? 1 : value <= q2 ? 2 : value <= q3 ? 3 : 4);
-  const cell = 14;
-  const step = 18;
-  const top = 20;
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const parts: string[] = [];
+  const squares: YearSquare[] = [];
+  const months: { column: number; label: string }[] = [];
+  let total = 0;
   let lastMonth = -1;
   for (let column = 0; column < HEAT_WEEKS; column++) {
     const first = addDays(start, column * 7);
     const month = Number(first.slice(5, 7)) - 1;
     // A label needs about two columns of room, so none squeezes in at the right edge.
     if (month !== lastMonth && column < HEAT_WEEKS - 2) {
-      parts.push(`<text x="${column * step}" y="11">${monthNames[month]}</text>`);
+      months.push({ column, label: MONTHS[month] });
       lastMonth = month;
     }
     for (let row = 0; row < 7; row++) {
       const day = addDays(start, column * 7 + row);
       if (day > reference) continue;
-      const value = byDay.get(day) ?? 0;
-      parts.push(
-        `<rect class="l${level(value)}" x="${column * step}" y="${top + row * step}" width="${cell}" height="${cell}" rx="3"><title>${day}: ${tokens(value)} tokens</title></rect>`,
-      );
+      const tokensOnDay = byDay.get(day) ?? 0;
+      total += tokensOnDay;
+      squares.push({ day, column, row, tokens: tokensOnDay, level: level(tokensOnDay) });
     }
   }
+  return { squares, months, total };
+}
+
+/** The year, drawn at its real size for the profile. */
+export function heatmap(days: { day: string; tokens: number }[], reference: string): Html {
+  const { squares, months } = yearSquares(days, reference);
+  const cell = 14;
+  const step = 18;
+  const top = 20;
+  const parts = [
+    ...months.map((month) => `<text x="${month.column * step}" y="11">${month.label}</text>`),
+    ...squares.map(
+      (square) =>
+        `<rect class="l${square.level}" x="${square.column * step}" y="${top + square.row * step}" width="${cell}" height="${cell}" rx="3"><title>${square.day}: ${tokens(square.tokens)} tokens</title></rect>`,
+    ),
+  ];
   const width = HEAT_WEEKS * step - (step - cell);
   const height = top + 7 * step - (step - cell);
   return html`${raw(`<svg class="heat" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Daily activity over the last year">${parts.join("")}</svg>`)}`;

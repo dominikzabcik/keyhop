@@ -186,6 +186,7 @@ A public profile can be dropped into a README, a GitHub profile, or any page tha
 | `card.svg` | This season's tokens, the streak, active days, badges and tier. |
 | `streak.svg` | The current streak, the longest streak and active days. |
 | `tools.svg` | The share of Claude Code, Cursor, Codex, Gemini CLI, OpenCode and Pi. The last 30 days, until you say otherwise. |
+| `graph.svg` | A year of days, Monday at the top, shaded by how many tokens that day used. The line above the squares is the year's total. |
 | `pet.svg` | The pet. |
 
 Add `?metric=` and `?period=` to a badge. Metrics are `tokens`, `cost`, `requests`, `commits`, `lines`, `streak`, `rank` and `tier`. Periods are `today`, `week`, `month`, `all` and `season`. `streak` is the current run of days. `tier` is this season. `rank` is your place by tokens in that period. `tools.svg` takes the same periods. `?theme=light` draws the frame for a light page. With no theme the image stays dark, so a link you already published keeps its look. An unknown metric or period is not found.
@@ -194,7 +195,7 @@ Add `?metric=` and `?period=` to a badge. Metrics are `tokens`, `cost`, `request
 [![Badge](https://keyhop.app/u/YOUR-LOGIN/badge.svg?metric=commits&period=month)](https://keyhop.app/u/YOUR-LOGIN)
 ```
 
-A team works the same way once its owner turns on **Publish this team's totals**. The images are `/t/<team>/badge.svg`, `card.svg`, `streak.svg` and `tools.svg`. They show summed totals and how many members the team has. A team badge takes `tokens`, `cost`, `requests`, `commits`, `lines` and `streak`. `keyhop cloud badge <team>` prints the lines when this computer's account is on that team and the owner has published it. Until then, the image is not found.
+A team works the same way once its owner turns on **Publish this team's totals**. The images are `/t/<team>/badge.svg`, `card.svg`, `streak.svg`, `tools.svg` and `graph.svg`. They show summed totals and how many members the team has. The year puts every member's tokens on the same day. A team badge takes `tokens`, `cost`, `requests`, `commits`, `lines` and `streak`. `keyhop cloud badge <team>` prints the lines when this computer's account is on that team and the owner has published it. Until then, the image is not found.
 
 GitHub keeps its own copy of an image, so a README can lag the profile by a few minutes.
 

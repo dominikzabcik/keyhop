@@ -335,6 +335,16 @@ function subjectClause(who: Subject): { clause: string; id: string } {
     : { clause: "user_id IN (SELECT user_id FROM team_members WHERE team_id = ?)", id: who.teamId };
 }
 
+/** Tokens per day inside a range. A team day is the sum of its members, with nobody named. */
+export async function dailyTokens(db: D1Database, who: Subject, from: string, until: string): Promise<{ day: string; tokens: number }[]> {
+  const { clause, id } = subjectClause(who);
+  const { results } = await db
+    .prepare(`SELECT day, SUM(tokens) AS tokens FROM daily_usage WHERE ${clause} AND day >= ? AND day <= ? GROUP BY day ORDER BY day`)
+    .bind(id, from, until)
+    .all<{ day: string; tokens: number }>();
+  return results;
+}
+
 /** Tokens, API value, requests and commits inside a day range. A team is the sum of its members. */
 export async function summed(db: D1Database, who: Subject, from: string, until: string): Promise<WindowTotals> {
   const { clause, id } = subjectClause(who);

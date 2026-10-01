@@ -841,6 +841,7 @@ describe("widgets", () => {
     expect((await call("/u/widge/badge.svg")).status).toBe(404);
     expect((await call("/u/widge/streak.svg")).status).toBe(404);
     expect((await call("/u/widge/tools.svg")).status).toBe(404);
+    expect((await call("/u/widge/graph.svg")).status).toBe(404);
 
     await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
     await upload(token, [{ day: today(), tool: "claude", tokens: 4200, cost: 1, requests: 5 }]);
@@ -861,10 +862,19 @@ describe("widgets", () => {
 
     expect(await (await call("/u/widge/streak.svg")).text()).toContain("1 day");
     expect(await (await call("/u/widge/tools.svg")).text()).toContain("Claude Code");
+    const graph = await call("/u/widge/graph.svg");
+    expect(graph.status).toBe(200);
+    expect(graph.headers.get("content-type")).toContain("image/svg+xml");
+    const year = await graph.text();
+    expect(year).toContain(`${today()}: 4K tokens`);
+    expect(year).toContain("4K tokens in the last year");
+    expect(year).toContain(">Less</text>");
+    expect(year).toContain(">More</text>");
     expect((await call("/u/widge/badge.svg?metric=nope")).status).toBe(404);
 
     const page = await (await call("/u/widge")).text();
     expect(page).toContain("/u/widge/badge.svg");
+    expect(page).toContain("/u/widge/graph.svg");
     expect(page).toContain("/u/widge/pet.svg");
     expect(page).toContain("?metric=commits");
     expect(page).toContain("?theme=light");
@@ -878,6 +888,34 @@ describe("widgets", () => {
     const svg = await (await call("/u/widge-rex/streak.svg")).text();
     expect(svg).not.toContain("<script>");
     expect(svg).toContain("&lt;script&gt;");
+    const graph = await (await call("/u/widge-rex/graph.svg")).text();
+    expect(graph).not.toContain("<script>");
+    expect(graph).toContain("&lt;script&gt;");
+  });
+
+  it("shades a heavier day brighter than a quiet one", async () => {
+    const cookie = await signIn("widge-year");
+    const token = await linkApp(cookie);
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    const yesterday = addDays(today(), -1);
+    await upload(token, [
+      { day: yesterday, tool: "claude", tokens: 50_000_000, cost: 1, requests: 1 },
+      { day: today(), tool: "cursor", tokens: 1_000, cost: 1, requests: 1 },
+    ]);
+
+    const svg = await (await call("/u/widge-year/graph.svg")).text();
+    const fill = (day: string) => svg.match(new RegExp(`fill="(#[0-9a-f]+)"><title>${day}:`))?.[1];
+    const heavy = fill(yesterday);
+    const quiet = fill(today());
+    expect(heavy).toBe("#6b6b6b");
+    expect(quiet).toBe("#414141");
+    expect(svg).toContain("50M tokens in the last year");
+    expect(svg).toContain(">Mon</text>");
+
+    const light = await (await call("/u/widge-year/graph.svg?theme=light")).text();
+    expect(light).toContain("#f6f6f6");
+    expect(light).toContain(`fill="#e7e7e7"`);
+    expect(light).not.toContain("#232323");
   });
 
   it("publishes a team's totals without its members' names", async () => {
@@ -896,6 +934,7 @@ describe("widgets", () => {
 
     expect((await call(`/t/${slug}/badge.svg`)).status).toBe(404);
     expect((await call(`/t/${slug}/card.svg`)).status).toBe(404);
+    expect((await call(`/t/${slug}/graph.svg`)).status).toBe(404);
     expect((await form(`/t/${slug}/public`, member, { public: "on" })).status).toBe(404);
     const denied = await call(`/api/teams/${slug}/public`, {
       method: "POST",
@@ -917,8 +956,16 @@ describe("widgets", () => {
     expect(card).not.toContain("widget-mate");
     expect((await call(`/t/${slug}/badge.svg?metric=rank`)).status).toBe(404);
 
+    const graph = await (await call(`/t/${slug}/graph.svg`)).text();
+    expect(graph).toContain("3.0M tokens in the last year");
+    expect(graph).toContain("&lt;script&gt;");
+    expect(graph).not.toContain("<script>");
+    expect(graph).not.toContain("widget-mate");
+    expect(graph).not.toContain("widget-owner");
+
     const page = await (await call(`/t/${slug}`, { headers: { cookie: member } })).text();
     expect(page).toContain(`/t/${slug}/badge.svg`);
+    expect(page).toContain(`/t/${slug}/graph.svg`);
     expect(page).toContain("tokens, cost, requests, commits, lines or streak");
     expect(page).not.toContain(`/t/${slug}/pet.svg`);
 
@@ -929,6 +976,7 @@ describe("widgets", () => {
     });
     expect(hidden.status).toBe(200);
     expect((await call(`/t/${slug}/badge.svg`)).status).toBe(404);
+    expect((await call(`/t/${slug}/graph.svg`)).status).toBe(404);
   });
 });
 

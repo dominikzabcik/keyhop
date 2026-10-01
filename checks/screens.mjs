@@ -51,9 +51,17 @@ export const APP_SCREENS = [
   { name: "accounts", section: "accounts", mustSay: ["Add account"] },
   { name: "usage", section: "usage", mustSay: ["Tokens", "Tools", "Sessions", "Cache read", "API value"] },
   { name: "budgets", section: "budgets", mustSay: ["Budget"] },
-  { name: "leaderboard", section: "leaderboard", mustSay: [] },
+  { name: "leaderboard", section: "leaderboard", mustSay: ["Your rank"] },
+  { name: "season", section: "season", mustSay: ["Season standings"] },
+  { name: "teams", section: "teams", mustSay: ["Your teams"] },
+  // A team is three jobs. The list is the section; these open one team and one job each.
+  { name: "team-day", section: "teams", mustSay: ["Open this day on the website"], arrive: ["[data-action=board-pick]"] },
+  { name: "team-ranks", section: "teams", mustSay: ["Your rank"], arrive: ["[data-action=board-pick]", "[data-action=board-view][data-value=ranks]"] },
+  { name: "team-members", section: "teams", mustSay: ["Leave Night Shift"], arrive: ["[data-action=board-pick]", "[data-action=board-view][data-value=members]"] },
+  { name: "profile", section: "profile", mustSay: ["Keeps", "Quests", "Badges"] },
   // Settings opens one calm category at a time; the category rail names the rest.
   { name: "settings", section: "settings", mustSay: ["Appearance", "Activity", "App & Privacy"], mayFail: ["/api/update"] },
+  { name: "settings-cloud", section: "settings", mustSay: ["How you appear", "This computer"], arrive: ['[data-action="settings-pane"][data-value="cloud"]'], mayFail: ["/api/update"] },
 ];
 
 /**

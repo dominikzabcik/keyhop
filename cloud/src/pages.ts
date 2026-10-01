@@ -4,6 +4,7 @@ import { pageUser, safeNext } from "./auth";
 import { type AppEnv, type User, addDays, now, today } from "./env";
 import { LANDING_CSS, landingPage } from "./landing";
 import { downloadPage, privacyPage, securityPage, termsPage } from "./marketing";
+import { type ClaimState, claimState } from "./keeps";
 import { creatureMarkup, petFrom, petsFor } from "./pet";
 import { profileBadges, questsFor } from "./quests";
 import { TIERS, currentSeason, daysLeft, isSeason, nextStep, seasonBoard, seasonLabel, seasonList, seasonRange, tierFor } from "./seasons";
@@ -243,12 +244,39 @@ pages.get("/leaderboard", async (c) => {
   );
 });
 
+/** The streak keeps counting itself. This is the click that takes today's keep. */
+function keepsCard(state: ClaimState, next: "profile" | "season", flash: string | undefined, mine: boolean): Html {
+  if (!mine && state.keeps.length === 0) return html``;
+  const chips = state.keeps.map((keep) => html`<span class="badge">${keep.name} ${keep.count}</span>`);
+  const opened = flash === "opened" && state.today ? html`<p style="margin:0 0 12px"><b>Opened a ${state.today.name}.</b> ${state.today.note}</p>` : html``;
+  const kept = flash === "kept" ? html`<p class="muted" style="margin:0 0 12px">Already claimed today.</p>` : html``;
+  const quiet = flash === "quiet" ? html`<p class="muted" style="margin:0 0 12px">Claim opens once today has tokens or a commit.</p>` : html``;
+  const action = !mine
+    ? html``
+    : state.claimed && state.today
+      ? html`<p class="muted" style="margin:12px 0 0">Claimed today · ${state.today.name}</p>`
+      : state.active && state.today
+        ? html`<form method="post" action="/streak/claim?next=${next}" style="margin-top:12px"><button class="btn sm" type="submit">Claim ${state.today.name}</button></form>`
+        : html`<p class="muted" style="margin:12px 0 0">The streak counts a day with tokens or a commit. Claim opens once today has one.</p>`;
+  const label = `${state.streak} ${state.streak === 1 ? "day" : "days"}`;
+  return html`<section class="card">
+    <div class="card-head"><h2>Keeps</h2><span class="hint">${label}</span></div>
+    <div class="card-body">
+      ${opened}${kept}${quiet}
+      ${chips.length ? html`<p style="margin:0;display:flex;flex-wrap:wrap;gap:8px">${chips}</p>` : html`<p class="muted" style="margin:0">Nothing kept yet.</p>`}
+      ${action}
+    </div>
+  </section>`;
+}
+
 /** One month of ranked play. Past seasons are counted the same way, so they never go stale. */
 async function seasonPage(c: C, season: string) {
   const viewer = c.get("user");
-  const [board, goals] = await Promise.all([
+  const current = season === currentSeason();
+  const [board, goals, claim] = await Promise.all([
     seasonBoard(c.env.DB, { season, metric: "tokens" }),
     viewer ? questsFor(c.env.DB, viewer.id) : Promise.resolve(null),
+    viewer && current ? claimState(c.env.DB, viewer.id) : Promise.resolve(null),
   ]);
   const mine = viewer ? board.find((entry) => entry.userId === viewer.id) : undefined;
   const range = seasonRange(season);
@@ -293,6 +321,7 @@ async function seasonPage(c: C, season: string) {
               <a class="btn sm ghost" href="/download">Get Keyhop first</a>
             </div>
           </section>`}
+      ${claim ? keepsCard(claim, "season", c.req.query("claim"), true) : ""}
       ${goals
         ? html`<section class="card">
             <div class="card-head"><h2>Quests</h2><span class="hint">Today and this week</span></div>
@@ -358,10 +387,11 @@ pages.get("/u/:login", async (c) => {
   if (!person || (person.public !== 1 && !isSelf)) return notFound(c, "This profile is private, or doesn't exist.");
   if (person.login !== login) return c.redirect(`/u/${person.login}`, 301);
 
-  const [stats, season, badges] = await Promise.all([
+  const [stats, season, badges, claim] = await Promise.all([
     profile(c.env.DB, person.id, person.public === 1),
     seasonBoard(c.env.DB, { season: currentSeason(), metric: "tokens" }),
     profileBadges(c.env.DB, person.id),
+    claimState(c.env.DB, person.id),
   ]);
   const earned = badges.filter((entry) => entry.earned);
   const place = season.find((entry) => entry.userId === person.id);
@@ -412,6 +442,7 @@ pages.get("/u/:login", async (c) => {
           <p class="next">${place ? `#${place.rank} of ${season.length}, with ${tokens(place.tokens)} tokens.` : "Not ranked this season yet."}</p>
         </div>
       </section>
+      ${keepsCard(claim, "profile", isSelf ? c.req.query("claim") : undefined, isSelf)}
       <section class="card">
         <div class="card-head"><h2>Badges</h2><span class="hint">${earned.length} of ${badges.length}</span></div>
         <div class="badges">${badges.map(

@@ -15,6 +15,7 @@ struct SeasonView: View {
                             limits
                             creature
                             standing
+                            keeps
                             quests
                             badges
                             board.id("board")
@@ -257,6 +258,42 @@ struct SeasonView: View {
             .padding(18)
         }
         .animation(.snappy, value: store.season?.you?.rank)
+    }
+
+    private func claimCaption(_ claim: CloudQuests.Claim) -> String {
+        if claim.claimed {
+            return claim.today.map { "Claimed today · \($0.name)." } ?? "Claimed today."
+        }
+        if claim.active {
+            return "Claim \(claim.today?.name ?? "today") in Keyhop."
+        }
+        return "Claim opens once today has tokens or a commit."
+    }
+
+    /// Keeps already claimed. The phone can read them; claiming stays on the computer and the website.
+    @ViewBuilder private var keeps: some View {
+        if let claim = store.quests?.claim {
+            Card {
+                VStack(alignment: .leading, spacing: 8) {
+                    CardHead(title: "Keeps") {
+                        Text("\(claim.streak) \(claim.streak == 1 ? "day" : "days")")
+                    }
+                    if claim.keeps.isEmpty {
+                        Text("Nothing kept yet.")
+                            .font(.ui(13, .regular, .footnote))
+                            .foregroundStyle(Brand.muted)
+                    } else {
+                        Text(claim.keeps.map { "\($0.name) \($0.count)" }.joined(separator: "  ·  "))
+                            .font(.ui(13, .regular, .body))
+                            .foregroundStyle(Brand.text)
+                    }
+                    Text(claimCaption(claim))
+                        .font(.ui(12.5, .regular, .footnote))
+                        .foregroundStyle(Brand.muted)
+                }
+                .padding(18)
+            }
+        }
     }
 
     @ViewBuilder private var quests: some View {

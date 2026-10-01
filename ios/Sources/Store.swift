@@ -133,7 +133,11 @@ final class Store: ObservableObject {
                 CloudQuests.Badge(key: "first-hop", name: "First hop", note: "Join your first season.", earned: true, day: "2026-09-01"),
                 CloudQuests.Badge(key: "billion", name: "One billion", note: "Use one billion tokens in a season.", earned: true, day: "2026-09-08"),
                 CloudQuests.Badge(key: "podium", name: "Podium", note: "Finish a week in the top three.", earned: false, day: nil),
-            ])
+            ],
+            claim: CloudQuests.Claim(
+                streak: 12, active: true, claimed: false,
+                today: CloudQuests.Keep(key: "ember", name: "Ember", note: "Seven days in a row."),
+                keeps: [CloudQuests.Kept(key: "ember", name: "Ember", note: "Seven days in a row.", count: 5)]))
         pet = .sample
         let soon = Int(Date().timeIntervalSince1970)
         limits = CloudLimits(limits: [

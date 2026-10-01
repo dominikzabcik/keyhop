@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- A public profile can share a year of days at `graph.svg`, shaded by that day's tokens, Monday at the top. A published team gets the same image, with every member's tokens on the day's square. `keyhop cloud badge` prints it with the other README lines.
+
 ## [0.14.0]
 
 - A linked account has one pet, counted from the daily totals it already syncs. Tokens set the stage, from Speck to Monument. The tool with at least half the tokens sets the colour. The current streak sets the pose, and commits add bricks under it. It shows on the profile, the team page, the menu and the iPhone season screen. A public profile shares the image at `/u/<login>/pet.svg`.

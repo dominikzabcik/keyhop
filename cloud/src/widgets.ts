@@ -1,12 +1,13 @@
 import { Hono } from "hono";
 import { type AppEnv, MEASURED_TOOLS, TOOL_NAMES, addDays, today } from "./env";
 import { currentSeason, seasonBoard, seasonRange, tierFor, tierLabel } from "./seasons";
-import { type Period, type Subject, type WindowTotals, activity, leaderboard, summed } from "./stats";
+import { type Period, type Subject, type WindowTotals, activity, dailyTokens, leaderboard, summed } from "./stats";
 import { dollars, esc, fit, frame, grouped, keyhopMark, MONO, SANS, shortTokens, svgHeaders, svgOpen, themeOf, type Theme } from "./svg";
 import { publishedTeam } from "./teams";
+import { yearSquares, yearStart } from "./ui";
 
 /**
- * README images besides the profile card and the pet: a small badge, a streak, and a tool mix.
+ * README images besides the profile card and the pet: a small badge, a streak, a tool mix, and a year of days.
  * A team gets the same set once its owner publishes it. Rank and tier stay on a person, because
  * a season ladder is one account, not a sum of them.
  */
@@ -41,6 +42,7 @@ export const PERSON_WIDGETS = [
   ["Card", "card.svg"],
   ["Streak", "streak.svg"],
   ["Tools", "tools.svg"],
+  ["Year", "graph.svg"],
   ["Pet", "pet.svg"],
 ] as const;
 
@@ -49,6 +51,7 @@ export const TEAM_WIDGETS = [
   ["Card", "card.svg"],
   ["Streak", "streak.svg"],
   ["Tools", "tools.svg"],
+  ["Year", "graph.svg"],
 ] as const;
 
 export function widgetMarkdown(page: string, file: string, label: string): string {
@@ -184,6 +187,58 @@ function toolsImage(theme: Theme, title: string, path: string, period: BadgePeri
 </svg>`;
 }
 
+/** Five steps from an empty day to the heaviest, painted so a light page and a dark page both read. */
+const YEAR_FILLS: Record<Theme["name"], [string, string, string, string, string]> = {
+  dark: ["#232323", "#414141", "#6b6b6b", "#a2a2a2", "#e8e8e8"],
+  light: ["#e7e7e7", "#cacaca", "#999999", "#5d5d5d", "#1e1e1e"],
+};
+
+const WEEKDAYS = ["Mon", "Wed", "Fri"];
+
+function graphImage(theme: Theme, title: string, path: string, days: { day: string; tokens: number }[], reference: string): string {
+  const width = 880;
+  const height = 320;
+  const cell = 11;
+  const step = 14;
+  const gridX = 72;
+  const gridY = 168;
+  const { squares, months, total } = yearSquares(days, reference);
+  const fills = YEAR_FILLS[theme.name];
+  const shown = `${shortTokens(total)} tokens in the last year`;
+  const cells = squares
+    .map(
+      (square) =>
+        `<rect x="${gridX + square.column * step}" y="${gridY + square.row * step}" width="${cell}" height="${cell}" rx="2" fill="${fills[square.level]}"><title>${square.day}: ${shortTokens(square.tokens)} tokens</title></rect>`,
+    )
+    .join("");
+  const monthLabels = months
+    .map(
+      (month) =>
+        `<text x="${gridX + month.column * step}" y="${gridY - 8}" font-size="11" fill="${theme.faint}" font-family="${MONO}">${month.label}</text>`,
+    )
+    .join("");
+  const weekdayLabels = WEEKDAYS.map(
+    (label, index) =>
+      `<text x="40" y="${gridY + index * 2 * step + 9}" font-size="10" fill="${theme.faint}" font-family="${MONO}">${label}</text>`,
+  ).join("");
+  const legendX = 78;
+  const legend = fills
+    .map((fill, index) => `<rect x="${legendX + index * 16}" y="286" width="11" height="11" rx="2" fill="${fill}"/>`)
+    .join("");
+  return `${svgOpen(width, height, `${title}, ${shown}`)}
+  ${frame(width, height, theme)}
+  ${header(theme, width, path)}
+  <text x="40" y="104" font-size="22" font-weight="640" fill="${theme.text}" font-family="${SANS}">${esc(fit(title, 36))}</text>
+  <text x="40" y="130" font-size="14" fill="${theme.muted}" font-family="${SANS}">${esc(shown)}</text>
+  ${weekdayLabels}
+  ${monthLabels}
+  ${cells}
+  <text x="40" y="296" font-size="11" fill="${theme.faint}" font-family="${SANS}">Less</text>
+  ${legend}
+  <text x="${legendX + fills.length * 16 + 4}" y="296" font-size="11" fill="${theme.faint}" font-family="${SANS}">More</text>
+</svg>`;
+}
+
 function teamCardImage(theme: Theme, name: string, slug: string, members: number, seasonTokens: number, streak: number, activeDays: number): string {
   const width = 880;
   const height = 250;
@@ -240,6 +295,16 @@ widgets.get("/u/:login/tools.svg", async (c) => {
   return c.body(toolsImage(themeOf(c.req.query("theme")), name, `u/${person.login}`, period, totals.tools));
 });
 
+widgets.get("/u/:login/graph.svg", async (c) => {
+  const person = await publicPerson(c.env.DB, c.req.param("login"));
+  if (!person) return c.notFound();
+  const reference = today();
+  const days = await dailyTokens(c.env.DB, { userId: person.id }, yearStart(reference), reference);
+  const name = person.display_name || person.name || person.login;
+  svgHeaders(c);
+  return c.body(graphImage(themeOf(c.req.query("theme")), name, `u/${person.login}`, days, reference));
+});
+
 widgets.get("/t/:slug/badge.svg", async (c) => {
   const team = await publishedTeam(c.env.DB, c.req.param("slug"));
   if (!team) return c.notFound();
@@ -269,6 +334,15 @@ widgets.get("/t/:slug/tools.svg", async (c) => {
   const totals = await summed(c.env.DB, { teamId: team.id }, bounds(period).from, bounds(period).until);
   svgHeaders(c);
   return c.body(toolsImage(themeOf(c.req.query("theme")), team.name, `t/${team.slug}`, period, totals.tools));
+});
+
+widgets.get("/t/:slug/graph.svg", async (c) => {
+  const team = await publishedTeam(c.env.DB, c.req.param("slug"));
+  if (!team) return c.notFound();
+  const reference = today();
+  const days = await dailyTokens(c.env.DB, { teamId: team.id }, yearStart(reference), reference);
+  svgHeaders(c);
+  return c.body(graphImage(themeOf(c.req.query("theme")), team.name, `t/${team.slug}`, days, reference));
 });
 
 widgets.get("/t/:slug/card.svg", async (c) => {

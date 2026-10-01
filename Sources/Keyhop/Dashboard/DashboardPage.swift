@@ -2207,7 +2207,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         <div class="row-actions"><a class="btn sm secondary" href="${esc(cloud.profile)}" target="_blank" rel="noopener">Open profile</a>
         <button class="btn sm secondary" data-action="cloud-sync">Sync now</button>
         <button class="btn sm ghost danger" data-action="cloud-unlink">Unlink</button></div></div>
-      ${profileForm()}${cloud.isPublic && cloud.profile ? `<div class="form card-body">${shareLines(cloud.profile, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"], ["Pet", "pet.svg"]])}
+      ${profileForm()}${cloud.isPublic && cloud.profile ? `<div class="form card-body">${shareLines(cloud.profile, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"], ["Year", "graph.svg"], ["Pet", "pet.svg"]])}
         <p class="empty-inline subtle">The badge shows tokens for the last 7 days. Add ?metric= and ?period= to the image address, and ?theme=light on a light page. <a href="https://github.com/dominikzabcik/keyhop#readme-images" target="_blank" rel="noopener">How the images work</a></p></div>` : ""}${appsCard()}${deleteAccountForm()}${limits}</section>`;
   }
 
@@ -2295,7 +2295,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
          <p class="empty-inline subtle">The image shows summed totals and how many members there are. Anyone with the link can load it.</p>`
       : "";
     const snippets = current && current.public
-      ? `<div class="form">${shareLines(`${website}/t/${current.slug}`, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"]])}
+      ? `<div class="form">${shareLines(`${website}/t/${current.slug}`, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"], ["Year", "graph.svg"]])}
          <p class="empty-inline subtle">The badge shows this team's tokens for the last 7 days. A team image takes tokens, cost, requests, commits, lines or streak.</p></div>`
       : "";
     const manage = !current ? "" : `${publish}${snippets}${current.role === "owner"

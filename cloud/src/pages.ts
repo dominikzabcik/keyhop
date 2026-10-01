@@ -393,7 +393,7 @@ pages.get("/u/:login", async (c) => {
             <div class="card-head"><h2>Widgets</h2><span class="hint">README</span></div>
             <div class="card-body form">
               ${widgetFields(url, PERSON_WIDGETS)}
-              <p class="muted" style="margin:0;font-size:13px">The badge shows tokens for the last 7 days. Add <span class="mono">?metric=commits&amp;period=month</span> to the image address, and <span class="mono">?theme=light</span> on a light page. Metrics: tokens, cost, requests, commits, lines, streak, rank, tier. Periods: today, week, month, all, season.</p>
+              <p class="muted" style="margin:0;font-size:13px">The badge shows tokens for the last 7 days. The year is a day for each of the last 53 weeks, shaded by that day's tokens. Add <span class="mono">?metric=commits&amp;period=month</span> to a badge, and <span class="mono">?theme=light</span> on a light page. Metrics: tokens, cost, requests, commits, lines, streak, rank, tier. Periods: today, week, month, all, season.</p>
             </div>
           </section>`
         : ""}
@@ -528,7 +528,7 @@ pages.get("/t/:slug", pageUser, async (c) => {
                   ? html`<p class="muted" style="margin:0;font-size:13px">The owner can publish a badge of this team's totals.</p>`
                   : ""}
               ${team.public === 1 ? widgetFields(`${origin}/t/${team.slug}`, TEAM_WIDGETS) : ""}
-              <p class="muted" style="margin:0;font-size:13px">The badge shows this team's tokens for the last 7 days. A team image takes tokens, cost, requests, commits, lines or streak, with the same period and theme as a profile.</p>
+              <p class="muted" style="margin:0;font-size:13px">The badge shows this team's tokens for the last 7 days. The year sums every member's tokens onto one square per day. A team badge takes tokens, cost, requests, commits, lines or streak, with the same period and theme as a profile.</p>
             </div>
           </div>
           ${owner

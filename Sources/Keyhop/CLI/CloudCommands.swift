@@ -112,7 +112,7 @@ extension Commands {
                 print("This team's totals aren't published. The owner can turn that on from the team page.")
                 return
             }
-            print(widgetLines(page: "\(link.server)/t/\(team.slug)", files: ["badge.svg", "card.svg", "streak.svg", "tools.svg"]))
+            print(widgetLines(page: "\(link.server)/t/\(team.slug)", files: ["badge.svg", "card.svg", "streak.svg", "tools.svg", "graph.svg"]))
             return
         }
         let me = try await client.me()
@@ -120,11 +120,11 @@ extension Commands {
             print("Your profile is private. Make it public to share a widget.")
             return
         }
-        print(widgetLines(page: "\(link.server)/u/\(me.login)", files: ["badge.svg", "card.svg", "streak.svg", "tools.svg", "pet.svg"]))
+        print(widgetLines(page: "\(link.server)/u/\(me.login)", files: ["badge.svg", "card.svg", "streak.svg", "tools.svg", "graph.svg", "pet.svg"]))
     }
 
     private static func widgetLines(page: String, files: [String]) -> String {
-        let labels = ["badge.svg": "Badge", "card.svg": "Card", "streak.svg": "Streak", "tools.svg": "Tools", "pet.svg": "Pet"]
+        let labels = ["badge.svg": "Badge", "card.svg": "Card", "streak.svg": "Streak", "tools.svg": "Tools", "graph.svg": "Year", "pet.svg": "Pet"]
         return files.map { file in
             let label = labels[file] ?? "Keyhop"
             return "[![\(label)](\(page)/\(file))](\(page))"

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
-import { apiUser } from "./auth";
+import { apiUser, apiWriter, pageUser } from "./auth";
 import { type AppEnv, type Tool, MEASURED_TOOLS, addDays, today } from "./env";
+import { claimState, claimToday } from "./keeps";
 import { currentSeason, seasonBoard, seasonOf, tierFor } from "./seasons";
 import { streaks } from "./stats";
 
@@ -298,10 +299,27 @@ export const quests = new Hono<AppEnv>();
 /** The signed-in person's quests and badges, for the app's window and the website. */
 quests.get("/api/quests", apiUser, async (c) => {
   const user = c.get("user")!;
-  const { quests: list, badges } = await questsAndBadges(c.env.DB, user.id);
+  const [{ quests: list, badges }, claim] = await Promise.all([
+    questsAndBadges(c.env.DB, user.id),
+    claimState(c.env.DB, user.id),
+  ]);
   return c.json({
     season: currentSeason(),
     quests: list,
     badges: badges.map((entry) => ({ ...entry, day: entry.day ?? null })),
+    claim,
   });
+});
+
+quests.post("/api/streak/claim", apiUser, apiWriter, async (c) => {
+  const user = c.get("user")!;
+  const result = await claimToday(c.env.DB, user.id);
+  return c.json({ ...result.state, opened: result.opened, status: result.status });
+});
+
+quests.post("/streak/claim", pageUser, async (c) => {
+  const user = c.get("user")!;
+  const result = await claimToday(c.env.DB, user.id);
+  const next = new URL(c.req.url).searchParams.get("next") === "season" ? "/season" : `/u/${user.login}`;
+  return c.redirect(`${next}?claim=${result.status}`);
 });

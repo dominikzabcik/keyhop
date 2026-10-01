@@ -245,8 +245,31 @@ struct CloudQuests: Codable {
         let day: String?
     }
 
+    struct Keep: Codable {
+        let key: String
+        let name: String
+        let note: String
+    }
+
+    struct Kept: Codable {
+        let key: String
+        let name: String
+        let note: String
+        var count: Int
+    }
+
+    /// Today's claim, plus the keeps already taken. Nil on a website that doesn't have it yet.
+    struct Claim: Codable {
+        var streak: Int
+        var active: Bool
+        var claimed: Bool
+        var today: Keep?
+        var keeps: [Kept]
+    }
+
     let quests: [Quest]
     let badges: [Badge]
+    var claim: Claim? = nil
 }
 
 /// The lifetime creature. The website decides the rectangles; a client only paints them.
@@ -764,6 +787,25 @@ struct CloudClient {
         let (data, status) = try await send("GET", "/api/quests")
         guard status == 200 else { throw problem(data, status) }
         return try JSONDecoder().decode(CloudQuests.self, from: data)
+    }
+
+    /// Take today's keep. The streak itself is already counted; this is only the claim.
+    func claimStreak() async throws -> CloudQuests.Claim {
+        struct Result: Decodable {
+            let status: String
+            let opened: CloudQuests.Keep?
+            let streak: Int
+            let active: Bool
+            let claimed: Bool
+            let today: CloudQuests.Keep?
+            let keeps: [CloudQuests.Kept]
+        }
+        let (data, status) = try await send("POST", "/api/streak/claim", body: [String: String]())
+        guard status == 200 else { throw problem(data, status) }
+        let result = try JSONDecoder().decode(Result.self, from: data)
+        if result.status == "quiet" { throw CloudError(kind: .server, message: "Claim opens once today has tokens or a commit.") }
+        if result.status == "kept" { throw CloudError(kind: .server, message: "Already claimed today.") }
+        return CloudQuests.Claim(streak: result.streak, active: result.active, claimed: result.claimed, today: result.today, keeps: result.keeps)
     }
 
     func pet() async throws -> CloudPet {

@@ -7,6 +7,7 @@ import { parseUsage } from "../src/usage";
 import { LIMIT_TTL_SECONDS, clean, parseLimits, sweepLimits } from "../src/limits";
 import { badgesFrom, questsFrom } from "../src/quests";
 import { webLink } from "../src/account";
+import { keepFor } from "../src/keeps";
 import { petFrom } from "../src/pet";
 import { INDEX_TTL_SECONDS, parseIndex, parseWork } from "../src/work";
 import { parseSubject, sharpen, span, tasksFor, tasksForDay } from "../src/tasks";
@@ -977,6 +978,55 @@ describe("widgets", () => {
     expect(hidden.status).toBe(200);
     expect((await call(`/t/${slug}/badge.svg`)).status).toBe(404);
     expect((await call(`/t/${slug}/graph.svg`)).status).toBe(404);
+  });
+});
+
+describe("streak claim", () => {
+  it("opens a rarer keep as the streak gets longer", () => {
+    expect(keepFor(1).name).toBe("Spark");
+    expect(keepFor(3).name).toBe("Glow");
+    expect(keepFor(7).name).toBe("Ember");
+    expect(keepFor(30).name).toBe("Flare");
+    expect(keepFor(100).name).toBe("Beacon");
+  });
+
+  it("claims today's keep once, and only after the day has counted", async () => {
+    const cookie = await signIn("keeper");
+    const token = await linkApp(cookie);
+    const quiet = await form("/streak/claim", cookie);
+    expect(quiet.headers.get("location")).toBe("/u/keeper?claim=quiet");
+
+    const phone = await linkPhone(cookie);
+    expect((await call("/api/streak/claim", { method: "POST", headers: { authorization: `Bearer ${phone}` } })).status).toBe(403);
+
+    await upload(token, [{ day: today(), tool: "claude", tokens: 1000, cost: 1, requests: 1 }]);
+    const opened = await call("/api/streak/claim", { method: "POST", headers: { authorization: `Bearer ${token}` } });
+    expect(opened.status).toBe(200);
+    const body = (await opened.json()) as { status: string; opened: { name: string }; keeps: { name: string; count: number }[]; claimed: boolean };
+    expect(body.status).toBe("opened");
+    expect(body.opened.name).toBe("Spark");
+    expect(body.claimed).toBe(true);
+    expect(body.keeps).toEqual([expect.objectContaining({ name: "Spark", count: 1 })]);
+
+    const again = (await (await call("/api/streak/claim", { method: "POST", headers: { authorization: `Bearer ${token}` } })).json()) as { status: string };
+    expect(again.status).toBe("kept");
+
+    const page = await (await call("/u/keeper", { headers: { cookie } })).text();
+    expect(page).toContain("Claimed today · Spark");
+    expect(page).toContain("Spark 1");
+
+    const quests = (await (await call("/api/quests", { headers: { authorization: `Bearer ${token}` } })).json()) as { claim: { claimed: boolean } };
+    expect(quests.claim.claimed).toBe(true);
+  });
+
+  it("opens an ember on the seventh day", async () => {
+    const cookie = await signIn("keeper-week");
+    const token = await linkApp(cookie);
+    const days = Array.from({ length: 7 }, (_, back) => ({ day: addDays(today(), -back), tool: "cursor", tokens: 2000, cost: 1, requests: 1 }));
+    await upload(token, days);
+    const body = (await (await call("/api/streak/claim", { method: "POST", headers: { authorization: `Bearer ${token}` } })).json()) as { opened: { name: string }; streak: number };
+    expect(body.streak).toBe(7);
+    expect(body.opened.name).toBe("Ember");
   });
 });
 

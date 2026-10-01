@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- The streak still counts itself from a day with tokens or a commit. Claiming that day opens a keep: Spark, then Glow, Ember, Flare and Beacon as the run gets longer. Each day can be claimed once. The keeps sit on your profile and on the season page, and in the window under Leaderboard.
+
 ## [0.14.1]
 
 - A public profile can share a year of days at `graph.svg`, shaded by that day's tokens, Monday at the top. A published team gets the same image, with every member's tokens on the day's square. `keyhop cloud badge` prints it with the other README lines, and the window lists it under Settings, Leaderboard.

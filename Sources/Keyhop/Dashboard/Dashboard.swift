@@ -814,6 +814,8 @@ actor DashboardSession {
                 return .json(try await saveProfile(try Self.decode(ProfileBody.self, request)))
             case ("POST", "/api/cloud/team"):
                 return .json(try await cloudTeam(try Self.decode(TeamActionBody.self, request)))
+            case ("POST", "/api/cloud/streak"):
+                return .json(try await cloudClaim())
             case ("POST", "/api/work"):
                 return .json(try await applyWork(try Self.decode(WorkBody.self, request)))
             case ("GET", "/api/usage"):
@@ -1132,6 +1134,8 @@ actor DashboardSession {
 
     // MARK: Appearance
 
+    /// The sample window can claim once, so the button can be tried without a linked account.
+    private var sampleClaimed = false
     private var sampleAppearance = DashboardAppearance()
     private var sampleImage: String?
 
@@ -1470,12 +1474,39 @@ actor DashboardSession {
         return DashboardAction(message: "Unlinked @\(link.login). Nothing more is sent from this computer.", note: nil)
     }
 
+    private func sampleLeaderboard(period: String, metric: String, team: String?, season: String?) -> DashboardLeaderboard {
+        var board = SampleData.leaderboard(period: period, metric: metric, team: team, season: season)
+        guard sampleClaimed, var quests = board.quests, var claim = quests.claim else { return board }
+        claim.claimed = true
+        if let today = claim.today, let index = claim.keeps.firstIndex(where: { $0.key == today.key }) {
+            claim.keeps[index].count += 1
+        } else if let today = claim.today {
+            claim.keeps.append(CloudQuests.Kept(key: today.key, name: today.name, note: today.note, count: 1))
+        }
+        quests.claim = claim
+        board = DashboardLeaderboard(board: board.board, teams: board.teams, team: board.team, website: board.website,
+                                     season: board.season, quests: quests, members: board.members)
+        return board
+    }
+
+    private func cloudClaim() async throws -> DashboardAction {
+        if sample {
+            if sampleClaimed { return DashboardAction(message: "Already claimed today.", note: nil) }
+            sampleClaimed = true
+            return DashboardAction(message: "Opened an Ember.", note: "Seven days in a row.")
+        }
+        guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud to claim a keep.") }
+        let claim = try await CloudClient(server: link.server, token: link.token).claimStreak()
+        let name = claim.today?.name ?? "keep"
+        return DashboardAction(message: "Opened a \(name).", note: claim.today?.note)
+    }
+
     private func cloudLeaderboard(period: String?, metric: String?, team: String?, season: String?) async throws -> DashboardLeaderboard {
         let period = period.flatMap { ["today", "week", "month", "all"].contains($0) ? $0 : nil } ?? "week"
         let metric = metric.flatMap { ["tokens", "cost", "requests", "commits", "lines"].contains($0) ? $0 : nil } ?? "tokens"
         let team = team.flatMap { $0.isEmpty ? nil : $0 }
         let season = season.flatMap { $0.isEmpty ? nil : $0 }
-        if sample { return SampleData.leaderboard(period: period, metric: metric, team: team, season: season) }
+        if sample { return sampleLeaderboard(period: period, metric: metric, team: team, season: season) }
         guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud to see leaderboards.") }
         let client = CloudClient(server: link.server, token: link.token)
         do {

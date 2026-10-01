@@ -2248,6 +2248,21 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     </section>`;
   }
 
+  // The streak number is already counted. This is the click that takes today's keep.
+  function claimCard(quests) {
+    const claim = quests && quests.claim;
+    if (!claim) return "";
+    const keeps = (claim.keeps || []).map((keep) => `<span class="badge">${esc(keep.name)} ${keep.count}</span>`).join("");
+    const action = claim.claimed && claim.today
+      ? `<p class="empty-inline subtle">Claimed today · ${esc(claim.today.name)}</p>`
+      : claim.active && claim.today
+        ? `<button class="btn sm" type="button" data-action="streak-claim">Claim ${esc(claim.today.name)}</button>`
+        : `<p class="empty-inline subtle">The streak counts a day with tokens or a commit. Claim opens once today has one.</p>`;
+    const days = `${claim.streak} ${claim.streak === 1 ? "day" : "days"}`;
+    return `<section class="card"><div class="card-head"><h2>Keeps</h2><span class="hint">${esc(days)}</span></div>
+      <div class="card-body">${keeps ? `<p style="margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px">${keeps}</p>` : `<p class="empty-inline">Nothing kept yet.</p>`}${action}</div></section>`;
+  }
+
   // The same goals the website shows, so the window and the site never disagree.
   function questsCard(quests) {
     if (!quests || !quests.quests || quests.quests.length === 0) return "";
@@ -2410,7 +2425,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
           <td class="right mono subtle">${e.activeDays}</td><td class="right mono">${esc(value(e))}</td></tr>`).join("")}</tbody></table></section>`
       : `<section class="card"><p class="empty">No usage yet for this period. It fills in as the computers on your board refresh.</p></section>`;
     const note = `<p class="empty-inline subtle">Day shows what each person shipped.${cloud.isPublic ? "" : " Your profile is private. Make it public in Settings, Cloud, to join the global board."}</p>`;
-    return { toolbar, body: seasonRow(data.board.season, site) + seasonStandings(data.board.season) + stats + questsCard(data.board.quests) + badgesCard(data.board.quests) + podium + table + teamsCard(site) + note };
+    return { toolbar, body: seasonRow(data.board.season, site) + seasonStandings(data.board.season) + stats + claimCard(data.board.quests) + questsCard(data.board.quests) + badgesCard(data.board.quests) + podium + table + teamsCard(site) + note };
   }
 
   // MARK: Settings
@@ -2637,6 +2652,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       case "install-update": act(el, () => api("/api/update", {}), "Installing"); break;
       case "cloud-link": act(el, () => api("/api/cloud/link", {}), "Opening GitHub"); break;
       case "cloud-sync": act(el, () => api("/api/cloud/sync", {}), "Syncing"); break;
+      case "streak-claim": act(el, () => api("/api/cloud/streak", {}), "Claiming"); break;
       case "cloud-unlink": data.board = null; act(el, () => api("/api/cloud/unlink", {}), "Unlinking"); break;
       case "cloud-limits-on": act(el, () => api("/api/cloud/limits", { on: true }), "Turning on"); break;
       case "cloud-limits-off": act(el, () => api("/api/cloud/limits", { on: false }), "Stopping"); break;

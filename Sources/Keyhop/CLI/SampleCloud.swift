@@ -49,7 +49,15 @@ extension SampleData {
             badges: [
                 CloudQuests.Badge(key: "streak", name: "Five days", note: "Use Keyhop on five days in a week.", earned: true, day: "2026-09-20"),
                 CloudQuests.Badge(key: "house", name: "Full house", note: "Use every tracked tool in a week.", earned: false, day: nil),
-            ])
+            ],
+            claim: CloudQuests.Claim(
+                streak: 12, active: true, claimed: false,
+                today: CloudQuests.Keep(key: "ember", name: "Ember", note: "Seven days in a row."),
+                keeps: [
+                    CloudQuests.Kept(key: "spark", name: "Spark", note: "A day on the streak.", count: 2),
+                    CloudQuests.Kept(key: "glow", name: "Glow", note: "Three days in a row.", count: 4),
+                    CloudQuests.Kept(key: "ember", name: "Ember", note: "Seven days in a row.", count: 5),
+                ]))
 
         // The sample season counts the same made-up people over a month.
         let mine = rows.first { $0.person.you }

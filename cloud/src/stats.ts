@@ -1,4 +1,4 @@
-import { type Tool, TOOLS, addDays, today } from "./env";
+import { type Tool, MEASURED_TOOLS, TOOLS, addDays, today } from "./env";
 
 export const PERIODS = {
   today: { label: "Today", days: 1 },
@@ -312,4 +312,70 @@ export function streaks(active: Set<string>, reference: string): { current: numb
     longest = Math.max(longest, length);
   }
   return { current, longest };
+}
+
+/** One person, or every member of a team, summed without naming anyone. */
+export type Subject = { userId: string } | { teamId: string };
+
+export interface WindowTotals {
+  tokens: number;
+  costMicros: number;
+  requests: number;
+  commits: number;
+  insertions: number;
+  deletions: number;
+  tools: Record<(typeof MEASURED_TOOLS)[number], number>;
+}
+
+const MEASURED_SUMS = MEASURED_TOOLS.map((tool) => `SUM(CASE WHEN tool = '${tool}' THEN tokens ELSE 0 END) AS tool_${tool}`).join(", ");
+
+function subjectClause(who: Subject): { clause: string; id: string } {
+  return "userId" in who
+    ? { clause: "user_id = ?", id: who.userId }
+    : { clause: "user_id IN (SELECT user_id FROM team_members WHERE team_id = ?)", id: who.teamId };
+}
+
+/** Tokens, API value, requests and commits inside a day range. A team is the sum of its members. */
+export async function summed(db: D1Database, who: Subject, from: string, until: string): Promise<WindowTotals> {
+  const { clause, id } = subjectClause(who);
+  const usage = await db
+    .prepare(
+      `SELECT COALESCE(SUM(tokens), 0) AS tokens, COALESCE(SUM(cost_micros), 0) AS cost_micros,
+         COALESCE(SUM(requests), 0) AS requests, ${MEASURED_SUMS}
+       FROM daily_usage WHERE ${clause} AND day >= ? AND day <= ?`,
+    )
+    .bind(id, from, until)
+    .first<{ tokens: number; cost_micros: number; requests: number } & Record<`tool_${(typeof MEASURED_TOOLS)[number]}`, number>>();
+  const work = await db
+    .prepare(
+      `SELECT COALESCE(SUM(commits), 0) AS commits, COALESCE(SUM(insertions), 0) AS insertions, COALESCE(SUM(deletions), 0) AS deletions
+       FROM daily_work WHERE ${clause} AND day >= ? AND day <= ?`,
+    )
+    .bind(id, from, until)
+    .first<{ commits: number; insertions: number; deletions: number }>();
+  return {
+    tokens: usage?.tokens ?? 0,
+    costMicros: usage?.cost_micros ?? 0,
+    requests: usage?.requests ?? 0,
+    commits: work?.commits ?? 0,
+    insertions: work?.insertions ?? 0,
+    deletions: work?.deletions ?? 0,
+    tools: Object.fromEntries(MEASURED_TOOLS.map((tool) => [tool, usage?.[`tool_${tool}`] ?? 0])) as WindowTotals["tools"],
+  };
+}
+
+/** Current streak, longest streak and active days. A team day counts when any member worked. */
+export async function activity(db: D1Database, who: Subject, reference = today()): Promise<{ streak: number; longest: number; activeDays: number }> {
+  const { clause, id } = subjectClause(who);
+  const { results } = await db
+    .prepare(
+      `SELECT day FROM daily_usage WHERE ${clause} AND tokens > 0
+       UNION
+       SELECT day FROM daily_work WHERE ${clause} AND commits > 0`,
+    )
+    .bind(id, id)
+    .all<{ day: string }>();
+  const active = new Set(results.map((row) => row.day));
+  const { current, longest } = streaks(active, reference);
+  return { streak: current, longest, activeDays: active.size };
 }

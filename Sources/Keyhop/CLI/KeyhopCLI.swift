@@ -92,6 +92,7 @@ enum KeyhopCLI {
       cloud sync [--json]                  Send daily totals now (also runs hourly after a refresh)
       cloud limits [on|off]                Let a linked phone see how full each account is
       cloud open                           Open your profile on the website
+      cloud badge [team]                   Print README widgets for your profile, or a team
       cloud logout                         Unlink this computer
 
     Work

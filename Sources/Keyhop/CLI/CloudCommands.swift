@@ -1,7 +1,7 @@
 import Foundation
 
 extension Commands {
-    /// `keyhop cloud login|status|sync|limits|open|logout`
+    /// `keyhop cloud login|status|sync|limits|open|badge|logout`
     static func cloud(_ args: inout Arguments) async throws {
         let action = args.nextPositional() ?? "status"
         switch action {
@@ -9,6 +9,7 @@ extension Commands {
         case "status": try cloudStatus(&args)
         case "sync": try await cloudSync(&args)
         case "limits": try await cloudLimits(&args)
+        case "badge": try await cloudBadge(&args)
         case "open":
             try args.finish()
             guard let link = CloudLink.load() else { throw KeyhopError("Not linked yet. Run keyhop cloud login.") }
@@ -21,7 +22,7 @@ extension Commands {
             CloudLink.remove()
             print("Unlinked @\(link.login). Nothing more is sent from this computer.")
         default:
-            throw UsageError("Unknown cloud command '\(action)'. Use login, status, sync, limits, open or logout.")
+            throw UsageError("Unknown cloud command '\(action)'. Use login, status, sync, limits, open, badge or logout.")
         }
     }
 
@@ -97,6 +98,37 @@ extension Commands {
         if let lastSync = link.lastSync { print("Last sync: \(Output.relative(lastSync))") } else { print("Not synced yet") }
         if let problem = link.lastSyncError { print("Last sync failed: \(problem)") }
         print("Limit sharing: \(link.sharesLimits ? "on" : "off")")
+    }
+
+    /// `keyhop cloud badge [team]`: markdown for a public profile, or a team its owner has published.
+    private static func cloudBadge(_ args: inout Arguments) async throws {
+        let slug = args.nextPositional()
+        try args.finish()
+        guard let link = CloudLink.load() else { throw KeyhopError("Not linked yet. Run keyhop cloud login.") }
+        let client = CloudClient(server: link.server, token: link.token)
+        if let slug {
+            let team = try await client.roster(slug: slug)
+            guard team.isPublic else {
+                print("This team's totals aren't published. The owner can turn that on from the team page.")
+                return
+            }
+            print(widgetLines(page: "\(link.server)/t/\(team.slug)", files: ["badge.svg", "card.svg", "streak.svg", "tools.svg"]))
+            return
+        }
+        let me = try await client.me()
+        guard me.isPublic else {
+            print("Your profile is private. Make it public to share a widget.")
+            return
+        }
+        print(widgetLines(page: "\(link.server)/u/\(me.login)", files: ["badge.svg", "card.svg", "streak.svg", "tools.svg", "pet.svg"]))
+    }
+
+    private static func widgetLines(page: String, files: [String]) -> String {
+        let labels = ["badge.svg": "Badge", "card.svg": "Card", "streak.svg": "Streak", "tools.svg": "Tools", "pet.svg": "Pet"]
+        return files.map { file in
+            let label = labels[file] ?? "Keyhop"
+            return "[![\(label)](\(page)/\(file))](\(page))"
+        }.joined(separator: "\n")
     }
 
     /// `keyhop cloud limits [on|off]`: whether a linked phone can see where accounts stand.

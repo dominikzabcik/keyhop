@@ -168,9 +168,35 @@ Link Keyhop with your GitHub account to compare usage with friends and teams: in
 - **Global leaderboard:** ranked by tokens, API value, requests, commits or lines, for today, 7 days, 30 days or all time. Only people who make their profile public appear.
 - **Teams:** create a team on the website and share its invite link. Members see each other's totals, even with private profiles.
 - **Ranked seasons:** every calendar month is a season, and the tokens you use in it place you on a ladder of six tiers from Bronze to Master, each with three divisions. Finished seasons stay readable, and quests and badges are counted the same way: from the daily totals themselves, so nothing can drift.
-- **Profiles:** a page at `/u/<login>` with a year of activity, streaks, tools, badges and your weekly rank. Set a display name, a bio and a link in Settings, and share the card at `/u/<login>/card.svg`.
-- **The team's day:** `/t/<team>/day` reads one day back as the things people worked on. Commits are grouped into tasks by what they say and when they landed, so a day shows up as "Auth, 5 commits, 09:49 to 11:59" rather than as a list, and the commits stay underneath so the summary can be checked.
+- **Profiles:** a page at `/u/<login>` with a year of activity, streaks, tools, badges and your weekly rank. Set a display name, a bio and a link in Settings. Make the profile public to join the global leaderboard and to publish the README images below.
+- **The team's day:** `/t/<team>/day` reads one day back as the things people worked on. Commits are grouped into tasks by what they say and when they landed, so a day shows up as "Auth, 5 commits, 09:49 to 11:59" rather than as a list, and the commits stay underneath so the summary can be checked. Keyhop's window shows the same day under Leaderboard, on Day.
 - **What's sent:** tokens, API value and requests per tool per day. Never prompts, emails, account names or models. `keyhop cloud logout` unlinks a computer, and deleting your account on the website removes everything it holds.
+
+### README images
+
+A public profile can be dropped into a README, a GitHub profile, or any page that shows an image. `keyhop cloud badge` prints the markdown. The same lines are on the profile under Widgets, and in Keyhop's window under Settings, Leaderboard.
+
+```markdown
+[![Badge](https://keyhop.app/u/YOUR-LOGIN/badge.svg)](https://keyhop.app/u/YOUR-LOGIN)
+```
+
+| Image | What it shows |
+| --- | --- |
+| `badge.svg` | One figure. Tokens over the last 7 days, until you say otherwise. |
+| `card.svg` | This season's tokens, the streak, active days, badges and tier. |
+| `streak.svg` | The current streak, the longest streak and active days. |
+| `tools.svg` | The share of Claude Code, Cursor, Codex, Gemini CLI, OpenCode and Pi. The last 30 days, until you say otherwise. |
+| `pet.svg` | The pet. |
+
+Add `?metric=` and `?period=` to a badge. Metrics are `tokens`, `cost`, `requests`, `commits`, `lines`, `streak`, `rank` and `tier`. Periods are `today`, `week`, `month`, `all` and `season`. `streak` is the current run of days. `tier` is this season. `rank` is your place by tokens in that period. `tools.svg` takes the same periods. `?theme=light` draws the frame for a light page. With no theme the image stays dark, so a link you already published keeps its look. An unknown metric or period is not found.
+
+```markdown
+[![Badge](https://keyhop.app/u/YOUR-LOGIN/badge.svg?metric=commits&period=month)](https://keyhop.app/u/YOUR-LOGIN)
+```
+
+A team works the same way once its owner turns on **Publish this team's totals**. The images are `/t/<team>/badge.svg`, `card.svg`, `streak.svg` and `tools.svg`. They show summed totals and how many members the team has. A team badge takes `tokens`, `cost`, `requests`, `commits`, `lines` and `streak`. `keyhop cloud badge <team>` prints the lines when this computer's account is on that team and the owner has published it. Until then, the image is not found.
+
+GitHub keeps its own copy of an image, so a README can lag the profile by a few minutes.
 
 ### Counting what you shipped
 

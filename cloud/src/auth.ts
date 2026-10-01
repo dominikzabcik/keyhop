@@ -293,5 +293,13 @@ auth.post("/link", pageUser, async (c) => {
 });
 
 export function publicUser(user: User) {
-  return { login: user.login, name: user.name, avatarUrl: user.avatar_url, public: user.public === 1 };
+  return {
+    login: user.login,
+    name: user.name,
+    displayName: user.display_name,
+    bio: user.bio,
+    link: user.link,
+    avatarUrl: user.avatar_url,
+    public: user.public === 1,
+  };
 }

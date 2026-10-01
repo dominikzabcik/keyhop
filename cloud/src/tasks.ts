@@ -1,4 +1,4 @@
-import type { WorkCommit } from "./work";
+import type { PersonDay, WorkCommit } from "./work";
 
 /**
  * A day, read as the things someone worked on rather than as a list of commits.
@@ -307,6 +307,41 @@ export function tasksForDay(repos: { repo: string; subjects: WorkCommit[] }[]): 
     }
   }
   return [...byTitle.values()].sort((a, b) => b.commits.length - a.commits.length || b.to - a.to);
+}
+
+/**
+ * The same day the website draws, as the app can read it.
+ *
+ * Tasks are already grouped here, so the window never invents its own reading of a subject line.
+ * What travels back is the title, the clock and the first line, never a path or a diff.
+ */
+export function presentDay(people: PersonDay[], viewerId: string) {
+  return people.map((person) => {
+    const tasks = tasksForDay(person.repos.map((repo) => ({ repo: repo.repo, subjects: repo.subjects })));
+    return {
+      login: person.login,
+      name: person.name,
+      isYou: person.userId === viewerId,
+      tokens: person.tokens,
+      commits: person.commits,
+      insertions: person.insertions,
+      deletions: person.deletions,
+      indexing: person.indexing,
+      repos: person.repos.map(({ repo, commits, insertions, deletions }) => ({ repo, commits, insertions, deletions })),
+      tasks: tasks.map((task) => ({
+        title: task.title,
+        repos: task.repos,
+        insertions: task.insertions,
+        deletions: task.deletions,
+        span: span(task.from, task.to, task.offset),
+        commits: task.commits.map((commit) => ({
+          sha: commit.sha,
+          subject: parseSubject(commit.subject).body,
+          repo: commit.repo,
+        })),
+      })),
+    };
+  });
 }
 
 /**

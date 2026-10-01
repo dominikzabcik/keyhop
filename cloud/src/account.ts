@@ -9,10 +9,77 @@ export const account = new Hono<AppEnv>();
 account.get("/api/me", apiUser, (c) => c.json({ user: publicUser(c.get("user")!) }));
 
 account.patch("/api/me", apiUser, apiWriter, async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as { public?: unknown };
-  if (typeof body.public !== "boolean") return c.json({ error: "Send { public: true } or { public: false }." }, 400);
-  await c.env.DB.prepare("UPDATE users SET public = ? WHERE id = ?").bind(body.public ? 1 : 0, c.get("user")!.id).run();
-  return c.json({ user: publicUser({ ...c.get("user")!, public: body.public ? 1 : 0 }) });
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body || typeof body !== "object") return c.json({ error: "Send a profile." }, 400);
+  const user = c.get("user")!;
+  const touches = ["public", "displayName", "bio", "link"].filter((key) => key in body);
+  if (touches.length === 0) return c.json({ error: "Send a profile field to change." }, 400);
+
+  let isPublic = user.public === 1;
+  let displayName = user.display_name;
+  let bio = user.bio;
+  let link = user.link;
+  if ("public" in body) {
+    if (typeof body.public !== "boolean") return c.json({ error: "public must be true or false." }, 400);
+    isPublic = body.public;
+  }
+  if ("displayName" in body) displayName = text(body.displayName, 40);
+  if ("bio" in body) bio = text(body.bio, 160);
+  if ("link" in body) {
+    const raw = body.link;
+    if (raw === null || String(raw).trim() === "") link = null;
+    else {
+      const parsed = webLink(raw);
+      if (!parsed) return c.json({ error: "That link isn't a web address." }, 400);
+      link = parsed;
+    }
+  }
+  await c.env.DB.prepare("UPDATE users SET public = ?, display_name = ?, bio = ?, link = ? WHERE id = ?")
+    .bind(isPublic ? 1 : 0, displayName, bio, link, user.id)
+    .run();
+  return c.json({ user: publicUser({ ...user, public: isPublic ? 1 : 0, display_name: displayName, bio, link }) });
+});
+
+/** Computers linked to this account. The caller is marked so the window can tell itself apart. */
+account.get("/api/apps", apiUser, async (c) => {
+  const token = c.req.header("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1] ?? "";
+  const hash = await sha256(token);
+  const { results } = await c.env.DB.prepare(
+    "SELECT id, label, access, last_used_at, token_hash FROM sessions WHERE user_id = ? AND kind = 'app' ORDER BY last_used_at DESC",
+  )
+    .bind(c.get("user")!.id)
+    .all<{ id: string; label: string | null; access: "read" | "write"; last_used_at: number; token_hash: string }>();
+  return c.json({
+    apps: results.map((app) => ({
+      id: app.id,
+      label: app.label,
+      access: app.access,
+      lastUsedAt: new Date(app.last_used_at * 1000).toISOString(),
+      current: app.token_hash === hash,
+    })),
+  });
+});
+
+account.post("/api/apps/:id/revoke", apiUser, apiWriter, async (c) => {
+  const token = c.req.header("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1] ?? "";
+  const hash = await sha256(token);
+  const row = await c.env.DB.prepare("SELECT token_hash FROM sessions WHERE id = ? AND user_id = ? AND kind = 'app'")
+    .bind(c.req.param("id"), c.get("user")!.id)
+    .first<{ token_hash: string }>();
+  if (!row) return c.json({ error: "That linked app is already gone." }, 404);
+  await c.env.DB.prepare("DELETE FROM sessions WHERE id = ? AND user_id = ? AND kind = 'app'").bind(c.req.param("id"), c.get("user")!.id).run();
+  return c.json({ message: "Unlinked.", current: row.token_hash === hash });
+});
+
+/** Deletes the account the same way Settings does on the website: the login has to be typed. */
+account.post("/api/account/delete", apiUser, apiWriter, async (c) => {
+  const user = c.get("user")!;
+  const body = (await c.req.json().catch(() => null)) as { confirm?: unknown } | null;
+  if (String(body?.confirm ?? "").trim().toLowerCase() !== user.login.toLowerCase()) {
+    return c.json({ error: `Type ${user.login} to delete your account.` }, 400);
+  }
+  await c.env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id).run();
+  return c.json({ message: "Your account is deleted.", unlinked: true });
 });
 
 /** Signs out whatever is calling: the app unlinks itself, or the browser ends its session. */

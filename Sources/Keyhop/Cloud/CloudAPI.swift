@@ -113,10 +113,15 @@ struct CloudBoard: Codable {
         let activeDays: Int
         let tools: [String: Int]
         let isYou: Bool
+        /// What the day produced. Absent on a website that only ranked usage.
+        let commits: Int?
+        let insertions: Int?
+        let deletions: Int?
 
         enum CodingKeys: String, CodingKey {
             case rank, login, name, avatarUrl, tokens, cost, requests, activeDays, tools, isYou
             case isPublic = "public"
+            case commits, insertions, deletions
         }
     }
 
@@ -152,6 +157,71 @@ struct CloudSeason: Codable {
     let over: Bool
     let players: Int
     let you: You?
+
+    struct Standing: Codable {
+        let rank: Int
+        let login: String
+        let name: String?
+        let tokens: Int
+        let isYou: Bool
+        let tier: Tier
+    }
+
+    /// The ladder. Nil when a website only sent your own place.
+    let entries: [Standing]?
+
+    struct SeasonRef: Codable {
+        let id: String
+        let label: String
+    }
+
+    /// Recent seasons, newest first. Nil when a website only sent the current one.
+    let seasons: [SeasonRef]?
+}
+
+struct CloudMember: Codable {
+    let login: String
+    let name: String?
+    let role: String
+}
+
+struct CloudRoster: Codable {
+    let slug: String
+    let name: String
+    let role: String
+    let members: [CloudMember]
+    let isPublic: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case slug, name, role, members
+        case isPublic = "public"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        slug = try container.decode(String.self, forKey: .slug)
+        name = try container.decode(String.self, forKey: .name)
+        role = try container.decode(String.self, forKey: .role)
+        members = try container.decode([CloudMember].self, forKey: .members)
+        isPublic = try container.decodeIfPresent(Bool.self, forKey: .isPublic) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(slug, forKey: .slug)
+        try container.encode(name, forKey: .name)
+        try container.encode(role, forKey: .role)
+        try container.encode(members, forKey: .members)
+        try container.encode(isPublic, forKey: .isPublic)
+    }
+}
+
+struct CloudApp: Codable {
+    let id: String
+    let label: String?
+    let access: String
+    let lastUsedAt: String?
+    let current: Bool
 }
 
 /// This week's goals and the badges earned, as the website counts them.
@@ -179,21 +249,256 @@ struct CloudQuests: Codable {
     let badges: [Badge]
 }
 
+/// The lifetime creature. The website decides the rectangles; a client only paints them.
+struct CloudPet: Codable, Equatable {
+    struct Shape: Codable, Equatable {
+        let x: Int
+        let y: Int
+        let w: Int
+        let h: Int
+        let opacity: Double
+        let fill: String
+        /// "flame" flickers and "shine" blinks. Absent on the body.
+        let kind: String?
+
+        var red: Double { Self.channel(fill, 16) }
+        var green: Double { Self.channel(fill, 8) }
+        var blue: Double { Self.channel(fill, 0) }
+
+        private static func channel(_ fill: String, _ shift: Int) -> Double {
+            let hex = fill.hasPrefix("#") ? String(fill.dropFirst()) : fill
+            guard hex.count == 6, let value = Int(hex, radix: 16) else { return 0.92 }
+            return Double((value >> shift) & 0xFF) / 255
+        }
+    }
+
+    struct Step: Codable, Equatable {
+        let label: String
+        let tokens: Int
+    }
+
+    let stage: String
+    let stageName: String
+    let lineage: String?
+    let lineageName: String?
+    let pose: String
+    let build: Int
+    let tokens: Int
+    let commits: Int
+    let streak: Int
+    let next: Step?
+    let width: Int
+    let height: Int
+    let shapes: [Shape]
+
+    var caption: String {
+        guard let lineageName, !lineageName.isEmpty else { return stageName }
+        return "\(stageName) · \(lineageName)"
+    }
+
+    /// A fixed creature for sample screens. The live one is computed on the website.
+    static let sample = CloudPet(
+        stage: "bulk", stageName: "Bulk", lineage: "claude", lineageName: "Claude",
+        pose: "tall", build: 2, tokens: 800_000_000, commits: 140, streak: 12,
+        next: Step(label: "Mass", tokens: 4_200_000_000),
+        width: 220, height: 230,
+        shapes: [
+            Shape(x: 5, y: 0, w: 210, h: 230, opacity: 1, fill: "#2F3629", kind: "screen"),
+            Shape(x: 0, y: 5, w: 220, h: 220, opacity: 1, fill: "#2F3629", kind: "screen"),
+            Shape(x: 5, y: 5, w: 210, h: 220, opacity: 1, fill: "#D9CE98", kind: "screen"),
+            Shape(x: 105, y: 70, w: 10, h: 5, opacity: 1, fill: "#C9821A", kind: nil),
+            Shape(x: 105, y: 75, w: 10, h: 5, opacity: 1, fill: "#C9821A", kind: nil),
+            Shape(x: 70, y: 80, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 105, y: 80, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 145, y: 80, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 85, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 105, y: 85, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 140, y: 85, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 90, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 75, y: 90, w: 5, h: 5, opacity: 1, fill: "#C9821A", kind: nil),
+            Shape(x: 80, y: 90, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 105, y: 90, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 135, y: 90, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 140, y: 90, w: 5, h: 5, opacity: 1, fill: "#C9821A", kind: nil),
+            Shape(x: 145, y: 90, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 95, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 75, y: 95, w: 10, h: 5, opacity: 1, fill: "#C9821A", kind: nil),
+            Shape(x: 85, y: 95, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 105, y: 95, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 130, y: 95, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 135, y: 95, w: 10, h: 5, opacity: 1, fill: "#C9821A", kind: nil),
+            Shape(x: 145, y: 95, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 100, w: 80, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 105, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 145, y: 105, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 110, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 145, y: 110, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 115, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 90, y: 115, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: "shine"),
+            Shape(x: 125, y: 115, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: "shine"),
+            Shape(x: 145, y: 115, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 65, y: 120, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 85, y: 120, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: "shine"),
+            Shape(x: 95, y: 120, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: "shine"),
+            Shape(x: 120, y: 120, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: "shine"),
+            Shape(x: 130, y: 120, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: "shine"),
+            Shape(x: 145, y: 120, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 65, y: 125, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 145, y: 125, w: 30, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 65, y: 130, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 145, y: 130, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 160, y: 130, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 135, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 95, y: 135, w: 30, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 145, y: 135, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 160, y: 135, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 140, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 95, y: 140, w: 30, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 145, y: 140, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 160, y: 140, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 50, y: 145, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 145, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 145, y: 145, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 160, y: 145, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 50, y: 150, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 150, w: 80, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 160, y: 150, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 50, y: 155, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 65, y: 155, w: 20, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 135, y: 155, w: 35, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 50, y: 160, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 65, y: 160, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 80, y: 160, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 105, y: 160, w: 10, h: 5, opacity: 1, fill: "#C9821A", kind: nil),
+            Shape(x: 135, y: 160, w: 35, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 50, y: 165, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 65, y: 165, w: 10, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 80, y: 165, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 105, y: 165, w: 10, h: 5, opacity: 1, fill: "#C9821A", kind: nil),
+            Shape(x: 135, y: 165, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 50, y: 170, w: 35, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 135, y: 170, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 50, y: 175, w: 35, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 135, y: 175, w: 5, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 80, y: 180, w: 60, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 80, y: 185, w: 15, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 125, y: 185, w: 15, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 80, y: 190, w: 15, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 125, y: 190, w: 15, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 20, y: 195, w: 180, h: 5, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 70, y: 210, w: 20, h: 10, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 100, y: 210, w: 20, h: 10, opacity: 1, fill: "#232B1D", kind: nil),
+            Shape(x: 130, y: 210, w: 20, h: 10, opacity: 1, fill: "#232B1D", kind: nil),
+        ]
+    )
+}
+
 struct CloudTeam: Codable {
     let slug: String
     let name: String
     let role: String
     let members: Int
+    /// Whether the owner published README images of this team's totals.
+    let isPublic: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case slug, name, role, members
+        case isPublic = "public"
+    }
+
+    init(slug: String, name: String, role: String, members: Int, isPublic: Bool = false) {
+        self.slug = slug
+        self.name = name
+        self.role = role
+        self.members = members
+        self.isPublic = isPublic
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        slug = try container.decode(String.self, forKey: .slug)
+        name = try container.decode(String.self, forKey: .name)
+        role = try container.decodeIfPresent(String.self, forKey: .role) ?? "member"
+        members = try container.decodeIfPresent(Int.self, forKey: .members) ?? 0
+        isPublic = try container.decodeIfPresent(Bool.self, forKey: .isPublic) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(slug, forKey: .slug)
+        try container.encode(name, forKey: .name)
+        try container.encode(role, forKey: .role)
+        try container.encode(members, forKey: .members)
+        try container.encode(isPublic, forKey: .isPublic)
+    }
+}
+
+/// One team's day, grouped the same way the website groups it.
+struct CloudTeamDay: Codable {
+    struct Team: Codable {
+        let slug: String
+        let name: String
+    }
+
+    struct Repo: Codable {
+        let repo: String
+        let commits: Int
+        let insertions: Int
+        let deletions: Int
+    }
+
+    struct Line: Codable {
+        let sha: String
+        let subject: String
+        let repo: String
+    }
+
+    struct Task: Codable {
+        let title: String
+        let repos: [String]
+        let insertions: Int
+        let deletions: Int
+        let span: String
+        let commits: [Line]
+    }
+
+    struct Indexing: Codable {
+        let done: Int
+        let total: Int
+    }
+
+    struct Person: Codable {
+        let login: String
+        let name: String?
+        let isYou: Bool
+        let tokens: Int
+        let commits: Int
+        let insertions: Int
+        let deletions: Int
+        let indexing: Indexing?
+        let repos: [Repo]
+        let tasks: [Task]
+    }
+
+    let team: Team
+    let day: String
+    let today: String
+    let previous: String
+    let next: String?
+    let people: [Person]
 }
 
 struct CloudUser: Codable, Equatable {
     let login: String
     let name: String?
+    let displayName: String?
+    let bio: String?
+    let link: String?
     let avatarUrl: String?
     let isPublic: Bool
 
     enum CodingKeys: String, CodingKey {
-        case login, name, avatarUrl
+        case login, name, displayName, bio, link, avatarUrl
         case isPublic = "public"
     }
 }
@@ -237,6 +542,107 @@ struct CloudClient {
         case 410: return .expired
         default: throw problem(data, status)
         }
+    }
+
+    func updateProfile(isPublic: Bool, displayName: String, bio: String, link: String) async throws -> CloudUser {
+        struct Body: Encodable {
+            let isPublic: Bool
+            let displayName: String
+            let bio: String
+            let link: String
+            enum CodingKeys: String, CodingKey {
+                case isPublic = "public"
+                case displayName, bio, link
+            }
+        }
+        struct Response: Decodable { let user: CloudUser }
+        let (data, status) = try await send("PATCH", "/api/me", body: Body(isPublic: isPublic, displayName: displayName, bio: bio, link: link))
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(Response.self, from: data).user
+    }
+
+    func createTeam(name: String) async throws -> CloudTeam {
+        struct Response: Decodable { let team: CloudTeam }
+        let (data, status) = try await send("POST", "/api/teams", body: ["name": name])
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(Response.self, from: data).team
+    }
+
+    func joinTeam(code: String) async throws -> String {
+        struct Response: Decodable { let message: String; let team: CloudTeam }
+        let (data, status) = try await send("POST", "/api/teams/join", body: ["code": code])
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(Response.self, from: data).team.slug
+    }
+
+    func invite(slug: String) async throws -> String {
+        struct Response: Decodable { let code: String }
+        let encoded = slug.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-_"))) ?? slug
+        let (data, status) = try await send("POST", "/api/teams/\(encoded)/invites")
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(Response.self, from: data).code
+    }
+
+    func revokeInvites(slug: String) async throws {
+        let encoded = slug.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-_"))) ?? slug
+        let (data, status) = try await send("POST", "/api/teams/\(encoded)/invites/revoke")
+        guard status == 200 else { throw problem(data, status) }
+    }
+
+    func leaveTeam(slug: String) async throws {
+        let (data, status) = try await send("POST", "/api/teams/\(Self.path(slug))/leave")
+        guard status == 200 else { throw problem(data, status) }
+    }
+
+    func roster(slug: String) async throws -> CloudRoster {
+        let (data, status) = try await send("GET", "/api/teams/\(Self.path(slug))")
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(CloudRoster.self, from: data)
+    }
+
+    func removeMember(slug: String, login: String) async throws {
+        let (data, status) = try await send("POST", "/api/teams/\(Self.path(slug))/members/\(Self.path(login))/remove")
+        guard status == 200 else { throw problem(data, status) }
+    }
+
+    func setTeamPublic(slug: String, isPublic: Bool) async throws {
+        struct Body: Encodable {
+            let isPublic: Bool
+            enum CodingKeys: String, CodingKey { case isPublic = "public" }
+        }
+        let (data, status) = try await send("POST", "/api/teams/\(Self.path(slug))/public", body: Body(isPublic: isPublic))
+        guard status == 200 else { throw problem(data, status) }
+    }
+
+    func deleteTeam(slug: String, confirm: String) async throws {
+        struct Body: Encodable { let confirm: String }
+        let (data, status) = try await send("POST", "/api/teams/\(Self.path(slug))/delete", body: Body(confirm: confirm))
+        guard status == 200 else { throw problem(data, status) }
+    }
+
+    func apps() async throws -> [CloudApp] {
+        struct Response: Decodable { let apps: [CloudApp] }
+        let (data, status) = try await send("GET", "/api/apps")
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(Response.self, from: data).apps
+    }
+
+    /// Unlinks one computer. `true` when that computer is the one calling.
+    func revokeApp(id: String) async throws -> Bool {
+        struct Response: Decodable { let current: Bool }
+        let (data, status) = try await send("POST", "/api/apps/\(Self.path(id))/revoke")
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(Response.self, from: data).current
+    }
+
+    func deleteAccount(confirm: String) async throws {
+        struct Body: Encodable { let confirm: String }
+        let (data, status) = try await send("POST", "/api/account/delete", body: Body(confirm: confirm))
+        guard status == 200 else { throw problem(data, status) }
+    }
+
+    private static func path(_ value: String) -> String {
+        value.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-_"))) ?? value
     }
 
     func me() async throws -> CloudUser {
@@ -318,6 +724,18 @@ struct CloudClient {
         guard status == 204 || status == 401 else { throw problem(data, status) }
     }
 
+    func teamDay(slug: String, date: String?) async throws -> CloudTeamDay {
+        var query = ""
+        if let date, !date.isEmpty,
+           let encoded = date.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-"))) {
+            query = "?date=\(encoded)"
+        }
+        let encodedSlug = slug.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-_"))) ?? slug
+        let (data, status) = try await send("GET", "/api/teams/\(encodedSlug)/day\(query)")
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(CloudTeamDay.self, from: data)
+    }
+
     func leaderboard(period: String, metric: String, team: String?) async throws -> CloudBoard {
         var query = "period=\(period)&metric=\(metric)"
         if let team, let encoded = team.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-_"))) {
@@ -328,11 +746,15 @@ struct CloudClient {
         return try JSONDecoder().decode(CloudBoard.self, from: data)
     }
 
-    func season(team: String?) async throws -> CloudSeason {
-        var query = ""
+    func season(team: String?, season: String? = nil) async throws -> CloudSeason {
+        var parts: [String] = []
         if let team, let encoded = team.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-_"))) {
-            query = "?team=\(encoded)"
+            parts.append("team=\(encoded)")
         }
+        if let season, let encoded = season.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-"))) {
+            parts.append("season=\(encoded)")
+        }
+        let query = parts.isEmpty ? "" : "?\(parts.joined(separator: "&"))"
         let (data, status) = try await send("GET", "/api/season\(query)")
         guard status == 200 else { throw problem(data, status) }
         return try JSONDecoder().decode(CloudSeason.self, from: data)
@@ -342,6 +764,12 @@ struct CloudClient {
         let (data, status) = try await send("GET", "/api/quests")
         guard status == 200 else { throw problem(data, status) }
         return try JSONDecoder().decode(CloudQuests.self, from: data)
+    }
+
+    func pet() async throws -> CloudPet {
+        let (data, status) = try await send("GET", "/api/pet")
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(CloudPet.self, from: data)
     }
 
     func teams() async throws -> [CloudTeam] {

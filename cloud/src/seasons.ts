@@ -221,6 +221,7 @@ seasons.get("/api/season", async (c) => {
         }
       : null,
     players: board.length,
+    seasons: seasonList().slice(0, 6).map((id) => ({ id, label: seasonLabel(id) })),
     entries: board.map((entry) => ({
       rank: entry.rank,
       login: entry.login,

@@ -140,7 +140,10 @@ enum SampleData {
                     daily = (bucket == .week ? 5.2 : 22) * (0.8 + 0.2 * sin(index / 5))
                 } else {
                     let weekday = calendar.component(.weekday, from: start)
-                    daily = Int(index) % 13 == 5 ? 0 : weekday == 1 ? 0.25 : weekday == 7 ? 0.45 : 1
+                    // A day off every so often, but never today: a range that is only today, such as
+                    // this month on the 1st, still has something to show.
+                    let dayOff = !calendar.isDate(start, inSameDayAs: now) && Int(index) % 13 == 5
+                    daily = dayOff ? 0 : weekday == 1 ? 0.25 : weekday == 7 ? 0.45 : 1
                 }
                 let wave = 0.55 + 0.45 * sin(index * 0.9 + Double(i) * 1.7)
                 let base = Double([2_600_000, 1_300_000, 1_900_000, 600_000, 2_200_000, 1_700_000][i % 6])

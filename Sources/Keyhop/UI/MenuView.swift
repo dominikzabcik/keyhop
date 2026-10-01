@@ -8,6 +8,7 @@ struct MenuView: View {
     @EnvironmentObject private var store: AccountStore
     @AppStorage("menuTool") private var tool: Provider = .claude
     @State private var renaming: UUID?
+    @State private var pet: CloudPet?
     @Namespace private var tabs
 
     var body: some View {
@@ -17,7 +18,13 @@ struct MenuView: View {
 
             ToolPanel(provider: tool, renaming: $renaming)
                 .padding(.horizontal, 12)
-                .padding(.bottom, 12)
+                .padding(.bottom, pet == nil ? 12 : 8)
+
+            if let pet {
+                MenuPet(pet: pet)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 12)
+            }
 
             if let notice = store.notice {
                 NoticeLine(text: notice)
@@ -37,6 +44,70 @@ struct MenuView: View {
                       let used = Provider.allCases.first(where: { !store.accounts(for: $0).isEmpty }) {
                 // Open on a tool you actually use.
                 tool = used
+            }
+        }
+        .task { await loadPet() }
+    }
+
+    /// A failed load leaves the menu able to switch accounts. The status icon stays the limit glyph.
+    private func loadPet() async {
+        guard let link = CloudLink.load() else {
+            pet = nil
+            return
+        }
+        if let loaded = try? await CloudClient(server: link.server, token: link.token).pet() {
+            pet = loaded
+        }
+    }
+}
+
+private struct MenuPet: View {
+    let pet: CloudPet
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            PetCanvas(pet: pet)
+                .frame(width: 96, height: 100)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(pet.caption)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Brand.text)
+                Text(pet.next.map { "\(Numbers.tokens($0.tokens)) to \($0.label)" } ?? "Monument")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Brand.muted)
+            }
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(pet.caption)
+    }
+}
+
+/// Paints the website's rectangles. The layout is not decided here.
+private struct PetCanvas: View {
+    let pet: CloudPet
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.45)) { timeline in
+            let tick = Int(timeline.date.timeIntervalSinceReferenceDate / 0.45)
+            Canvas { context, size in
+                let scaleX = size.width / CGFloat(max(pet.width, 1))
+                let scaleY = size.height / CGFloat(max(pet.height, 1))
+                let blink = tick % 8 == 0
+                let dim = tick % 2 == 1
+                for shape in pet.shapes {
+                    if blink && shape.kind == "shine" { continue }
+                    var opacity = shape.opacity
+                    if dim && shape.kind == "flame" { opacity *= 0.55 }
+                    let rect = CGRect(
+                        x: CGFloat(shape.x) * scaleX,
+                        y: CGFloat(shape.y) * scaleY,
+                        width: CGFloat(shape.w) * scaleX,
+                        height: CGFloat(shape.h) * scaleY
+                    )
+                    let path = Path(roundedRect: rect, cornerRadius: 0.6 * scaleX)
+                    context.fill(path, with: .color(Color(red: shape.red, green: shape.green, blue: shape.blue).opacity(opacity)))
+                }
             }
         }
     }

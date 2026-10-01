@@ -13,6 +13,7 @@ struct SeasonView: View {
                         problem
                         if store.hasRead {
                             limits
+                            creature
                             standing
                             quests
                             badges
@@ -166,6 +167,30 @@ struct SeasonView: View {
 
     private func sent(_ updated: Date, at now: Date) -> String {
         now.timeIntervalSince(updated) < 90 ? "just now" : "\(Format.until(now, from: updated)) ago"
+    }
+
+    // MARK: Pet
+
+    @ViewBuilder private var creature: some View {
+        if let pet = store.pet {
+            Card {
+                HStack(alignment: .center, spacing: 14) {
+                    PetCanvas(pet: pet)
+                        .frame(width: 152, height: 159)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(pet.caption)
+                            .font(.ui(21, .semibold, .title3))
+                            .foregroundStyle(Brand.text)
+                        Text(pet.next.map { "\(Format.tokens($0.tokens)) to \($0.label)" } ?? "Monument")
+                            .font(.ui(13, .medium, .footnote))
+                            .foregroundStyle(Brand.muted)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(18)
+                .accessibilityElement(children: .combine)
+            }
+        }
     }
 
     // MARK: Season
@@ -503,5 +528,36 @@ struct BoardRow: View {
         .padding(.horizontal, -10)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(entry.isYou ? "You" : (entry.name ?? entry.login)), rank \(entry.rank), \(Format.tokens(entry.tokens)) tokens")
+    }
+}
+
+/// Paints the website's rectangles. The layout is not decided here.
+private struct PetCanvas: View {
+    let pet: CloudPet
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.45)) { timeline in
+            let tick = Int(timeline.date.timeIntervalSinceReferenceDate / 0.45)
+            Canvas { context, size in
+                let scaleX = size.width / CGFloat(max(pet.width, 1))
+                let scaleY = size.height / CGFloat(max(pet.height, 1))
+                let blink = tick % 8 == 0
+                let dim = tick % 2 == 1
+                for shape in pet.shapes {
+                    if blink && shape.kind == "shine" { continue }
+                    var opacity = shape.opacity
+                    if dim && shape.kind == "flame" { opacity *= 0.55 }
+                    let rect = CGRect(
+                        x: CGFloat(shape.x) * scaleX,
+                        y: CGFloat(shape.y) * scaleY,
+                        width: CGFloat(shape.w) * scaleX,
+                        height: CGFloat(shape.h) * scaleY
+                    )
+                    let path = Path(roundedRect: rect, cornerRadius: 0.6 * scaleX)
+                    context.fill(path, with: .color(Color(red: shape.red, green: shape.green, blue: shape.blue).opacity(opacity)))
+                }
+            }
+        }
+        .accessibilityLabel(pet.caption)
     }
 }

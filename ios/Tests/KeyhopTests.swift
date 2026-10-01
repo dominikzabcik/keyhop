@@ -2,6 +2,19 @@ import XCTest
 @testable import Keyhop
 
 final class KeyhopTests: XCTestCase {
+    func testDecodesThePetShapeList() throws {
+        let json = """
+        {"stage":"hatch","stageName":"Hatch","lineage":"claude","lineageName":"Claude","pose":"up","build":1,
+        "tokens":1000000,"commits":3,"streak":2,"next":{"label":"Frame","tokens":49000000},"width":76,"height":100,
+        "shapes":[{"x":36,"y":30,"w":4,"h":4,"opacity":1,"fill":"#C9821A"}]}
+        """
+        let pet = try JSONDecoder().decode(CloudPet.self, from: Data(json.utf8))
+        XCTAssertEqual(pet.caption, "Hatch · Claude")
+        XCTAssertEqual(pet.next?.tokens, 49_000_000)
+        XCTAssertEqual(pet.shapes.count, 1)
+        XCTAssertEqual(CloudPet.sample.lineageName, "Claude")
+    }
+
     func testTokenFormatting() {
         XCTAssertEqual(Format.tokens(999), "999")
         XCTAssertEqual(Format.tokens(1_000), "1K")
@@ -76,7 +89,7 @@ final class KeyhopTests: XCTestCase {
     func testNothingIsScheduledWhileTheAlertsAreOff() {
         let now = Date()
         let quests = CloudQuests(quests: [.init(key: "today", name: "Get going", note: "", period: "day", done: 0, target: 1, complete: false)], badges: [])
-        let season = CloudSeason(season: "2026-09", label: "September 2026", daysLeft: 1, over: false, players: 4, you: nil)
+        let season = CloudSeason(season: "2026-09", label: "September 2026", daysLeft: 1, over: false, players: 4, you: nil, entries: nil, seasons: nil)
         XCTAssertTrue(AlertPlan.alerts(limits: [limit("a", "codex", nil, "5h", 99, resetsIn: 1_400, from: now)],
                                        season: season, quests: quests,
                                        wantsLimits: false, wantsSeason: false, now: now).isEmpty)
@@ -89,7 +102,8 @@ final class KeyhopTests: XCTestCase {
         func season(daysLeft: Int, over: Bool = false) -> CloudSeason {
             CloudSeason(season: "2026-09", label: "September 2026", daysLeft: daysLeft, over: over, players: 4,
                         you: .init(rank: 3, tokens: 4_000_000_000, tier: .init(key: "platinum", name: "Platinum", division: 2),
-                                   next: .init(label: "Platinum I", tokens: 940_000_000)))
+                                   next: .init(label: "Platinum I", tokens: 940_000_000)),
+                        entries: nil, seasons: nil)
         }
         func alerts(_ season: CloudSeason?, at now: Date = Date()) -> [PlannedAlert] {
             AlertPlan.alerts(limits: [], season: season, quests: nil, wantsLimits: false, wantsSeason: true,
@@ -196,7 +210,7 @@ final class KeyhopTests: XCTestCase {
 
     func testSeasonProgressFollowsItsOwnMonth() {
         func season(_ name: String, left: Int, over: Bool = false) -> CloudSeason {
-            CloudSeason(season: name, label: name, daysLeft: left, over: over, players: 1, you: nil)
+            CloudSeason(season: name, label: name, daysLeft: left, over: over, players: 1, you: nil, entries: nil, seasons: nil)
         }
         XCTAssertEqual(Format.seasonProgress(season("2026-09", left: 30)), 0, accuracy: 1e-9)
         XCTAssertEqual(Format.seasonProgress(season("2026-09", left: 15)), 0.5, accuracy: 1e-9)

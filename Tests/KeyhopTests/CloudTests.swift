@@ -1,4 +1,7 @@
 import XCTest
+#if os(macOS)
+import AppKit
+#endif
 @testable import Keyhop
 
 final class CloudTests: XCTestCase {
@@ -27,6 +30,26 @@ final class CloudTests: XCTestCase {
 
         let user = try JSONDecoder().decode(CloudUser.self, from: Data(#"{"login":"mira","name":"Mira","avatarUrl":null,"public":false}"#.utf8))
         XCTAssertFalse(user.isPublic)
+    }
+
+    func testDecodesAPetAndKeepsTheMenuIconOnLimits() throws {
+        let json = """
+        {"stage":"hatch","stageName":"Hatch","lineage":"claude","lineageName":"Claude","pose":"up","build":1,
+        "tokens":1000000,"commits":3,"streak":2,"next":{"label":"Frame","tokens":49000000},"width":76,"height":100,
+        "shapes":[{"x":36,"y":30,"w":4,"h":4,"opacity":1,"fill":"#C9821A"}]}
+        """
+        let pet = try JSONDecoder().decode(CloudPet.self, from: Data(json.utf8))
+        XCTAssertEqual(pet.caption, "Hatch · Claude")
+        XCTAssertEqual(pet.shapes.first?.fill, "#C9821A")
+        XCTAssertEqual(pet.shapes.first?.red ?? 0, 201 / 255, accuracy: 0.001)
+        XCTAssertEqual(pet.next?.label, "Frame")
+        XCTAssertEqual(CloudPet.sample.stage, "bulk")
+
+        #if os(macOS)
+        let image = MenuBarGlyph.image(windows: [UsageWindow(label: "5h", usedPercent: 40, resetsAt: nil, windowSeconds: nil)])
+        XCTAssertTrue(image.isTemplate)
+        XCTAssertEqual(image.accessibilityDescription, "Keyhop, 5h 40 percent used")
+        #endif
     }
 
     func testDailyTotalsAddUpPerToolAndLocalDay() async throws {

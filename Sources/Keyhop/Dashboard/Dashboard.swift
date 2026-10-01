@@ -306,6 +306,19 @@ struct DashboardCloudLinkAction: Encodable {
     let verifyUrl: String
 }
 
+/// A team's day, as Leaderboard shows it: the same reading the website draws.
+struct DashboardDay: Encodable {
+    let teams: [CloudTeam]
+    let team: CloudTeamDay.Team?
+    let day: String
+    let today: String
+    let previous: String
+    let next: String?
+    let people: [CloudTeamDay.Person]
+    let website: String
+    let members: [CloudMember]
+}
+
 struct DashboardLeaderboard: Encodable {
     let board: CloudBoard
     let teams: [CloudTeam]
@@ -315,6 +328,7 @@ struct DashboardLeaderboard: Encodable {
     let season: CloudSeason?
     /// This week's quests and the badges earned. Nil for the same reason.
     let quests: CloudQuests?
+    let members: [CloudMember]
 }
 
 struct DashboardAction: Encodable {
@@ -782,7 +796,24 @@ actor DashboardSession {
             case ("POST", "/api/cloud/unlink"):
                 return .json(try await cloudUnlink())
             case ("GET", "/api/cloud/leaderboard"):
-                return .json(try await cloudLeaderboard(period: request.query["period"], metric: request.query["metric"], team: request.query["team"]))
+                return .json(try await cloudLeaderboard(period: request.query["period"], metric: request.query["metric"],
+                                                       team: request.query["team"], season: request.query["season"]))
+            case ("GET", "/api/cloud/apps"):
+                return .json(try await cloudApps())
+            case ("POST", "/api/cloud/apps"):
+                return .json(try await revokeApp(try Self.decode(IDTextBody.self, request).id))
+            case ("POST", "/api/cloud/account"):
+                return .json(try await deleteAccount(try Self.decode(ConfirmBody.self, request).confirm))
+            case ("GET", "/api/cloud/day"):
+                return .json(try await cloudDay(team: request.query["team"], date: request.query["date"]))
+            case ("GET", "/api/cloud/profile"):
+                return .json(try await cloudProfile())
+            case ("GET", "/api/cloud/pet"):
+                return .json(try await cloudPet())
+            case ("POST", "/api/cloud/profile"):
+                return .json(try await saveProfile(try Self.decode(ProfileBody.self, request)))
+            case ("POST", "/api/cloud/team"):
+                return .json(try await cloudTeam(try Self.decode(TeamActionBody.self, request)))
             case ("POST", "/api/work"):
                 return .json(try await applyWork(try Self.decode(WorkBody.self, request)))
             case ("GET", "/api/usage"):
@@ -913,6 +944,17 @@ actor DashboardSession {
         let shareSubjects: Bool?
         let add: String?
         let remove: String?
+        let index: Bool?
+    }
+
+    private struct IDTextBody: Decodable { let id: String }
+    private struct ConfirmBody: Decodable { let confirm: String }
+
+    struct CloudAppsDocument: Encodable { let apps: [CloudApp] }
+    struct CloudAccountAction: Encodable {
+        let message: String
+        let note: String?
+        let unlinked: Bool
     }
 
     private static func decode<Body: Decodable>(_ type: Body.Type, _ request: HTTPRequest) throws -> Body {
@@ -1251,6 +1293,43 @@ actor DashboardSession {
         }
     }
 
+    private struct ProfileBody: Decodable {
+        let displayName: String?
+        let bio: String?
+        let link: String?
+        let isPublic: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case displayName, bio, link
+            case isPublic = "public"
+        }
+    }
+
+    private struct TeamActionBody: Decodable {
+        let name: String?
+        let code: String?
+        let invite: String?
+        let revoke: String?
+        let leave: String?
+        let slug: String?
+        let member: String?
+        let confirm: String?
+        let delete: String?
+        let publish: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case name, code, invite, revoke, leave, slug, member, confirm, delete
+            case publish = "public"
+        }
+    }
+
+    struct TeamAction: Encodable {
+        let message: String
+        let note: String?
+        let slug: String?
+        let url: String?
+    }
+
     private struct CloudLimitsBody: Decodable {
         let on: Bool
     }
@@ -1280,6 +1359,104 @@ actor DashboardSession {
         return DashboardAction(message: "A linked phone can now see how full each account is.", note: nil)
     }
 
+    private func cloudPet() async throws -> CloudPet {
+        if sample { return SampleData.pet() }
+        guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud to see your pet.") }
+        do {
+            return try await CloudClient(server: link.server, token: link.token).pet()
+        } catch let error as CloudError where error.kind == .unlinked {
+            CloudLink.remove()
+            throw error
+        }
+    }
+
+    private func cloudProfile() async throws -> CloudUser {
+        if sample {
+            return CloudUser(login: "you", name: "You", displayName: nil, bio: nil, link: nil, avatarUrl: nil, isPublic: true)
+        }
+        guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud to edit your profile.") }
+        return try await CloudClient(server: link.server, token: link.token).me()
+    }
+
+    private func saveProfile(_ body: ProfileBody) async throws -> DashboardAction {
+        try refuseInSample()
+        guard var link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud to edit your profile.") }
+        let user = try await CloudClient(server: link.server, token: link.token).updateProfile(
+            isPublic: body.isPublic ?? link.isPublic,
+            displayName: body.displayName ?? "",
+            bio: body.bio ?? "",
+            link: body.link ?? ""
+        )
+        link.isPublic = user.isPublic
+        if let display = user.displayName, !display.isEmpty { link.name = display }
+        try link.save()
+        return DashboardAction(message: "Profile saved.", note: nil)
+    }
+
+    private func cloudTeam(_ body: TeamActionBody) async throws -> TeamAction {
+        try refuseInSample()
+        guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud to manage a team.") }
+        let client = CloudClient(server: link.server, token: link.token)
+        if let name = body.name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            let team = try await client.createTeam(name: name)
+            return TeamAction(message: "Created \(team.name).", note: nil, slug: team.slug, url: nil)
+        }
+        if let code = body.code?.trimmingCharacters(in: .whitespacesAndNewlines), !code.isEmpty {
+            let slug = try await client.joinTeam(code: code)
+            return TeamAction(message: "Joined the team.", note: nil, slug: slug, url: nil)
+        }
+        if let slug = body.invite?.trimmingCharacters(in: .whitespacesAndNewlines), !slug.isEmpty {
+            let code = try await client.invite(slug: slug)
+            return TeamAction(message: "Invite link is ready.", note: nil, slug: slug, url: "\(link.server)/invite/\(code)")
+        }
+        if let slug = body.revoke?.trimmingCharacters(in: .whitespacesAndNewlines), !slug.isEmpty {
+            try await client.revokeInvites(slug: slug)
+            return TeamAction(message: "Invite links for this team stopped working.", note: nil, slug: slug, url: nil)
+        }
+        if let publish = body.publish, let slug = body.slug?.trimmingCharacters(in: .whitespacesAndNewlines), !slug.isEmpty {
+            try await client.setTeamPublic(slug: slug, isPublic: publish)
+            return TeamAction(message: publish ? "This team's totals are on a public badge." : "This team's badge is off.", note: nil, slug: slug, url: nil)
+        }
+        if let slug = body.leave?.trimmingCharacters(in: .whitespacesAndNewlines), !slug.isEmpty {
+            try await client.leaveTeam(slug: slug)
+            return TeamAction(message: "Left the team.", note: nil, slug: nil, url: nil)
+        }
+        if let login = body.member?.trimmingCharacters(in: .whitespacesAndNewlines), !login.isEmpty,
+           let slug = body.slug?.trimmingCharacters(in: .whitespacesAndNewlines), !slug.isEmpty {
+            try await client.removeMember(slug: slug, login: login)
+            return TeamAction(message: "Removed @\(login).", note: nil, slug: slug, url: nil)
+        }
+        if let slug = body.delete?.trimmingCharacters(in: .whitespacesAndNewlines), !slug.isEmpty {
+            try await client.deleteTeam(slug: slug, confirm: body.confirm ?? "")
+            return TeamAction(message: "Deleted the team.", note: nil, slug: nil, url: nil)
+        }
+        throw KeyhopError("Say which team to change.")
+    }
+
+    private func cloudApps() async throws -> CloudAppsDocument {
+        if sample {
+            return CloudAppsDocument(apps: [CloudApp(id: "sample", label: "This Mac", access: "write", lastUsedAt: nil, current: true)])
+        }
+        guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud to see linked apps.") }
+        return CloudAppsDocument(apps: try await CloudClient(server: link.server, token: link.token).apps())
+    }
+
+    private func revokeApp(_ id: String) async throws -> CloudAccountAction {
+        try refuseInSample()
+        guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud first.") }
+        let current = try await CloudClient(server: link.server, token: link.token).revokeApp(id: id)
+        if current { CloudLink.remove() }
+        return CloudAccountAction(message: current ? "Unlinked this computer." : "Unlinked that computer.", note: nil, unlinked: current)
+    }
+
+    private func deleteAccount(_ confirm: String) async throws -> CloudAccountAction {
+        try refuseInSample()
+        guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud first.") }
+        try await CloudClient(server: link.server, token: link.token).deleteAccount(confirm: confirm)
+        CloudLink.remove()
+        return CloudAccountAction(message: "Your account is deleted.", note: nil, unlinked: true)
+    }
+
     private func cloudUnlink() async throws -> DashboardAction {
         try refuseInSample()
         if let pending = cloudLinking {
@@ -1293,25 +1470,61 @@ actor DashboardSession {
         return DashboardAction(message: "Unlinked @\(link.login). Nothing more is sent from this computer.", note: nil)
     }
 
-    private func cloudLeaderboard(period: String?, metric: String?, team: String?) async throws -> DashboardLeaderboard {
+    private func cloudLeaderboard(period: String?, metric: String?, team: String?, season: String?) async throws -> DashboardLeaderboard {
         let period = period.flatMap { ["today", "week", "month", "all"].contains($0) ? $0 : nil } ?? "week"
-        let metric = metric.flatMap { ["tokens", "cost", "requests"].contains($0) ? $0 : nil } ?? "tokens"
+        let metric = metric.flatMap { ["tokens", "cost", "requests", "commits", "lines"].contains($0) ? $0 : nil } ?? "tokens"
         let team = team.flatMap { $0.isEmpty ? nil : $0 }
-        if sample { return SampleData.leaderboard(period: period, metric: metric, team: team) }
+        let season = season.flatMap { $0.isEmpty ? nil : $0 }
+        if sample { return SampleData.leaderboard(period: period, metric: metric, team: team, season: season) }
         guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud to see leaderboards.") }
         let client = CloudClient(server: link.server, token: link.token)
         do {
             async let board = client.leaderboard(period: period, metric: metric, team: team)
             async let teams = client.teams()
             // A website without seasons still serves the board, so this one failure isn't fatal.
-            async let season = try? await client.season(team: team)
+            async let season = try? await client.season(team: team, season: season)
             async let quests = try? await client.quests()
+            let members = if let team { (try? await client.roster(slug: team))?.members ?? [] } else { [CloudMember]() }
             return DashboardLeaderboard(board: try await board, teams: try await teams, team: team, website: link.server,
-                                        season: await season, quests: await quests)
+                                        season: await season, quests: await quests, members: members)
         } catch let error as CloudError where error.kind == .unlinked {
             CloudLink.remove()
             throw error
         }
+    }
+
+    private func cloudDay(team: String?, date: String?) async throws -> DashboardDay {
+        if sample { return SampleData.day(team: team, date: date) }
+        guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud to see a team's day.") }
+        let client = CloudClient(server: link.server, token: link.token)
+        do {
+            let teams = try await client.teams()
+            let slug = team.flatMap { $0.isEmpty ? nil : $0 } ?? teams.first?.slug
+            guard let slug else {
+                let today = Self.utcDay()
+                return DashboardDay(teams: [], team: nil, day: today, today: today, previous: "", next: nil, people: [],
+                                    website: link.server, members: [])
+            }
+            async let cloud = client.teamDay(slug: slug, date: date)
+            let roster = try? await client.roster(slug: slug)
+            let day = try await cloud
+            return DashboardDay(teams: teams, team: day.team, day: day.day, today: day.today,
+                                previous: day.previous, next: day.next, people: day.people, website: link.server,
+                                members: roster?.members ?? [])
+        } catch let error as CloudError where error.kind == .unlinked {
+            CloudLink.remove()
+            throw error
+        }
+    }
+
+    /// Today's date in UTC, the same calendar the website buckets a day by.
+    private static func utcDay(_ date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 
     private func checkUpdate() async throws -> UpdateDocument {
@@ -1389,6 +1602,21 @@ actor DashboardSession {
             message = "Removed \(path)."
         }
         try settings.save()
+        if body.index == true {
+            guard !settings.roots.isEmpty else { throw KeyhopError("Add a folder to scan first.") }
+            let started = Date()
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = .current
+            formatter.dateFormat = "yyyy-MM-dd"
+            let since = formatter.string(from: started.addingTimeInterval(-30 * 86400))
+            let scan = GitWork.scan(roots: settings.rootURLs, since: since, emails: settings.emails,
+                                    login: CloudLink.load()?.login, shareSubjects: settings.shareSubjects,
+                                    index: WorkIndex.load(), progress: nil)
+            try scan.index.save()
+            let count = scan.index.total
+            message = "Read \(count) \(count == 1 ? "repository" : "repositories"). The next sync sends them."
+        }
         return DashboardWorkAction(message: message, note: nil, work: workStatus())
     }
 }

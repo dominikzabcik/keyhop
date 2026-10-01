@@ -4,11 +4,13 @@ import { pageUser, safeNext } from "./auth";
 import { type AppEnv, type User, addDays, now, today } from "./env";
 import { LANDING_CSS, landingPage } from "./landing";
 import { downloadPage, privacyPage, securityPage, termsPage } from "./marketing";
+import { creatureMarkup, petFrom, petsFor } from "./pet";
 import { profileBadges, questsFor } from "./quests";
 import { TIERS, currentSeason, daysLeft, isSeason, nextStep, seasonBoard, seasonLabel, seasonList, seasonRange, tierFor } from "./seasons";
 import { type Entry, type Metric, type Period, METRICS, PERIODS, isMetric, isPeriod, leaderboard, profile } from "./stats";
 import { inviteInfo, members, myTeams, teamForMember } from "./teams";
 import { parseSubject, span, tasksForDay } from "./tasks";
+import { PERSON_WIDGETS, TEAM_WIDGETS, widgetMarkdown } from "./widgets";
 import { type DayRepo, type PersonDay, teamDay } from "./work";
 import {
   type Html,
@@ -32,6 +34,10 @@ import {
 } from "./ui";
 
 type C = Context<AppEnv>;
+
+function widgetFields(pageURL: string, files: readonly (readonly [string, string])[]) {
+  return files.map(([label, file]) => html`<label>${label}<input class="field mono" readonly value="${widgetMarkdown(pageURL, file, label)}"></label>`);
+}
 
 export const pages = new Hono<AppEnv>();
 
@@ -361,6 +367,12 @@ pages.get("/u/:login", async (c) => {
   const place = season.find((entry) => entry.userId === person.id);
   const url = `${new URL(c.req.url).origin}/u/${person.login}`;
   const display = person.display_name || person.name || person.login;
+  const creature = petFrom({
+    tokens: stats.allTime.tokens,
+    tools: stats.allTime.tools,
+    streak: stats.streak,
+    commits: stats.allTime.commits,
+  });
   const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
   return render(
     c,
@@ -375,6 +387,23 @@ pages.get("/u/:login", async (c) => {
           ${person.link ? html`<p class="bio"><a class="profile-link" href="${person.link}" rel="nofollow noopener ugc" target="_blank">${person.link.replace(/^https?:\/\//, "").replace(/\/$/, "")}</a></p>` : ""}
         </div>
         ${person.public === 1 ? html`<label class="share">Share this profile<input class="field mono" readonly value="${url}"></label>` : ""}
+      </section>
+      ${person.public === 1
+        ? html`<section class="card">
+            <div class="card-head"><h2>Widgets</h2><span class="hint">README</span></div>
+            <div class="card-body form">
+              ${widgetFields(url, PERSON_WIDGETS)}
+              <p class="muted" style="margin:0;font-size:13px">The badge shows tokens for the last 7 days. Add <span class="mono">?metric=commits&amp;period=month</span> to the image address, and <span class="mono">?theme=light</span> on a light page. Metrics: tokens, cost, requests, commits, lines, streak, rank, tier. Periods: today, week, month, all, season.</p>
+            </div>
+          </section>`
+        : ""}
+      <section class="card pet-card">
+        ${raw(creatureMarkup(creature))}
+        <div class="grow">
+          <h2>${creature.lineageName ? `${creature.stageName} · ${creature.lineageName}` : creature.stageName}</h2>
+          <p class="next">${creature.next ? html`${tokens(creature.next.tokens)} to ${creature.next.label}` : "Monument"}</p>
+          ${person.public === 1 ? html`<p class="bio"><a class="profile-link" href="/u/${person.login}/pet.svg">Share image</a></p>` : ""}
+        </div>
       </section>
       <section class="card season-head">
         ${tierTag(tierFor(place?.tokens ?? 0), "lg")}
@@ -465,6 +494,7 @@ pages.get("/t/:slug", pageUser, async (c) => {
   const { team, role } = membership;
   const { period, metric } = readChoice(c);
   const [entries, people] = await Promise.all([leaderboard(c.env.DB, { period, metric, teamId: team.id }), members(c.env.DB, team.id)]);
+  const pets = await petsFor(c.env.DB, people.map((person) => person.id));
   const origin = new URL(c.req.url).origin;
   const invite = c.req.query("invite");
   const owner = role === "owner";
@@ -485,6 +515,22 @@ pages.get("/t/:slug", pageUser, async (c) => {
       <section class="aside-layout">
         <div class="stack">${board(entries, metric, user, "Nobody on this team has synced usage for this period yet.")}</div>
         <aside class="stack">
+          <div class="card">
+            <div class="card-head"><h2>Badge</h2></div>
+            <div class="card-body form">
+              ${owner
+                ? html`<form class="form" method="post" action="/t/${team.slug}/public">
+                    <label class="check"><input type="checkbox" name="public" ${team.public === 1 ? raw("checked") : ""}>
+                      <span>Publish this team's totals<small>The image shows summed totals and how many members there are. Anyone with the link can load it.</small></span></label>
+                    <button class="btn sm" type="submit">Save</button>
+                  </form>`
+                : team.public !== 1
+                  ? html`<p class="muted" style="margin:0;font-size:13px">The owner can publish a badge of this team's totals.</p>`
+                  : ""}
+              ${team.public === 1 ? widgetFields(`${origin}/t/${team.slug}`, TEAM_WIDGETS) : ""}
+              <p class="muted" style="margin:0;font-size:13px">The badge shows this team's tokens for the last 7 days. A team image takes tokens, cost, requests, commits, lines or streak, with the same period and theme as a profile.</p>
+            </div>
+          </div>
           ${owner
             ? html`<div class="card">
                 <div class="card-head"><h2>Invite people</h2></div>
@@ -504,7 +550,7 @@ pages.get("/t/:slug", pageUser, async (c) => {
             <div class="card-head"><h2>Members</h2><span class="hint">${people.length}</span></div>
             ${people.map(
               (person) => html`<div class="list-row">
-                <span class="person">${avatar(person, 28)}<span><b>${person.name || person.login}</b><small>@${person.login}</small></span></span>
+                <span class="person">${raw(creatureMarkup(pets.get(person.id) ?? petFrom({ tokens: 0, tools: {}, streak: 0, commits: 0 }), "member-pet"))}${avatar(person, 28)}<span><b>${person.name || person.login}</b><small>@${person.login}</small></span></span>
                 ${person.role === "owner"
                   ? html`<span class="badge">Owner</span>`
                   : owner

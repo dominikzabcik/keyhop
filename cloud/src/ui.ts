@@ -197,6 +197,14 @@ a.place-card:hover { border-color: var(--border-strong); }
 .profile-link:hover { border-bottom-color: var(--text); }
 .profile-head { display: flex; align-items: center; gap: 18px; padding: 20px; flex-wrap: wrap; }
 .profile-head .grow { flex: 1; min-width: 200px; }
+.pet-card { display: flex; align-items: center; gap: 8px 20px; padding: 6px 20px 6px 4px; flex-wrap: wrap; }
+.pet-card .pet { width: 140px; height: auto; flex: none; }
+.pet-card h2 { margin: 0; font-size: 22px; font-weight: 640; letter-spacing: -.02em; }
+.member-pet { width: 64px; height: auto; flex: none; }
+.pet rect.flame, .member-pet rect.flame { animation: pet-flame 1.1s steps(2, end) infinite; }
+.pet rect.shine, .member-pet rect.shine { animation: pet-blink 3.6s steps(1, end) infinite; }
+@keyframes pet-flame { 50% { opacity: .45; } }
+@keyframes pet-blink { 0%, 88%, 100% { opacity: 1; } 92%, 96% { opacity: 0; } }
 .share { display: grid; gap: 6px; width: min(340px, 100%); font-size: 12.5px; color: var(--subtle); }
 .heat { display: block; max-width: 100%; height: auto; }
 .heat rect.l0 { fill: hsl(0 0% 100% / .05); } .heat rect.l1 { fill: hsl(0 0% 100% / .18); } .heat rect.l2 { fill: hsl(0 0% 100% / .36); }

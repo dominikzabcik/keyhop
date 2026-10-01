@@ -185,6 +185,16 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .hero-figure .num { font-size: 56px; font-weight: 600; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 .hero-figure .unit { font-size: 19px; color: var(--muted); font-weight: 520; }
 .hero-line { margin: 0; color: var(--muted); font-size: 14px; }
+.pet-card { display: flex; align-items: center; gap: 8px 22px; padding: 8px 22px 8px 6px; }
+.pet-card .pet { width: 128px; height: auto; flex: none; }
+.pet rect.flame { animation: pet-flame 1.1s steps(2, end) infinite; }
+.pet rect.shine { animation: pet-blink 3.6s steps(1, end) infinite; }
+@keyframes pet-flame { 50% { opacity: .45; } }
+@keyframes pet-blink { 0%, 88%, 100% { opacity: 1; } 92%, 96% { opacity: 0; } }
+.pet-card h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+.pet-card p { margin: 6px 0 0; color: var(--muted); font-size: 14px; max-width: 62ch; }
+.pet-slot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; }
+.pet-slot p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 /* A soft shadow right behind the words keeps them clear of bright dots, without a band behind them. */
 .has-backdrop .hero-figure, .has-backdrop .hero-line { text-shadow: 0 1px 20px hsl(0 0% 9% / .95), 0 0 2px hsl(0 0% 9% / .8); }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid hsl(0 0% 100% / .05); min-height: 50px; flex-wrap: wrap; }
@@ -474,6 +484,21 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .podium-card.you { border-color: var(--border-strong); }
 .podium-value { font-size: 24px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .podium .mix-bar, .table .mix-bar { margin: 0; height: 6px; }
+.day-sum { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 16px; color: var(--muted); }
+.day-sum b { color: var(--text); font-variant-numeric: tabular-nums; }
+.day-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.day-figures { display: flex; gap: 16px; }
+.day-figures div { text-align: right; }
+.day-figures b { display: block; font-variant-numeric: tabular-nums; font-weight: 600; }
+.day-figures small, .task-meta, .day-note { color: var(--subtle); font-size: 12px; }
+.task { padding: 12px 16px; border-top: 1px solid var(--border); }
+.task h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.task-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
+.commits { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.commit { display: flex; gap: 8px; align-items: baseline; color: var(--muted); font-size: 12.5px; }
+.sha { font-family: var(--mono); font-size: 11.5px; color: var(--subtle); }
+.day-nav { display: flex; align-items: center; gap: 6px; }
+.day-nav .now { padding: 0 8px; font-weight: 600; }
 .table tr.me td { background: hsl(0 0% 100% / .035); }
 .plain-link { color: inherit; text-decoration: none; }
 .plain-link:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -653,13 +678,13 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     section: SECTIONS.includes(wanted) ? wanted : (boot?.section || "overview"),
     menu: null, hidden: { account: [], tool: [], model: [] },
     range: "week", rangeOpen: false, metric: "tokens", tool: "all", group: "account", breakdown: "periods", allPeriods: false,
-    boardPeriod: "week", boardMetric: "tokens", boardTeam: "",
+    boardPeriod: "week", boardMetric: "tokens", boardTeam: "", boardView: "ranks", boardDate: "", boardSeason: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
     settingsPane: "general", checkingUpdate: false,
     pending: new Map(), loadingUsage: 0,
   };
   history.replaceState(null, "", "#" + ui.section);
-  const data = { state: boot?.state || null, usage: {}, usageErrors: {}, doctor: null, update: null, updateError: null };
+  const data = { state: boot?.state || null, usage: {}, usageErrors: {}, doctor: null, update: null, updateError: null, pet: null, petError: null };
   if (isStatic) for (const [range, doc] of Object.entries(boot.usage || {})) data.usage[range + ":all"] = doc;
 
   // MARK: Formatting
@@ -799,23 +824,49 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     }
   }
 
+  async function loadPet() {
+    try {
+      data.pet = await api("/api/cloud/pet");
+      data.petError = null;
+    } catch (error) {
+      data.petError = error.message;
+    }
+  }
+
   async function loadSection() {
     try {
-      if (ui.section === "overview") { loadServices(); await Promise.all([loadUsage("today"), loadUsage("week")]); }
+      if (ui.section === "overview") {
+        loadServices();
+        const jobs = [loadUsage("today"), loadUsage("week")];
+        if (!isStatic && data.state?.cloud?.linked) jobs.push(loadPet());
+        await Promise.all(jobs);
+      }
       if (ui.section === "usage") await loadUsage(ui.range, ui.tool);
       if (ui.section === "budgets") await loadUsage("month");
       if (ui.section === "leaderboard" && !isStatic && data.state?.cloud?.linked) {
         try {
-          data.board = await api(`/api/cloud/leaderboard?period=${ui.boardPeriod}&metric=${ui.boardMetric}&team=${encodeURIComponent(ui.boardTeam)}`);
-          data.boardError = null;
+          if (ui.boardView === "day") {
+            data.day = await api(`/api/cloud/day?team=${encodeURIComponent(ui.boardTeam)}&date=${encodeURIComponent(ui.boardDate)}`);
+            data.dayError = null;
+            if (data.day.team) ui.boardTeam = data.day.team.slug;
+            if (data.day.day) ui.boardDate = data.day.day;
+          } else {
+            data.board = await api(`/api/cloud/leaderboard?period=${ui.boardPeriod}&metric=${ui.boardMetric}&team=${encodeURIComponent(ui.boardTeam)}&season=${encodeURIComponent(ui.boardSeason)}`);
+            data.boardError = null;
+          }
         } catch (error) {
-          data.boardError = error.message;
+          if (ui.boardView === "day") data.dayError = error.message;
+          else data.boardError = error.message;
         }
       }
       if (ui.section === "settings" && !isStatic) {
         const doctor = api("/api/doctor");
         loadUpdate();
         data.doctor = await doctor;
+        if (data.state?.cloud?.linked) {
+          try { data.profile = await api("/api/cloud/profile"); } catch (error) { data.profileError = error.message; }
+          try { data.apps = await api("/api/cloud/apps"); data.appsError = null; } catch (error) { data.appsError = error.message; }
+        }
       }
     } catch (error) {
       ui.offline = error.message;
@@ -994,6 +1045,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       }
       items.push({ group: "Do", label: "Read limits and usage now", icon: "refresh", run: () => { if (!data.state?.refreshing) act(null, () => { data.state.refreshing = true; renderActivity(); return api("/api/refresh", {}); }); } });
       items.push({ group: "Do", label: "Check for updates", icon: "update", run: () => { ui.settingsPane = "app"; go("settings"); } });
+      if (data.state?.cloud?.linked) items.push({ group: "Go to", label: "Today's work", icon: "leaderboard", run: () => showDay() });
     }
     return items;
   }
@@ -1320,7 +1372,23 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         (m) => `${mark(m.tool)}<span class="mono">${esc(m.model)}</span><span class="subtle ranked-value">${fmt.tokens(m.figures.tokens)}</span>`)}</div>` : `<p class="empty">No models used this week.</p>`}
     </section>`;
 
-    return { body: `${notices}${stats}${inUse}<div class="split">${weekCard}${modelsCard}</div>${budgetsCard}` };
+    return { body: `${notices}${stats}${petCard()}${inUse}<div class="split">${weekCard}${modelsCard}</div>${budgetsCard}` };
+  }
+
+  function petCard() {
+    if (data.pet) {
+      const pet = data.pet;
+      const shapes = pet.shapes.map((shape) => `<rect x="${shape.x}" y="${shape.y}" width="${shape.w}" height="${shape.h}" rx="0.6" fill="${esc(shape.fill)}" fill-opacity="${shape.opacity}"${shape.kind === "flame" || shape.kind === "shine" || shape.kind === "eye" ? ` class="${shape.kind}"` : ""}/>`).join("");
+      const caption = pet.lineageName ? `${pet.stageName} · ${pet.lineageName}` : pet.stageName;
+      const next = pet.next ? `${fmt.tokens(pet.next.tokens)} to ${esc(pet.next.label)}` : "Monument";
+      return `<section class="card pet-card"><svg class="pet" viewBox="0 0 ${pet.width} ${pet.height}" role="img" aria-label="${esc(caption)}">${shapes}</svg><div><h2>${esc(caption)}</h2><p>${next}</p></div></section>`;
+    }
+    if (isStatic || !data.state?.cloud?.available) return "";
+    if (!data.state.cloud.linked) {
+      return `<section class="card pet-slot"><div><b>Link with GitHub</b><p>Join leaderboards and get a profile you can share. Linking hatches your pet from the usage you already sync.</p></div><button class="btn sm" data-action="cloud-link">Link with GitHub</button></section>`;
+    }
+    if (data.petError) return `<section class="card"><p class="empty">${esc(data.petError)}</p></section>`;
+    return "";
   }
 
   function busiestHour(usage) {
@@ -2060,7 +2128,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       ? `<button class="btn sm ghost" data-action="work-off">Stop counting</button>`
       : `<button class="btn sm" data-action="work-on">Count commits</button>`;
     const subjects = work.shareSubjects
-      ? `<div class="card-body setting-row"><div><b>Subject lines are shared</b><p>The first line of each commit goes with the counts, so a day can be read as tasks. Turning this off deletes the ones already sent.</p></div>
+      ? `<div class="card-body setting-row"><div><b>Subject lines are shared</b><p>The first line of each commit goes with the counts. Leaderboard, on Day, reads them as tasks, and so does the team's day on the website. Turning this off deletes the ones already sent.</p></div>
           <button class="btn sm ghost" data-action="work-subjects-off">Keep subjects here</button></div>`
       : `<div class="card-body setting-row"><div><b>Keep subject lines here</b><p>Counts still go. The words you wrote stay on this computer until you share them.</p></div>
           <button class="btn sm secondary" data-action="work-subjects-on">Share subject lines</button></div>`;
@@ -2068,12 +2136,47 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       <label>Folder to scan<input class="field" name="folder" placeholder="~/Projects" autocomplete="off"></label>
       <div class="row-actions" style="justify-content:flex-start"><button class="btn sm secondary">Add folder</button></div>
     </form>`;
+    const read = isStatic ? "" : `<div class="card-body setting-row"><div><b>Read repositories now</b>
+        <p>Walks the folders below. A repository that hasn't changed since last time is skipped.</p></div>
+        <button class="btn sm secondary" data-action="work-index">Read repositories now</button></div>`;
     return `<section class="card"><div class="card-head"><h2>What you shipped</h2>${work.enabled ? `<span class="badge live">On</span>` : ""}</div>
       <div class="card-body setting-row"><div><b>Count the commits you author</b>
         <p>Token totals say what a day cost. This adds what came out of it, from the git repositories already on this computer. Paths and diffs never leave. ${index} ${synced}</p></div>
         ${toggle}</div>
-      ${work.enabled ? `${subjects}${folders}${add}` : ""}
+      ${work.enabled ? `${subjects}${read}${folders}${add}` : ""}
     </section>`;
+  }
+
+  function profileForm() {
+    if (data.profileError) return `<div class="card-body"><p class="empty-inline">${esc(data.profileError)}</p></div>`;
+    const profile = data.profile;
+    if (!profile) return `<div class="card-body">${busy("Reading your profile", "empty")}</div>`;
+    return `<form class="form card-body" data-form="profile">
+      <label>Display name<input class="field" name="displayName" maxlength="40" value="${esc(profile.displayName || "")}" placeholder="${esc(profile.name || profile.login)}" autocomplete="off"></label>
+      <label>Bio<input class="field" name="bio" maxlength="160" value="${esc(profile.bio || "")}" placeholder="One line about you" autocomplete="off"></label>
+      <label>Link<input class="field" name="link" maxlength="200" value="${esc(profile.link || "")}" placeholder="your-site.dev" autocomplete="off"></label>
+      <label class="check"><input type="checkbox" name="public" ${profile.public ? "checked" : ""}> Show me on the global leaderboard</label>
+      <div class="row-actions" style="justify-content:flex-start"><button class="btn sm">Save profile</button></div>
+    </form>`;
+  }
+
+  function appsCard() {
+    if (data.appsError) return `<div class="card-body"><p class="empty-inline">${esc(data.appsError)}</p></div>`;
+    const apps = data.apps?.apps;
+    if (!apps) return `<div class="card-body">${busy("Reading linked apps", "empty")}</div>`;
+    if (!apps.length) return `<div class="card-body"><p class="empty-inline">No Keyhop app is linked yet.</p></div>`;
+    const rows = apps.map((app) => `<div class="row setting-row"><div><b>${esc(app.label || "Keyhop")}${app.current ? " · this computer" : ""}</b><p>${app.access === "read" ? "Read only" : "Can sync"}${app.lastUsedAt ? ` · used ${esc(ago(app.lastUsedAt))}` : ""}</p></div>
+      ${app.current ? "" : `<button class="btn sm ghost" type="button" data-action="app-revoke" data-id="${esc(app.id)}">Unlink</button>`}</div>`).join("");
+    return `<div class="card-head"><h2>Linked apps</h2><span class="hint">${apps.length}</span></div><div class="list">${rows}</div>`;
+  }
+
+  function deleteAccountForm() {
+    const login = data.profile?.login || data.state?.cloud?.login || "";
+    return `<form class="form card-body" data-form="account-delete">
+      <p class="empty-inline">Removes your profile, synced totals, linked apps, memberships and the teams you own.</p>
+      <label>Delete account<input class="field" name="confirm" placeholder="Type ${esc(login)} to confirm" autocomplete="off"></label>
+      <div class="row-actions" style="justify-content:flex-start"><button class="btn sm secondary danger">Delete account</button></div>
+    </form>`;
   }
 
   function cloudCard(cloud) {
@@ -2104,7 +2207,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         <div class="row-actions"><a class="btn sm secondary" href="${esc(cloud.profile)}" target="_blank" rel="noopener">Open profile</a>
         <button class="btn sm secondary" data-action="cloud-sync">Sync now</button>
         <button class="btn sm ghost danger" data-action="cloud-unlink">Unlink</button></div></div>
-      ${limits}</section>`;
+      ${profileForm()}${cloud.isPublic && cloud.profile ? `<div class="form card-body">${shareLines(cloud.profile, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"], ["Pet", "pet.svg"]])}
+        <p class="empty-inline subtle">The badge shows tokens for the last 7 days. Add ?metric= and ?period= to the image address, and ?theme=light on a light page. <a href="https://github.com/dominikzabcik/keyhop#readme-images" target="_blank" rel="noopener">How the images work</a></p></div>` : ""}${appsCard()}${deleteAccountForm()}${limits}</section>`;
   }
 
   // Six squares climbing to the right, lit as far as the tier has come.
@@ -2133,10 +2237,14 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         ? `${fmt.tokens(you.next.tokens)} more tokens for ${esc(you.next.label)}.`
         : "You're at the top of the ladder.";
     const place = you && you.rank ? `#${you.rank} of ${season.players}. ` : "";
+    const seasons = season.seasons || [];
+    const tabs = seasons.length > 1
+      ? `<div class="tabs">${seasons.map((item) => `<button type="button" data-action="board-season" data-value="${esc(item.id)}" aria-pressed="${item.id === season.season}">${esc(item.label)}</button>`).join("")}</div>`
+      : "";
     return `<section class="card season-row">
       ${tierTag(you ? you.tier : { key: "bronze", name: "Bronze", division: 3 })}
-      <div class="grow"><b>${esc(season.label)} · ${esc(left)}</b><p>${place}${note}</p></div>
-      <a class="btn sm secondary" href="${esc(website)}/season" target="_blank" rel="noopener">Open season</a>
+      <div class="grow"><b>${esc(season.label)} · ${esc(left)}</b><p>${place}${note}</p>${tabs}</div>
+      <a class="btn sm secondary" href="${esc(website)}/season${season.season ? `/${esc(season.season)}` : ""}" target="_blank" rel="noopener">Open season</a>
     </section>`;
   }
 
@@ -2153,20 +2261,124 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       ${quests.quests.map(row).join("")}</section>`;
   }
 
+  function badgesCard(quests) {
+    const badges = quests?.badges || [];
+    if (!badges.length) return "";
+    const earned = badges.filter((badge) => badge.earned).length;
+    return `<section class="card"><div class="card-head"><h2>Badges</h2><span class="hint">${earned} of ${badges.length}</span></div>
+      ${badges.map((badge) => `<div class="quest-row${badge.earned ? " done" : ""}"><div><b>${esc(badge.name)}</b><p>${esc(badge.earned && badge.day ? `Earned ${badge.day}` : badge.note)}</p></div></div>`).join("")}</section>`;
+  }
+
+  function seasonStandings(season) {
+    const entries = season?.entries || [];
+    if (!entries.length) return "";
+    return `<section class="card"><div class="card-head"><h2>Season standings</h2><span class="hint">${entries.length}</span></div>
+      <table class="table"><thead><tr><th style="width:52px">#</th><th>Person</th><th>Tier</th><th class="right">Tokens</th></tr></thead>
+      <tbody>${entries.map((entry) => `<tr class="${entry.isYou ? "me" : ""}"><td class="mono subtle">${entry.rank}</td><td><b>${esc(entry.name || entry.login)}</b> <small class="subtle">@${esc(entry.login)}</small></td><td>${tierTag(entry.tier, "sm")}</td><td class="right mono">${fmt.tokens(entry.tokens)}</td></tr>`).join("")}</tbody></table></section>`;
+  }
+
+  function shareLines(page, files) {
+    return files.map(([label, file]) => `<label>${esc(label)}<input class="field mono" readonly value="[![${esc(label)}](${esc(page)}/${file})](${esc(page)})"></label>`).join("");
+  }
+
+  function teamsCard(website) {
+    const teams = data.day?.teams || data.board?.teams || [];
+    const current = teams.find((team) => team.slug === ui.boardTeam);
+    const rows = teams.map((team) => `<div class="row setting-row"><div><b>${esc(team.name)}</b><p>${team.members} ${team.members === 1 ? "member" : "members"}${team.role === "owner" ? " · owner" : ""}</p></div>
+      <button class="btn sm ghost" type="button" data-action="board-pick" data-value="${esc(team.slug)}">Open</button></div>`).join("");
+    const roster = current ? ((ui.boardView === "day" ? data.day?.members : data.board?.members) || []) : [];
+    const people = roster.map((person) => `<div class="row setting-row"><div><b>${esc(person.name || person.login)}</b><p>@${esc(person.login)}${person.role === "owner" ? " · owner" : ""}</p></div>
+      ${current && current.role === "owner" && person.role !== "owner" ? `<button class="btn sm ghost" type="button" data-action="team-remove" data-login="${esc(person.login)}">Remove</button>` : ""}</div>`).join("");
+    const invite = data.invite ? `<label>Share this link<input class="field" readonly value="${esc(data.invite)}"></label>` : "";
+    const publish = current && current.role === "owner"
+      ? `<label class="check"><input type="checkbox" data-action="team-public" ${current.public ? "checked" : ""}> Publish this team's totals</label>
+         <p class="empty-inline subtle">The image shows summed totals and how many members there are. Anyone with the link can load it.</p>`
+      : "";
+    const snippets = current && current.public
+      ? `<div class="form">${shareLines(`${website}/t/${current.slug}`, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"]])}
+         <p class="empty-inline subtle">The badge shows this team's tokens for the last 7 days. A team image takes tokens, cost, requests, commits, lines or streak.</p></div>`
+      : "";
+    const manage = !current ? "" : `${publish}${snippets}${current.role === "owner"
+      ? `${people}<div class="row-actions" style="justify-content:flex-start"><button class="btn sm secondary" type="button" data-action="team-invite">Create invite link</button><button class="btn sm ghost" type="button" data-action="team-revoke">Turn off invite links</button></div>${invite}
+        <form class="form" data-form="team-delete"><label>Delete this team<input class="field" name="confirm" placeholder="Type ${esc(current.slug)} to confirm" autocomplete="off"></label><button class="btn sm secondary danger">Delete team</button></form>`
+      : `${people}<div class="row-actions" style="justify-content:flex-start"><button class="btn sm ghost" type="button" data-action="team-leave">Leave ${esc(current.name)}</button></div>`}`;
+    return `<section class="card"><div class="card-head"><h2>Teams</h2></div>
+      ${rows ? `<div class="list">${rows}</div>` : `<p class="empty">You aren't on a team yet.</p>`}
+      <div class="card-body">${manage}
+        <form class="form" data-form="team-create"><label>New team<input class="field" name="name" maxlength="40" placeholder="Studio" autocomplete="off"></label><button class="btn sm">Create team</button></form>
+        <form class="form" data-form="team-join"><label>Invite link or code<input class="field" name="code" placeholder="https://keyhop.app/invite/…" autocomplete="off"></label><button class="btn sm secondary">Join team</button></form>
+        <p class="empty-inline subtle"><a href="${esc(website)}/teams" target="_blank" rel="noopener">The same teams are on the website</a></p>
+      </div></section>`;
+  }
+
+  function boardValue(entry) {
+    if (ui.boardMetric === "cost") return fmt.usd(entry.cost);
+    if (ui.boardMetric === "requests") return fmt.count(entry.requests);
+    if (ui.boardMetric === "commits") return fmt.count(entry.commits);
+    if (ui.boardMetric === "lines") return fmt.count((entry.insertions || 0) + (entry.deletions || 0));
+    return fmt.tokens(entry.tokens);
+  }
+
+  function diffStat(added, removed) {
+    if (!added && !removed) return "";
+    return `<span class="diff">+${fmt.count(added)} −${fmt.count(removed)}</span>`;
+  }
+
+  // The same day the website shows at /t/<team>/day.
+  function dayView(toolbar) {
+    if (data.dayError) return { toolbar, body: `<div class="notice">${icon("alert")}<div><p>${esc(data.dayError)}</p></div></div>` };
+    if (!data.day) return { toolbar, body: busy("Reading the day", "lede") };
+    const day = data.day;
+    if (!day.team) {
+      return { toolbar, body: teamsCard(day.website) };
+    }
+    const label = day.day === day.today ? "Today" : day.day;
+    const previous = `<button class="btn sm ghost" type="button" data-action="day-step" data-value="${esc(day.previous)}" aria-label="Previous day">Previous</button>`;
+    const following = day.next
+      ? `<button class="btn sm ghost" type="button" data-action="day-step" data-value="${esc(day.next)}" aria-label="Next day">Next</button>`
+      : "";
+    const back = day.day === day.today ? `<span class="now">${label}</span>` : `<button class="btn sm ghost" type="button" data-action="day-step" data-value="${esc(day.today)}">Today</button>`;
+    const nav = `<div class="day-nav">${previous}${back}${following}</div>`;
+    const people = day.people || [];
+    const commits = people.reduce((sum, person) => sum + (person.commits || 0), 0);
+    const tokens = people.reduce((sum, person) => sum + (person.tokens || 0), 0);
+    const worked = people.filter((person) => person.commits > 0 || person.tokens > 0).length;
+    const repos = new Set(people.flatMap((person) => (person.repos || []).map((repo) => repo.repo)));
+    const sum = `<p class="day-sum"><span><b>${worked}</b> of ${people.length} working</span><span><b>${fmt.count(commits)}</b> ${commits === 1 ? "commit" : "commits"}</span><span><b>${repos.size}</b> ${repos.size === 1 ? "repository" : "repositories"}</span><span><b>${fmt.tokens(tokens)}</b> tokens</span></p>`;
+    const card = (person) => {
+      const tasks = person.tasks || [];
+      const shown = tasks.slice(0, 6);
+      const many = (person.repos || []).length > 1;
+      const lines = tasks.length === 0 && person.commits > 0
+        ? `<p class="day-note" style="padding:0 16px 14px">Commit subjects aren't shared from this computer.</p>`
+        : shown.map((task) => `<li class="task"><div class="task-head"><h3>${esc(task.title)}</h3><span class="task-meta">${many ? `<span>${esc(task.repos.map((repo) => repo.split("/").pop()).join(", "))}</span>` : ""}${task.commits.length === 1 ? `<code class="sha">${esc(task.commits[0].sha.slice(0, 7))}</code>` : ""}<span>${fmt.count(task.commits.length)} ${task.commits.length === 1 ? "commit" : "commits"}</span><span>${esc(task.span)}</span>${diffStat(task.insertions, task.deletions)}</span></div>${task.commits.length < 2 ? "" : `<ul class="commits">${task.commits.map((commit) => `<li class="commit"><code class="sha">${esc(commit.sha.slice(0, 7))}</code><span>${esc(commit.subject)}</span></li>`).join("")}</ul>`}</li>`).join("");
+      const more = tasks.length > 6 ? `<li class="task"><span class="day-note">and ${tasks.length - 6} more</span></li>` : "";
+      const indexing = person.indexing ? `<p class="day-note" style="padding:0 16px 12px">Still reading this computer's repositories, ${fmt.count(person.indexing.done)} of ${fmt.count(person.indexing.total)}. What's here is real, but it isn't all of it yet.</p>` : "";
+      const quiet = person.commits === 0 && person.tokens === 0 && !person.indexing ? `<p class="day-note" style="padding:0 16px 14px">Nothing synced for this day.</p>` : "";
+      return `<section class="card day-person"><header class="card-head day-head"><h2>${esc(person.name || person.login)}${person.isYou ? " · you" : ""}</h2><div class="day-figures"><div><b>${fmt.count(person.commits)}</b><small>${person.commits === 1 ? "commit" : "commits"}</small></div><div><b>${fmt.tokens(person.tokens)}</b><small>tokens</small></div><div>${diffStat(person.insertions, person.deletions) || "<b>0</b>"}<small>lines</small></div></div></header>${indexing}${quiet}<ol class="tasks">${lines}${more}</ol></section>`;
+    };
+    const empty = commits === 0 ? `<section class="card"><p class="empty">No commits synced for this day. Turn counting on under Settings, Activity.</p></section>` : "";
+    const note = `<p class="empty-inline subtle"><a href="${esc(day.website)}/t/${esc(day.team.slug)}/day/${esc(day.day)}" target="_blank" rel="noopener">Open this day on the website</a></p>`;
+    return { toolbar: `${toolbar}${nav}`, body: sum + people.map(card).join("") + empty + note + teamsCard(day.website) };
+  }
+
   function leaderboardPage() {
     const cloud = data.state.cloud;
     if (!cloud.linked || cloud.linking) return { body: cloudCard(cloud) };
     const choice = (action, options, current) => `<div class="tabs">${options.map(([value, label]) => `<button data-action="${action}" data-value="${value}" aria-pressed="${value === current}">${label}</button>`).join("")}</div>`;
-    const teams = data.board?.teams || [];
-    const toolbar = `${teams.length ? `<select class="field" data-action="board-team"><option value="">Everyone</option>${teams.map((team) => `<option value="${esc(team.slug)}"${team.slug === ui.boardTeam ? " selected" : ""}>${esc(team.name)}</option>`).join("")}</select>` : ""}
+    const teams = (data.day?.teams || data.board?.teams || []);
+    const teamSelect = teams.length ? `<select class="field" data-action="board-team">${ui.boardView === "day" ? "" : `<option value="">Everyone</option>`}${teams.map((team) => `<option value="${esc(team.slug)}"${team.slug === ui.boardTeam ? " selected" : ""}>${esc(team.name)}</option>`).join("")}</select>` : "";
+    const view = choice("board-view", [["ranks", "Ranks"], ["day", "Day"]], ui.boardView);
+    if (ui.boardView === "day") return dayView(`${teamSelect}${view}`);
+    const toolbar = `${teamSelect}${view}
       ${choice("board-period", [["today", "Today"], ["week", "7 days"], ["month", "30 days"], ["all", "All time"]], ui.boardPeriod)}
-      ${choice("board-metric", [["tokens", "Tokens"], ["cost", "API value"], ["requests", "Requests"]], ui.boardMetric)}`;
+      ${choice("board-metric", [["tokens", "Tokens"], ["cost", "API value"], ["requests", "Requests"], ["commits", "Commits"], ["lines", "Lines"]], ui.boardMetric)}`;
     if (data.boardError) return { toolbar, body: `<div class="notice">${icon("alert")}<div><p>${esc(data.boardError)}</p></div></div>` };
     if (!data.board) return { toolbar, body: busy("Reading the leaderboard", "lede") };
 
     const entries = data.board.board.entries;
     const site = data.board.website;
-    const value = (e) => ui.boardMetric === "cost" ? fmt.usd(e.cost) : ui.boardMetric === "requests" ? Math.round(e.requests).toLocaleString() : fmt.tokens(e.tokens);
+    const value = boardValue;
     const avatar = (e, size) => `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px" aria-hidden="true">${esc(e.login.slice(0, 1).toUpperCase())}</span>`;
     const person = (e, size) => `<div class="who">${avatar(e, size)}<div><b>${esc(e.name || e.login)}</b><small>@${esc(e.login)}</small></div></div>`;
     const mix = (e) => {
@@ -2177,7 +2389,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const me = entries.find((e) => e.isYou);
     const ahead = me && me.rank > 1 ? entries[me.rank - 2] : null;
     const scope = ui.boardTeam ? (teams.find((team) => team.slug === ui.boardTeam)?.name || "your team") : "the global board";
-    const gap = ahead ? value({ tokens: ahead.tokens - me.tokens, cost: ahead.cost - me.cost, requests: ahead.requests - me.requests }) : null;
+    const gap = ahead ? value({ tokens: ahead.tokens - me.tokens, cost: ahead.cost - me.cost, requests: ahead.requests - me.requests, commits: (ahead.commits || 0) - (me.commits || 0), insertions: (ahead.insertions || 0) - (me.insertions || 0), deletions: (ahead.deletions || 0) - (me.deletions || 0) }) : null;
 
     const stats = `<div class="stats">
       <div class="card stat"><div class="label">Your rank</div><div class="value">${me ? `#${me.rank}` : "Unranked"}</div>
@@ -2191,14 +2403,14 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     </div>`;
     const podium = entries.length ? `<div class="podium">${entries.slice(0, 3).map((e) => `<div class="card podium-card${e.isYou ? " you" : ""}">
         <span class="place mono">#${e.rank}</span>${person(e, 36)}<div class="podium-value">${esc(value(e))}</div>${mix(e)}</div>`).join("")}</div>` : "";
-    const heading = { tokens: "Tokens", cost: "API value", requests: "Requests" }[ui.boardMetric];
+    const heading = { tokens: "Tokens", cost: "API value", requests: "Requests", commits: "Commits", lines: "Lines" }[ui.boardMetric];
     const table = entries.length
       ? `<section class="card"><table class="table"><thead><tr><th style="width:52px">#</th><th>Person</th><th>Tools</th><th class="right">Active days</th><th class="right">${heading}</th></tr></thead>
           <tbody>${entries.map((e) => `<tr class="${e.isYou ? "me" : ""}"><td class="mono subtle">${e.rank}</td><td>${person(e, 26)}</td><td class="bar-cell">${mix(e)}</td>
           <td class="right mono subtle">${e.activeDays}</td><td class="right mono">${esc(value(e))}</td></tr>`).join("")}</tbody></table></section>`
       : `<section class="card"><p class="empty">No usage yet for this period. It fills in as the computers on your board refresh.</p></section>`;
-    const note = `<p class="empty-inline subtle">Create teams and invite people on <a href="${esc(site)}/teams" target="_blank" rel="noopener">the website</a>.${cloud.isPublic ? "" : ` Your profile is private; make it public in the <a href="${esc(site)}/settings" target="_blank" rel="noopener">website's settings</a> to join the global board.`}</p>`;
-    return { toolbar, body: seasonRow(data.board.season, site) + stats + questsCard(data.board.quests) + podium + table + note };
+    const note = `<p class="empty-inline subtle">Day shows what each person shipped.${cloud.isPublic ? "" : " Your profile is private. Make it public in Settings, Cloud, to join the global board."}</p>`;
+    return { toolbar, body: seasonRow(data.board.season, site) + seasonStandings(data.board.season) + stats + questsCard(data.board.quests) + badgesCard(data.board.quests) + podium + table + teamsCard(site) + note };
   }
 
   // MARK: Settings
@@ -2322,6 +2534,16 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     }
   }
 
+  async function showDay() {
+    ui.boardView = "day";
+    ui.boardDate = "";
+    data.day = null;
+    if (ui.section !== "leaderboard") { await go("leaderboard"); return; }
+    render();
+    await loadSection();
+    render();
+  }
+
   async function go(section) {
     ui.section = section;
     history.replaceState(null, "", "#" + section);
@@ -2407,6 +2629,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       case "work-subjects-on": act(el, () => api("/api/work", { shareSubjects: true }), "Sharing"); break;
       case "work-subjects-off": act(el, () => api("/api/work", { shareSubjects: false }), "Keeping here"); break;
       case "work-remove": act(el, () => api("/api/work", { remove: el.dataset.path }), "Removing"); break;
+      case "work-index": act(el, () => api("/api/work", { index: true }), "Reading"); break;
       case "edit-budget": ui.budgetEdit = el.dataset.scope; render(); $("form[data-form=budget] input[name=amount]")?.focus(); break;
       case "cancel-budget": ui.budgetEdit = null; render(); break;
       case "delete-budget": act(el, () => api("/api/budget", { scope: el.dataset.scope === "all" ? "all" : el.dataset.scope.replace("account:", ""), amount: null })); break;
@@ -2419,12 +2642,78 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       case "cloud-limits-off": act(el, () => api("/api/cloud/limits", { on: false }), "Stopping"); break;
       case "appearance": setAppearance({ [el.dataset.key]: el.dataset.value }); break;
       case "appearance-clear": setAppearance({ image: "" }); break;
+      case "board-season":
+        if (el.dataset.value === ui.boardSeason) break;
+        ui.boardSeason = el.dataset.value;
+        data.board = null;
+        render();
+        await loadSection();
+        render();
+        break;
       case "board-period": case "board-metric":
         ui[el.dataset.action === "board-period" ? "boardPeriod" : "boardMetric"] = el.dataset.value;
         data.board = null;
         render();
         await loadSection();
         render();
+        break;
+      case "board-view":
+        if (el.dataset.value === ui.boardView) break;
+        ui.boardView = el.dataset.value;
+        if (ui.boardView === "day") ui.boardDate = "";
+        data.day = null;
+        render();
+        await loadSection();
+        render();
+        break;
+      case "day-step":
+        ui.boardDate = el.dataset.value;
+        data.day = null;
+        render();
+        await loadSection();
+        render();
+        break;
+      case "board-pick":
+        ui.boardTeam = el.dataset.value;
+        ui.boardView = "day";
+        ui.boardDate = "";
+        data.invite = null;
+        data.day = null;
+        if (ui.section !== "leaderboard") { await go("leaderboard"); break; }
+        render();
+        await loadSection();
+        render();
+        break;
+      case "team-invite":
+        act(el, async () => {
+          const result = await api("/api/cloud/team", { invite: ui.boardTeam });
+          data.invite = result.url;
+          return result;
+        }, "Creating link");
+        break;
+      case "team-revoke":
+        data.invite = null;
+        act(el, () => api("/api/cloud/team", { revoke: ui.boardTeam }), "Turning off");
+        break;
+      case "team-leave": {
+        const slug = ui.boardTeam;
+        ui.boardTeam = "";
+        data.invite = null;
+        data.board = null;
+        data.day = null;
+        act(el, () => api("/api/cloud/team", { leave: slug }), "Leaving");
+        break;
+      }
+      case "team-remove":
+        act(el, () => api("/api/cloud/team", { slug: ui.boardTeam, member: el.dataset.login }), "Removing");
+        break;
+      case "app-revoke":
+        act(el, async () => {
+          const result = await api("/api/cloud/apps", { id: el.dataset.id });
+          data.apps = null;
+          if (result.unlinked) { data.board = null; data.profile = null; }
+          return result;
+        }, "Unlinking");
         break;
     }
   });
@@ -2439,6 +2728,11 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   });
 
   document.addEventListener("change", async (event) => {
+    const publish = event.target.closest("[data-action=team-public]");
+    if (publish) {
+      act(publish, () => api("/api/cloud/team", { slug: ui.boardTeam, public: publish.checked }), publish.checked ? "Publishing" : "Hiding");
+      return;
+    }
     const look = event.target.closest("[data-appearance]");
     if (look) {
       if (look.dataset.appearance === "opacity") { setAppearance({ opacity: Number(look.value) / 100 }); return; }
@@ -2455,6 +2749,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       ui.boardTeam = team.value;
       team.blur();
       data.board = null;
+      data.day = null;
       render();
       await loadSection();
       render();
@@ -2492,6 +2787,58 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       ui.rangeOpen = false;
       render();
       loadSection().then(render);
+    }
+    if (form.dataset.form === "profile") {
+      act(button, async () => {
+        const result = await api("/api/cloud/profile", {
+          displayName: form.elements.displayName.value,
+          bio: form.elements.bio.value,
+          link: form.elements.link.value,
+          public: form.elements.public.checked,
+        });
+        data.profile = null;
+        return result;
+      }, "Saving");
+    }
+    if (form.dataset.form === "team-create") {
+      const name = String(form.elements.name.value || "").trim();
+      if (name.length < 2) { toast("Give the team a name of at least 2 characters.", true); return; }
+      act(button, async () => {
+        const result = await api("/api/cloud/team", { name });
+        if (result.slug) { ui.boardTeam = result.slug; ui.boardView = "day"; ui.boardDate = ""; data.day = null; data.board = null; }
+        return result;
+      }, "Creating");
+    }
+    if (form.dataset.form === "team-join") {
+      const code = String(form.elements.code.value || "").trim();
+      if (!code) { toast("Paste an invite link or its code.", true); return; }
+      act(button, async () => {
+        const result = await api("/api/cloud/team", { code });
+        if (result.slug) { ui.boardTeam = result.slug; ui.boardView = "day"; ui.boardDate = ""; data.day = null; data.board = null; }
+        return result;
+      }, "Joining");
+    }
+    if (form.dataset.form === "team-delete") {
+      const slug = ui.boardTeam;
+      const confirm = String(form.elements.confirm.value || "").trim();
+      if (confirm.toLowerCase() !== slug.toLowerCase()) { toast(`Type ${slug} to delete this team.`, true); return; }
+      ui.boardTeam = "";
+      data.invite = null;
+      data.board = null;
+      data.day = null;
+      act(button, () => api("/api/cloud/team", { delete: slug, confirm }), "Deleting");
+    }
+    if (form.dataset.form === "account-delete") {
+      const confirm = String(form.elements.confirm.value || "").trim();
+      const login = data.profile?.login || data.state?.cloud?.login || "";
+      if (confirm.toLowerCase() !== login.toLowerCase()) { toast(`Type ${login} to delete your account.`, true); return; }
+      act(button, async () => {
+        const result = await api("/api/cloud/account", { confirm });
+        data.board = null;
+        data.profile = null;
+        data.apps = null;
+        return result;
+      }, "Deleting");
     }
     if (form.dataset.form === "work-folder") {
       const folder = String(form.elements.folder.value || "").trim();

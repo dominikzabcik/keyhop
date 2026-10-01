@@ -69,6 +69,7 @@ final class Store: ObservableObject {
     @Published private(set) var season: CloudSeason?
     @Published private(set) var board: CloudBoard?
     @Published private(set) var quests: CloudQuests?
+    @Published private(set) var pet: CloudPet?
     @Published private(set) var limits: CloudLimits = .none
     @Published private(set) var loading = false
     /// True once a read has finished, whether it worked or not, so the screen can tell "still
@@ -119,7 +120,8 @@ final class Store: ObservableObject {
             season: "2026-09", label: "September 2026", daysLeft: 17, over: false, players: 6,
             you: CloudSeason.You(rank: 3, tokens: 4_140_000_000,
                                  tier: CloudSeason.Tier(key: "platinum", name: "Platinum", division: 2),
-                                 next: CloudSeason.Step(label: "Platinum I", tokens: 940_000_000)))
+                                 next: CloudSeason.Step(label: "Platinum I", tokens: 940_000_000)),
+            entries: nil, seasons: nil)
         quests = CloudQuests(
             quests: [
                 CloudQuests.Quest(key: "today", name: "Get going", note: "Use any tool today.", period: "day", done: 1, target: 1, complete: true),
@@ -132,6 +134,7 @@ final class Store: ObservableObject {
                 CloudQuests.Badge(key: "billion", name: "One billion", note: "Use one billion tokens in a season.", earned: true, day: "2026-09-08"),
                 CloudQuests.Badge(key: "podium", name: "Podium", note: "Finish a week in the top three.", earned: false, day: nil),
             ])
+        pet = .sample
         let soon = Int(Date().timeIntervalSince1970)
         limits = CloudLimits(limits: [
             CloudLimit(accountKey: "codex-work", tool: "codex", label: "Work", windowLabel: "5h", usedPercent: 96, resetsAt: soon + 1440),
@@ -152,7 +155,7 @@ final class Store: ObservableObject {
             CloudBoard.Entry(rank: index + 1, login: person.0, name: person.1, avatarUrl: nil, isPublic: true,
                              tokens: person.2, cost: Double(person.2) / 1_000_000 * 3.1, requests: person.2 / 42_000,
                              activeDays: 6, tools: ["claude": person.2 * 5 / 12, "cursor": person.2 / 4, "codex": person.2 / 6, "gemini": person.2 / 6],
-                             isYou: person.3)
+                             isYou: person.3, commits: nil, insertions: nil, deletions: nil)
         })
     }
 
@@ -175,6 +178,7 @@ final class Store: ObservableObject {
             async let season = client.season(team: nil)
             async let board = client.leaderboard(period: "week", metric: "tokens", team: nil)
             async let quests = try? await client.quests()
+            async let pet = try? await client.pet()
             // A website without limit sharing on still serves everything else, so this one is optional.
             async let limits = try? await client.limits()
             let (updatedProfile, updatedSeason, updatedBoard) = try await (profile, season, board)
@@ -187,6 +191,7 @@ final class Store: ObservableObject {
             self.season = updatedSeason
             self.board = updatedBoard
             self.quests = await quests
+            self.pet = await pet
             self.limits = await limits ?? .none
             problem = nil
             rescheduleAlerts()
@@ -311,6 +316,7 @@ final class Store: ObservableObject {
         season = nil
         board = nil
         quests = nil
+        pet = nil
         limits = .none
         hasRead = false
         // Nothing left to count down to: an unlinked phone should stay quiet.

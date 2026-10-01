@@ -7,6 +7,7 @@ import { parseUsage } from "../src/usage";
 import { LIMIT_TTL_SECONDS, clean, parseLimits, sweepLimits } from "../src/limits";
 import { badgesFrom, questsFrom } from "../src/quests";
 import { webLink } from "../src/account";
+import { petFrom } from "../src/pet";
 import { INDEX_TTL_SECONDS, parseIndex, parseWork } from "../src/work";
 import { parseSubject, sharpen, span, tasksFor, tasksForDay } from "../src/tasks";
 
@@ -347,12 +348,14 @@ describe("ranked seasons", () => {
       season: string;
       you: { rank: number; tier: { key: string }; next: { tokens: number } };
       entries: { login: string; tier: { key: string } }[];
+      seasons?: { id: string }[];
     };
     expect(body.season).toBe(currentSeason());
     expect(body.you.rank).toBe(1);
     expect(body.you.tier.key).toBe("silver");
     expect(body.you.next.tokens).toBeGreaterThan(0);
     expect(body.entries.find((entry) => entry.login === "ivan")?.tier.key).toBe("silver");
+    expect(body.seasons?.[0]?.id).toBe(body.season);
 
     // A month Keyhop never ran isn't a season.
     expect((await call("/api/season?season=2020-01")).status).toBe(400);
@@ -396,6 +399,143 @@ describe("teams", () => {
     // Turning invites off stops the old link.
     await form("/t/night-shift/invites/revoke", carol);
     expect((await call(`/invite/${code}`, { headers: { cookie: outsider } })).status).toBe(404);
+  });
+
+  it("reads a team's day for the app the same way the page groups it", async () => {
+    const day = today();
+    const cookie = await signIn("day-reader");
+    const created = await form("/teams", cookie, { name: "Day Shift" });
+    const slug = new URL(created.headers.get("location")!, BASE).pathname.split("/").pop();
+    const token = await linkApp(cookie);
+    const at = Math.floor(Date.now() / 1000) - 3600;
+    const sent = await call("/api/work", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        days: [
+          {
+            day,
+            repo: "acme/atlas",
+            commits: 2,
+            insertions: 12,
+            deletions: 3,
+            subjects: [
+              { sha: "abc1234", subject: "feat(auth): keep the session", insertions: 8, deletions: 1, at, offset: 7200 },
+              { sha: "def5678", subject: "feat(auth): expire the token", insertions: 4, deletions: 2, at: at + 120, offset: 7200 },
+            ],
+          },
+        ],
+      }),
+    });
+    expect(sent.status).toBe(200);
+
+    const response = await call(`/api/teams/${slug}/day?date=${day}`, { headers: { authorization: `Bearer ${token}` } });
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      team: { slug: string };
+      day: string;
+      next: string | null;
+      people: { login: string; isYou: boolean; commits: number; tasks: { title: string; span: string; commits: { subject: string }[] }[] }[];
+    };
+    expect(body.team.slug).toBe(slug);
+    expect(body.day).toBe(day);
+    expect(body.next).toBeNull();
+    expect(body.people[0]).toMatchObject({ login: "day-reader", isYou: true, commits: 2 });
+    expect(body.people[0].tasks[0].title).toBe("Auth");
+    expect(body.people[0].tasks[0].commits.map((commit) => commit.subject)).toEqual(
+      expect.arrayContaining(["keep the session", "expire the token"]),
+    );
+    expect(body.people[0].tasks[0].span).toContain("to");
+
+    const outsider = await linkApp(await signIn("day-outsider"));
+    expect((await call(`/api/teams/${slug}/day`, { headers: { authorization: `Bearer ${outsider}` } })).status).toBe(404);
+  });
+
+  it("creates a team, invites and joins from the app", async () => {
+    const owner = await linkApp(await signIn("team-owner"));
+    const created = await call("/api/teams", { method: "POST", headers: { authorization: `Bearer ${owner}` }, body: JSON.stringify({ name: "Window" }) });
+    expect(created.status).toBe(200);
+    const slug = ((await created.json()) as { team: { slug: string } }).team.slug;
+
+    const invite = await call(`/api/teams/${slug}/invites`, { method: "POST", headers: { authorization: `Bearer ${owner}` } });
+    expect(invite.status).toBe(200);
+    const code = ((await invite.json()) as { code: string }).code;
+
+    const member = await linkApp(await signIn("team-joiner"));
+    const joined = await call("/api/teams/join", {
+      method: "POST",
+      headers: { authorization: `Bearer ${member}` },
+      body: JSON.stringify({ code: `https://keyhop.app/invite/${code}` }),
+    });
+    expect(joined.status).toBe(200);
+    const teams = await call("/api/teams", { headers: { authorization: `Bearer ${member}` } });
+    expect(((await teams.json()) as { teams: { slug: string }[] }).teams.some((team) => team.slug === slug)).toBe(true);
+
+    const profile = await call("/api/me", {
+      method: "PATCH",
+      headers: { authorization: `Bearer ${owner}` },
+      body: JSON.stringify({ displayName: "Owner", bio: "Ships daily", link: "keyhop.app", public: true }),
+    });
+    expect(profile.status).toBe(200);
+    const user = ((await profile.json()) as { user: { displayName: string; link: string; public: boolean } }).user;
+    expect(user).toMatchObject({ displayName: "Owner", link: "https://keyhop.app/", public: true });
+  });
+
+  it("lists members, removes one, and deletes a team from the app", async () => {
+    const owner = await linkApp(await signIn("roster-owner"));
+    const created = await call("/api/teams", { method: "POST", headers: { authorization: `Bearer ${owner}` }, body: JSON.stringify({ name: "Roster" }) });
+    const slug = ((await created.json()) as { team: { slug: string } }).team.slug;
+    const invite = await call(`/api/teams/${slug}/invites`, { method: "POST", headers: { authorization: `Bearer ${owner}` } });
+    const code = ((await invite.json()) as { code: string }).code;
+    const member = await linkApp(await signIn("roster-member"));
+    expect((await call("/api/teams/join", { method: "POST", headers: { authorization: `Bearer ${member}` }, body: JSON.stringify({ code }) })).status).toBe(200);
+
+    const roster = await call(`/api/teams/${slug}`, { headers: { authorization: `Bearer ${owner}` } });
+    expect(roster.status).toBe(200);
+    const people = ((await roster.json()) as { role: string; members: { login: string; role: string }[] });
+    expect(people.role).toBe("owner");
+    expect(people.members.map((person) => person.login).sort()).toEqual(["roster-member", "roster-owner"]);
+
+    const denied = await call(`/api/teams/${slug}/delete`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${owner}` },
+      body: JSON.stringify({ confirm: "nope" }),
+    });
+    expect(denied.status).toBe(400);
+
+    const removed = await call(`/api/teams/${slug}/members/roster-member/remove`, { method: "POST", headers: { authorization: `Bearer ${owner}` } });
+    expect(removed.status).toBe(200);
+    expect((await call(`/api/teams/${slug}/members/roster-member/remove`, { method: "POST", headers: { authorization: `Bearer ${member}` } })).status).toBe(404);
+
+    const deleted = await call(`/api/teams/${slug}/delete`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${owner}` },
+      body: JSON.stringify({ confirm: slug }),
+    });
+    expect(deleted.status).toBe(200);
+    expect((await call(`/api/teams/${slug}`, { headers: { authorization: `Bearer ${owner}` } })).status).toBe(404);
+  });
+
+  it("lists linked apps and deletes an account only when the login matches", async () => {
+    const token = await linkApp(await signIn("gone-user"));
+    const apps = await call("/api/apps", { headers: { authorization: `Bearer ${token}` } });
+    expect(apps.status).toBe(200);
+    expect(((await apps.json()) as { apps: { current: boolean }[] }).apps.some((app) => app.current)).toBe(true);
+
+    const wrong = await call("/api/account/delete", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      body: JSON.stringify({ confirm: "someone-else" }),
+    });
+    expect(wrong.status).toBe(400);
+
+    const gone = await call("/api/account/delete", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      body: JSON.stringify({ confirm: "Gone-User" }),
+    });
+    expect(gone.status).toBe(200);
+    expect((await call("/api/me", { headers: { authorization: `Bearer ${token}` } })).status).toBe(401);
   });
 });
 
@@ -573,6 +713,222 @@ describe("profiles", () => {
     const svg = await (await call("/u/rex/card.svg")).text();
     expect(svg).not.toContain("<script>");
     expect(svg).toContain("&lt;script&gt;");
+  });
+});
+
+describe("pet", () => {
+  const base = { tokens: 0, tools: {}, streak: 0, commits: 0 };
+
+  it("grows through the token stages and never skips a boundary", () => {
+    const stages = [
+      [0, "speck"],
+      [999_999, "speck"],
+      [1_000_000, "hatch"],
+      [50_000_000, "frame"],
+      [500_000_000, "bulk"],
+      [5_000_000_000, "mass"],
+      [25_000_000_000, "monument"],
+    ] as const;
+    const pets = stages.map(([tokens, stage]) => {
+      const pet = petFrom({ ...base, tokens });
+      expect(pet.stage).toBe(stage);
+      expect(pet.shapes.every((shape) => shape.x >= 0 && shape.y >= 0 && shape.x + shape.w <= pet.width && shape.y + shape.h <= pet.height)).toBe(true);
+      return pet;
+    });
+    expect(pets[0].shapes).toEqual(pets[1].shapes);
+    expect(petFrom({ ...base, tokens: 25_000_000_000 }).next).toBeNull();
+    expect(petFrom({ ...base, tokens: 1_000_000 }).next).toEqual({ label: "Frame", tokens: 49_000_000 });
+    const grown = [0, 2, 3, 4, 5, 6].map((index) => pets[index].shapes.length);
+    for (let i = 1; i < grown.length; i++) expect(grown[i]).toBeGreaterThan(grown[i - 1]);
+  });
+
+  it("takes the tool with at least half the tokens, and a mix below that", () => {
+    expect(petFrom({ ...base, tokens: 100, tools: { claude: 50, cursor: 50 } }).lineage).toBe("claude");
+    expect(petFrom({ ...base, tokens: 100, tools: { claude: 49, cursor: 51 } }).lineage).toBe("cursor");
+    const mix = petFrom({ ...base, tokens: 2_000_000, tools: { claude: 800_000, cursor: 600_000, codex: 600_000 } });
+    expect(mix.lineage).toBe("mix");
+    const toolColors = ["#C9821A", "#2F6FC0", "#B8423F", "#1E9A78", "#7A6BC4", "#C45B8A"];
+    expect(mix.shapes.every((shape) => !toolColors.includes(shape.fill))).toBe(true);
+    expect(mix.shapes.some((shape) => shape.fill === "#6E7A52")).toBe(true);
+    const claude = petFrom({ ...base, tokens: 2_000_000, tools: { claude: 2_000_000 } });
+    expect(claude.shapes.some((shape) => shape.fill === "#C9821A")).toBe(true);
+    expect(petFrom(base).lineage).toBeNull();
+  });
+
+  it("raises its pose with the current streak and adds build from commits", () => {
+    const body = { tokens: 2_000_000, tools: { codex: 2_000_000 }, commits: 0, streak: 0 };
+    const settled = petFrom({ ...body, streak: 0 });
+    const up = petFrom({ ...body, streak: 1 });
+    const stillUp = petFrom({ ...body, streak: 6 });
+    const tall = petFrom({ ...body, streak: 7 });
+    expect(settled.pose).toBe("settled");
+    expect(up.pose).toBe("up");
+    expect(stillUp.pose).toBe("up");
+    expect(tall.pose).toBe("tall");
+    const creature = <T extends { kind?: string }>(pet: { shapes: T[] }) => pet.shapes.filter((shape) => shape.kind !== "screen");
+    const top = (pet: { shapes: { y: number; kind?: string }[] }) => Math.min(...creature(pet).map((shape) => shape.y));
+    expect(top(settled)).toBeGreaterThan(top(up));
+    expect(top(up)).toBe(top(stillUp));
+    expect(top(up)).toBeGreaterThan(top(tall));
+    const bottom = (pet: { shapes: { y: number; h: number; kind?: string }[] }) => Math.max(...creature(pet).map((shape) => shape.y + shape.h));
+    expect(bottom(settled)).toBe(bottom(up));
+    expect(bottom(up)).toBe(bottom(tall));
+
+    expect(petFrom({ ...body, commits: 0 }).build).toBe(0);
+    expect(petFrom({ ...body, commits: 1 }).build).toBe(1);
+    expect(petFrom({ ...body, commits: 100 }).build).toBe(2);
+    expect(petFrom({ ...body, commits: 1000 }).build).toBe(3);
+    const carrying = petFrom({ ...body, commits: 100, streak: 0 });
+    const carryingTall = petFrom({ ...body, commits: 100, streak: 7 });
+    const ground = (pet: { shapes: { y: number; kind?: string }[] }) => Math.max(...creature(pet).map((shape) => shape.y));
+    expect(ground(carrying)).toBe(ground(carryingTall));
+    expect(carrying.shapes.length).toBeGreaterThan(settled.shapes.length);
+  });
+
+  it("serves a public pet image and keeps a private one hidden", async () => {
+    const cookie = await signIn("pip");
+    const token = await linkApp(cookie);
+    expect((await call("/api/pet")).status).toBe(401);
+    expect((await call("/u/pip/pet.svg")).status).toBe(404);
+
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    await upload(token, [{ day: today(), tool: "claude", tokens: 1_000_000, cost: 1, requests: 2 }]);
+    await call("/api/work", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      body: JSON.stringify({ days: [{ day: today(), repo: "acme/pet", commits: 100, insertions: 4, deletions: 1 }] }),
+    });
+
+    const api = await call("/api/pet", { headers: { authorization: `Bearer ${token}` } });
+    expect(api.status).toBe(200);
+    const pet = (await api.json()) as { stage: string; lineage: string; build: number; pose: string };
+    expect(pet).toMatchObject({ stage: "hatch", lineage: "claude", build: 2 });
+
+    const image = await call("/u/pip/pet.svg");
+    expect(image.status).toBe(200);
+    expect(image.headers.get("content-type")).toContain("image/svg+xml");
+    expect(image.headers.get("cache-control")).toContain("max-age=900");
+    const svg = await image.text();
+    expect(svg).toContain("Hatch · Claude");
+    expect(svg).not.toContain("<script>");
+
+    const page = await (await call("/u/pip")).text();
+    expect(page).toContain("Hatch · Claude");
+    expect(page).toContain("/u/pip/pet.svg");
+  });
+
+  it("shows a teammate's pet even when their profile is private", async () => {
+    const owner = await signIn("pet-owner");
+    const created = await form("/teams", owner, { name: "Pet Yard" });
+    const slug = new URL(created.headers.get("location")!, BASE).pathname.split("/").pop();
+    const invited = await form(`/t/${slug}/invites`, owner);
+    const code = new URL(invited.headers.get("location")!, BASE).searchParams.get("invite")!;
+    const member = await signIn("pet-member");
+    await form(`/invite/${code}`, member);
+    const token = await linkApp(member);
+    await upload(token, [{ day: today(), tool: "codex", tokens: 50_000_000, cost: 1, requests: 1 }]);
+
+    expect((await call("/u/pet-member/pet.svg")).status).toBe(404);
+    const page = await (await call(`/t/${slug}`, { headers: { cookie: owner } })).text();
+    expect(page).toContain('aria-label="Frame · Codex"');
+  });
+});
+
+describe("widgets", () => {
+  it("serves a public profile's badge, streak and tools, and hides a private one", async () => {
+    const cookie = await signIn("widge");
+    const token = await linkApp(cookie);
+    expect((await call("/u/widge/badge.svg")).status).toBe(404);
+    expect((await call("/u/widge/streak.svg")).status).toBe(404);
+    expect((await call("/u/widge/tools.svg")).status).toBe(404);
+
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    await upload(token, [{ day: today(), tool: "claude", tokens: 4200, cost: 1, requests: 5 }]);
+
+    const badge = await call("/u/widge/badge.svg");
+    expect(badge.status).toBe(200);
+    expect(badge.headers.get("content-type")).toContain("image/svg+xml");
+    expect(badge.headers.get("cache-control")).toContain("max-age=900");
+    const svg = await badge.text();
+    expect(svg).toContain("4K");
+    expect(svg).toContain("#171717");
+
+    const light = await (await call("/u/widge/card.svg?theme=light")).text();
+    expect(light).toContain("#f6f6f6");
+    const unchanged = await (await call("/u/widge/badge.svg?theme=neon")).text();
+    expect(unchanged).toContain("#171717");
+    expect(unchanged).not.toContain("#f6f6f6");
+
+    expect(await (await call("/u/widge/streak.svg")).text()).toContain("1 day");
+    expect(await (await call("/u/widge/tools.svg")).text()).toContain("Claude Code");
+    expect((await call("/u/widge/badge.svg?metric=nope")).status).toBe(404);
+
+    const page = await (await call("/u/widge")).text();
+    expect(page).toContain("/u/widge/badge.svg");
+    expect(page).toContain("/u/widge/pet.svg");
+    expect(page).toContain("?metric=commits");
+    expect(page).toContain("?theme=light");
+  });
+
+  it("escapes a name on the streak image", async () => {
+    const cookie = await signIn("widge-rex");
+    const token = await linkApp(cookie);
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    await form("/settings/profile", cookie, { public: "on", display_name: "<script>x</script>" });
+    const svg = await (await call("/u/widge-rex/streak.svg")).text();
+    expect(svg).not.toContain("<script>");
+    expect(svg).toContain("&lt;script&gt;");
+  });
+
+  it("publishes a team's totals without its members' names", async () => {
+    const owner = await signIn("widget-owner");
+    const created = await form("/teams", owner, { name: "<script>x</script>" });
+    const slug = new URL(created.headers.get("location")!, BASE).pathname.split("/").pop()!;
+    const ownerToken = await linkApp(owner);
+    await upload(ownerToken, [{ day: today(), tool: "claude", tokens: 1_000_000, cost: 1, requests: 1 }]);
+
+    const invited = await form(`/t/${slug}/invites`, owner);
+    const code = new URL(invited.headers.get("location")!, BASE).searchParams.get("invite")!;
+    const member = await signIn("widget-mate");
+    await form(`/invite/${code}`, member);
+    const memberToken = await linkApp(member);
+    await upload(memberToken, [{ day: today(), tool: "cursor", tokens: 2_000_000, cost: 1, requests: 1 }]);
+
+    expect((await call(`/t/${slug}/badge.svg`)).status).toBe(404);
+    expect((await call(`/t/${slug}/card.svg`)).status).toBe(404);
+    expect((await form(`/t/${slug}/public`, member, { public: "on" })).status).toBe(404);
+    const denied = await call(`/api/teams/${slug}/public`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${memberToken}` },
+      body: JSON.stringify({ public: true }),
+    });
+    expect(denied.status).toBe(404);
+
+    expect((await form(`/t/${slug}/public`, owner, { public: "on" })).headers.get("location")).toBe(`/t/${slug}`);
+
+    const badge = await (await call(`/t/${slug}/badge.svg`)).text();
+    expect(badge).toContain("3.0M");
+    expect(badge).not.toContain("widget-mate");
+    expect(badge).not.toContain("widget-owner");
+
+    const card = await (await call(`/t/${slug}/card.svg`)).text();
+    expect(card).toContain("&lt;script&gt;");
+    expect(card).not.toContain("<script>");
+    expect(card).not.toContain("widget-mate");
+    expect((await call(`/t/${slug}/badge.svg?metric=rank`)).status).toBe(404);
+
+    const page = await (await call(`/t/${slug}`, { headers: { cookie: member } })).text();
+    expect(page).toContain(`/t/${slug}/badge.svg`);
+    expect(page).toContain("tokens, cost, requests, commits, lines or streak");
+    expect(page).not.toContain(`/t/${slug}/pet.svg`);
+
+    const hidden = await call(`/api/teams/${slug}/public`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ public: false }),
+    });
+    expect(hidden.status).toBe(200);
+    expect((await call(`/t/${slug}/badge.svg`)).status).toBe(404);
   });
 });
 

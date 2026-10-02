@@ -7,8 +7,8 @@ type Browser = { evaluate: (fn: () => unknown) => Promise<unknown> };
 /** The address the sample dashboard printed, including its session key. Empty until it has. */
 function printedUrl(): string {
   try {
-    const text = readFileSync(new URL('../.e2e/logs/dashboard.log', import.meta.url), 'utf8');
-    const line = text.split('\n').find((row) => row.includes('"url"'));
+    const text = readFileSync(new URL('../../.e2e/logs/dashboard.log', import.meta.url), 'utf8');
+    const line = text.split('\n').findLast((row) => row.includes('"url"'));
     if (!line) return '';
     const url = JSON.parse(line).url;
     return typeof url === 'string' ? url : '';

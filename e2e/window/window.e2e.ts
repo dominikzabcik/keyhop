@@ -109,6 +109,30 @@ test('a team splits into its day, its ranks and its members', async ({ app, scre
   await assertReadable(browser);
 });
 
+test('the sidebar stays packed in the smallest window', async ({ app, browser }) => {
+  await openWindow(app, 'overview');
+  await browser.setViewport({ width: 960, height: 620 });
+  await expect.poll(() => browser.evaluate(() => {
+    const label = document.querySelector('#cloud-label');
+    if (!label || (label as HTMLElement).hidden) return 999;
+    const nav = document.querySelector('#nav');
+    if (!nav) return 999;
+    const boxes = [...nav.children].filter((el) => !(el as HTMLElement).hidden).map((el) => el.getBoundingClientRect());
+    let maxGap = 0;
+    for (let i = 1; i < boxes.length; i++) maxGap = Math.max(maxGap, boxes[i].top - boxes[i - 1].bottom);
+    return maxGap;
+  })).toBeLessThan(40);
+});
+
+test('Hop lists the sections a linked account can open', async ({ app, screen }) => {
+  await openWindow(app, 'overview');
+  await screen.getByRole('button', 'Hop', { exact: false }).tap();
+  await expect(screen.getByRole('dialog', 'Hop')).toBeVisible();
+  for (const name of ['Overview', 'Leaderboard', 'Season', 'Teams', 'Profile', 'Settings']) {
+    await expect(screen.getByRole('option', name, { exact: false })).toBeVisible();
+  }
+});
+
 test('settings keeps the link, the profile and the phone together', async ({ app, screen, browser }) => {
   await openWindow(app, 'settings');
   await expect(screen.getByRole('heading', 'Window Appearance')).toBeVisible();

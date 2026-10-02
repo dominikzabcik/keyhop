@@ -183,21 +183,17 @@ jobs:
       - name: Install the e2e browser
         run: npx playwright install chromium
 
-      # The sample window, one section at a time, including the sidebar staying packed under the header.
-      - name: Walk the window with e2e
-        run: npx e2e run --reporter list,junit
-        env:
-          E2E_TELEMETRY_DISABLED: "1"
+      # The sample window, the local website at two widths, and the reading commands.
+      - name: Walk the window, the website and the commands with e2e
+        run: npm run test:e2e
 
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: e2e-report
           path: |
-            .e2e/report.json
-            .e2e/junit.xml
-            .e2e/failures
-            .e2e/artifacts
+            .e2e/window
+            .e2e/site
           if-no-files-found: warn
 
       # Every page of the website and every section of Keyhop's window, at three widths each: what

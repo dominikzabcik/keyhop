@@ -20,7 +20,8 @@ const app = {
 
 export default {
   // Swift already owns `Tests/`. On a case-insensitive disk that is the same folder as `tests/`.
-  tests: 'e2e/**/*.e2e.ts',
+  // The website has its own config, so these files are not opened against the dashboard.
+  tests: ['e2e/window/**/*.e2e.ts', 'e2e/cli/**/*.e2e.ts'],
   workers: 1,
   timeout: 60_000,
   targets: [

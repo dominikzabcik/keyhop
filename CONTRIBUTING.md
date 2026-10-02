@@ -12,12 +12,15 @@ swift build     # debug build
 Every screen is walked by `checks/`: each page of the website and each section of Keyhop's window at
 three widths, every control pressed, and every reading command run. See `checks/README.md`.
 
-The window is also walked by [e2e](https://tester.army/e2e). That run opens the sample dashboard and
-checks each section, and it measures the sidebar so the Cloud label cannot open a gap under Budgets.
-Build first; the runner starts `.build/debug/Keyhop` itself.
+The window, the website and the reading commands are also walked by [e2e](https://tester.army/e2e).
+The window run opens the sample dashboard, checks each section, and measures the sidebar so the Cloud
+label cannot open a gap under Budgets. The website run starts the local worker at a laptop width and
+a phone width, signed out and signed in. Build Keyhop first, and install the website's packages; the
+runner starts both itself.
 
 ```bash
 npm install && npx playwright install chromium
+(cd cloud && npm install)
 npm run test:e2e
 ```
 

@@ -21,3 +21,7 @@ ios/.generated/
 checks/report/
 checks/node_modules/
 checks/.env
+
+# e2e writes its report, traces and the sample-window log here.
+.e2e/
+node_modules/

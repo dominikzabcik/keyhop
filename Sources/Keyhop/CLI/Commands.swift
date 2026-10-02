@@ -444,16 +444,26 @@ enum Commands {
         #endif
     }
 
+    /// `0` lets the system pick a free port. A named port is how a test runner owns the address.
+    private static func port(_ raw: String?) throws -> UInt16 {
+        guard let raw else { return 0 }
+        guard let port = UInt16(raw), port > 0 else {
+            throw UsageError("--port needs a number from 1 to 65535.")
+        }
+        return port
+    }
+
     static func dashboard(_ args: inout Arguments) async throws {
         let sample = args.flag("--sample")
         let noOpen = args.flag("--no-open")
         let json = args.flag("--json")
         let section = try args.option("--section") ?? "overview"
+        let port = try Self.port(try args.option("--port"))
         guard Dashboard.sections.contains(section) else {
             throw UsageError("Unknown section '\(section)'. Use \(Dashboard.sections.joined(separator: ", ")).")
         }
         try args.finish()
-        try await Dashboard.run(sample: sample, section: section, open: !noOpen, json: json)
+        try await Dashboard.run(sample: sample, section: section, open: !noOpen, json: json, port: port)
     }
 
     /// Insights is the dashboard's Usage section; `--output` saves the dashboard as one file instead.

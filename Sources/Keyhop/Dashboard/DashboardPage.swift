@@ -90,7 +90,7 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .brand .badge { margin-left: auto; }
 /* Keys drawn as keys: a cap with a lip along its bottom edge. */
 kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; background: hsl(0 0% 100% / .07); box-shadow: inset 0 -1.5px 0 hsl(0 0% 100% / .09); color: var(--muted); font: 600 11px var(--sans); letter-spacing: .02em; }
-.nav { position: relative; isolation: isolate; display: grid; gap: 2px; padding: 12px 10px; flex: 1; min-height: 0; overflow-y: auto; }
+.nav { position: relative; isolation: isolate; display: grid; align-content: start; gap: 2px; padding: 12px 10px; flex: 1; min-height: 0; overflow-y: auto; }
 .nav-label { margin: 14px 10px 4px; color: var(--subtle); font-size: 12px; font-weight: 560; }
 .nav.has-thumb::before { content: ""; position: absolute; z-index: -1; left: 10px; right: 10px; top: 0; height: var(--nav-h); transform: translateY(var(--nav-y)); border-radius: 8px; background: hsl(0 0% 100% / .08); transition: transform .3s cubic-bezier(.3, .8, .25, 1); }
 .nav.no-slide::before { transition: none; }

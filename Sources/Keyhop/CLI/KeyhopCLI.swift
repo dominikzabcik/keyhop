@@ -80,7 +80,7 @@ enum KeyhopCLI {
 
     Usage and budgets
       usage [--range today|week|month|30d|90d|12m|all|<from>..<to>] [--tool <tool>] [--json]
-      dashboard [--section <name>] [--sample]  Open Keyhop's window: accounts, usage, budgets, settings
+      dashboard [--section <name>] [--sample] [--port <n>]  Open Keyhop's window: accounts, usage, budgets, settings
       insights [--output <file>] [--sample]    Open Usage in the dashboard, or save the dashboard as one file
       budget list [--json]
       budget set <account|all> <dollars> [--period day|week|month]

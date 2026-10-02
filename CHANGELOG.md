@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- The window's sidebar lists its sections from the top. The Cloud label no longer opens a gap under Budgets.
+
 ## [0.14.2]
 
 - The streak still counts itself from a day with tokens or a commit. Claiming that day opens a keep: Spark, then Glow, Ember, Flare and Beacon as the run gets longer. Each day can be claimed once. The keeps sit on your profile and on the season page, and in the window under Profile.

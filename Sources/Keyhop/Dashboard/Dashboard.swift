@@ -29,7 +29,7 @@ enum Dashboard {
 
     /// Opens the dashboard, starting its server unless one is already running, and returns once the
     /// server stops: 15 minutes after its last window closed, or when a tray closes it.
-    static func run(sample: Bool, section: String, open: Bool, json: Bool) async throws {
+    static func run(sample: Bool, section: String, open: Bool, json: Bool, port: UInt16 = 0) async throws {
         #if os(macOS)
         // With Keyhop.app installed, its own window is Keyhop's window.
         if !sample, open, !json, MacApp.openWindow(section: section) {
@@ -43,7 +43,7 @@ enum Dashboard {
         }
         let session = try DashboardSession(sample: sample)
         let token = randomToken()
-        let server = try LoopbackServer()
+        let server = try LoopbackServer(port: port)
         let port = server.port
         server.start { request in await session.respond(to: request, token: token, port: port) }
         if !sample {

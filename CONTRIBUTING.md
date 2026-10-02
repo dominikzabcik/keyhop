@@ -12,6 +12,15 @@ swift build     # debug build
 Every screen is walked by `checks/`: each page of the website and each section of Keyhop's window at
 three widths, every control pressed, and every reading command run. See `checks/README.md`.
 
+The window is also walked by [e2e](https://tester.army/e2e). That run opens the sample dashboard and
+checks each section, and it measures the sidebar so the Cloud label cannot open a gap under Budgets.
+Build first; the runner starts `.build/debug/Keyhop` itself.
+
+```bash
+npm install && npx playwright install chromium
+npm run test:e2e
+```
+
 ```bash
 cd checks && npm install && npx playwright install chromium
 node run.mjs            # the website, the window and the commands

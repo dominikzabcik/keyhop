@@ -1,9 +1,16 @@
 import SwiftUI
 
-/// Once linked: where the accounts stand, where this season stands, then quests, badges and the board.
+/// Once linked. Season is the standings, the same place as in the window. Profile holds limits,
+/// the pet, keeps, quests and badges.
 struct SeasonView: View {
     @EnvironmentObject private var store: Store
     @State private var showingAlerts = ProcessInfo.processInfo.arguments.contains("--show-alerts")
+    @State private var place: Place = .season
+
+    private enum Place: String, CaseIterable {
+        case season = "Season"
+        case profile = "Profile"
+    }
 
     var body: some View {
         NavigationStack {
@@ -11,14 +18,25 @@ struct SeasonView: View {
                 ScrollView {
                     VStack(spacing: 14) {
                         problem
+                        Picker("Place", selection: $place) {
+                            ForEach(Place.allCases, id: \.self) { item in
+                                Text(item.rawValue).tag(item)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
                         if store.hasRead {
-                            limits
-                            creature
-                            standing
-                            keeps
-                            quests
-                            badges
-                            board.id("board")
+                            switch place {
+                            case .season:
+                                standing
+                                board.id("board")
+                            case .profile:
+                                limits
+                                creature
+                                keeps
+                                quests
+                                badges
+                            }
                         } else {
                             reading
                         }
@@ -42,10 +60,10 @@ struct SeasonView: View {
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 8) {
                         HopMark(size: 16, hopping: store.loading, period: 0.9)
-                        Text("Season & limits").font(.ui(16, .semibold, .headline)).foregroundStyle(Brand.text)
+                        Text(place.rawValue).font(.ui(16, .semibold, .headline)).foregroundStyle(Brand.text)
                     }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(store.loading ? "Season and limits, updating" : "Season and limits")
+                    .accessibilityLabel(store.loading ? "\(place.rawValue), updating" : place.rawValue)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -107,7 +125,7 @@ struct SeasonView: View {
                     Text(store.loading ? "Reading your season" : "Nothing read yet")
                         .font(.ui(15, .semibold, .headline))
                         .foregroundStyle(Brand.text)
-                    Text(store.loading ? "Limits, standings and quests from keyhop.app." : "Pull down to try again.")
+                    Text(store.loading ? "Standings, limits and quests from keyhop.app." : "Pull down to try again.")
                         .font(.ui(12.5, .regular, .footnote))
                         .foregroundStyle(Brand.muted)
                 }

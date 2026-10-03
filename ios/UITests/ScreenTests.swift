@@ -110,17 +110,30 @@ final class ScreenTests: XCTestCase {
         }
     }
 
-    func testTheSeasonScreenShowsLimitsSeasonAndQuests() {
+    func testTheSeasonScreenShowsTheStandings() {
         launch(["--sample"])
-        XCTAssertTrue(app.staticTexts["Limits"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["Season & limits"].exists)
+        XCTAssertTrue(app.staticTexts["Season"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["This week"].exists)
+        XCTAssertFalse(app.staticTexts["Quests"].exists, "quests live on Profile")
+        everythingIsNamed()
+        nothingIsBroken()
+        record("season")
+    }
+
+    func testTheProfileHoldsLimitsKeepsAndQuests() {
+        launch(["--sample"])
+        XCTAssertTrue(app.buttons["Profile"].waitForExistence(timeout: 10))
+        app.buttons["Profile"].tap()
+        XCTAssertTrue(app.staticTexts["Limits"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Keeps"].exists)
         XCTAssertTrue(app.staticTexts["Quests"].exists)
+        XCTAssertTrue(app.staticTexts["Badges"].exists)
         // A limit is only useful with its countdown next to it.
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] 'back in'")).count > 0
             || app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] 'left'")).count > 0)
         everythingIsNamed()
         nothingIsBroken()
-        record("season")
+        record("profile")
     }
 
     func testTheBoardIsReachedByScrollingAndNamesTheRanks() {
@@ -149,7 +162,7 @@ final class ScreenTests: XCTestCase {
         record("alerts")
 
         app.buttons["Done"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["Limits"].waitForExistence(timeout: 5), "Done returns to the season")
+        XCTAssertTrue(app.staticTexts["This week"].waitForExistence(timeout: 5), "Done returns to the season")
     }
 
     func testTheLinkScreenExplainsItselfAndOffersOneAction() {
@@ -178,7 +191,9 @@ final class ScreenTests: XCTestCase {
         app.launchArguments = ["--sample"]
         app.launchEnvironment["XCUI_CONTENT_SIZE"] = "UICTContentSizeCategoryAccessibilityExtraLarge"
         app.launch()
-        XCTAssertTrue(app.staticTexts["Limits"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Season"].waitForExistence(timeout: 10))
+        app.buttons["Profile"].tap()
+        XCTAssertTrue(app.staticTexts["Limits"].waitForExistence(timeout: 5))
         nothingIsBroken()
         record("season-large-text")
     }

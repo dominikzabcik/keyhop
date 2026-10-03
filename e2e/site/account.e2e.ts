@@ -19,10 +19,12 @@ async function openSignedIn(
   await app.open(path);
 }
 
-test('a signed-in profile shows the pet, keeps and badges', async ({ app, screen, browser }) => {
+test('a signed-in profile shows the pet, keeps, quests and badges', async ({ app, screen, browser }) => {
   await openSignedIn(app, browser, '/u/checks-visitor');
   await expect(screen.getByRole('heading', 'Checks Visitor')).toBeVisible();
   await expect(screen.getByRole('heading', 'Keeps')).toBeVisible();
+  await expect(screen.getByRole('heading', 'Quests')).toBeVisible();
+  await expect(screen.getByText('Today and this week')).toBeVisible();
   await expect(screen.getByRole('heading', 'Badges')).toBeVisible();
   await expect(screen.getByText('Share image')).toBeVisible();
 });
@@ -52,13 +54,12 @@ test('the team day is today and the work that was synced', async ({ app, screen,
   await expect(screen.getByText('importer', { exact: false })).toBeVisible();
 });
 
-test('the season stacks the ladder, keeps and quests', async ({ app, screen, browser }) => {
+test('the season is the standings and the ladder', async ({ app, screen, browser }) => {
   await openSignedIn(app, browser, '/season');
   await expect(screen.getByRole('heading', 'Season')).toBeVisible();
-  await expect(screen.getByRole('heading', 'Keeps')).toBeVisible();
-  await expect(screen.getByRole('heading', 'Quests')).toBeVisible();
-  await expect(screen.getByText('Today and this week')).toBeVisible();
   await expect(screen.getByRole('heading', 'The ladder')).toBeVisible();
+  await expect(screen.getByRole('heading', 'Keeps')).not.toBeVisible();
+  await expect(screen.getByRole('heading', 'Quests')).not.toBeVisible();
 });
 
 test('welcome and link are the two ways onto the account', async ({ app, screen, browser }) => {

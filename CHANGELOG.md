@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- The season, on the website and on the phone, is the standings. Keeps, quests and badges stay on the profile. On the phone, limits sit with the profile.
+
 ## [0.14.3]
 
 - The window's sidebar lists its sections from the top. The Cloud label no longer opens a gap under Budgets.

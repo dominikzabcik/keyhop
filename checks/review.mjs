@@ -123,7 +123,7 @@ function stateFor(reading) {
     site: "a page on keyhop.app, the website for Keyhop, which switches between AI coding accounts you own",
     account: "a page on keyhop.app shown to someone who is signed in",
     app: "a section of Keyhop's window, a Mac app that switches between AI coding accounts you own",
-    phone: "a screen of Keyhop's iPhone companion, which shows limits, seasons and standings read from a computer",
+    phone: "a screen of Keyhop's iPhone companion. Season is the standings. Profile holds limits, the pet, keeps, quests and badges, read from a computer",
   };
   return {
     screen: `${reading.target}/${reading.screen}`,

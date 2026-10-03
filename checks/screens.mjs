@@ -35,7 +35,7 @@ export const SITE_SCREENS = [
 
 /** Pages that only exist once someone is signed in. The harness signs itself in to reach them. */
 export const ACCOUNT_SCREENS = [
-  { name: "profile", path: "/u/checks-visitor", mustSay: ["checks-visitor"] },
+  { name: "profile", path: "/u/checks-visitor", mustSay: ["checks-visitor", "Quests"] },
   { name: "settings", path: "/settings", mustSay: ["Settings"] },
   { name: "teams", path: "/teams", mustSay: ["Teams"] },
   { name: "link", path: "/link", mustSay: [] },

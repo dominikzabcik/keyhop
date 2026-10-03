@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.14.3]
 
 - The window's sidebar lists its sections from the top. The Cloud label no longer opens a gap under Budgets.
 

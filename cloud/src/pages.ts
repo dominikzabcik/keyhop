@@ -6,7 +6,7 @@ import { LANDING_CSS, landingPage } from "./landing";
 import { downloadPage, privacyPage, securityPage, termsPage } from "./marketing";
 import { type ClaimState, claimState } from "./keeps";
 import { creatureMarkup, petFrom, petsFor } from "./pet";
-import { profileBadges, questsFor } from "./quests";
+import { profileBadges, questsFor, type Quest } from "./quests";
 import { TIERS, currentSeason, daysLeft, isSeason, nextStep, seasonBoard, seasonLabel, seasonList, seasonRange, tierFor } from "./seasons";
 import { type Entry, type Metric, type Period, METRICS, PERIODS, isMetric, isPeriod, leaderboard, profile } from "./stats";
 import { inviteInfo, members, myTeams, teamForMember } from "./teams";
@@ -269,15 +269,26 @@ function keepsCard(state: ClaimState, next: "profile" | "season", flash: string 
   </section>`;
 }
 
+/** Today's and this week's goals. They belong on a profile, the same place the window keeps them. */
+function questsCard(goals: Quest[]): Html {
+  return html`<section class="card">
+    <div class="card-head"><h2>Quests</h2><span class="hint">Today and this week</span></div>
+    ${goals.map(
+      (goal) => html`<div class="quest-row ${goal.complete ? "done" : ""}">
+        <div><b>${goal.name}</b><p>${goal.note}</p></div>
+        <div>
+          <div class="quest-track"><span style="width:${Math.round((goal.done / goal.target) * 100)}%"></span></div>
+          <div class="quest-state">${goal.complete ? "Done" : goal.target <= 7 ? `${goal.done} of ${goal.target}` : `${Math.round((goal.done / goal.target) * 100)}%`}</div>
+        </div>
+      </div>`,
+    )}
+  </section>`;
+}
+
 /** One month of ranked play. Past seasons are counted the same way, so they never go stale. */
 async function seasonPage(c: C, season: string) {
   const viewer = c.get("user");
-  const current = season === currentSeason();
-  const [board, goals, claim] = await Promise.all([
-    seasonBoard(c.env.DB, { season, metric: "tokens" }),
-    viewer ? questsFor(c.env.DB, viewer.id) : Promise.resolve(null),
-    viewer && current ? claimState(c.env.DB, viewer.id) : Promise.resolve(null),
-  ]);
+  const board = await seasonBoard(c.env.DB, { season, metric: "tokens" });
   const mine = viewer ? board.find((entry) => entry.userId === viewer.id) : undefined;
   const range = seasonRange(season);
   const left = daysLeft(season);
@@ -321,21 +332,6 @@ async function seasonPage(c: C, season: string) {
               <a class="btn sm ghost" href="/download">Get Keyhop first</a>
             </div>
           </section>`}
-      ${claim ? keepsCard(claim, "season", c.req.query("claim"), true) : ""}
-      ${goals
-        ? html`<section class="card">
-            <div class="card-head"><h2>Quests</h2><span class="hint">Today and this week</span></div>
-            ${goals.map(
-              (goal) => html`<div class="quest-row ${goal.complete ? "done" : ""}">
-                <div><b>${goal.name}</b><p>${goal.note}</p></div>
-                <div>
-                  <div class="quest-track"><span style="width:${Math.round((goal.done / goal.target) * 100)}%"></span></div>
-                  <div class="quest-state">${goal.complete ? "Done" : goal.target <= 7 ? `${goal.done} of ${goal.target}` : `${Math.round((goal.done / goal.target) * 100)}%`}</div>
-                </div>
-              </div>`,
-            )}
-          </section>`
-        : ""}
       ${board.length === 0
         ? html`<div class="card empty">No usage yet this season. Link a computer running Keyhop and yours shows up here.</div>`
         : html`<div class="card"><div class="table-wrap"><table class="table">
@@ -387,11 +383,12 @@ pages.get("/u/:login", async (c) => {
   if (!person || (person.public !== 1 && !isSelf)) return notFound(c, "This profile is private, or doesn't exist.");
   if (person.login !== login) return c.redirect(`/u/${person.login}`, 301);
 
-  const [stats, season, badges, claim] = await Promise.all([
+  const [stats, season, badges, claim, goals] = await Promise.all([
     profile(c.env.DB, person.id, person.public === 1),
     seasonBoard(c.env.DB, { season: currentSeason(), metric: "tokens" }),
     profileBadges(c.env.DB, person.id),
     claimState(c.env.DB, person.id),
+    isSelf ? questsFor(c.env.DB, person.id) : Promise.resolve(null),
   ]);
   const earned = badges.filter((entry) => entry.earned);
   const place = season.find((entry) => entry.userId === person.id);
@@ -443,6 +440,7 @@ pages.get("/u/:login", async (c) => {
         </div>
       </section>
       ${keepsCard(claim, "profile", isSelf ? c.req.query("claim") : undefined, isSelf)}
+      ${goals && goals.length ? questsCard(goals) : ""}
       <section class="card">
         <div class="card-head"><h2>Badges</h2><span class="hint">${earned.length} of ${badges.length}</span></div>
         <div class="badges">${badges.map(

@@ -288,7 +288,7 @@ export async function profileBadges(db: D1Database, userId: string, reference = 
   return badgesFrom(rows, await seasonHonours(db, userId, rows, reference), reference, work);
 }
 
-/** One person's quests, for the season page and the app's window. */
+/** One person's quests, for their profile and the app's window. */
 export async function questsFor(db: D1Database, userId: string, reference = today()): Promise<Quest[]> {
   const [rows, work] = await Promise.all([dayRows(db, userId), workRows(db, userId)]);
   return questsFrom(rows, work, reference);

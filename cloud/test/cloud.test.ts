@@ -369,6 +369,17 @@ describe("ranked seasons", () => {
     const body = await page.text();
     expect(body).toContain("<h1>Season</h1>");
     expect(body).toContain("The ladder");
+
+    // Keeps and quests sit on the profile, the same split as the window.
+    const cookie = await signIn("season-places");
+    const season = await (await call("/season", { headers: { cookie } })).text();
+    expect(season).toContain("The ladder");
+    expect(season).not.toContain("<h2>Keeps</h2>");
+    expect(season).not.toContain("<h2>Quests</h2>");
+    const profile = await (await call("/u/season-places", { headers: { cookie } })).text();
+    expect(profile).toContain("<h2>Keeps</h2>");
+    expect(profile).toContain("<h2>Quests</h2>");
+    expect(profile).toContain("Today and this week");
   });
 });
 

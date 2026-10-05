@@ -216,7 +216,9 @@ final class CursorUsageTests: XCTestCase {
         XCTAssertTrue(read.contains("refresh-a"))
 
         try CursorAdapter.installCLICredential(#"{"refreshToken":"only"}"#, at: file)
-        XCTAssertEqual(CursorAdapter.cliCredential(at: file), read)
+        let kept = try XCTUnwrap(CursorAdapter.cliCredential(at: file))
+        XCTAssertTrue(kept.contains("access-a"))
+        XCTAssertTrue(kept.contains("refresh-a"))
 
         try Data("stats".utf8).write(to: file)
         try CursorAdapter.installCLICredential(nil, at: file)

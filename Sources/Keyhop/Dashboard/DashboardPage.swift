@@ -723,11 +723,16 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     },
     clock(date) { return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(date)); },
     day(date, options) { return new Intl.DateTimeFormat(undefined, options).format(new Date(date)); },
-    change(now, before) {
+    // `earlier` is the previous amount in words. A multiple past 99× is that amount: the
+    // period before was nearly empty, and the multiple itself is noise.
+    change(now, before, earlier) {
       if (!before) return "";
       const pct = Math.round(((now - before) / before) * 100);
-      // Past ten times as much, a percentage stops meaning anything.
-      if (pct >= 900) return `<span class="mono up">${Math.round(now / before)}×</span>`;
+      if (pct >= 900) {
+        const times = Math.round(now / before);
+        if (times > 99) return earlier ? `<span class="mono subtle">from ${earlier}</span>` : "";
+        return `<span class="mono up">${times}×</span>`;
+      }
       return pct === 0 ? `<span class="mono subtle">0%</span>` : `<span class="mono ${pct > 0 ? "up" : "down"}">${pct > 0 ? "+" : ""}${pct}%</span>`;
     },
   };
@@ -1329,12 +1334,19 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const serviceHint = services.length && !troubled.length && services.some((s) => s.level === "operational") ? " · Services operational" : "";
 
     const streak = (week || today)?.streak;
+    // "12× on yesterday" while the ratio still means something. Past that, yesterday's own total.
+    function heroYesterday(digest) {
+      if (!digest) return "";
+      const chip = fmt.change(digest.total.tokens, digest.previous.tokens, fmt.tokens(digest.previous.tokens));
+      if (!chip) return "";
+      return `${chip} ${chip.includes(">from ") ? "yesterday" : "on yesterday"} · `;
+    }
     // Everything that needs a look, in one place instead of a stack of boxes.
     const notices = alerts + outages ? `<section class="notices" aria-label="Needs a look">${alerts}${outages}</section>` : "";
     const hero = `<section class="hero">
       <div class="hero-main">
       <h2 class="hero-figure"><span class="num" data-count="${status.today.tokens}" data-count-key="today" data-format="tokens" data-count-intro>${fmt.tokens(status.today.tokens)}</span><span class="unit">tokens today</span></h2>
-      <p class="hero-line">${today ? `${fmt.change(today.total.tokens, today.previous.tokens)} on yesterday · ` : ""}${fmt.count(status.today.requests)} requests${today && today.total.requests ? ` · ${esc(busiestHour(today))}` : ""}</p>
+      <p class="hero-line">${heroYesterday(today)}${fmt.count(status.today.requests)} requests${today && today.total.requests ? ` · ${esc(busiestHour(today))}` : ""}</p>
       </div>
       ${today && today.total.requests ? `<figure class="hero-hours"><figcaption>Today by hour</figcaption>${dotHours(today)}</figure>` : ""}
       <div class="hero-run${data.state.refreshing ? " on" : ""}" aria-hidden="true">${window.KeyhopBackdrop ? window.KeyhopBackdrop.sprite("blip", "top:0") : ""}</div>
@@ -1342,7 +1354,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const stats = hero + `<div class="stats">
       <div class="card stat"><div class="label">Streak</div><div class="value">${streak ? `${streak.current} ${streak.current === 1 ? "day" : "days"}` : "…"}</div><div class="foot">${streak ? `Longest ${streak.longest} · ${fmt.count(streak.activeDays)} active days` : ""}</div></div>
       <div class="card stat"><div class="label">API value today</div><div class="value">${fmt.usd(status.today.cost)}</div><div class="foot">At standard API prices</div></div>
-      <div class="card stat"><div class="label">This week ${week ? fmt.change(week.total.tokens, week.previous.tokens) : ""}</div><div class="value">${week ? fmt.tokens(week.total.tokens) : "…"}</div><div class="foot">${week ? `${fmt.usd(week.total.cost)} API value` : ""}</div></div>
+      <div class="card stat"><div class="label">This week ${week ? fmt.change(week.total.tokens, week.previous.tokens, fmt.tokens(week.previous.tokens)) : ""}</div><div class="value">${week ? fmt.tokens(week.total.tokens) : "…"}</div><div class="foot">${week ? `${fmt.usd(week.total.cost)} API value` : ""}</div></div>
       <div class="card stat"><div class="label">Closest to a limit</div><div class="value">${near ? `${Math.round(near.limit.usedPercent)}%` : "None"}</div><div class="foot">${near ? `${esc(near.tool.name)} · ${esc(windowName(near.limit.label))}` : "No limits read yet"}</div></div>
     </div>`;
 

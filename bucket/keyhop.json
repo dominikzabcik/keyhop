@@ -1,15 +1,15 @@
 {
-    "version": "0.14.3",
+    "version": "0.14.4",
     "description": "Switch AI coding accounts in one click and track exact usage where available.",
     "homepage": "https://github.com/dominikzabcik/keyhop",
     "license": "MIT",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/dominikzabcik/keyhop/releases/download/v0.14.3/keyhop-0.14.3-windows-x86_64.zip",
-            "hash": "e99503a912c34fcbf806acfa1a16937a34fa2a43507ede9e11a52a6fff082f1f"
+            "url": "https://github.com/dominikzabcik/keyhop/releases/download/v0.14.4/keyhop-0.14.4-windows-x86_64.zip",
+            "hash": "06b2c6334e1839dace4fc13d167da3c85058a39fbf600a87f4df6519f1bd4f0d"
         }
     },
-    "extract_dir": "keyhop-0.14.3",
+    "extract_dir": "keyhop-0.14.4",
     "bin": "keyhop.exe",
     "shortcuts": [
         [

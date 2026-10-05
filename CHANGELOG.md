@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.14.4]
 
 - Switching Cursor accounts also switches the TypeScript SDK's key in `~/.cursor/sdk/auth.json`, and the CLI's file login in `~/.cursor/auth.json`. `cli-config.json` follows `CURSOR_CONFIG_DIR`, and on Linux `XDG_CONFIG_HOME`.
 - Claude Code sessions under `CLAUDE_CONFIG_DIR` switch with that directory: the Keychain item is suffixed with the directory's hash, the credentials file is updated when Claude fell back to it, and token history is read from that folder's `projects`. Codex history follows `CODEX_HOME`.

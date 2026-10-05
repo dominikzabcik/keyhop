@@ -2,7 +2,7 @@ import Foundation
 
 enum AppVersion {
     /// Kept in step with the VERSION file; the release workflow refuses a mismatch.
-    static let number = "0.14.3"
+    static let number = "0.14.4"
 
     static var current: String {
         #if os(macOS)

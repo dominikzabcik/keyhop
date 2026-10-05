@@ -7,8 +7,12 @@ import CSQLite
 #endif
 
 /// Cursor keeps its login in `state.vscdb` (the `cursorAuth/*` rows) and mirrors the account
-/// into `~/.cursor/cli-config.json` for cursor-agent. A running Cursor holds the login in
-/// memory, so it gets new tokens through its own login deep link instead of the database.
+/// into `cli-config.json` for cursor-agent. That file follows `CURSOR_CONFIG_DIR`, and on Linux
+/// `XDG_CONFIG_HOME`. When the CLI stores its login in a file, that file is `~/.cursor/auth.json`.
+/// The TypeScript SDK keeps a separate key in `~/.cursor/sdk/auth.json`. Each of those files is
+/// saved and restored with the same account. The CLI's macOS keychain login stays in the keychain.
+/// A running Cursor holds the login in memory, so it gets new tokens through its own login deep link
+/// instead of the database.
 struct CursorAdapter: ProviderAdapter {
     let provider = Provider.cursor
     private static let keys = [
@@ -31,7 +35,9 @@ struct CursorAdapter: ProviderAdapter {
     }
 
     private var database: ItemTable { ItemTable(url: Self.databaseURL) }
-    private var cliConfigURL: URL { Files.home.appendingPathComponent(".cursor/cli-config.json") }
+    private var cliConfigURL: URL { Self.cliConfigURL(home: Files.home, environment: ProcessInfo.processInfo.environment) }
+    private var cliAuthURL: URL { Files.home.appendingPathComponent(".cursor/auth.json") }
+    private var sdkAuthURL: URL { Files.home.appendingPathComponent(".cursor/sdk/auth.json") }
 
     func readLive() async throws -> LiveLogin? {
         guard FileManager.default.fileExists(atPath: database.url.path) else { return nil }
@@ -42,6 +48,9 @@ struct CursorAdapter: ProviderAdapter {
         if let authInfo = (try? Data(contentsOf: cliConfigURL)).flatMap({ JSON.object($0) })?["authInfo"] {
             secret["cliAuthInfo"] = try? JSON.string(authInfo)
         }
+        if let cli = Self.cliCredential(at: cliAuthURL) { secret["cliAuth"] = cli }
+        // The SDK keeps its own key, separate from the editor login. Save it with this account.
+        if let sdk = Self.sdkCredential(at: sdkAuthURL) { secret["sdkAuth"] = sdk }
         return LiveLogin(
             identity: subject,
             email: rows["cursorAuth/cachedEmail"] ?? "",
@@ -59,6 +68,8 @@ struct CursorAdapter: ProviderAdapter {
         if let authInfo = JSON.object(secret["cliAuthInfo"]) {
             try updateCLIConfig { $0["authInfo"] = authInfo }
         }
+        try Self.installCLICredential(secret["cliAuth"], at: cliAuthURL)
+        try Self.installSdkCredential(secret["sdkAuth"], at: sdkAuthURL)
 
         if CursorApp.isRunning, await handOff(access: access, refresh: refresh) {
             // The login route doesn't touch the cached profile, so fill in the new account's.
@@ -105,6 +116,8 @@ struct CursorAdapter: ProviderAdapter {
         for key in Self.keys { rows[key] = .some(nil) }
         try database.write(rows)
         try updateCLIConfig { $0.removeValue(forKey: "authInfo") }
+        try Self.installCLICredential(nil, at: cliAuthURL)
+        try Self.installSdkCredential(nil, at: sdkAuthURL)
         CursorApp.open()
     }
 
@@ -216,6 +229,71 @@ struct CursorAdapter: ProviderAdapter {
             return String(subject[range].dropFirst())
         }
         return subject
+    }
+
+    /// `cli-config.json` lives in `CURSOR_CONFIG_DIR` when that is set, then under `XDG_CONFIG_HOME`
+    /// on Linux, and otherwise in `~/.cursor`.
+    static func cliConfigURL(home: URL, environment: [String: String]) -> URL {
+        if let directory = environment["CURSOR_CONFIG_DIR"], !directory.isEmpty {
+            return URL(fileURLWithPath: directory, isDirectory: true).appendingPathComponent("cli-config.json")
+        }
+        #if os(Linux)
+        if let xdg = environment["XDG_CONFIG_HOME"], xdg.hasPrefix("/") {
+            return URL(fileURLWithPath: xdg, isDirectory: true).appendingPathComponent("cursor/cli-config.json")
+        }
+        #endif
+        return home.appendingPathComponent(".cursor/cli-config.json")
+    }
+
+    /// The CLI's file login, when the file holds an access token. Anything else stays where it is.
+    static func cliCredential(at url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url), let object = JSON.object(data), acceptedCLICredential(object) else { return nil }
+        return try? JSON.string(object)
+    }
+
+    /// Writes this account's CLI file login, or removes one that belongs to a previous account.
+    static func installCLICredential(_ text: String?, at url: URL) throws {
+        if let text {
+            guard let object = JSON.object(text), acceptedCLICredential(object) else { return }
+            try writeCredential(object, to: url)
+            return
+        }
+        if Self.cliCredential(at: url) != nil { try FileManager.default.removeItem(at: url) }
+    }
+
+    private static func acceptedCLICredential(_ object: [String: Any]) -> Bool {
+        (object["accessToken"] as? String)?.isEmpty == false
+    }
+
+    /// The SDK login file, when it is one Keyhop can put back. A foreign file is left alone.
+    static func sdkCredential(at url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url), let object = JSON.object(data), acceptedSdkCredential(object) else { return nil }
+        return try? JSON.string(object)
+    }
+
+    /// Writes this account's SDK login, or removes one that belongs to a previous account.
+    /// A damaged payload is ignored, so it cannot wipe a key that is already on disk.
+    static func installSdkCredential(_ text: String?, at url: URL) throws {
+        if let text {
+            guard let object = JSON.object(text), acceptedSdkCredential(object) else { return }
+            try writeCredential(object, to: url)
+            return
+        }
+        if Self.sdkCredential(at: url) != nil { try FileManager.default.removeItem(at: url) }
+    }
+
+    private static func writeCredential(_ object: [String: Any], to url: URL) throws {
+        let directory = url.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+        try Files.writeAtomically(JSON.data(object), to: url)
+    }
+
+    private static func acceptedSdkCredential(_ object: [String: Any]) -> Bool {
+        JSON.number(object["version"]) == 1
+            && (object["apiKey"] as? String)?.isEmpty == false
+            && (object["backendUrl"] as? String)?.isEmpty == false
+            && JSON.number(object["createdAtMs"]) != nil
     }
 
     private func updateCLIConfig(_ change: (inout [String: Any]) -> Void) throws {

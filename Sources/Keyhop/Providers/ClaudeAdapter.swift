@@ -1,8 +1,11 @@
 import Foundation
 
 /// Claude Code keeps its OAuth login in the Keychain item "Claude Code-credentials" on macOS, and
-/// in `~/.claude/.credentials.json` (0600) on Linux. MCP server tokens stored next to it are left
-/// untouched. The account summary lives in `~/.claude.json`.
+/// in `~/.claude/.credentials.json` (0600) on Linux. A custom `CLAUDE_CONFIG_DIR` moves the file,
+/// the account summary and the transcript tree, and on macOS suffixes the Keychain service with
+/// the first eight hex characters of SHA-256 of that path. When the Keychain rejects a write,
+/// Claude Code keeps the same login in the credentials file; a switch updates that file too.
+/// MCP server tokens stored next to the login are left untouched.
 struct ClaudeAdapter: ProviderAdapter {
     let provider = Provider.claude
     private static let clientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
@@ -158,49 +161,83 @@ struct ClaudeAdapter: ProviderAdapter {
     // MARK: Where the login lives
 
     /// Claude Code's config folder: `$CLAUDE_CONFIG_DIR`, or `~/.claude`.
-    private static var configDirectory: URL {
-        if let custom = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"], !custom.isEmpty {
+    static func configDirectory(environment: [String: String], home: URL) -> URL {
+        if let custom = environment["CLAUDE_CONFIG_DIR"], !custom.isEmpty {
             return URL(fileURLWithPath: custom, isDirectory: true)
         }
-        return Files.home.appendingPathComponent(".claude", isDirectory: true)
+        return home.appendingPathComponent(".claude", isDirectory: true)
     }
 
-    #if os(macOS)
-    private static let service = "Claude Code-credentials"
+    static func projectsDirectory(environment: [String: String], home: URL) -> URL {
+        configDirectory(environment: environment, home: home).appendingPathComponent("projects", isDirectory: true)
+    }
 
+    /// `.claude.json` stays in the home directory until a custom config folder is set. Then it
+    /// lives inside that folder, which is where Claude Code reads it.
+    static func configFile(environment: [String: String], home: URL) -> URL {
+        if let custom = environment["CLAUDE_CONFIG_DIR"], !custom.isEmpty {
+            return configDirectory(environment: environment, home: home).appendingPathComponent(".claude.json")
+        }
+        return home.appendingPathComponent(".claude.json")
+    }
+
+    /// Default service `Claude Code-credentials`. A custom directory adds `-<8 hex of sha256>`.
+    static func keychainService(environment: [String: String]) -> String {
+        let base = "Claude Code-credentials"
+        guard let custom = environment["CLAUDE_CONFIG_DIR"], !custom.isEmpty else { return base }
+        let hash = SHA256Digest.hex(Data(custom.precomposedStringWithCanonicalMapping.utf8))
+        return "\(base)-\(hash.prefix(8))"
+    }
+
+    private static var environment: [String: String] { ProcessInfo.processInfo.environment }
+    private static var configDirectory: URL { configDirectory(environment: environment, home: Files.home) }
+    static var projectsDirectory: URL { projectsDirectory(environment: environment, home: Files.home) }
+    private static var credentialsFile: URL { configDirectory.appendingPathComponent(".credentials.json") }
+    private static var configURL: URL { configFile(environment: environment, home: Files.home) }
+
+    #if os(macOS)
     /// Same account name Claude Code uses: $USER, or a fixed fallback when it has unusual characters.
     private static var keychainAccount: String {
-        let user = ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
+        let user = environment["USER"] ?? NSUserName()
         return user.range(of: #"^[a-zA-Z0-9._-]+$"#, options: .regularExpression) != nil ? user : "claude-code-user"
     }
 
-    private static func readCredentials() -> [String: Any]? {
-        (Keychain.read(service: service, account: keychainAccount) ?? Keychain.read(service: service, account: nil))
+    private static func readKeychain() -> [String: Any]? {
+        let service = keychainService(environment: environment)
+        return (Keychain.read(service: service, account: keychainAccount) ?? Keychain.read(service: service, account: nil))
             .flatMap { JSON.object($0) }
     }
 
-    private static func writeCredentials(_ root: [String: Any]) throws {
-        try Keychain.write(service: service, account: keychainAccount, data: JSON.data(root))
-    }
-
-    private static var configURL: URL { Files.home.appendingPathComponent(".claude.json") }
-    #else
-    static var credentialsFile: URL { configDirectory.appendingPathComponent(".credentials.json") }
-
     private static func readCredentials() -> [String: Any]? {
-        (try? Data(contentsOf: credentialsFile)).flatMap { JSON.object($0) }
+        if let keychain = readKeychain(), keychain["claudeAiOauth"] != nil { return keychain }
+        if let file = readCredentialFile(), file["claudeAiOauth"] != nil { return file }
+        return readKeychain() ?? readCredentialFile()
     }
+
+    private static func writeCredentials(_ root: [String: Any]) throws {
+        try Keychain.write(service: keychainService(environment: environment), account: keychainAccount, data: JSON.data(root))
+        // The file is the login Claude Code uses when the Keychain refuses a write. Update it
+        // when it already holds one, and leave a machine that never fell back to the file alone.
+        guard FileManager.default.fileExists(atPath: credentialsFile.path) else { return }
+        var file = readCredentialFile() ?? [:]
+        if let oauth = root["claudeAiOauth"] {
+            file["claudeAiOauth"] = oauth
+        } else {
+            file.removeValue(forKey: "claudeAiOauth")
+        }
+        try Files.writeAtomically(JSON.data(file), to: credentialsFile)
+    }
+    #else
+    private static func readCredentials() -> [String: Any]? { readCredentialFile() }
 
     private static func writeCredentials(_ root: [String: Any]) throws {
         try Files.writeAtomically(JSON.data(root), to: credentialsFile)
     }
-
-    /// With a custom config folder, Claude Code keeps `.claude.json` inside it.
-    private static var configURL: URL {
-        ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"].map { _ in configDirectory.appendingPathComponent(".claude.json") }
-            ?? Files.home.appendingPathComponent(".claude.json")
-    }
     #endif
+
+    private static func readCredentialFile() -> [String: Any]? {
+        (try? Data(contentsOf: credentialsFile)).flatMap { JSON.object($0) }
+    }
 
     private static func readConfig() -> [String: Any]? {
         (try? Data(contentsOf: configURL)).flatMap { JSON.object($0) }

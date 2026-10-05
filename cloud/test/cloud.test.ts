@@ -1,5 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
+import { publicError } from "../src/errors";
 import { addDays, today } from "../src/env";
 import { streaks } from "../src/stats";
 import { currentSeason, daysLeft, nextStep, seasonRange, tierFor } from "../src/seasons";
@@ -74,6 +75,14 @@ function sendLimits(token: string, list: unknown[]): Promise<Response> {
 function readLimits(token: string): Promise<Response> {
   return call("/api/limits", { headers: { authorization: `Bearer ${token}` } });
 }
+
+describe("request errors", () => {
+  it("names the daily database limit and hides other failures", () => {
+    const quota = new Error("Your account has exceeded D1's free tier daily row read limit.");
+    expect(publicError(quota)).toBe("Keyhop cloud hit its daily database limit. It clears at midnight UTC.");
+    expect(publicError(new Error("no such column"))).toBe("Something went wrong.");
+  });
+});
 
 describe("usage uploads", () => {
   const day = today();

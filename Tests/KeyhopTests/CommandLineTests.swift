@@ -186,6 +186,24 @@ final class MCPTests: XCTestCase {
         let result = try XCTUnwrap(initialized["result"] as? [String: Any])
         XCTAssertEqual(result["protocolVersion"] as? String, "2025-11-25")
 
+        let discoverResponse = await MCPServer.response(to: ["jsonrpc": "2.0", "id": 3, "method": "server/discover"])
+        let discovered = try XCTUnwrap(discoverResponse)
+        let discover = try XCTUnwrap(discovered["result"] as? [String: Any])
+        XCTAssertEqual(discover["resultType"] as? String, "complete")
+        XCTAssertEqual(discover["cacheScope"] as? String, "private")
+        let versions = try XCTUnwrap(discover["supportedVersions"] as? [String])
+        XCTAssertEqual(versions.first, "2026-07-28")
+        XCTAssertTrue(versions.contains("2025-11-25"))
+
+        let negotiated = await MCPServer.response(to: [
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "initialize",
+            "params": ["protocolVersion": "2026-07-28"],
+        ])
+        let negotiatedResult = try XCTUnwrap(negotiated?["result"] as? [String: Any])
+        XCTAssertEqual(negotiatedResult["protocolVersion"] as? String, "2026-07-28")
+
         let listResponse = await MCPServer.response(to: ["jsonrpc": "2.0", "id": 2, "method": "tools/list"])
         let listed = try XCTUnwrap(listResponse)
         let listResult = try XCTUnwrap(listed["result"] as? [String: Any])

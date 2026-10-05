@@ -1,8 +1,10 @@
 import Foundation
 
 enum MCPServer {
-    private static let latestProtocol = "2025-11-25"
-    private static let supportedProtocols = [latestProtocol, "2025-06-18", "2024-11-05"]
+    /// Clients that still open with `initialize` get a version from this list. An unknown request
+    /// stays on the 2025 handshake those clients already speak.
+    private static let fallbackProtocol = "2025-11-25"
+    private static let supportedProtocols = ["2026-07-28", fallbackProtocol, "2025-06-18", "2024-11-05"]
 
     static func run(_ args: inout Arguments) async throws {
         try args.finish()
@@ -25,12 +27,27 @@ enum MCPServer {
         case "initialize":
             let params = request["params"] as? [String: Any]
             let requested = params?["protocolVersion"] as? String
-            let version = requested.flatMap { supportedProtocols.contains($0) ? $0 : nil } ?? latestProtocol
+            let version = requested.flatMap { supportedProtocols.contains($0) ? $0 : nil } ?? fallbackProtocol
             return success(id: id!, result: [
                 "protocolVersion": version,
                 "capabilities": ["tools": [:]],
                 "serverInfo": ["name": "keyhop", "version": AppVersion.current],
-                "instructions": "Read local Keyhop account health and usage. No tool exposes credentials or changes accounts.",
+                "instructions": Self.instructions,
+            ])
+        case "server/discover":
+            return success(id: id!, result: [
+                "resultType": "complete",
+                "supportedVersions": supportedProtocols,
+                "capabilities": ["tools": [:]],
+                "instructions": Self.instructions,
+                "ttlMs": 0,
+                "cacheScope": "private",
+                "_meta": [
+                    "io.modelcontextprotocol/serverInfo": [
+                        "name": "keyhop",
+                        "version": AppVersion.current,
+                    ],
+                ],
             ])
         case "ping":
             return success(id: id!, result: [:])
@@ -55,6 +72,8 @@ enum MCPServer {
             return error(id: id!, code: -32601, message: "Method not found: \(method)")
         }
     }
+
+    private static let instructions = "Read local Keyhop account health and usage. No tool exposes credentials or changes accounts."
 
     private static let tools: [[String: Any]] = [
         tool(

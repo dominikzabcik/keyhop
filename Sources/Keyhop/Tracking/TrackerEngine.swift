@@ -95,7 +95,7 @@ actor TrackerEngine {
     func ingestLocalLogs(progress: ProgressHandler? = nil) throws -> Int {
         var files: [(url: URL, feed: LogFeed, size: Int64)] = []
         for feed in LogFeed.all {
-            for root in feed.roots where FileManager.default.fileExists(atPath: root.path) {
+            for root in feed.roots() where FileManager.default.fileExists(atPath: root.path) {
                 let found = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles])
                 while let url = found?.nextObject() as? URL {
                     guard url.pathExtension == "jsonl" else { continue }

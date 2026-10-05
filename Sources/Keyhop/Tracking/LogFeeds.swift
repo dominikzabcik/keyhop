@@ -2,7 +2,8 @@ import Foundation
 
 /// A tree of append-only JSONL logs and how to turn their lines into usage records.
 struct LogFeed {
-    let roots: [URL]
+    /// Read at scan time, so a config directory set in the environment is the tree that gets counted.
+    let roots: () -> [URL]
     /// A line must contain one of these byte strings before it's worth decoding.
     let markers: [Data]
     /// `state` persists per file between reads, for parsers that need earlier lines.
@@ -12,10 +13,10 @@ struct LogFeed {
 
     // MARK: Claude Code
 
-    /// `~/.claude/projects/**/*.jsonl`. Each assistant response is logged once per content
-    /// block with identical usage, so the message and request ids make the key.
+    /// `$CLAUDE_CONFIG_DIR/projects/**/*.jsonl`, or `~/.claude/projects`. Each assistant response
+    /// is logged once per content block with identical usage, so the message and request ids make the key.
     static let claudeCode = LogFeed(
-        roots: [Files.home.appendingPathComponent(".claude/projects")],
+        roots: { [ClaudeAdapter.projectsDirectory] },
         markers: [Data("\"usage\"".utf8)]
     ) { object, _, _ in
         guard object["type"] as? String == "assistant",
@@ -50,11 +51,14 @@ struct LogFeed {
 
     // MARK: Codex
 
-    /// `~/.codex/sessions/**/rollout-*.jsonl`. Current Codex writes a `token_usage_record` per
-    /// response. Older sessions only emit `token_count` events carrying running totals, which are
-    /// stored as the difference from the previous total.
+    /// `$CODEX_HOME/sessions/**/rollout-*.jsonl`, or `~/.codex/sessions`. Current Codex writes a
+    /// `token_usage_record` per response. Older sessions only emit `token_count` events carrying
+    /// running totals, which are stored as the difference from the previous total.
     static let codex = LogFeed(
-        roots: [Files.home.appendingPathComponent(".codex/sessions"), Files.home.appendingPathComponent(".codex/archived_sessions")],
+        roots: {
+            let home = CodexAdapter.homeDirectory
+            return [home.appendingPathComponent("sessions"), home.appendingPathComponent("archived_sessions")]
+        },
         markers: ["token_usage_record", "token_count", "turn_context"].map { Data($0.utf8) }
     ) { object, file, state in
         let payload = object["payload"] as? [String: Any] ?? [:]
@@ -131,7 +135,7 @@ struct LogFeed {
     /// `~/.gemini/tmp/*/chats/*.jsonl`. Gemini records one line per model response, including
     /// cached, thought and tool-prompt tokens in a compact `tokens` object.
     static let geminiCLI = LogFeed(
-        roots: [GeminiAdapter.directory.appendingPathComponent("tmp")],
+        roots: { [GeminiAdapter.directory.appendingPathComponent("tmp")] },
         markers: [Data("\"type\":\"gemini\"".utf8), Data("\"tokens\"".utf8)]
     ) { object, file, state in
         if let session = object["sessionId"] as? String ?? object["session_id"] as? String {
@@ -166,7 +170,7 @@ struct LogFeed {
     /// compactions and branch summaries. Entry id plus timestamp stays the same when a session is
     /// forked, so the database key also prevents copied history from being counted twice.
     static let pi = LogFeed(
-        roots: [PiAdapter.sessionsDirectory],
+        roots: { [PiAdapter.sessionsDirectory] },
         markers: [Data("\"usage\"".utf8), Data("\"model_change\"".utf8), Data("\"type\":\"session\"".utf8)]
     ) { object, file, state in
         let type = object["type"] as? String

@@ -638,15 +638,16 @@ enum ToolDetection {
         switch provider {
         case .claude:
             #if os(macOS)
-            return "Keychain item \"Claude Code-credentials\""
+            let service = ClaudeAdapter.keychainService(environment: ProcessInfo.processInfo.environment)
+            return "Keychain item \"\(service)\""
             #else
-            return ClaudeAdapter.credentialsFile.path
+            return ClaudeAdapter.configDirectory(environment: ProcessInfo.processInfo.environment, home: Files.home)
+                .appendingPathComponent(".credentials.json").path
             #endif
         case .cursor:
             return CursorAdapter.databaseURL.path
         case .codex:
-            let base = ProcessInfo.processInfo.environment["CODEX_HOME"] ?? Files.home.appendingPathComponent(".codex").path
-            return base + "/auth.json"
+            return CodexAdapter.homeDirectory.appendingPathComponent("auth.json").path
         case .gemini:
             return GeminiAdapter.credentialsURL.path
         case .opencode:

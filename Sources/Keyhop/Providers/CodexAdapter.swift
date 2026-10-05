@@ -1,16 +1,22 @@
 import Foundation
 
-/// Codex keeps its whole login in `~/.codex/auth.json`. Limits come from the same ChatGPT
-/// endpoint the Codex CLI reads, and tokens refresh through OpenAI's public Codex OAuth client.
+/// Codex keeps its whole login in `auth.json` under `CODEX_HOME`, or `~/.codex`. Session
+/// transcripts live in that same folder. Limits come from the same ChatGPT endpoint the Codex
+/// CLI reads, and tokens refresh through OpenAI's public Codex OAuth client.
 struct CodexAdapter: ProviderAdapter {
     let provider = Provider.codex
     private static let clientID = "app_EMoamEEZ73f0CkXaXp7hrann"
 
-    private var authURL: URL {
-        let base = ProcessInfo.processInfo.environment["CODEX_HOME"].map { URL(fileURLWithPath: $0) }
-            ?? Files.home.appendingPathComponent(".codex")
-        return base.appendingPathComponent("auth.json")
+    static func homeDirectory(environment: [String: String], home: URL) -> URL {
+        if let custom = environment["CODEX_HOME"], !custom.isEmpty {
+            return URL(fileURLWithPath: custom, isDirectory: true)
+        }
+        return home.appendingPathComponent(".codex", isDirectory: true)
     }
+
+    static var homeDirectory: URL { homeDirectory(environment: ProcessInfo.processInfo.environment, home: Files.home) }
+
+    private var authURL: URL { Self.homeDirectory.appendingPathComponent("auth.json") }
 
     func readLive() async throws -> LiveLogin? {
         guard let data = try? Data(contentsOf: authURL) else { return nil }

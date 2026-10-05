@@ -4,6 +4,7 @@ import { auth, sameOrigin, session } from "./auth";
 import { card } from "./card";
 import { randomToken } from "./crypto";
 import type { AppEnv } from "./env";
+import { publicError } from "./errors";
 import { limits, sweepLimits } from "./limits";
 import { notFound, pages } from "./pages";
 import { petRoutes } from "./pet";
@@ -54,7 +55,8 @@ app.onError((error, c) => {
     path: c.req.path,
     message: error instanceof Error ? error.message : String(error),
   });
-  return c.req.path.startsWith("/api/") ? c.json({ error: "Something went wrong." }, 500) : c.text("Something went wrong.", 500);
+  const text = publicError(error);
+  return c.req.path.startsWith("/api/") ? c.json({ error: text }, 500) : c.text(text, 500);
 });
 
 export default {

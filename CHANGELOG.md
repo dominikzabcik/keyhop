@@ -1,7 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.14.4]
 
+- Switching Cursor accounts also switches the TypeScript SDK's key in `~/.cursor/sdk/auth.json`, and the CLI's file login in `~/.cursor/auth.json`. `cli-config.json` follows `CURSOR_CONFIG_DIR`, and on Linux `XDG_CONFIG_HOME`.
+- Claude Code sessions under `CLAUDE_CONFIG_DIR` switch with that directory: the Keychain item is suffixed with the directory's hash, the credentials file is updated when Claude fell back to it, and token history is read from that folder's `projects`. Codex history follows `CODEX_HOME`.
+- `keyhop mcp` answers `server/discover` for the July 2026 protocol, and still opens with `initialize` for the clients it already speaks.
+- When Keyhop cloud hits its daily database limit, the site and the app say it clears at midnight UTC.
 - The season, on the website and on the phone, is the standings. Keeps, quests and badges stay on the profile. On the phone, limits sit with the profile.
 
 ## [0.14.3]

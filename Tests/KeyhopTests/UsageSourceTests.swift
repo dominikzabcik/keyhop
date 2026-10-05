@@ -157,4 +157,118 @@ final class CursorUsageTests: XCTestCase {
     func testChangedExportFormatIsReported() {
         XCTAssertThrowsError(try CursorAdapter.usageRecords(csv: "Something,Else\n1,2\n", account: UUID()))
     }
+
+    func testSdkLoginIsSavedAndRestoredWithTheAccount() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let file = directory.appendingPathComponent("auth.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let saved = #"{"version":1,"backendUrl":"https://api2.cursor.sh","apiKey":"cursor_test","createdAtMs":1,"email":"a@example.dev"}"#
+        try CursorAdapter.installSdkCredential(saved, at: file)
+        let read = try XCTUnwrap(CursorAdapter.sdkCredential(at: file))
+        XCTAssertTrue(read.contains("cursor_test"))
+        XCTAssertTrue(read.contains("a@example.dev"))
+        #if !os(Windows)
+        let mode = try FileManager.default.attributesOfItem(atPath: file.path)[.posixPermissions] as? NSNumber
+        XCTAssertEqual(mode?.uint16Value, 0o600)
+        let directoryMode = try FileManager.default.attributesOfItem(atPath: directory.path)[.posixPermissions] as? NSNumber
+        XCTAssertEqual(directoryMode?.uint16Value, 0o700)
+        #endif
+
+        let other = #"{"version":1,"backendUrl":"https://api2.cursor.sh","apiKey":"cursor_other","apiKeyExpiresAtMs":9,"createdAtMs":2,"email":"b@example.dev"}"#
+        try CursorAdapter.installSdkCredential(other, at: file)
+        let replaced = try XCTUnwrap(CursorAdapter.sdkCredential(at: file))
+        XCTAssertTrue(replaced.contains("cursor_other"))
+        XCTAssertTrue(replaced.contains("b@example.dev"))
+        XCTAssertFalse(replaced.contains("cursor_test"))
+        XCTAssertTrue(replaced.contains("\"apiKeyExpiresAtMs\":9"))
+
+        try CursorAdapter.installSdkCredential(#"{"version":1}"#, at: file)
+        let kept = try XCTUnwrap(CursorAdapter.sdkCredential(at: file))
+        XCTAssertTrue(kept.contains("cursor_other"))
+        XCTAssertTrue(kept.contains("b@example.dev"))
+        XCTAssertTrue(kept.contains("\"apiKeyExpiresAtMs\":9"))
+        XCTAssertFalse(kept.contains("cursor_test"))
+
+        try CursorAdapter.installSdkCredential(nil, at: file)
+        XCTAssertNil(CursorAdapter.sdkCredential(at: file))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+    }
+
+    func testAForeignSdkFileIsLeftAlone() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let file = directory.appendingPathComponent("auth.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data("not a login".utf8).write(to: file)
+        XCTAssertNil(CursorAdapter.sdkCredential(at: file))
+        try CursorAdapter.installSdkCredential(nil, at: file)
+        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "not a login")
+    }
+
+    func testCliFileLoginSwitchesAndAForeignFileStays() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let file = directory.appendingPathComponent("auth.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let saved = #"{"accessToken":"access-a","refreshToken":"refresh-a"}"#
+        try CursorAdapter.installCLICredential(saved, at: file)
+        let read = try XCTUnwrap(CursorAdapter.cliCredential(at: file))
+        XCTAssertTrue(read.contains("access-a"))
+        XCTAssertTrue(read.contains("refresh-a"))
+
+        try CursorAdapter.installCLICredential(#"{"refreshToken":"only"}"#, at: file)
+        let kept = try XCTUnwrap(CursorAdapter.cliCredential(at: file))
+        XCTAssertTrue(kept.contains("access-a"))
+        XCTAssertTrue(kept.contains("refresh-a"))
+
+        try Data("stats".utf8).write(to: file)
+        try CursorAdapter.installCLICredential(nil, at: file)
+        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "stats")
+    }
+
+    func testCliConfigFollowsTheConfigDirectory() {
+        let home = URL(fileURLWithPath: "/tmp/keyhop-home", isDirectory: true)
+        let plain = CursorAdapter.cliConfigURL(home: home, environment: [:])
+        XCTAssertEqual(plain.path, home.appendingPathComponent(".cursor/cli-config.json").path)
+        let moved = CursorAdapter.cliConfigURL(home: home, environment: ["CURSOR_CONFIG_DIR": "/tmp/cursor-config"])
+        XCTAssertEqual(moved.path, "/tmp/cursor-config/cli-config.json")
+        #if os(Linux)
+        let xdg = CursorAdapter.cliConfigURL(home: home, environment: ["XDG_CONFIG_HOME": "/tmp/xdg"])
+        XCTAssertEqual(xdg.path, "/tmp/xdg/cursor/cli-config.json")
+        #endif
+    }
+}
+
+final class ConfigDirectoryTests: XCTestCase {
+    func testClaudeFollowsItsConfigDirectory() {
+        let home = URL(fileURLWithPath: "/tmp/keyhop-home", isDirectory: true)
+        let plain = ClaudeAdapter.configDirectory(environment: [:], home: home)
+        XCTAssertEqual(plain.path, home.appendingPathComponent(".claude").path)
+        XCTAssertEqual(ClaudeAdapter.configFile(environment: [:], home: home).path, home.appendingPathComponent(".claude.json").path)
+        XCTAssertEqual(ClaudeAdapter.keychainService(environment: [:]), "Claude Code-credentials")
+
+        let custom = ClaudeAdapter.configDirectory(environment: ["CLAUDE_CONFIG_DIR": "/tmp/claude-work"], home: home)
+        XCTAssertEqual(custom.path, "/tmp/claude-work")
+        XCTAssertEqual(
+            ClaudeAdapter.projectsDirectory(environment: ["CLAUDE_CONFIG_DIR": "/tmp/claude-work"], home: home).path,
+            "/tmp/claude-work/projects"
+        )
+        XCTAssertEqual(
+            ClaudeAdapter.configFile(environment: ["CLAUDE_CONFIG_DIR": "/tmp/claude-work"], home: home).path,
+            "/tmp/claude-work/.claude.json"
+        )
+        // SHA-256("abc") begins ba7816bf. Claude Code suffixes the Keychain service with those eight characters.
+        XCTAssertEqual(ClaudeAdapter.keychainService(environment: ["CLAUDE_CONFIG_DIR": "abc"]), "Claude Code-credentials-ba7816bf")
+    }
+
+    func testCodexSessionsFollowCodexHome() {
+        let home = URL(fileURLWithPath: "/tmp/keyhop-home", isDirectory: true)
+        XCTAssertEqual(
+            CodexAdapter.homeDirectory(environment: [:], home: home).path,
+            home.appendingPathComponent(".codex").path
+        )
+        XCTAssertEqual(
+            CodexAdapter.homeDirectory(environment: ["CODEX_HOME": "/tmp/codex-work"], home: home).path,
+            "/tmp/codex-work"
+        )
+    }
 }

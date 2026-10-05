@@ -864,6 +864,9 @@ struct CloudClient {
         if status == 401 { return CloudError.unlinked }
         struct Message: Decodable { let error: String }
         let message = (try? JSONDecoder().decode(Message.self, from: data))?.error ?? "Keyhop cloud answered with status \(status)."
+        if message.contains("exceeded D1's free tier") {
+            return CloudError(kind: .server, message: "Keyhop cloud hit its daily database limit. It clears at midnight UTC.")
+        }
         return CloudError(kind: .server, message: message)
     }
 }

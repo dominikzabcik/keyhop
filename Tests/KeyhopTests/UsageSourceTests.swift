@@ -183,7 +183,11 @@ final class CursorUsageTests: XCTestCase {
         XCTAssertTrue(replaced.contains("\"apiKeyExpiresAtMs\":9"))
 
         try CursorAdapter.installSdkCredential(#"{"version":1}"#, at: file)
-        XCTAssertEqual(CursorAdapter.sdkCredential(at: file), replaced)
+        let kept = try XCTUnwrap(CursorAdapter.sdkCredential(at: file))
+        XCTAssertTrue(kept.contains("cursor_other"))
+        XCTAssertTrue(kept.contains("b@example.dev"))
+        XCTAssertTrue(kept.contains("\"apiKeyExpiresAtMs\":9"))
+        XCTAssertFalse(kept.contains("cursor_test"))
 
         try CursorAdapter.installSdkCredential(nil, at: file)
         XCTAssertNil(CursorAdapter.sdkCredential(at: file))

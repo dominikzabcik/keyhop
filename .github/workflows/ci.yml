@@ -72,7 +72,7 @@ jobs:
           PY
           echo "Selected an available iPhone simulator by UDID."
 
-      # Unit tests and the UI tests that walk every screen in the simulator.
+      # Unit tests and the UI tests. Each UI test launches the app itself.
       - name: Build and test
         working-directory: ios
         run: |
@@ -87,19 +87,6 @@ jobs:
           name: ios-screens
           path: ios/build/Logs/Test/*.xcresult
           if-no-files-found: warn
-
-      # A build that runs is worth more than one that only compiles: the app is launched with sample
-      # data and has to still be alive a moment later.
-      - name: Launch it
-        working-directory: ios
-        run: |
-          xcrun simctl boot "$SIMULATOR_ID" || true
-          xcrun simctl bootstatus "$SIMULATOR_ID" -b
-          xcrun simctl install booted build/Build/Products/Debug-iphonesimulator/Keyhop.app
-          xcrun simctl launch booted app.keyhop.ios --sample
-          sleep 5
-          xcrun simctl spawn booted launchctl list | grep -q app.keyhop.ios
-          echo "Keyhop is running in the simulator."
 
   macos:
     name: macOS
@@ -153,8 +140,7 @@ jobs:
     name: Screens
     runs-on: macos-15
     timeout-minutes: 40
-    # Read here so a step can ask whether the key exists: `secrets` itself is not available to
-    # a step's `if`.
+    # The walk asks Jev at the end when this is set. Secrets are not visible inside a step otherwise.
     env:
       TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
     steps:
@@ -196,18 +182,10 @@ jobs:
             .e2e/site
           if-no-files-found: warn
 
-      # Every page of the website and every section of Keyhop's window, at three widths each: what
-      # they say, whether anything overflows or is cut off, and whether their controls answer. Then
-      # the commands, including the tools `keyhop mcp` serves to an agent.
+      # Every page of the website and every section of Keyhop's window, at three widths each, then
+      # the commands. Jev reads that same pass. A second walk would repeat every page, and a
+      # judgement still does not fail the run.
       - name: Walk every screen and run every command
-        working-directory: checks
-        run: node run.mjs --site --app --cli
-
-      # Jev reads what each screen says and answers typed questions about it. It runs only where
-      # the key is configured, and never fails the build: a judgement is a second opinion.
-      - name: Ask Jev about them
-        if: ${{ env.TYPESAFE_API_KEY != '' }}
-        continue-on-error: true
         working-directory: checks
         run: node run.mjs --site --app --cli --review
 

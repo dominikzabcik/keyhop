@@ -385,16 +385,17 @@ async function main() {
     await browser.close();
   }
 
-  if (wanted.review) {
-    const phone = await phoneScreens();
-    if (phone.length) console.log(`Reading ${phone.length} screens the phone's tests wrote down…`);
-    readings.push(...phone);
-  }
-
   let judgements = [];
   if (wanted.review) {
-    const { review } = await import("./review.mjs");
-    judgements = await review(readings);
+    try {
+      const phone = await phoneScreens();
+      if (phone.length) console.log(`Reading ${phone.length} screens the phone's tests wrote down…`);
+      readings.push(...phone);
+      const { review } = await import("./review.mjs");
+      judgements = await review(readings);
+    } catch (error) {
+      console.error(`Jev was not asked: ${error instanceof Error ? error.message : error}`);
+    }
   }
 
   await writeFile(join(out, "report.json"), JSON.stringify({ found, judgements, screens: readings.map((r) => r.screen) }, null, 2));

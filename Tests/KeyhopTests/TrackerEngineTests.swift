@@ -79,7 +79,10 @@ final class TrackerEngineTests: XCTestCase {
 
     func testDigestGroupsDatedModelNamesAndComparesThePreviousPeriod() async throws {
         let engine = try TrackerEngine(url: url)
-        let now = Date()
+        // Half an hour past the hour, so the two recent rows stay in one bucket. On the hour,
+        // a minute ago and two minutes ago fall into different hours and the digest splits.
+        let hour = Calendar.current.dateInterval(of: .hour, for: Date())!
+        let now = hour.start.addingTimeInterval(30 * 60)
         let interval = DateInterval(start: now.addingTimeInterval(-3600), end: now)
         let previous = DateInterval(start: now.addingTimeInterval(-7200), end: interval.start)
         try await engine.store([

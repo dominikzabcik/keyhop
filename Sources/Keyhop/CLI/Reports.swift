@@ -413,9 +413,12 @@ enum Reports {
         let before = Double(digest.previous.tokens.total)
         if before > 0 {
             let change = Int(((Double(digest.total.tokens.total) - before) / before * 100).rounded())
-            // Past ten times as much, a percentage stops meaning anything.
+            // Past ten times as much, a percentage stops meaning anything. Past ninety-nine times,
+            // the multiple is the earlier period being nearly empty, so name that amount.
+            let times = Int((Double(digest.total.tokens.total) / before).rounded())
             headline += change == 0 ? " (same as the period before)"
-                : change >= 900 ? " (\(Int((Double(digest.total.tokens.total) / before).rounded()))× the tokens of the period before)"
+                : times > 99 ? " (from \(Numbers.tokens(Int(before.rounded()))) the period before)"
+                : change >= 900 ? " (\(times)× the tokens of the period before)"
                 : " (\(abs(change))% \(change > 0 ? "more" : "fewer") tokens than the period before)"
         }
         lines.append(headline)

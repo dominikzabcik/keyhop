@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- A comparison past ninety-nine times no longer prints that multiple. Overview and `keyhop usage` name the earlier amount instead, so a nearly empty yesterday stays a small number.
+
 ## [0.14.4]
 
 - Switching Cursor accounts also switches the TypeScript SDK's key in `~/.cursor/sdk/auth.json`, and the CLI's file login in `~/.cursor/auth.json`. `cli-config.json` follows `CURSOR_CONFIG_DIR`, and on Linux `XDG_CONFIG_HOME`.

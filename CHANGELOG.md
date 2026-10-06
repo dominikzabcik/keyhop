@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 - A comparison past ninety-nine times no longer prints that multiple. Overview and `keyhop usage` name the earlier amount instead, so a nearly empty yesterday stays a small number.
+- The pet is a companion that fills its frame: one round body, big ears, tiny feet, and a face. The tool colour is the marking, the streak is how it stands, and commits are the blocks beside it.
+- Claiming today's keep is a large action on Overview, beside the pet, and on your profile.
 
 ## [0.14.4]
 

@@ -810,6 +810,8 @@ actor DashboardSession {
                 return .json(try await cloudProfile())
             case ("GET", "/api/cloud/pet"):
                 return .json(try await cloudPet())
+            case ("GET", "/api/cloud/quests"):
+                return .json(try await cloudQuests())
             case ("POST", "/api/cloud/profile"):
                 return .json(try await saveProfile(try Self.decode(ProfileBody.self, request)))
             case ("POST", "/api/cloud/team"):
@@ -1361,6 +1363,22 @@ actor DashboardSession {
         }
         changed()
         return DashboardAction(message: "A linked phone can now see how full each account is.", note: nil)
+    }
+
+    private func cloudQuests() async throws -> CloudQuests {
+        if sample {
+            guard let quests = sampleLeaderboard(period: "week", metric: "tokens", team: nil, season: nil).quests else {
+                throw KeyhopError("No keeps in the sample.")
+            }
+            return quests
+        }
+        guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud to claim a keep.") }
+        do {
+            return try await CloudClient(server: link.server, token: link.token).quests()
+        } catch let error as CloudError where error.kind == .unlinked {
+            CloudLink.remove()
+            throw error
+        }
     }
 
     private func cloudPet() async throws -> CloudPet {

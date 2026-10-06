@@ -50,7 +50,7 @@ export interface PetShape {
   h: number;
   opacity: number;
   fill: string;
-  /** screen is the handheld glass, shine is what blinks (the eyes), flame is kept for older clients. Body pixels omit it. */
+  /** shine blinks (the eyes). flame and screen stay so an older list still decodes. */
   kind?: "flame" | "eye" | "shine" | "screen";
 }
 
@@ -80,28 +80,32 @@ export interface PetInput {
 }
 
 /**
- * The pet lives on a small handheld screen, the way a Game & Watch does. The screen is part of the
- * shape list, so a client never has to choose a background that the ink can be read on. The tool
- * colour tints the glass and fills the creature's antenna tip, ear linings and chest light.
+ * A chibi that fills its frame, the way a Codex pet fills a 192×208 cell: one round body,
+ * ears big enough to read, tiny feet, a thick outline, flat colour. Pose only lifts the ears
+ * and the paw, so the feet stay put. The tool colour is the ears, the cheeks, and the blocks.
+ * Clients paint the rectangles and do not invent a second body.
  */
-const INK = "#232B1D";
-const SHELL = "#2F3629";
-const GLASS = "#C9D2A6";
-/** The accent when a pet has no single tool: a mid green that sits between glass and ink. */
+const INK = "#241C16";
+const BODY = "#F6DCC0";
+const SHADE = "#E2BC8C";
+const LIFT = "#FFF3DC";
+const EYE = "#FFF9F2";
+/** The accent when a pet has no single tool: a mid green, never one tool's colour. */
 const NEUTRAL_ACCENT = "#6E7A52";
 
-/** K ink, A accent, E ink that blinks. */
-type Ink = "K" | "A" | "E";
+/** K outline, B body, S the lower shade, L the highlight, A the marking, W the eye, E the pupil. */
+type Ink = "K" | "B" | "S" | "L" | "A" | "W" | "E";
 type Cell = Ink | null;
 
-const GRID_W = 44;
-const GRID_H = 46;
-/** One drawn pixel is this many units on the canvas. */
-const PX = 5;
-/** The bottom row of the feet. The floor line sits one row under it. */
-const FLOOR = 38;
-/** Columns 0 to 21 lie left of the centre line, 22 to 43 right of it. */
-const MID = GRID_W / 2;
+/** A Codex pet cell is 192×208. Two units per drawn pixel keeps the outline chunky at card size. */
+const GRID_W = 96;
+const GRID_H = 104;
+const PX = 2;
+/** The row the soles rest on. Every pose shares it. */
+const FOOT = 99;
+const CX = 48;
+/** Each stage is a larger copy of the same character, anchored on the soles. */
+const SCALES = [0.5, 0.62, 0.73, 0.84, 0.93, 1];
 
 class Grid {
   readonly rows: Cell[][];
@@ -118,280 +122,158 @@ class Grid {
     if (x >= 0 && y >= 0 && x < GRID_W && y < GRID_H) this.rows[y][x] = ink;
   }
 
-  /** Paints a pixel and its mirror. `far` is the distance from the centre line, 0 being the pair beside it. */
-  pair(far: number, y: number, ink: Cell = "K"): void {
-    this.set(MID - 1 - far, y, ink);
-    this.set(MID + far, y, ink);
-  }
+}
 
-  span(from: number, to: number, y: number, ink: Cell = "K"): void {
-    for (let far = from; far <= to; far++) this.pair(far, y, ink);
-  }
+/** Distances are measured up from the soles, then scaled. `dx` is right of centre. */
+function gx(dx: number, s: number): number {
+  return CX + dx * s;
+}
+function gy(up: number, s: number): number {
+  return FOOT - up * s;
+}
 
-  /** A box centred on the screen, 1 pixel outline, glass inside. */
-  box(top: number, height: number, half: number): void {
-    for (let y = top; y < top + height; y++) {
-      const edge = y === top || y === top + height - 1;
-      for (let far = 0; far < half; far++) this.pair(far, y, edge || far === half - 1 ? "K" : null);
+function ellipse(g: Grid, cx: number, cy: number, rx: number, ry: number, cell: Cell, guard?: (current: Cell) => boolean): void {
+  if (rx < 0.45 || ry < 0.45) return;
+  const y0 = Math.max(0, Math.floor(cy - ry));
+  const y1 = Math.min(GRID_H - 1, Math.ceil(cy + ry));
+  for (let y = y0; y <= y1; y++) {
+    const ny = (y + 0.5 - cy) / ry;
+    if (ny * ny > 1) continue;
+    const hx = rx * Math.sqrt(1 - ny * ny);
+    const x0 = Math.max(0, Math.ceil(cx - hx));
+    const x1 = Math.min(GRID_W - 1, Math.floor(cx + hx - 1e-6));
+    for (let x = x0; x <= x1; x++) {
+      if (guard && !guard(g.get(x, y))) continue;
+      g.set(x, y, cell);
     }
   }
+}
 
-  /** Any filled shape, drawn as its outline. `halves[i]` is the half width of row i from `top`. */
-  silhouette(top: number, halves: number[]): void {
-    halves.forEach((half, i) => {
-      const above = i === 0 ? 0 : halves[i - 1];
-      const below = i === halves.length - 1 ? 0 : halves[i + 1];
-      for (let far = 0; far < half; far++) {
-        const edge = far >= Math.min(above, below) || far === half - 1;
-        this.pair(far, top + i, edge ? "K" : null);
-      }
-    });
+const onBody = (cell: Cell) => cell === "B" || cell === "S" || cell === "L";
+
+/** Ink ring, then a flat fill. The ring is two pixels: thick at card size, still a hard edge. */
+function blob(g: Grid, cx: number, cy: number, rx: number, ry: number, fill: Cell, outline = 2): void {
+  ellipse(g, cx, cy, rx + outline, ry + outline, "K");
+  ellipse(g, cx, cy, rx, ry, fill);
+}
+
+function capsule(g: Grid, x0: number, y0: number, x1: number, y1: number, radius: number, fill: Cell): void {
+  const steps = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)));
+  for (const rad of [radius + 2, radius]) {
+    const cell: Cell = rad === radius ? fill : "K";
+    for (let step = 0; step <= steps; step++) {
+      const t = step / steps;
+      ellipse(g, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, rad, rad * 0.92, cell);
+    }
   }
 }
 
-interface Frame {
-  /** Half width of the head, and its height. */
-  head: number;
-  headRows: number;
-  /** Half width of the body and its height. Zero for a pet that is all head. */
-  body: number;
-  bodyRows: number;
-  ear: number;
-  eyeGap: number;
-  eyeWidth: number;
-  eyeRows: number;
-  /** Half width of the smile. */
-  smile: number;
-  bolts: boolean;
-  /** 0 no arms, otherwise how long. */
-  arm: number;
-  chest: number;
-  halo: boolean;
+/** A fat ear. The tool colour is the outside; the cream is the inside. Settled ears hang beside the cheek. */
+function ear(g: Grid, dx: number, up: number, rx: number, ry: number, s: number): void {
+  const cx = gx(dx, s);
+  const cy = gy(up, s);
+  blob(g, cx, cy, rx * s, ry * s, "A", 2);
+  ellipse(g, cx, cy + ry * s * 0.08, rx * s * 0.48, ry * s * 0.52, "B", (cell) => cell === "A");
 }
 
-const FRAMES: Frame[] = [
-  { head: 0, headRows: 0, body: 0, bodyRows: 0, ear: 0, eyeGap: 0, eyeWidth: 0, eyeRows: 0, smile: 0, bolts: false, arm: 0, chest: 0, halo: false },
-  { head: 6, headRows: 9, body: 0, bodyRows: 0, ear: 2, eyeGap: 1, eyeWidth: 2, eyeRows: 3, smile: 1, bolts: false, arm: 0, chest: 0, halo: false },
-  { head: 7, headRows: 10, body: 4, bodyRows: 5, ear: 3, eyeGap: 1, eyeWidth: 2, eyeRows: 3, smile: 1, bolts: false, arm: 0, chest: 0, halo: false },
-  { head: 8, headRows: 11, body: 6, bodyRows: 7, ear: 4, eyeGap: 2, eyeWidth: 2, eyeRows: 4, smile: 2, bolts: true, arm: 5, chest: 1, halo: false },
-  { head: 9, headRows: 12, body: 7, bodyRows: 8, ear: 5, eyeGap: 2, eyeWidth: 3, eyeRows: 4, smile: 2, bolts: true, arm: 6, chest: 2, halo: false },
-  { head: 10, headRows: 13, body: 8, bodyRows: 9, ear: 5, eyeGap: 2, eyeWidth: 3, eyeRows: 5, smile: 3, bolts: true, arm: 7, chest: 3, halo: true },
-];
+function smile(g: Grid, up: number, half: number, rise: number, s: number): void {
+  const cx = gx(0, s);
+  const cy = gy(up, s);
+  const w = Math.max(2, half * s);
+  const h = Math.max(1.2, rise * s);
+  for (let x = Math.round(cx - w); x <= Math.round(cx + w); x++) {
+    const t = (x - cx) / w;
+    const y = Math.round(cy + h * (1 - t * t));
+    g.set(x, y, "K");
+    g.set(x, y + 1, "K");
+  }
+}
 
-/** Antenna stem rows: the pet sleeps with it folded, stands with it up, and stretches it when the streak is long. */
-const STEM: Record<Pet["pose"], number> = { settled: 0, up: 2, tall: 4 };
-
-/** Two dashes asleep, bars awake, and a pair of arcs when the streak is long. */
-function eyes(g: Grid, top: number, f: Frame, pose: Pet["pose"]): void {
-  const middle = top + Math.floor((f.eyeRows - 1) / 2);
+function eye(g: Grid, dx: number, up: number, s: number, pose: Pet["pose"]): void {
+  const cx = gx(dx, s);
+  const cy = gy(up, s);
+  const rx = 7.2 * s;
+  const ry = 8.2 * s;
   if (pose === "settled") {
-    g.span(f.eyeGap, f.eyeGap + f.eyeWidth, middle);
-    return;
-  }
-  if (pose === "up") {
-    for (let r = 0; r < f.eyeRows; r++) g.span(f.eyeGap, f.eyeGap + f.eyeWidth - 1, top + r, "E");
-    return;
-  }
-  const w = f.eyeWidth + 1;
-  g.span(f.eyeGap + 1, f.eyeGap + w - 2, middle, "E");
-  g.pair(f.eyeGap, middle + 1, "E");
-  g.pair(f.eyeGap + w - 1, middle + 1, "E");
-}
-
-function mouth(g: Grid, y: number, f: Frame, pose: Pet["pose"]): void {
-  if (pose === "settled") {
-    g.pair(0, y);
-    return;
-  }
-  if (pose === "up") {
-    g.span(0, f.smile - 1, y + 1);
-    g.pair(f.smile, y);
-    return;
-  }
-  g.span(0, f.smile, y);
-  g.span(0, f.smile, y + 1);
-}
-
-function ears(g: Grid, f: Frame, headTop: number, pose: Pet["pose"]): void {
-  const height = pose === "settled" ? Math.max(1, f.ear - 2) : f.ear;
-  for (let r = 0; r < height; r++) {
-    const y = headTop - height + r;
-    for (let k = 0; k <= r; k++) {
-      const far = f.head - 1 - k;
-      const lining = f.ear >= 4 && pose !== "settled" && r >= 2 && k >= 1 && k < r;
-      g.pair(far, y, lining ? "A" : "K");
+    const w = Math.max(2, rx);
+    for (let x = Math.round(cx - w); x <= Math.round(cx + w); x++) {
+      const t = (x - cx) / w;
+      const y = Math.round(cy + ry * 0.28 * (1 - t * t));
+      g.set(x, y, "K");
+      g.set(x, y + 1, "K");
     }
+    return;
   }
+  blob(g, cx, cy, rx, ry, "W", 1.4);
+  const side = dx < 0 ? -1 : 1;
+  ellipse(g, cx + side * rx * 0.08, cy + ry * 0.06, rx * 0.58, ry * 0.64, "E");
+  ellipse(g, cx - side * rx * 0.22, cy - ry * 0.28, Math.max(0.9, rx * 0.2), Math.max(0.9, ry * 0.2), "W");
 }
 
-function antenna(g: Grid, headTop: number, pose: Pet["pose"]): number {
-  const stem = STEM[pose];
-  for (let r = 0; r < stem; r++) g.pair(0, headTop - 1 - r);
-  const tip = headTop - stem - 2;
-  g.span(0, 0, tip, "A");
-  g.span(0, 0, tip + 1, "A");
-  return tip;
-}
-
-function arms(g: Grid, f: Frame, bodyTop: number, pose: Pet["pose"]): void {
-  if (f.arm === 0) return;
-  const reach = f.body;
-  g.pair(reach, bodyTop + 1);
-  for (let r = 0; r < f.arm; r++) {
-    const y = bodyTop + 1 + r;
-    g.set(MID - 1 - reach - 1, y, "K");
-    g.set(MID - 1 - reach - 2, y, "K");
-    if (pose === "tall") continue;
-    g.set(MID + reach + 1, y, "K");
-    g.set(MID + reach + 2, y, "K");
-  }
-  if (pose !== "tall") return;
-  const out = f.head + 3;
-  for (let far = reach; far <= out; far++) {
-    g.set(MID + far, bodyTop + 1, "K");
-    g.set(MID + far, bodyTop + 2, "K");
-  }
-  for (let y = bodyTop - 5; y <= bodyTop + 2; y++) {
-    g.set(MID + out - 1, y, "K");
-    g.set(MID + out, y, "K");
-  }
-  g.set(MID + out - 2, bodyTop - 5, "K");
-  g.set(MID + out + 1, bodyTop - 5, "K");
-}
-
-/** A cat's tail on the left, longer as the pet grows. It rises behind the arm, with a gap between them. */
-function tail(g: Grid, f: Frame, index: number): void {
-  if (!f.body) return;
-  const length = 2 + index;
-  const lift = FLOOR - 3;
-  for (let far = f.body; far <= f.body + 5; far++) {
-    g.set(MID - 1 - far, lift, "K");
-    g.set(MID - 1 - far, lift - 1, "K");
-  }
-  for (let r = 0; r < length; r++) {
-    const tip = index >= 4 && r >= length - 2;
-    for (const far of [f.body + 4, f.body + 5]) g.set(MID - 1 - far, lift - 2 - r, tip ? "A" : "K");
-  }
-}
-
-/** The sleeping mark: a Z that floats beside the head while the streak is cold. */
-function sleep(g: Grid, f: Frame, headTop: number): void {
-  const x = MID + f.head + 1;
-  const y = headTop - 3;
-  for (let k = 0; k < 4; k++) g.set(x + k, y, "K");
-  g.set(x + 3, y + 1, "K");
-  g.set(x + 2, y + 2, "K");
-  g.set(x + 1, y + 3, "K");
-  for (let k = 0; k < 4; k++) g.set(x + k, y + 4, "K");
-}
-
-function egg(g: Grid, pose: Pet["pose"]): void {
-  const halves = [2, 3, 4, 4, 5, 5, 5, 4, 3];
-  const top = FLOOR - halves.length + 1;
-  g.silhouette(top, halves);
-  g.set(MID - 3, top + 4, "A");
-  g.set(MID - 2, top + 5, "A");
-  g.set(MID - 1, top + 4, "A");
-  g.set(MID, top + 5, "A");
-  g.set(MID + 1, top + 4, "A");
-  g.set(MID + 2, top + 5, "A");
-  if (pose === "tall") {
-    for (const side of [-1, 1]) {
-      const x = side < 0 ? MID - 8 : MID + 7;
-      g.set(x, top + 2, "A");
-      g.set(x - 1, top + 3, "A");
-      g.set(x + 1, top + 3, "A");
-      g.set(x, top + 3, "A");
-      g.set(x, top + 4, "A");
-    }
-  }
-}
-
-/** A floor line under the feet. The last stage stands on a thicker plinth. */
-function floor(g: Grid, index: number): void {
-  g.span(0, 17, FLOOR + 1);
-  if (index === FRAMES.length - 1) g.span(0, 13, FLOOR + 2);
-}
-
-function robot(index: number, pose: Pet["pose"]): Grid {
+function companion(stage: number, pose: Pet["pose"]): Grid {
   const g = new Grid();
-  if (index === 0) {
-    egg(g, pose);
-    floor(g, index);
-    return g;
-  }
-  const f = FRAMES[index];
-  const bodyTop = f.body ? FLOOR - 1 - f.bodyRows : FLOOR - 1;
-  const headTop = f.body ? bodyTop - f.headRows + 1 : FLOOR - 1 - f.headRows;
+  const s = SCALES[stage];
+  const leg = (dx: number, footDx: number) => {
+    capsule(g, gx(dx, s), gy(16, s), gx(footDx, s), gy(5, s), Math.max(2.2, 3.4 * s), "S");
+    blob(g, gx(footDx, s), gy(3.2, s), 7.2 * s, 3.6 * s, "S", 2);
+  };
+  leg(-8, -13);
+  leg(8, 13);
 
-  ears(g, f, headTop, pose);
-  const tip = antenna(g, headTop, pose);
-  g.box(headTop, f.headRows, f.head);
-  if (f.body) g.box(bodyTop, f.bodyRows, f.body);
-  arms(g, f, bodyTop, pose);
-  tail(g, f, index);
-
-  const eyeTop = headTop + 2;
-  eyes(g, eyeTop, f, pose);
-  mouth(g, eyeTop + f.eyeRows + 1, f, pose);
-
-  if (f.bolts) {
-    const mid = headTop + Math.floor(f.headRows / 2);
-    for (let r = -1; r <= 1; r++) g.pair(f.head, mid + r);
-  }
-  if (f.chest) {
-    const lamp = Math.min(f.chest, 3);
-    for (let r = 0; r < 2; r++) g.span(0, lamp - 1, bodyTop + 2 + r, "A");
+  // Ears first, then the head covers their base, so they grow out of the skull instead of sitting on it.
+  if (pose !== "settled") {
+    ear(g, -15, 68, 13, 17, s);
+    ear(g, 16, 66, 13, 18, s);
   }
 
-  const feetGap = f.body ? Math.max(1, f.body - 3) : Math.max(1, f.head - 4);
-  for (const y of [FLOOR - 1, FLOOR]) g.span(feetGap, feetGap + 2, y);
+  const bodyCx = gx(0, s);
+  const bodyCy = gy(34, s);
+  const bodyRx = 33 * s;
+  const bodyRy = 27 * s;
+  blob(g, bodyCx, bodyCy, bodyRx, bodyRy, "B", 2);
+  ellipse(g, bodyCx + bodyRx * 0.1, bodyCy + bodyRy * 0.24, bodyRx * 0.7, bodyRy * 0.5, "S", onBody);
+  ellipse(g, bodyCx - bodyRx * 0.34, bodyCy - bodyRy * 0.38, bodyRx * 0.16, bodyRy * 0.12, "L", (cell) => cell === "B");
 
-  const top = Math.min(tip, headTop - (pose === "settled" ? Math.max(1, f.ear - 2) : f.ear));
-  if (pose === "settled") sleep(g, f, headTop);
-  if (f.halo) {
-    const ring = [4, 7, 8, 8, 7, 4];
-    const haloTop = top - 3;
-    ring.forEach((half, i) => {
-      if (i !== 0 && i !== ring.length - 1) {
-        g.pair(half - 1, haloTop + i - 1, "A");
-        return;
-      }
-      g.span(0, half - 1, haloTop + i - 1, "A");
-    });
+  if (pose === "settled") {
+    ear(g, -31, 44, 10, 7.5, s);
+    ear(g, 31, 44, 10, 7.5, s);
   }
-  floor(g, index);
+
+  eye(g, -12, 42, s, pose);
+  eye(g, 12, 42, s, pose);
+  smile(g, 27, pose === "tall" ? 8 : 6.2, pose === "settled" ? 1.6 : 3.4, s);
+  ellipse(g, gx(-20, s), gy(33, s), 4.8 * s, 2.8 * s, "A", onBody);
+  ellipse(g, gx(20, s), gy(33, s), 4.8 * s, 2.8 * s, "A", onBody);
+  ellipse(g, gx(0, s), gy(18, s), 6.4 * s, 3.6 * s, "A", onBody);
+
+  const nub = Math.max(2.6, 4.6 * s);
+  capsule(g, gx(-26, s), gy(32, s), gx(-32, s), gy(18, s), nub, "B");
+  if (pose === "tall") {
+    const thick = Math.max(3.4, 6.4 * s);
+    const pawX = gx(22, s);
+    const pawY = gy(90, s);
+    capsule(g, gx(28, s), gy(40, s), gx(38, s), gy(62, s), thick, "B");
+    capsule(g, gx(38, s), gy(62, s), pawX, pawY, thick, "B");
+    blob(g, pawX, pawY, 10 * s, 8.4 * s, "B", 2);
+    ellipse(g, pawX, pawY + 1.2 * s, 2.2 * s, 1.7 * s, "A", onBody);
+    ellipse(g, pawX - 3.2 * s, pawY + 2.2 * s, 1.3 * s, 1.1 * s, "A", onBody);
+    ellipse(g, pawX + 3.2 * s, pawY + 2.2 * s, 1.3 * s, 1.1 * s, "A", onBody);
+  } else {
+    capsule(g, gx(26, s), gy(32, s), gx(32, s), gy(18, s), nub, "B");
+  }
   return g;
 }
 
-export const PET_WIDTH = GRID_W * PX;
-export const PET_HEIGHT = GRID_H * PX;
-
-function mixHex(hex: string, target: number, amount: number): string {
-  const value = parseInt(hex.slice(1), 16);
-  const channel = (shift: number) => {
-    const from = (value >> shift) & 255;
-    const to = (target >> shift) & 255;
-    return Math.round(from * (1 - amount) + to * amount);
-  };
-  return `#${[channel(16), channel(8), channel(0)].map((part) => part.toString(16).padStart(2, "0")).join("")}`.toUpperCase();
-}
+/** One extra unit so neighbouring pixels overlap. A scaled card would otherwise show hairline gaps. */
+export const PET_WIDTH = GRID_W * PX + 1;
+export const PET_HEIGHT = GRID_H * PX + 1;
 
 function rect(x: number, y: number, w: number, h: number, fill: string, kind?: PetShape["kind"]): PetShape {
-  return { x: x * PX, y: y * PX, w: w * PX, h: h * PX, opacity: 1, fill, ...(kind ? { kind } : {}) };
+  return { x: x * PX, y: y * PX, w: w * PX + 1, h: h * PX + 1, opacity: 1, fill, ...(kind ? { kind } : {}) };
 }
 
-/** The handheld glass: a dark shell with clipped corners and a tinted pane inside it. */
-function screen(glass: string): PetShape[] {
-  return [
-    rect(1, 0, GRID_W - 2, GRID_H, SHELL, "screen"),
-    rect(0, 1, GRID_W, GRID_H - 2, SHELL, "screen"),
-    rect(1, 1, GRID_W - 2, GRID_H - 2, glass, "screen"),
-  ];
-}
-
-function raster(grid: Grid, accent: string, ink: string): PetShape[] {
-  const colours: Record<Ink, string> = { K: ink, A: accent, E: ink };
+function raster(grid: Grid, accent: string): PetShape[] {
+  const colours: Record<Ink, string> = { K: INK, B: BODY, S: SHADE, L: LIFT, A: accent, W: EYE, E: INK };
   const shapes: PetShape[] = [];
   for (let y = 0; y < GRID_H; y++) {
     let run: PetShape | null = null;
@@ -407,29 +289,33 @@ function raster(grid: Grid, accent: string, ink: string): PetShape[] {
       }
       const fill = colours[cell];
       const kind: PetShape["kind"] = cell === "E" ? "shine" : undefined;
-      if (run && run.fill === fill && run.kind === kind && run.x + run.w === x * PX) {
+      if (run && run.fill === fill && run.kind === kind && run.x + run.w === x * PX + 1) {
         run.w += PX;
         continue;
       }
       flush();
-      run = { x: x * PX, y: y * PX, w: PX, h: PX, opacity: 1, fill, ...(kind ? { kind } : {}) };
+      run = { x: x * PX, y: y * PX, w: PX + 1, h: PX + 1, opacity: 1, fill, ...(kind ? { kind } : {}) };
     }
     flush();
   }
   return shapes;
 }
 
-/** Bricks on the ground beside the floor line, one per step of build, centred under the creature. */
-function bricks(count: number): { x: number; w: number }[] {
-  const width = 4;
-  const gap = 2;
-  const total = count * width + (count - 1) * gap;
-  const left = (GRID_W - total) / 2;
-  return Array.from({ length: count }, (_, i) => ({ x: left + i * (width + gap), w: width }));
+/** Blocks beside the feet, one more at each step of build. They stay above the sole. */
+function stack(stage: number, build: number, fill: string): PetShape[] {
+  const shapes: PetShape[] = [];
+  const s = SCALES[stage];
+  const footLeft = CX + -20 * s;
+  for (let i = 0; i < build; i++) {
+    const w = Math.max(4, Math.round((8 - i) * Math.max(s, 0.7)));
+    const h = Math.max(3, Math.round(4.5 * Math.max(s, 0.7)));
+    const x = Math.max(1, Math.round(footLeft - w - 3));
+    const y = Math.max(1, Math.round(FOOT - 2 - (i + 1) * (h + 1)));
+    shapes.push(rect(x - 1, y - 1, w + 2, h + 2, INK));
+    shapes.push(rect(x, y, w, h, fill));
+  }
+  return shapes;
 }
-
-const BUILD: { x: number; w: number }[][] = [[], bricks(1), bricks(3), bricks(5)];
-const BRICK_TOP = FLOOR + 4;
 
 function stageIndex(tokens: number): number {
   let index = 0;
@@ -481,10 +367,8 @@ export function petFrom(input: PetInput): Pet {
   const pose = poseFor(streak);
   const build = buildFor(commits);
   const tint = lineage && lineage.key !== "mix" ? TOOL_COLORS[lineage.key as (typeof MEASURED_TOOLS)[number]] : null;
-  const glass = tint ? mixHex(tint, 0xdde4bc, 0.78) : GLASS;
-
-  const shapes = [...screen(glass), ...raster(robot(index, pose), tint ?? NEUTRAL_ACCENT, INK)];
-  for (const block of BUILD[build]) shapes.push(rect(block.x, BRICK_TOP, block.w, 2, INK));
+  const accent = tint ?? NEUTRAL_ACCENT;
+  const shapes = [...raster(companion(index, pose), accent), ...stack(index, build, accent)];
 
   return {
     stage: stage.key,
@@ -589,11 +473,11 @@ export function creatureMarkup(pet: Pet, className = "pet"): string {
   const rects = pet.shapes
     .map(
       (shape) =>
-        `<rect x="${shape.x}" y="${shape.y}" width="${shape.w}" height="${shape.h}" rx="0.6" fill="${shape.fill}" fill-opacity="${shape.opacity}"${shape.kind ? ` class="${shape.kind}"` : ""}/>`,
+        `<rect x="${shape.x}" y="${shape.y}" width="${shape.w}" height="${shape.h}" fill="${shape.fill}" fill-opacity="${shape.opacity}"${shape.kind ? ` class="${shape.kind}"` : ""}/>`,
     )
     .join("");
   const label = pet.lineageName ? `${pet.stageName} · ${pet.lineageName}` : pet.stageName;
-  return `<svg class="${className}" viewBox="0 0 ${pet.width} ${pet.height}" role="img" aria-label="${esc(label)}">${rects}</svg>`;
+  return `<svg class="${className}" viewBox="0 0 ${pet.width} ${pet.height}" shape-rendering="crispEdges" role="img" aria-label="${esc(label)}">${rects}</svg>`;
 }
 
 /** A share image: the creature, its stage, and where to find the profile. */
@@ -606,7 +490,7 @@ export function petCard(pet: Pet, name: string, login: string, theme: Theme): st
   const body = pet.shapes
     .map(
       (shape) =>
-        `<rect x="${left + shape.x * scale}" y="${top + shape.y * scale}" width="${shape.w * scale}" height="${shape.h * scale}" rx="${0.6 * scale}" fill="${shape.fill}" fill-opacity="${shape.opacity}"${shape.kind ? ` class="${shape.kind}"` : ""}/>`,
+        `<rect x="${left + shape.x * scale}" y="${top + shape.y * scale}" width="${shape.w * scale}" height="${shape.h * scale}" fill="${shape.fill}" fill-opacity="${shape.opacity}"${shape.kind ? ` class="${shape.kind}"` : ""}/>`,
     )
     .join("");
   const caption = pet.lineageName ? `${pet.stageName} · ${pet.lineageName}` : pet.stageName;

@@ -255,8 +255,8 @@ function keepsCard(state: ClaimState, next: "profile" | "season", flash: string 
     ? html``
     : state.claimed && state.today
       ? html`<p class="muted" style="margin:12px 0 0">Claimed today · ${state.today.name}</p>`
-      : state.active && state.today
-        ? html`<form method="post" action="/streak/claim?next=${next}" style="margin-top:12px"><button class="btn sm" type="submit">Claim ${state.today.name}</button></form>`
+        : state.active && state.today
+          ? html`<form method="post" action="/streak/claim?next=${next}"><button class="btn claim-kick" type="submit">Claim ${state.today.name}</button></form>`
         : html`<p class="muted" style="margin:12px 0 0">The streak counts a day with tokens or a commit. Claim opens once today has one.</p>`;
   const label = `${state.streak} ${state.streak === 1 ? "day" : "days"}`;
   return html`<section class="card">
@@ -431,6 +431,9 @@ pages.get("/u/:login", async (c) => {
           <p class="next">${creature.next ? html`${tokens(creature.next.tokens)} to ${creature.next.label}` : "Monument"}</p>
           ${person.public === 1 ? html`<p class="bio"><a class="profile-link" href="/u/${person.login}/pet.svg">Share image</a></p>` : ""}
         </div>
+        ${isSelf && claim.active && !claim.claimed && claim.today
+          ? html`<form method="post" action="/streak/claim?next=profile"><button class="btn claim-kick" type="submit">Claim ${claim.today.name}</button></form>`
+          : ""}
       </section>
       <section class="card season-head">
         ${tierTag(tierFor(place?.tokens ?? 0), "lg")}

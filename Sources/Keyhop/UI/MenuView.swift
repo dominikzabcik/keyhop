@@ -95,17 +95,18 @@ private struct PetCanvas: View {
                 let scaleY = size.height / CGFloat(max(pet.height, 1))
                 let blink = tick % 8 == 0
                 let dim = tick % 2 == 1
+                let bob: CGFloat = tick % 2 == 0 ? -1.2 : 0
                 for shape in pet.shapes {
                     if blink && shape.kind == "shine" { continue }
                     var opacity = shape.opacity
                     if dim && shape.kind == "flame" { opacity *= 0.55 }
                     let rect = CGRect(
                         x: CGFloat(shape.x) * scaleX,
-                        y: CGFloat(shape.y) * scaleY,
+                        y: CGFloat(shape.y) * scaleY + bob,
                         width: CGFloat(shape.w) * scaleX,
                         height: CGFloat(shape.h) * scaleY
                     )
-                    let path = Path(roundedRect: rect, cornerRadius: 0.6 * scaleX)
+                    let path = Path(rect)
                     context.fill(path, with: .color(Color(red: shape.red, green: shape.green, blue: shape.blue).opacity(opacity)))
                 }
             }

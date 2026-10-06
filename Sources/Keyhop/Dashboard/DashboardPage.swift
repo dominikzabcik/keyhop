@@ -187,13 +187,24 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .hero-figure .unit { font-size: 19px; color: var(--muted); font-weight: 520; }
 .hero-line { margin: 0; color: var(--muted); font-size: 14px; }
 .pet-card { display: flex; align-items: center; gap: 8px 22px; padding: 8px 22px 8px 6px; }
-.pet-card .pet { width: 128px; height: auto; flex: none; }
+.pet-card .pet { width: 140px; height: auto; flex: none; }
+.companion { display: flex; align-items: center; gap: 8px 18px; padding: 8px 18px 8px 4px; }
+.companion .pet { width: 140px; height: auto; flex: none; }
+.companion .grow { flex: 1; min-width: 0; }
+.companion b { font-size: 16px; font-weight: 620; letter-spacing: -.02em; }
+.companion p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+@media (prefers-reduced-motion: no-preference) {
+  .pet { animation: pet-live 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center 80%; }
+}
+@keyframes pet-live { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 .pet rect.flame { animation: pet-flame 1.1s steps(2, end) infinite; }
 .pet rect.shine { animation: pet-blink 3.6s steps(1, end) infinite; }
 @keyframes pet-flame { 50% { opacity: .45; } }
 @keyframes pet-blink { 0%, 88%, 100% { opacity: 1; } 92%, 96% { opacity: 0; } }
 .pet-card h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
 .pet-card p { margin: 6px 0 0; color: var(--muted); font-size: 14px; max-width: 62ch; }
+.btn.claim-kick { height: 48px; padding: 0 22px; border-radius: 10px; font-size: 16px; font-weight: 650; }
+.card-body .btn.claim-kick { width: 100%; }
 .pet-slot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; }
 .pet-slot p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 /* A soft shadow right behind the words keeps them clear of bright dots, without a band behind them. */
@@ -692,7 +703,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     pending: new Map(), loadingUsage: 0,
   };
   history.replaceState(null, "", "#" + ui.section);
-  const data = { state: boot?.state || null, usage: {}, usageErrors: {}, doctor: null, update: null, updateError: null, pet: null, petError: null };
+  const data = { state: boot?.state || null, usage: {}, usageErrors: {}, doctor: null, update: null, updateError: null, pet: null, petError: null, quests: null };
   if (isStatic) for (const [range, doc] of Object.entries(boot.usage || {})) data.usage[range + ":all"] = doc;
 
   // MARK: Formatting
@@ -846,11 +857,18 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     }
   }
 
+  async function loadQuests() {
+    try { data.quests = await api("/api/cloud/quests"); }
+    catch { data.quests = null; }
+  }
+
   async function loadSection() {
     try {
       if (ui.section === "overview") {
         loadServices();
-        await Promise.all([loadUsage("today"), loadUsage("week")]);
+        const jobs = [loadUsage("today"), loadUsage("week")];
+        if (!isStatic && data.state?.cloud?.linked) jobs.push(loadPet(), loadQuests());
+        await Promise.all(jobs);
       }
       if (ui.section === "usage") await loadUsage(ui.range, ui.tool);
       if (ui.section === "budgets") await loadUsage("month");
@@ -1351,7 +1369,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       ${today && today.total.requests ? `<figure class="hero-hours"><figcaption>Today by hour</figcaption>${dotHours(today)}</figure>` : ""}
       <div class="hero-run${data.state.refreshing ? " on" : ""}" aria-hidden="true">${window.KeyhopBackdrop ? window.KeyhopBackdrop.sprite("blip", "top:0") : ""}</div>
     </section>`;
-    const stats = hero + `<div class="stats">
+    const stats = hero + companionRow() + `<div class="stats">
       <div class="card stat"><div class="label">Streak</div><div class="value">${streak ? `${streak.current} ${streak.current === 1 ? "day" : "days"}` : "…"}</div><div class="foot">${streak ? `Longest ${streak.longest} · ${fmt.count(streak.activeDays)} active days` : ""}</div></div>
       <div class="card stat"><div class="label">API value today</div><div class="value">${fmt.usd(status.today.cost)}</div><div class="foot">At standard API prices</div></div>
       <div class="card stat"><div class="label">This week ${week ? fmt.change(week.total.tokens, week.previous.tokens, fmt.tokens(week.previous.tokens)) : ""}</div><div class="value">${week ? fmt.tokens(week.total.tokens) : "…"}</div><div class="foot">${week ? `${fmt.usd(week.total.cost)} API value` : ""}</div></div>
@@ -1390,13 +1408,42 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     return { body: `${notices}${stats}${inUse}` };
   }
 
+  function petSvg(pet) {
+    const caption = pet.lineageName ? `${pet.stageName} · ${pet.lineageName}` : pet.stageName;
+    const shapes = pet.shapes.map((shape) => `<rect x="${shape.x}" y="${shape.y}" width="${shape.w}" height="${shape.h}" fill="${esc(shape.fill)}" fill-opacity="${shape.opacity}"${shape.kind === "flame" || shape.kind === "shine" || shape.kind === "eye" ? ` class="${shape.kind}"` : ""}/>`).join("");
+    return { caption, svg: `<svg class="pet" viewBox="0 0 ${pet.width} ${pet.height}" shape-rendering="crispEdges" role="img" aria-label="${esc(caption)}">${shapes}</svg>` };
+  }
+
+  function currentClaim() {
+    if (ui.section === "profile" && data.board && data.board.quests) return data.board.quests.claim || null;
+    return (data.quests && data.quests.claim) || (data.board && data.board.quests && data.board.quests.claim) || null;
+  }
+
+  function claimKick(claim) {
+    if (!claim || claim.claimed || !claim.active || !claim.today) return "";
+    return `<button class="btn claim-kick" type="button" data-action="streak-claim">Claim ${esc(claim.today.name)}</button>`;
+  }
+
+  // The creature sits with today's work. Claiming the streak is the action on that row.
+  function companionRow() {
+    const claim = currentClaim();
+    const kick = claimKick(claim);
+    if (!data.pet && !kick) return "";
+    const drawn = data.pet ? petSvg(data.pet) : null;
+    const title = drawn ? drawn.caption : "Streak";
+    const note = kick && claim.today ? claim.today.note
+      : claim && claim.claimed && claim.today ? `Claimed today · ${claim.today.name}`
+      : data.pet && data.pet.next ? `${fmt.tokens(data.pet.next.tokens)} to ${data.pet.next.label}`
+      : data.pet ? "Monument" : "";
+    return `<section class="card companion">${drawn ? drawn.svg : ""}<div class="grow"><b>${esc(title)}</b>${note ? `<p>${esc(note)}</p>` : ""}</div>${kick}</section>`;
+  }
+
   function petCard() {
     if (data.pet) {
       const pet = data.pet;
-      const shapes = pet.shapes.map((shape) => `<rect x="${shape.x}" y="${shape.y}" width="${shape.w}" height="${shape.h}" rx="0.6" fill="${esc(shape.fill)}" fill-opacity="${shape.opacity}"${shape.kind === "flame" || shape.kind === "shine" || shape.kind === "eye" ? ` class="${shape.kind}"` : ""}/>`).join("");
-      const caption = pet.lineageName ? `${pet.stageName} · ${pet.lineageName}` : pet.stageName;
+      const drawn = petSvg(pet);
       const next = pet.next ? `${fmt.tokens(pet.next.tokens)} to ${esc(pet.next.label)}` : "Monument";
-      return `<section class="card pet-card"><svg class="pet" viewBox="0 0 ${pet.width} ${pet.height}" role="img" aria-label="${esc(caption)}">${shapes}</svg><div><h2>${esc(caption)}</h2><p>${next}</p></div></section>`;
+      return `<section class="card pet-card">${drawn.svg}<div><h2>${esc(drawn.caption)}</h2><p>${next}</p></div>${claimKick(currentClaim())}</section>`;
     }
     if (isStatic || !data.state?.cloud?.available) return "";
     if (!data.state.cloud.linked) {
@@ -2276,7 +2323,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const action = claim.claimed && claim.today
       ? `<p class="empty-inline subtle">Claimed today · ${esc(claim.today.name)}</p>`
       : claim.active && claim.today
-        ? `<button class="btn sm" type="button" data-action="streak-claim">Claim ${esc(claim.today.name)}</button>`
+        ? `<button class="btn claim-kick" type="button" data-action="streak-claim">Claim ${esc(claim.today.name)}</button>`
         : `<p class="empty-inline subtle">The streak counts a day with tokens or a commit. Claim opens once today has one.</p>`;
     const days = `${claim.streak} ${claim.streak === 1 ? "day" : "days"}`;
     return `<section class="card"><div class="card-head"><h2>Keeps</h2><span class="hint">${esc(days)}</span></div>

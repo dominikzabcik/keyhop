@@ -200,7 +200,15 @@ a.place-card:hover { border-color: var(--border-strong); }
 .pet-card { display: flex; align-items: center; gap: 8px 20px; padding: 6px 20px 6px 4px; flex-wrap: wrap; }
 .pet-card .pet { width: 140px; height: auto; flex: none; }
 .pet-card h2 { margin: 0; font-size: 22px; font-weight: 640; letter-spacing: -.02em; }
+.pet-card .btn.claim-kick { height: 48px; padding: 0 22px; border-radius: 10px; font-size: 16px; font-weight: 650; }
+.pet-card form { margin-left: auto; }
+.card-body form:has(.claim-kick) { margin-top: 14px; }
+.card-body .btn.claim-kick { width: 100%; height: 48px; border-radius: 10px; font-size: 16px; font-weight: 650; }
 .member-pet { width: 64px; height: auto; flex: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .pet, .member-pet { animation: pet-live 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center 80%; }
+}
+@keyframes pet-live { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 .pet rect.flame, .member-pet rect.flame { animation: pet-flame 1.1s steps(2, end) infinite; }
 .pet rect.shine, .member-pet rect.shine { animation: pet-blink 3.6s steps(1, end) infinite; }
 @keyframes pet-flame { 50% { opacity: .45; } }

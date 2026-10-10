@@ -6,10 +6,11 @@ struct LogFeed {
     let roots: () -> [URL]
     /// A line must contain one of these byte strings before it's worth decoding.
     let markers: [Data]
-    /// `state` persists per file between reads, for parsers that need earlier lines.
-    let parse: (_ object: [String: Any], _ file: URL, _ state: inout [String: String]) -> UsageRecord?
+    /// `state` persists per file between reads, for parsers that need earlier lines. A line
+    /// usually yields one record; a turn summary split by model can yield several.
+    let parse: (_ object: [String: Any], _ file: URL, _ state: inout [String: String]) -> [UsageRecord]
 
-    static let all = [claudeCode, codex, geminiCLI, pi]
+    static let all = [claudeCode, codex, geminiCLI, pi, MeasuredFeeds.qwen, MeasuredFeeds.kimi, MeasuredFeeds.openclaw, MeasuredFeeds.grok]
 
     // MARK: Claude Code
 
@@ -23,7 +24,7 @@ struct LogFeed {
               let message = object["message"] as? [String: Any],
               let usage = message["usage"] as? [String: Any],
               let model = message["model"] as? String, !model.hasPrefix("<"),
-              let timestamp = Dates.parse(object["timestamp"]) else { return nil }
+              let timestamp = Dates.parse(object["timestamp"]) else { return [] }
 
         func count(_ key: String, in dictionary: [String: Any]? = nil) -> Int {
             Int(JSON.number((dictionary ?? usage)[key]) ?? 0)
@@ -40,13 +41,13 @@ struct LogFeed {
 
         // Keys must be stable, so a re-read file can never count a response twice.
         let id = message["id"] as? String ?? object["uuid"] as? String ?? String(timestamp.timeIntervalSince1970)
-        return UsageRecord(
+        return [UsageRecord(
             key: "claude:\(id):\(object["requestId"] as? String ?? "")",
             provider: .claude, account: nil, session: object["sessionId"] as? String,
             kind: .request, timestamp: timestamp, model: model, tokens: tokens,
             cost: Pricing.cost(model: model, tokens: tokens, fast: usage["speed"] as? String == "fast"),
             billed: nil, project: Projects.root(for: object["cwd"] as? String)
-        )
+        )]
     }
 
     // MARK: Codex
@@ -68,26 +69,26 @@ struct LogFeed {
         case "turn_context":
             if let model = payload["model"] as? String { state["model"] = model }
             if let directory = payload["cwd"] as? String { state["cwd"] = directory }
-            return nil
+            return []
 
         case "token_usage_record":
-            guard let usage = payload["usage"] as? [String: Any], let timestamp = Dates.parse(object["timestamp"]) else { return nil }
+            guard let usage = payload["usage"] as? [String: Any], let timestamp = Dates.parse(object["timestamp"]) else { return [] }
             let model = state["model"] ?? "gpt-5"
             let tokens = codexTokens(usage)
             let id = payload["response_id"] as? String ?? "\(session):\(object["ordinal"] ?? timestamp.timeIntervalSince1970)"
-            return UsageRecord(key: "codex:\(id)", provider: .codex, account: nil, session: payload["session_id"] as? String ?? session,
+            return [UsageRecord(key: "codex:\(id)", provider: .codex, account: nil, session: payload["session_id"] as? String ?? session,
                                kind: .request, timestamp: timestamp, model: model, tokens: tokens,
                                cost: Pricing.cost(model: model, tokens: tokens), billed: nil,
-                               project: Projects.root(for: state["cwd"]))
+                               project: Projects.root(for: state["cwd"]))]
 
         case "event_msg" where payload["type"] as? String == "token_count":
             guard let info = payload["info"] as? [String: Any],
                   let total = info["total_token_usage"] as? [String: Any],
-                  let timestamp = Dates.parse(object["timestamp"]) else { return nil }
+                  let timestamp = Dates.parse(object["timestamp"]) else { return [] }
             let runningTotal = Int(JSON.number(total["total_tokens"]) ?? 0)
             let previous = JSON.object(state["total"])
             let previousTotal = previous.flatMap { JSON.number($0["total_tokens"]) }.map(Int.init) ?? -1
-            guard runningTotal != previousTotal else { return nil }
+            guard runningTotal != previousTotal else { return [] }
             state["total"] = try? JSON.string(total)
 
             let usage: [String: Any]
@@ -101,13 +102,13 @@ struct LogFeed {
             }
             let model = state["model"] ?? "gpt-5"
             let tokens = codexTokens(usage)
-            return UsageRecord(key: "codex-total:\(session):\(runningTotal)", provider: .codex, account: nil, session: session,
+            return [UsageRecord(key: "codex-total:\(session):\(runningTotal)", provider: .codex, account: nil, session: session,
                                kind: .runningTotal, timestamp: timestamp, model: model, tokens: tokens,
                                cost: Pricing.cost(model: model, tokens: tokens), billed: nil,
-                               project: Projects.root(for: state["cwd"]))
+                               project: Projects.root(for: state["cwd"]))]
 
         default:
-            return nil
+            return []
         }
     }
 
@@ -144,7 +145,7 @@ struct LogFeed {
         guard object["type"] as? String == "gemini",
               let usage = object["tokens"] as? [String: Any],
               let model = object["model"] as? String,
-              let timestamp = Dates.parse(object["timestamp"]) else { return nil }
+              let timestamp = Dates.parse(object["timestamp"]) else { return [] }
 
         func count(_ key: String) -> Int { Int(JSON.number(usage[key]) ?? 0) }
         let cached = count("cached")
@@ -157,11 +158,11 @@ struct LogFeed {
 
         let session = state["session"] ?? file.deletingPathExtension().lastPathComponent
         let id = object["id"] as? String ?? String(timestamp.timeIntervalSince1970)
-        return UsageRecord(
+        return [UsageRecord(
             key: "gemini:\(session):\(id)", provider: .gemini, account: nil, session: session,
             kind: .request, timestamp: timestamp, model: model, tokens: tokens,
             cost: Pricing.cost(model: model, tokens: tokens), billed: nil
-        )
+        )]
     }
 
     // MARK: Pi
@@ -177,48 +178,48 @@ struct LogFeed {
         if type == "session" {
             if let session = object["id"] as? String { state["session"] = session }
             if let directory = object["cwd"] as? String { state["cwd"] = directory }
-            return nil
+            return []
         }
         if type == "model_change" {
             if let provider = object["provider"] as? String, let model = object["modelId"] as? String {
                 state["model"] = "\(provider)/\(model)"
             }
-            return nil
+            return []
         }
 
         let usage: [String: Any]
         var timestamp = Dates.parse(object["timestamp"])
         if type == "message" {
             guard let message = object["message"] as? [String: Any], message["role"] as? String == "assistant",
-                  let found = message["usage"] as? [String: Any] else { return nil }
+                  let found = message["usage"] as? [String: Any] else { return [] }
             usage = found
             if let provider = message["provider"] as? String, let model = message["model"] as? String {
                 state["model"] = "\(provider)/\(model)"
             }
             timestamp = Dates.parse(message["timestamp"]) ?? timestamp
         } else if type == "compaction" || type == "branch_summary" {
-            guard let found = object["usage"] as? [String: Any] else { return nil }
+            guard let found = object["usage"] as? [String: Any] else { return [] }
             usage = found
         } else {
-            return nil
+            return []
         }
 
         guard let id = object["id"] as? String,
               let timestamp,
-              let session = state["session"] ?? piSession(file) else { return nil }
+              let session = state["session"] ?? piSession(file) else { return [] }
         func count(_ key: String) -> Int { Int(JSON.number(usage[key]) ?? 0) }
         let tokens = TokenCounts(input: count("input"), cacheWrite: count("cacheWrite"),
                                  cacheRead: count("cacheRead"), output: count("output"))
         let logged = JSON.number((usage["cost"] as? [String: Any])?["total"]) ?? 0
-        guard tokens.total > 0 || logged > 0 else { return nil }
+        guard tokens.total > 0 || logged > 0 else { return [] }
         let model = state["model"] ?? "unknown/unknown"
         let stamp = object["timestamp"] as? String ?? String(timestamp.timeIntervalSince1970)
-        return UsageRecord(
+        return [UsageRecord(
             key: "pi:\(id):\(stamp)", provider: .pi, account: nil, session: session,
             kind: .request, timestamp: timestamp, model: model, tokens: tokens,
             cost: logged > 0 ? logged : Pricing.cost(model: model, tokens: tokens), billed: nil,
             project: Projects.root(for: state["cwd"])
-        )
+        )]
     }
 
     private static func piSession(_ file: URL) -> String? {

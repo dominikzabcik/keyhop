@@ -157,7 +157,8 @@ final class TrayContractTests: XCTestCase {
         for range in InsightsRange.presets + [.all(since: now.addingTimeInterval(-400 * 86_400))] {
             XCTAssertGreaterThan(SampleData.digest(range: range, accounts: accounts, now: now).total.requests, 0, range.title)
         }
-        XCTAssertEqual(Set(accounts.map(\.provider)), Set(Provider.allCases))
+        // Sample accounts cover every switchable tool; measured-only tools never have accounts.
+        XCTAssertEqual(Set(accounts.map(\.provider)), Set(Provider.switchable))
         XCTAssertTrue(accounts.allSatisfy { $0.email.hasSuffix(".dev") })
         let overview = SampleData.overview(now: now)
         XCTAssertNil(overview.today[accounts.first { $0.provider == .copilot }!.id])

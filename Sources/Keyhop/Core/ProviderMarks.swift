@@ -14,6 +14,8 @@ enum ProviderMarks {
         case .copilot: copilot
         case .windsurf: windsurf
         case .codebuff: codebuff
+        // Measured-only tools share a meter mark until the V2 design pass gives each its own.
+        case .amp, .goose, .qwen, .kimi, .grok, .kilo, .openclaw: measured
         }
     }
 
@@ -39,4 +41,7 @@ enum ProviderMarks {
 
     /// A compact C-shaped code block, drawn locally because Codebuff is not in Simple Icons.
     private static let codebuff = "M3 3h18v5h-5V7H8v10h8v-1h5v5H3V3Zm9 6h9v6h-9V9Z"
+
+    /// Three rising bars: a meter, drawn locally for tools Keyhop measures but doesn't switch.
+    private static let measured = "M3 21h4V11H3v10Zm7 0h4V3h-4v18Zm7 0h4v-7h-4v7Z"
 }

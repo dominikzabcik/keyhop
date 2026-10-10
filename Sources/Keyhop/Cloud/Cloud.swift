@@ -136,6 +136,12 @@ struct CloudLink: Codable, Equatable {
 }
 
 enum CloudSync {
+    /// The tools keyhop.app's daily_usage CHECK accepts today. Measured-only tools stay local
+    /// until the widening migration is deployed; one unknown tool would fail the whole upload.
+    static let cloudAcceptedTools: Set<String> = [
+        "claude", "cursor", "codex", "gemini", "opencode", "pi", "copilot", "windsurf", "codebuff",
+    ]
+
     /// Daily totals per tool, in this computer's local days.
     static func days(tracker: TrackerEngine, since: Date, now: Date = Date()) async throws -> [CloudDay] {
         let interval = DateInterval(start: since, end: max(since, now).addingTimeInterval(60))
@@ -160,6 +166,7 @@ enum CloudSync {
                 return CloudDay(day: String(parts[0]), tool: String(parts[1]), tokens: sum.tokens,
                                 cost: (sum.cost * 100).rounded() / 100, requests: sum.requests)
             }
+            .filter { cloudAcceptedTools.contains($0.tool) }
             .sorted { ($0.day, $0.tool) < ($1.day, $1.tool) }
     }
 

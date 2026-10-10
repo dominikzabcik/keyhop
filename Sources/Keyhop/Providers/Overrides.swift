@@ -115,7 +115,7 @@ enum Overrides {
 
     /// Set, and not spelled "off": flags like CLAUDE_CODE_USE_BEDROCK treat 0/false as absent.
     private static func isOn(_ value: String?) -> Bool {
-        guard isSet(value), let value else { return false }
+        guard let value, isSet(value) else { return false }
         return !["0", "false", "no"].contains(value.lowercased())
     }
 

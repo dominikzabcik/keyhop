@@ -1,0 +1,478 @@
+import Foundation
+
+/// Event handling for every control, and the start-up sequence.
+extension DashboardPage {
+    static let scriptActions = ##"""
+  // MARK: Actions
+
+  const editing = () => ui.editing || ui.confirming || ui.rangeOpen || ui.menu || ui.homeMenu || palette || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
+
+  // `morph` cross-fades the page into its new state once the call is done, for changes that move
+  // things around, like switching which login is in use.
+  async function act(button, call, label, morph = false) {
+    const key = button ? pendingKey(button) : null;
+    if (key) { ui.pending.set(key, label || ""); applyPending(); }
+    try {
+      const running = call();
+      watchActivity();
+      const result = await running;
+      if (result && result.message) toast(result.note ? `${result.message} ${result.note}` : result.message);
+      await loadState();
+      await loadSection();
+    } catch (error) {
+      toast(error.message, true);
+      if (data.state) { data.state.refreshing = false; data.state.activity = null; }
+    } finally {
+      if (key) ui.pending.delete(key);
+      if (morph) transition(render); else render();
+      watchActivity();
+    }
+  }
+
+  async function showDay() {
+    ui.boardView = "day";
+    ui.boardDate = "";
+    data.day = null;
+    if (ui.section !== "teams") { await go("teams"); return; }
+    render();
+    await loadSection();
+    render();
+  }
+
+  async function go(section) {
+    ui.section = section;
+    data.boardError = null;
+    data.dayError = null;
+    history.replaceState(null, "", "#" + section);
+    transition(() => { render(); $("#main").scrollTop = 0; });
+    await loadSection();
+    render();
+  }
+
+  document.addEventListener("input", (event) => {
+    const hop = event.target.closest(".hcomposer input");
+    if (hop) ui.homeQuery = hop.value;
+    if (!palette || !event.target.closest("#palette")) return;
+    palette.query = event.target.value;
+    palette.index = 0;
+    drawPalette();
+  });
+
+  document.addEventListener("click", async (event) => {
+    if (event.target.closest("[data-palette-close]")) { closePalette(); return; }
+    const option = event.target.closest("[data-palette]");
+    if (option) { runPalette(+option.dataset.palette); return; }
+    const link = event.target.closest("#nav a, .side-foot a[data-section]");
+    if (link) {
+      event.preventDefault();
+      const menuWas = ui.homeMenu;
+      ui.homeMenu = null;
+      if (link.dataset.section !== ui.section) go(link.dataset.section);
+      else if (menuWas) render();
+      return;
+    }
+    const closeHomeMenu = !!(ui.homeMenu && !event.target.closest(".hchip-wrap"));
+    if (closeHomeMenu) ui.homeMenu = null;
+    // A click anywhere outside the open range menu closes it.
+    if (ui.rangeOpen && !event.target.closest(".range-pick")) { ui.rangeOpen = false; render(); }
+    if (ui.menu && !event.target.closest(".menu-anchor")) { ui.menu = null; render(); }
+    const el = event.target.closest("[data-action]");
+    if (!el || el.disabled || el.tagName === "SELECT") { if (closeHomeMenu) render(); return; }
+    const id = el.dataset.id;
+    switch (el.dataset.action) {
+      case "palette": openPalette(); break;
+      case "goto": go(el.dataset.section); break;
+      case "fold": {
+        const tool = (data.state?.status.tools || []).find((t) => t.id === el.dataset.tool);
+        if (tool) ui.treeOpen[tool.id] = !treeIsOpen(tool);
+        renderChrome();
+        break;
+      }
+      case "home-menu":
+        ui.homeMenu = ui.homeMenu === el.dataset.menu ? null : el.dataset.menu;
+        render();
+        break;
+      case "home-tool": {
+        ui.homeTool = el.dataset.id;
+        ui.homeMenu = null;
+        const picked = (data.state?.status.tools || []).find((t) => t.id === ui.homeTool);
+        const room = (picked?.accounts || []).filter((a) => !a.error).sort((a, b) => maxUsed(a) - maxUsed(b))[0];
+        ui.homeAccount = (room || picked?.accounts?.[0])?.id || "";
+        render();
+        break;
+      }
+      case "home-account":
+        ui.homeAccount = el.dataset.id;
+        ui.homeMenu = null;
+        render();
+        break;
+      case "skip-content": $("#main")?.focus(); break;
+      case "settings-pane": ui.settingsPane = el.dataset.value; render(); break;
+      case "refresh":
+        if (data.state?.refreshing) break;
+        act(null, () => { data.state.refreshing = true; renderActivity(); return api("/api/refresh", {}); });
+        break;
+      case "switch": act(el, () => api("/api/switch", { id }), "Switching", true); break;
+      case "account-menu": ui.menu = ui.menu === id ? null : id; ui.confirming = null; render(); break;
+      case "add": act(el, () => api("/api/add", { tool: el.dataset.tool }), "Signing out"); break;
+      case "add-stop": act(el, () => api("/api/add/stop", { tool: el.dataset.tool }), "Stopping"); break;
+      case "edit": ui.editing = id; ui.confirming = null; ui.menu = null; render(); $("form[data-form=rename] input")?.focus(); break;
+      case "cancel-edit": ui.editing = null; render(); break;
+      case "confirm-remove": ui.confirming = id; ui.editing = null; ui.menu = null; render(); break;
+      case "cancel-remove": ui.confirming = null; render(); break;
+      case "remove": act(el, () => api("/api/remove", { id }).finally(() => { ui.confirming = null; }), "Removing"); break;
+      case "range-menu":
+        ui.rangeOpen = !ui.rangeOpen;
+        render();
+        if (ui.rangeOpen) $(".range-list [aria-checked=true]")?.focus();
+        break;
+      case "all-periods": ui.allPeriods = true; render(); break;
+      case "series": {
+        const hidden = ui.hidden[ui.group] || (ui.hidden[ui.group] = []);
+        const at = hidden.indexOf(el.dataset.value);
+        const total = chartGroup(data.usage[`${ui.range}:${ui.tool}`] || {}, ui.group).series?.length || 0;
+        if (at >= 0) hidden.splice(at, 1);
+        else if (hidden.length < total - 1) hidden.push(el.dataset.value); // At least one part stays.
+        transition(render);
+        break;
+      }
+      case "day": showUsage({ range: `${el.dataset.value}..${el.dataset.value}` }); break;
+      case "breakdown": ui.breakdown = el.dataset.value; ui.allPeriods = false; render(); break;
+      case "range": case "metric": case "group":
+        ui[el.dataset.action] = el.dataset.value;
+        if (el.dataset.action === "range") ui.rangeOpen = false;
+        if (el.dataset.action === "group") transition(render); else render();
+        if (el.dataset.action === "range") { await loadSection(); render(); }
+        break;
+      case "filter-tool":
+        if (!el.dataset.value || el.dataset.value === ui.tool) break;
+        ui.tool = el.dataset.value;
+        render();
+        await loadSection();
+        render();
+        break;
+      case "export-csv": {
+        const usage = data.usage[`${ui.range}:${ui.tool}`];
+        if (usage) exportCSV(usage);
+        break;
+      }
+      case "work-on": act(el, () => api("/api/work", { enabled: true }), "Turning on"); break;
+      case "work-off": act(el, () => api("/api/work", { enabled: false }), "Stopping"); break;
+      case "work-subjects-on": act(el, () => api("/api/work", { shareSubjects: true }), "Sharing"); break;
+      case "work-subjects-off": act(el, () => api("/api/work", { shareSubjects: false }), "Keeping here"); break;
+      case "work-remove": act(el, () => api("/api/work", { remove: el.dataset.path }), "Removing"); break;
+      case "work-index": act(el, () => api("/api/work", { index: true }), "Reading"); break;
+      case "edit-budget": ui.budgetEdit = el.dataset.scope; render(); $("form[data-form=budget] input[name=amount]")?.focus(); break;
+      case "cancel-budget": ui.budgetEdit = null; render(); break;
+      case "delete-budget": act(el, () => api("/api/budget", { scope: el.dataset.scope === "all" ? "all" : el.dataset.scope.replace("account:", ""), amount: null })); break;
+      case "check-update": await loadUpdate(true); break;
+      case "install-update": act(el, () => api("/api/update", {}), "Installing"); break;
+      case "cloud-link": act(el, () => api("/api/cloud/link", {}), "Opening GitHub"); break;
+      case "cloud-sync": act(el, () => api("/api/cloud/sync", {}), "Syncing"); break;
+      case "streak-claim": act(el, () => api("/api/cloud/streak", {}), "Claiming"); break;
+      case "cloud-unlink": data.board = null; act(el, () => api("/api/cloud/unlink", {}), "Unlinking"); break;
+      case "cloud-limits-on": act(el, () => api("/api/cloud/limits", { on: true }), "Turning on"); break;
+      case "cloud-limits-off": act(el, () => api("/api/cloud/limits", { on: false }), "Stopping"); break;
+      case "appearance": setAppearance({ [el.dataset.key]: el.dataset.value }); break;
+      case "appearance-clear": setAppearance({ image: "" }); break;
+      case "theme-toggle": setAppearance({ theme: ui.theme === "day" ? "night" : "day" }); break;
+      case "board-season":
+        if (el.dataset.value === ui.boardSeason) break;
+        ui.boardSeason = el.dataset.value;
+        data.board = null;
+        render();
+        await loadSection();
+        render();
+        break;
+      case "board-period": case "board-metric":
+        ui[el.dataset.action === "board-period" ? "boardPeriod" : "boardMetric"] = el.dataset.value;
+        data.board = null;
+        render();
+        await loadSection();
+        render();
+        break;
+      case "board-view":
+        if (el.dataset.value === ui.boardView) break;
+        ui.boardView = el.dataset.value;
+        if (ui.boardView === "day") ui.boardDate = "";
+        data.day = null;
+        render();
+        await loadSection();
+        render();
+        break;
+      case "day-step":
+        ui.boardDate = el.dataset.value;
+        data.day = null;
+        render();
+        await loadSection();
+        render();
+        break;
+      case "board-pick":
+        ui.boardTeam = el.dataset.value;
+        ui.boardView = "day";
+        ui.boardDate = "";
+        data.invite = null;
+        data.day = null;
+        if (ui.section !== "teams") { await go("teams"); break; }
+        render();
+        await loadSection();
+        render();
+        break;
+      case "team-invite":
+        act(el, async () => {
+          const result = await api("/api/cloud/team", { invite: ui.boardTeam });
+          data.invite = result.url;
+          return result;
+        }, "Creating link");
+        break;
+      case "team-revoke":
+        data.invite = null;
+        act(el, () => api("/api/cloud/team", { revoke: ui.boardTeam }), "Turning off");
+        break;
+      case "team-leave": {
+        const slug = ui.boardTeam;
+        ui.boardTeam = "";
+        data.invite = null;
+        data.board = null;
+        data.day = null;
+        act(el, () => api("/api/cloud/team", { leave: slug }), "Leaving");
+        break;
+      }
+      case "team-remove":
+        act(el, () => api("/api/cloud/team", { slug: ui.boardTeam, member: el.dataset.login }), "Removing");
+        break;
+      case "app-revoke":
+        act(el, async () => {
+          const result = await api("/api/cloud/apps", { id: el.dataset.id });
+          data.apps = null;
+          if (result.unlinked) { data.board = null; data.profile = null; }
+          return result;
+        }, "Unlinking");
+        break;
+    }
+    if (closeHomeMenu && document.querySelector(".hpop")) render();
+  });
+
+  // Window opacity and blur follow their sliders while they move, and save when let go.
+  document.addEventListener("input", (event) => {
+    const slider = event.target.closest('[data-appearance="glass"], [data-appearance="blur"]');
+    if (!slider) return;
+    const look = data.state.appearance;
+    if (slider.dataset.appearance === "glass") applyGlass(Number(slider.value) / 100, look.blur);
+    else applyGlass(look.glass, Number(slider.value));
+  });
+
+  document.addEventListener("change", async (event) => {
+    const publish = event.target.closest("[data-action=team-public]");
+    if (publish) {
+      act(publish, () => api("/api/cloud/team", { slug: ui.boardTeam, public: publish.checked }), publish.checked ? "Publishing" : "Hiding");
+      return;
+    }
+    const look = event.target.closest("[data-appearance]");
+    if (look) {
+      if (look.dataset.appearance === "opacity") { setAppearance({ opacity: Number(look.value) / 100 }); return; }
+      if (look.dataset.appearance === "glass") { setAppearance({ glass: Number(look.value) / 100 }); return; }
+      if (look.dataset.appearance === "blur") { setAppearance({ blur: Number(look.value) }); return; }
+      const file = look.files && look.files[0];
+      look.value = "";
+      if (!file) return;
+      try { setAppearance({ image: await shrinkPicture(file) }); } catch (error) { toast(error.message, true); }
+      return;
+    }
+    const team = event.target.closest("select[data-action=board-team]");
+    if (team) {
+      ui.boardTeam = team.value;
+      if (!team.value) ui.boardView = "ranks";
+      team.blur();
+      data.board = null;
+      data.day = null;
+      render();
+      await loadSection();
+      render();
+      return;
+    }
+    const select = event.target.closest("select[data-action=tool]");
+    if (!select) return;
+    ui.tool = select.value;
+    select.blur();
+    render();
+    await loadSection();
+    render();
+  });
+
+  document.addEventListener("submit", (event) => {
+    const form = event.target;
+    event.preventDefault();
+    if (form.dataset.form === "home-hop") { homeHop(form.elements.query.value); return; }
+    const button = form.querySelector("button:not([type=button])");
+    if (form.dataset.form === "rename") {
+      const id = form.dataset.id, name = form.elements.name.value;
+      ui.editing = null;
+      act(button, () => api("/api/rename", { id, name }));
+    }
+    if (form.dataset.form === "budget") {
+      const amount = parseFloat(String(form.elements.amount.value).replace(/[$,\s]/g, ""));
+      if (!(amount > 0)) { toast("Type an amount in dollars, like 200.", true); return; }
+      const scope = form.elements.scope.value, period = form.elements.period.value;
+      ui.budgetEdit = null;
+      act(button, () => api("/api/budget", { scope, amount, period }));
+    }
+    if (form.dataset.form === "range") {
+      const from = form.elements.from.value, to = form.elements.to.value;
+      if (!from || !to) { toast("Pick both days.", true); return; }
+      ui.range = from <= to ? `${from}..${to}` : `${to}..${from}`;
+      ui.rangeOpen = false;
+      render();
+      loadSection().then(render);
+    }
+    if (form.dataset.form === "profile") {
+      act(button, async () => {
+        const result = await api("/api/cloud/profile", {
+          displayName: form.elements.displayName.value,
+          bio: form.elements.bio.value,
+          link: form.elements.link.value,
+          public: form.elements.public.checked,
+        });
+        data.profile = null;
+        return result;
+      }, "Saving");
+    }
+    if (form.dataset.form === "team-create") {
+      const name = String(form.elements.name.value || "").trim();
+      if (name.length < 2) { toast("Give the team a name of at least 2 characters.", true); return; }
+      act(button, async () => {
+        const result = await api("/api/cloud/team", { name });
+        if (result.slug) { ui.boardTeam = result.slug; ui.boardView = "day"; ui.boardDate = ""; data.day = null; data.board = null; }
+        return result;
+      }, "Creating");
+    }
+    if (form.dataset.form === "team-join") {
+      const code = String(form.elements.code.value || "").trim();
+      if (!code) { toast("Paste an invite link or its code.", true); return; }
+      act(button, async () => {
+        const result = await api("/api/cloud/team", { code });
+        if (result.slug) { ui.boardTeam = result.slug; ui.boardView = "day"; ui.boardDate = ""; data.day = null; data.board = null; }
+        return result;
+      }, "Joining");
+    }
+    if (form.dataset.form === "team-delete") {
+      const slug = ui.boardTeam;
+      const confirm = String(form.elements.confirm.value || "").trim();
+      if (confirm.toLowerCase() !== slug.toLowerCase()) { toast(`Type ${slug} to delete this team.`, true); return; }
+      ui.boardTeam = "";
+      data.invite = null;
+      data.board = null;
+      data.day = null;
+      act(button, () => api("/api/cloud/team", { delete: slug, confirm }), "Deleting");
+    }
+    if (form.dataset.form === "account-delete") {
+      const confirm = String(form.elements.confirm.value || "").trim();
+      const login = data.profile?.login || data.state?.cloud?.login || "";
+      if (confirm.toLowerCase() !== login.toLowerCase()) { toast(`Type ${login} to delete your account.`, true); return; }
+      act(button, async () => {
+        const result = await api("/api/cloud/account", { confirm });
+        data.board = null;
+        data.profile = null;
+        data.apps = null;
+        return result;
+      }, "Deleting");
+    }
+    if (form.dataset.form === "work-folder") {
+      const folder = String(form.elements.folder.value || "").trim();
+      if (!folder) { toast("Type a folder to scan, like ~/Projects.", true); return; }
+      act(button, () => api("/api/work", { add: folder }));
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      if (palette) closePalette(); else openPalette();
+      return;
+    }
+    if (palette) {
+      const count = paletteMatches().length;
+      if (event.key === "Escape") { event.preventDefault(); closePalette(); return; }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        palette.index = (palette.index + (event.key === "ArrowDown" ? 1 : -1) + count) % Math.max(1, count);
+        drawPalette();
+        return;
+      }
+      if (event.key === "Enter") { event.preventDefault(); runPalette(palette.index); return; }
+      return;
+    }
+    // Number keys jump between sections, unless someone is typing.
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "");
+    if (!typing && !event.metaKey && !event.ctrlKey && !event.altKey && /^[1-9]$/.test(event.key)) {
+      const section = shownSections()[+event.key - 1];
+      if (section && section !== ui.section) { event.preventDefault(); go(section); return; }
+    }
+    if (event.key === "Escape" && ui.homeMenu) { ui.homeMenu = null; render(); return; }
+    if (event.key === "Escape" && ui.menu) { ui.menu = null; render(); return; }
+    if (event.key === "Escape" && ui.rangeOpen) { ui.rangeOpen = false; render(); $(".range-button")?.focus(); return; }
+    if (event.key === "Escape" && (ui.editing || ui.confirming || ui.budgetEdit)) { ui.editing = ui.confirming = ui.budgetEdit = null; render(); }
+  });
+  const followVisibility = () => document.documentElement.toggleAttribute("data-away", document.hidden);
+  async function resumeRefresh() {
+    followVisibility();
+    if (document.hidden || isStatic || !data.state) return;
+    try {
+      await loadState();
+      if (ui.section === "overview" || ui.section === "usage" || ui.section === "limits") await loadSection();
+      if (!editing()) render(); else renderSidebar();
+    } catch (error) {
+      ui.offline = error.message;
+      if (!editing()) render();
+    }
+  }
+  document.addEventListener("visibilitychange", resumeRefresh);
+  followVisibility();
+  addEventListener("hashchange", () => {
+    const section = location.hash.slice(1);
+    if (SECTIONS.includes(section) && section !== ui.section) go(section);
+  });
+  let resizeTimer;
+  addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (!editing()) render(); }, 150); });
+
+  // MARK: Start
+
+  async function start() {
+    if (isStatic) { render(); applyBackdrop(); return; }
+    if (!token) {
+      $("#main").innerHTML = `<div class="page"><div class="card"><p class="empty">This window isn't connected to Keyhop. Open it from the tray, or run keyhop dashboard.</p></div></div>`;
+      return;
+    }
+    try {
+      await loadState();
+      render();
+      watchActivity();
+      await loadSection();
+      render();
+    } catch (error) {
+      $("#main").innerHTML = `<div class="page"><div class="notice">${icon("alert")}<div><p>${esc(error.message)}</p></div></div></div>`;
+      return;
+    }
+    setInterval(async () => {
+      if (document.hidden) return;
+      try {
+        await loadState();
+        if (ui.section === "overview" || ui.section === "usage" || ui.section === "limits") await loadSection();
+        if (!editing()) render(); else renderSidebar();
+        watchActivity();
+      } catch (error) {
+        ui.offline = error.message;
+        if (!editing()) render();
+      }
+    }, 20000);
+  }
+  if (document.documentElement.classList.contains("mac-window")) {
+    addEventListener("mousedown", (event) => {
+      if (event.button !== 0 || !event.target.closest(".brand, .topbar")) return;
+      if (event.target.closest("button, a, input, select, textarea, label")) return;
+      window.webkit?.messageHandlers?.keyhopWindow?.postMessage(event.detail === 2 ? "zoom" : "drag");
+    });
+  }
+  start();
+"""##
+}

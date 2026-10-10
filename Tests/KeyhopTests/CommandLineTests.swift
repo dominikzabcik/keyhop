@@ -77,6 +77,22 @@ final class AlertRulesTests: XCTestCase {
         XCTAssertTrue(alerts.first?.title.contains("95%") ?? false)
     }
 
+    func testAutoHopPicksTheLimitAlertsRecommendedAccount() {
+        let inUse = account("a@x.dev"), roomy = account("c@x.dev")
+        let alerts = AlertRules.evaluate(accounts: [inUse, roomy], active: [.claude: inUse.id],
+                                         usage: [inUse.id: reading(95), roomy.id: reading(20)],
+                                         forecasts: [:], budgets: [], budgetSpend: [:], now: now)
+        let hop = AlertRules.autoHop(from: alerts, accounts: [inUse, roomy])
+        XCTAssertEqual(hop?.to.id, roomy.id)
+        XCTAssertEqual(hop?.key, alerts.first?.key)
+        // A budget alert alone never hops.
+        let budget = Budget(scope: Budget.everything, amount: 10, period: .month)
+        let budgetOnly = AlertRules.evaluate(accounts: [inUse], active: [:], usage: [:], forecasts: [:],
+                                             budgets: [budget], budgetSpend: [budget.scope: 12], now: now)
+        XCTAssertFalse(budgetOnly.isEmpty)
+        XCTAssertNil(AlertRules.autoHop(from: budgetOnly, accounts: [inUse]))
+    }
+
     func testSmartHopBalancesLimitRoomForecastsAndBudgets() throws {
         let inUse = account("a@x.dev"), cheap = account("b@x.dev"), risky = account("c@x.dev")
         let accountBudget = Budget(scope: Budget.scope(for: cheap.id), amount: 100, period: .month)

@@ -675,6 +675,7 @@ private struct MenuFooter: View {
     @EnvironmentObject private var tracker: UsageTracker
     @ObservedObject private var updater = Updater.shared
     @AppStorage("autoRefresh") private var autoRefresh = true
+    @AppStorage("autoHop") private var autoHop = false
     @AppStorage("checkForUpdates") private var checkForUpdates = true
     @AppStorage("autoInstallUpdates") private var autoInstallUpdates = true
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -742,6 +743,8 @@ private struct MenuFooter: View {
                 Button("Check for Updates…") { Task { await updater.check(userInitiated: true) } }
                 Divider()
                 Toggle("Check usage every 5 minutes", isOn: $autoRefresh)
+                Toggle("Hop before a limit automatically", isOn: $autoHop)
+                    .disabled(!autoRefresh)
                 Toggle("Check for updates automatically", isOn: $checkForUpdates)
                 Toggle("Install updates automatically", isOn: $autoInstallUpdates)
                     .disabled(!checkForUpdates)

@@ -25,6 +25,8 @@ final class UsageTracker: ObservableObject {
     private var watcher: LogWatch?
     private var watchedPaths: [String] = []
     private var livePending = false
+    /// Limit alerts that already caused an automatic hop, so each window hops once.
+    private var autoHopped: Set<String> = []
 
     init() {
         let url = Platform.dataDirectory.appendingPathComponent("usage.sqlite")
@@ -163,8 +165,20 @@ final class UsageTracker: ObservableObject {
         }
         revision += 1
 
-        let alerts = AlertRules.evaluate(accounts: store.accounts, active: store.active, usage: store.usage, forecasts: forecasts,
+        var alerts = AlertRules.evaluate(accounts: store.accounts, active: store.active, usage: store.usage, forecasts: forecasts,
                                          budgets: budgets, budgetSpend: budgetSpend, now: now)
+        // With hop-before-the-limit on, the hop replaces the warning: the account with room takes
+        // over, and the notification says what happened instead of asking.
+        if UserDefaults.standard.bool(forKey: "autoHop"), store.switching == nil,
+           let hop = AlertRules.autoHop(from: alerts, accounts: store.accounts), !autoHopped.contains(hop.key) {
+            autoHopped.insert(hop.key)
+            if autoHopped.count > 200 { autoHopped.removeAll() }
+            alerts.removeAll { $0.key == hop.key }
+            store.switchTo(hop.to)
+            Alerts.shared.post(key: "autohop:\(hop.key)",
+                               title: "Hopped \(hop.to.provider.name) to \(hop.to.displayName)",
+                               body: "The limit was close, so Keyhop moved over while there was room.")
+        }
         for alert in alerts {
             Alerts.shared.post(key: alert.key, title: alert.title, body: alert.body, switchTo: alert.switchTo)
         }

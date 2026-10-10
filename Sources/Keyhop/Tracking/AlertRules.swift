@@ -16,6 +16,17 @@ enum AlertRules {
         "\(account.uuidString)|\(label)"
     }
 
+    /// The hop to make for someone who turned hop-before-the-limit on: the first limit alert
+    /// that names an account with room. The alert's key comes along so each window triggers at
+    /// most one hop.
+    static func autoHop(from alerts: [AlertCandidate], accounts: [Account]) -> (key: String, to: Account)? {
+        for alert in alerts where alert.key.hasPrefix("limit:") {
+            guard let id = alert.switchTo, let account = accounts.first(where: { $0.id == id }) else { continue }
+            return (alert.key, account)
+        }
+        return nil
+    }
+
     static func evaluate(accounts: [Account], active: [Provider: UUID], usage: [UUID: UsageSnapshot],
                          forecasts: [String: Date], budgets: [Budget], budgetSpend: [String: Double],
                          now: Date) -> [AlertCandidate] {

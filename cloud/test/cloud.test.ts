@@ -1626,6 +1626,12 @@ describe("live layer", () => {
     const earlier = (await (await call(`/api/teams/${slug}/day?date=${addDays(day, -1)}`, { headers: { authorization: `Bearer ${token}` } })).json()) as { people: { login: string; live: boolean }[] };
     expect(earlier.people.find((person) => person.login === "liv")?.live).toBe(false);
 
+    // Turning live sharing off takes the readings down at once.
+    expect((await call("/api/live", { method: "DELETE", headers: { authorization: `Bearer ${token}` } })).status).toBe(204);
+    const gone = (await (await call(`/api/teams/${slug}/day`, { headers: { authorization: `Bearer ${token}` } })).json()) as { people: { login: string; tokens: number; live: boolean }[] };
+    expect(gone.people.find((person) => person.login === "liv")).toMatchObject({ tokens: 1000, live: false });
+    await call("/api/live", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ days: [{ day, tool: "claude", tokens: 4000, cost: 2, requests: 40 }, { day, tool: "codex", tokens: 500, cost: 0.1, requests: 5 }] }) });
+
     // The sweep drops what nobody refreshed, and a stale reading no longer counts.
     expect(await sweepLive(env.DB, Math.floor(Date.now() / 1000) + LIVE_TTL_SECONDS + 1)).toBe(2);
     const after = (await (await call(`/api/teams/${slug}/day`, { headers: { authorization: `Bearer ${token}` } })).json()) as { people: { login: string; tokens: number; live: boolean }[] };

@@ -86,3 +86,9 @@ live.post("/api/live", apiUser, apiWriter, uploadLimit, async (c) => {
   if (statements.length > 0) await c.env.DB.batch(statements);
   return c.json({ saved: statements.length, fresh: LIVE_FRESH_SECONDS });
 });
+
+/** Takes today's readings down, for when live sharing is turned off. */
+live.delete("/api/live", apiUser, apiWriter, async (c) => {
+  await c.env.DB.prepare("DELETE FROM live_usage WHERE user_id = ?").bind(c.get("user")!.id).run();
+  return c.body(null, 204);
+});

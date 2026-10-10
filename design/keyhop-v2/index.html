@@ -1,0 +1,1191 @@
+<!doctype html>
+<!-- Local Keyhop v2 sketch. Sample logins only. Not wired into the Mac window. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keyhop</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #101010;
+    --sidebar: #141414;
+    --card: #1b1b1b;
+    --search: rgba(255, 255, 255, .045);
+    --text: #ececec;
+    --muted: #9a9a9a;
+    --subtle: #6f6f6f;
+    --side: #8d8d8d;
+    --border: rgba(255, 255, 255, .08);
+    --accent: rgba(255, 255, 255, .06);
+    --accent-2: rgba(255, 255, 255, .1);
+    --track: rgba(255, 255, 255, .08);
+    --ink: #f2f2f2;
+    --pace: rgba(255, 255, 255, .72);
+    --kbd: rgba(255, 255, 255, .04);
+    --warn: #e3a64f;
+    --warn-ink: #f0c27a;
+    --good: #5cc98a;
+    --bad: #ee7a69;
+    --info: #7eb0f2;
+    --shadow: 0 18px 50px rgba(0, 0, 0, .35);
+    --veil: radial-gradient(ellipse 72% 58% at 50% 42%, rgba(0, 0, 0, .38), transparent 70%);
+    --headline-shadow: 0 1px 18px rgba(0, 0, 0, .55);
+  }
+  [data-theme="day"] {
+    color-scheme: light;
+    --bg: #f4f4f1;
+    --sidebar: #efefec;
+    --card: #fff;
+    --search: #fff;
+    --text: #1c1c1c;
+    --muted: #5f5f5a;
+    --subtle: #8a8a84;
+    --side: #5c5c57;
+    --border: rgba(0, 0, 0, .08);
+    --accent: rgba(0, 0, 0, .045);
+    --accent-2: rgba(0, 0, 0, .08);
+    --track: rgba(0, 0, 0, .08);
+    --ink: #1c1c1c;
+    --pace: rgba(0, 0, 0, .45);
+    --kbd: #fff;
+    --warn: #b86e12;
+    --warn-ink: #9a5b0c;
+    --good: #1f8a4c;
+    --bad: #c44b3c;
+    --info: #2f6fbe;
+    --shadow: 0 16px 40px rgba(40, 36, 28, .12);
+    --veil: radial-gradient(ellipse 70% 56% at 50% 42%, rgba(255, 255, 255, .42), transparent 68%);
+    --headline-shadow: 0 1px 14px rgba(255, 255, 255, .75);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--sidebar);
+    color: var(--text);
+    font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  input, .selectable { user-select: text; }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--accent-2); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
+
+  #app {
+    height: 100%;
+    display: grid;
+    grid-template-columns: 252px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 26px;
+    color: var(--text);
+  }
+  #side {
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+  }
+  #stage { position: relative; min-width: 0; min-height: 0; background: var(--bg); }
+  #field, #veil { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #field { display: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+  #veil { display: none; z-index: 1; background: var(--veil); }
+  #app[data-view="home"] #field, #app[data-view="home"] #veil { display: block; }
+  #main { position: relative; z-index: 2; height: 100%; overflow: auto; }
+  #status {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 12px;
+    border-top: 1px solid var(--border);
+    background: var(--sidebar);
+    color: var(--muted);
+    font-size: 11.5px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  #status button {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 0; background: transparent; color: inherit; padding: 0; height: 26px;
+  }
+  #status button:hover { color: var(--text); }
+  #status .grow { flex: 1; }
+  .sample {
+    border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; height: 16px;
+    display: inline-flex; align-items: center; color: var(--subtle); font-size: 10.5px;
+  }
+
+  .brand { display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 14px; }
+  .brand b { font-size: 13.5px; font-weight: 620; letter-spacing: -.01em; }
+  .mark { width: 15px; height: 15px; flex: none; }
+
+  .hop-btn, .nav-item, .tool-row, .acct-row, .foot-btn {
+    display: flex; align-items: center; gap: 8px; width: calc(100% - 16px); margin: 0 8px;
+    border: 0; background: transparent; border-radius: 8px; color: var(--side); text-align: left;
+  }
+  .hop-btn {
+    height: 32px; padding: 0 8px 0 10px; margin-bottom: 6px;
+    border: 1px solid var(--border); background: var(--search); color: var(--muted);
+  }
+  .hop-btn:hover, .nav-item:hover, .tool-row:hover, .acct-row:hover, .foot-btn:hover { background: var(--accent); color: var(--text); }
+  .hop-btn kbd { margin-left: auto; }
+  kbd {
+    display: inline-flex; align-items: center; height: 18px; padding: 0 5px;
+    border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px;
+    background: var(--kbd); color: var(--subtle); font: 11px/1 ui-sans-serif, system-ui, sans-serif;
+  }
+  .nav { display: grid; gap: 1px; padding: 4px 0 8px; }
+  .nav-item, .foot-btn { height: 30px; padding: 0 8px; }
+  .nav-item.on, .acct-row.on, .foot-btn.on { background: var(--accent-2); color: var(--text); }
+  .nav-item .count {
+    margin-left: auto; min-width: 16px; height: 16px; padding: 0 5px;
+    border-radius: 99px; background: var(--warn); color: #1c1408;
+    font-size: 11px; font-weight: 650; display: inline-flex; align-items: center; justify-content: center;
+  }
+  [data-theme="day"] .nav-item .count { color: #fff; }
+  .col h2 .n { margin-left: auto; color: var(--subtle); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .ico { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .side-label { margin: 12px 16px 4px; color: var(--subtle); font-size: 12px; }
+  .tree { flex: 1; min-height: 0; overflow: auto; padding-bottom: 8px; }
+  .tool-row, .acct-row { height: 28px; padding: 0 8px; width: calc(100% - 12px); margin: 0 6px; border-radius: 6px; }
+  .acct-row { padding-left: 28px; }
+  .chev { width: 12px; height: 12px; flex: none; transition: transform .12s ease; }
+  .tool-row.open .chev { transform: rotate(90deg); }
+  .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .acct-row .nm { flex: 1; }
+  .tool-row .nm { flex: 1; font-weight: 550; }
+  .plan { color: var(--subtle); font-size: 11px; flex: none; }
+  .acct-row.needs .nm { color: var(--warn-ink); }
+  .dot { width: 8px; height: 8px; border-radius: 99px; flex: none; box-sizing: border-box; }
+  .dot.needs { background: var(--warn); }
+  .dot.active { background: transparent; box-shadow: inset 0 0 0 1.6px var(--info); }
+  .dot.room, .dot.hot { background: var(--good); }
+  .dot.quiet { background: transparent; box-shadow: inset 0 0 0 1.6px var(--subtle); }
+  .side-foot { border-top: 1px solid var(--border); padding: 8px 0; }
+  .pet-row { display: flex; align-items: center; gap: 8px; padding: 2px 14px 8px; }
+  .pet-row span { display: grid; line-height: 1.25; min-width: 0; }
+  .pet-row b { font-size: 12.5px; font-weight: 600; }
+  .pet-row small { color: var(--subtle); font-size: 11.5px; }
+  .pet { width: 28px; height: 32px; flex: none; }
+
+  .home {
+    min-height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 48px 24px 36px; gap: 18px;
+  }
+  .home h1 {
+    margin: 0; font-size: 28px; font-weight: 620; letter-spacing: -.03em; text-align: center;
+    text-shadow: var(--headline-shadow);
+  }
+  .sub, .note { margin: 0; max-width: 440px; text-align: center; color: var(--muted); font-size: 13.5px; text-shadow: var(--headline-shadow); text-wrap: balance; }
+  .note { color: var(--warn-ink); font-size: 13px; }
+  [data-theme="day"] .home h1, [data-theme="day"] .sub, [data-theme="day"] .note { text-shadow: none; }
+  .stack { width: min(620px, 100%); display: grid; gap: 8px; justify-items: center; }
+
+  .composer, .logins {
+    width: min(620px, 100%);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+  .composer input {
+    display: block; width: 100%; border: 0; background: transparent; outline: none;
+    padding: 14px 14px 6px; font-size: 14px;
+  }
+  .composer input::placeholder { color: var(--subtle); }
+  .composer-bar { display: flex; align-items: center; gap: 4px; padding: 6px 8px 8px; }
+  .chip, .go, .text-btn, .seg button, .mini {
+    border: 0; background: transparent; color: var(--muted); border-radius: 8px;
+  }
+  .chip {
+    position: relative; height: 28px; padding: 0 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
+  }
+  .chip:hover, .text-btn:hover, .mini:hover { background: var(--accent); color: var(--text); }
+  .go {
+    margin-left: auto; width: 28px; height: 28px; border-radius: 8px;
+    background: var(--text); color: var(--bg); display: grid; place-items: center;
+  }
+  .go:hover { filter: brightness(1.05); }
+  .go:active, .chip:active, .text-btn:active { transform: scale(.97); }
+  .pop {
+    position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; min-width: 180px;
+    padding: 4px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card); box-shadow: var(--shadow);
+  }
+  .pop button {
+    display: flex; width: 100%; align-items: center; gap: 8px; height: 30px; padding: 0 8px;
+    border: 0; border-radius: 6px; background: transparent; color: var(--text); text-align: left;
+  }
+  .pop button:hover, .pop button.on { background: var(--accent); }
+  .pop button small { margin-left: auto; color: var(--subtle); }
+
+  .logins-head, .login, .quiet-line { padding-left: 12px; padding-right: 12px; }
+  .logins-head {
+    display: flex; align-items: center; justify-content: space-between;
+    min-height: 40px; color: var(--muted); font-size: 13px;
+  }
+  .logins-head b { color: var(--text); font-weight: 600; }
+  .text-btn { height: 26px; padding: 0 8px; font-size: 12.5px; }
+  .g { padding: 8px 12px 2px; color: var(--subtle); font-size: 12px; }
+  .login {
+    display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px;
+    border: 0; background: transparent; color: inherit; text-align: left;
+  }
+  .login-main {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+    border: 0; background: transparent; color: inherit; text-align: left; padding: 6px 0;
+  }
+  .login b { font-weight: 620; font-size: 13px; max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .login b.warn { color: var(--warn-ink); }
+  .meta { color: var(--muted); font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .login .right, .pct { margin-left: auto; flex: none; color: var(--subtle); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+  .login:hover, .login-main:hover { background: transparent; }
+  .login:hover { background: var(--accent); }
+  .pill {
+    margin-left: auto; flex: none; height: 20px; padding: 0 7px; border-radius: 6px;
+    background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn-ink);
+    font-size: 11.5px; font-weight: 620; display: inline-flex; align-items: center;
+  }
+  .pill.bad { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+  .quiet-line { margin: 0 0 10px; color: var(--subtle); font-size: 12.5px; }
+  .hop-link {
+    margin-left: auto; flex: none; height: 24px; padding: 0 8px; border-radius: 6px;
+    border: 0; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 620;
+  }
+
+  .page-head {
+    display: flex; align-items: baseline; gap: 10px; min-height: 46px; padding: 12px 18px 4px;
+  }
+  .page-head h1 { margin: 0; font-size: 14px; font-weight: 640; }
+  .page-head p { margin: 0; color: var(--muted); font-size: 13px; }
+  .page-head .right { margin-left: auto; display: flex; gap: 6px; }
+  .board-scroll { height: calc(100% - 46px); overflow: auto; }
+  .board {
+    display: grid; grid-template-columns: repeat(4, minmax(230px, 1fr));
+    gap: 14px; min-width: 980px; height: 100%; padding: 8px 16px 16px; align-items: stretch;
+  }
+  .col { min-height: 0; max-height: 100%; display: flex; flex-direction: column; }
+  .col-body { min-height: 0; overflow: auto; padding-bottom: 8px; }
+  .col h2 {
+    margin: 0 0 8px; display: flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 550; color: var(--muted);
+  }
+  .kcard {
+    border: 1px solid var(--border); border-radius: 10px; background: var(--card);
+    padding: 10px 10px 8px; margin-bottom: 8px;
+  }
+  .kcard.needs { border-color: color-mix(in srgb, var(--warn) 55%, var(--border)); }
+  .kcard header { display: flex; align-items: center; gap: 6px; }
+  .kcard header b { font-size: 13px; font-weight: 620; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kcard header .pct { margin-left: auto; }
+  .kmeta, .kline { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; }
+  .kline { color: var(--text); }
+  .kcard .bar { margin-top: 8px; }
+  .kacts { display: flex; gap: 4px; margin-top: 8px; }
+  .mini { height: 26px; padding: 0 8px; font-size: 12.5px; color: var(--text); }
+  .col-empty { margin: 0; color: var(--subtle); font-size: 12.5px; }
+
+  .bar { position: relative; height: 4px; border-radius: 99px; background: var(--track); }
+  .bar > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: var(--ink); }
+  .bar.warn > span { background: var(--warn); }
+  .bar.bad > span { background: var(--bad); }
+  .bar > i { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--pace); }
+
+  .tabs-strip {
+    height: 40px; display: flex; align-items: flex-end; gap: 4px; padding: 0 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 6px 0 10px;
+    border: 1px solid var(--border); border-bottom: 0; border-radius: 8px 8px 0 0; background: var(--card);
+    font-size: 12.5px;
+  }
+  .tab .x { width: 18px; height: 18px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); }
+  .tab .x:hover { background: var(--accent); color: var(--text); }
+  .doc { max-width: 720px; padding: 22px 22px 40px; display: grid; gap: 14px; }
+  .doc h1 { margin: 0; font-size: 20px; font-weight: 640; letter-spacing: -.02em; }
+  .doc .lede { margin: 0; color: var(--muted); }
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .fact { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+  .fact span { display: block; color: var(--subtle); font-size: 12px; }
+  .fact b { display: block; margin-top: 2px; font-size: 18px; font-weight: 620; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .callout {
+    display: flex; align-items: center; gap: 12px; padding: 12px;
+    border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--border));
+    border-radius: 10px; background: color-mix(in srgb, var(--warn) 8%, var(--card));
+  }
+  .callout.bad { border-color: color-mix(in srgb, var(--bad) 40%, var(--border)); background: color-mix(in srgb, var(--bad) 8%, var(--card)); }
+  .callout div { flex: 1; min-width: 0; }
+  .callout b { font-weight: 620; }
+  .callout p { margin: 2px 0 0; color: var(--muted); }
+  .limits { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+  .limit-top { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+  .limit-top b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .limit-foot { margin-top: 5px; color: var(--subtle); font-size: 12px; }
+
+  .panel { margin: 8px 18px 24px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); overflow: hidden; }
+  .usage-figure { padding: 16px 16px 8px; }
+  .usage-figure .lbl { color: var(--muted); font-size: 12.5px; display: flex; justify-content: space-between; }
+  .usage-figure .num { margin: 4px 0 0; font-size: 32px; font-weight: 620; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .chart { display: block; width: 100%; height: auto; }
+  .chart .axis { fill: var(--subtle); font: 11px ui-monospace, "SF Mono", Menlo, monospace; }
+  .legend { display: flex; gap: 14px; padding: 0 16px 14px; color: var(--muted); font-size: 12px; list-style: none; margin: 0; }
+  .legend li { display: flex; align-items: center; gap: 6px; }
+  .sw { width: 8px; height: 8px; border-radius: 2px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 500; color: var(--subtle); font-size: 12px; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 16px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  td.r, th.r { text-align: right; }
+  .share { height: 4px; border-radius: 99px; background: var(--track); }
+  .share > span { display: block; height: 100%; border-radius: inherit; background: var(--ink); }
+  .day-row, .rank, .set-row, .budget {
+    display: grid; align-items: center; gap: 12px; padding: 10px 16px;
+  }
+  .day-row { grid-template-columns: 52px minmax(0, 1fr) auto; }
+  .day-row + .day-row, .rank + .rank, .set-row + .set-row, .budget + .budget { border-top: 1px solid var(--border); }
+  .day-row time, .repo { color: var(--subtle); font-variant-numeric: tabular-nums; font-size: 12px; }
+  .repo { margin-right: 8px; }
+  .rank { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .rank.you { background: var(--accent); }
+  .rank b { font-weight: 600; }
+  .budget { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .budget .top { display: flex; justify-content: space-between; gap: 12px; }
+  .seg { display: inline-flex; padding: 2px; border-radius: 8px; border: 1px solid var(--border); background: var(--search); }
+  .seg button { height: 24px; padding: 0 8px; border-radius: 6px; font-size: 12.5px; }
+  .seg button.on { background: var(--accent-2); color: var(--text); }
+  .set-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .set-row p { margin: 2px 0 0; color: var(--subtle); font-size: 12.5px; }
+  .dot-status { width: 7px; height: 7px; border-radius: 99px; background: var(--warn); display: inline-block; }
+  .dot-status.good { background: var(--good); }
+  .dot-status.info { background: var(--info); }
+  #toast {
+    position: fixed; left: 50%; bottom: 40px; transform: translate(-50%, 8px);
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; box-shadow: var(--shadow); opacity: 0; pointer-events: none;
+    transition: opacity .16s ease, transform .16s ease;
+  }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #palette { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, .28); }
+  [data-theme="day"] #palette { background: rgba(0, 0, 0, .12); }
+  .palette {
+    width: min(520px, calc(100% - 32px)); margin: 14vh auto 0;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .palette input {
+    width: 100%; border: 0; background: transparent; outline: none;
+    padding: 14px 14px 10px; font-size: 14px; border-bottom: 1px solid var(--border);
+  }
+  .pitem {
+    display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 12px;
+    border: 0; background: transparent; color: var(--text); text-align: left;
+  }
+  .pitem small { margin-left: auto; color: var(--subtle); }
+  .pitem.on { background: var(--accent); }
+  .pfoot { padding: 8px 12px; color: var(--subtle); font-size: 11.5px; border-top: 1px solid var(--border); }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app" data-theme="night" data-view="home">
+  <aside id="side"></aside>
+  <div id="stage">
+    <canvas id="field" aria-hidden="true"></canvas>
+    <div id="veil" aria-hidden="true"></div>
+    <div id="main"></div>
+  </div>
+  <footer id="status"></footer>
+  <div id="palette" hidden></div>
+  <div id="toast" role="status"></div>
+</div>
+<script>
+(() => {
+  "use strict";
+
+  const NAV = [
+    ["home", "Overview", "overview"],
+    ["limits", "Limits", "limits"],
+    ["usage", "Usage", "usage"],
+    ["day", "Day", "day"],
+    ["budgets", "Budgets", "budgets"],
+    ["board", "Leaderboard", "leaderboard"],
+  ];
+
+  const TOOLS = [
+    { id: "claude", name: "Claude", accounts: [
+      { id: "c1", name: "Personal", email: "me@personal.dev", plan: "Max", active: true, today: 8400000, limits: [
+        { label: "5-hour", used: 51, reset: "3h 6m", pace: 38 },
+        { label: "Week", used: 6, reset: "6d", pace: 40 },
+      ]},
+      { id: "c2", name: "Work", email: "work@studio.dev", plan: "Pro", active: false, today: 1100000, limits: [
+        { label: "5-hour", used: 12, reset: "40m", pace: 88 },
+        { label: "Week", used: 18, reset: "3d", pace: 55 },
+      ]},
+    ]},
+    { id: "cursor", name: "Cursor", accounts: [
+      { id: "cu1", name: "me@personal.dev", email: "me@personal.dev", plan: "Ultra", active: true, today: 4200000, limits: [
+        { label: "Auto", used: 62, reset: "13d", pace: 48 },
+        { label: "API", used: 39, reset: "13d", pace: 48 },
+      ]},
+      { id: "cu2", name: "spare@personal.dev", email: "spare@personal.dev", plan: "Pro", active: false, today: 0, error: "Login expired. Switch to it and sign in to Cursor again.", limits: [] },
+    ]},
+    { id: "codex", name: "Codex", outage: "Partial outage. Elevated error rates in Codex CLI.", accounts: [
+      { id: "cx1", name: "me@personal.dev", email: "me@personal.dev", plan: "Plus", active: true, today: 3600000, limits: [
+        { label: "5-hour", used: 93, reset: "1h 47m", pace: 36, runsOut: "26m" },
+        { label: "Week", used: 62, reset: "4d", pace: 50 },
+      ]},
+    ]},
+    { id: "gemini", name: "Gemini", accounts: [
+      { id: "g1", name: "me@personal.dev", email: "me@personal.dev", plan: "Standard", active: true, today: 420000, limits: [
+        { label: "Quota", used: 28, reset: "14h", pace: 60 },
+      ]},
+    ]},
+    { id: "opencode", name: "OpenCode", accounts: [
+      { id: "oc1", name: "Multi-provider", email: "profile@opencode.dev", plan: "Local", active: true, today: 180000, limits: [] },
+    ]},
+    { id: "pi", name: "Pi", accounts: [
+      { id: "pi1", name: "Multi-provider", email: "profile@pi.dev", plan: "Local", active: true, today: 90000, limits: [] },
+    ]},
+    { id: "copilot", name: "Copilot", accounts: [
+      { id: "cp1", name: "Personal", email: "octocat@github.dev", plan: "Pro", active: true, today: 260000, limits: [
+        { label: "Premium", used: 47, reset: "13d", pace: 40 },
+      ]},
+    ]},
+    { id: "windsurf", name: "Windsurf", accounts: [
+      { id: "ws1", name: "me@windsurf.dev", email: "me@windsurf.dev", plan: "Pro", active: true, today: 210000, limits: [
+        { label: "Day", used: 33, reset: "14h", pace: 55 },
+        { label: "Week", used: 18, reset: "4d", pace: 45 },
+      ]},
+    ]},
+    { id: "codebuff", name: "Codebuff", accounts: [
+      { id: "cb1", name: "me@codebuff.dev", email: "me@codebuff.dev", plan: "Strong", active: true, today: 140000, limits: [
+        { label: "Credits", used: 25, reset: "13d", pace: 35 },
+        { label: "Week", used: 30, reset: "4d", pace: 42 },
+      ]},
+    ]},
+  ];
+
+  const SERIES = {
+    Claude: [8.2, 11.4, 9.6, 14.1, 12.8, 3.2, 4.4],
+    Cursor: [2.4, 3.8, 4.1, 5.6, 4.4, 1.1, 1.6],
+    Codex: [1.8, 4.2, 3.4, 6.8, 5.1, 0.8, 1.2],
+    Other: [0.6, 0.8, 1.1, 1.4, 0.9, 0.2, 0.4],
+  };
+  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const MODELS = [
+    ["claude-opus", "Claude", 41],
+    ["composer", "Cursor", 22],
+    ["gpt-5", "Codex", 18],
+    ["claude-sonnet", "Claude", 9],
+    ["gemini-pro", "Gemini", 6],
+  ];
+  const COMMITS = [
+    ["09:14", "keyhop", "Keep the menu and the window on one clock"],
+    ["11:02", "keyhop", "Rewrite the day when a rebase lands"],
+    ["13:40", "atlas", "Exclude merge commits from the count"],
+    ["16:18", "keyhop", "Paint the pet from the same totals"],
+  ];
+  const BOARD = [
+    ["mina", 210],
+    ["jonas", 164],
+    ["ada", 141],
+    ["you", 96],
+    ["ravi", 88],
+  ];
+
+  const params = new URLSearchParams(location.search);
+  const state = {
+    theme: params.get("theme") === "day" || params.get("theme") === "night" ? params.get("theme") : (localStorage.getItem("kh2-theme") || "night"),
+    view: "home",
+    account: null,
+    open: { claude: true, cursor: true, codex: true },
+    menu: null,
+    compTool: "claude",
+    compAccount: "c2",
+    palette: false,
+    query: "",
+    pi: 0,
+    range: "week",
+    tick: 0,
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function icon(name) {
+    const d = {
+      overview: '<rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/>',
+      usage: '<path d="M2 13.5h12"/><path d="M4 11V7"/><path d="M8 11V3.5"/><path d="M12 11V5.5"/>',
+      budgets: '<rect x="1.8" y="3.5" width="12.4" height="9" rx="1.8"/><path d="M1.8 6.5h12.4"/><path d="M10.5 9.8h1.5"/>',
+      leaderboard: '<rect x="1.8" y="8" width="4" height="5.5" rx="1"/><rect x="6" y="3.5" width="4" height="10" rx="1"/><rect x="10.2" y="10" width="4" height="3.5" rx="1"/>',
+      day: '<rect x="2.2" y="3" width="11.6" height="10.5" rx="1.6"/><path d="M2.2 6.4h11.6"/><path d="M5.2 2.2v1.8"/><path d="M10.8 2.2v1.8"/>',
+      settings: '<path d="M2 4.5h6"/><path d="M11 4.5h3"/><circle cx="9.5" cy="4.5" r="1.5"/><path d="M2 11.5h2"/><path d="M7 11.5h7"/><circle cx="5.5" cy="11.5" r="1.5"/>',
+      hop: '<rect x="1.8" y="9.6" width="4" height="4" rx="1"/><rect x="10.2" y="9.6" width="4" height="4" rx="1"/><path d="M3.8 7.6C4.6 3.6 11.4 3.6 12.2 7.6"/><path d="M10.2 6.6l2 1.1 1.1-2"/>',
+      limits: '<rect x="1.5" y="2" width="3" height="12" rx="1"/><rect x="6.5" y="2" width="3" height="12" rx="1"/><rect x="11.5" y="2" width="3" height="12" rx="1"/>',
+      chev: '<path d="M6 4.5 10 8 6 11.5"/>',
+    };
+    return `<svg class="ico" viewBox="0 0 16 16" aria-hidden="true">${d[name] || ""}</svg>`;
+  }
+
+  function allAccounts() {
+    const out = [];
+    for (const tool of TOOLS) for (const account of tool.accounts) out.push({ tool, account });
+    return out;
+  }
+  function findAccount(id) { return allAccounts().find((x) => x.account.id === id) || null; }
+  function toolById(id) { return TOOLS.find((t) => t.id === id); }
+  function maxUsed(a) { return a.limits?.length ? Math.max(...a.limits.map((l) => l.used)) : null; }
+  function topLimit(a) {
+    if (!a.limits?.length) return null;
+    return a.limits.reduce((x, y) => (y.used > x.used ? y : x));
+  }
+  function lane(a) {
+    if (a.error) return "needs";
+    const m = maxUsed(a);
+    if (m != null && (m >= 85 || a.limits.some((l) => l.runsOut))) return "needs";
+    if (a.active) return "active";
+    if (m == null) return "quiet";
+    if (m >= 60) return "hot";
+    return "room";
+  }
+  function worst(tool) {
+    const order = ["needs", "hot", "active", "room", "quiet"];
+    return tool.accounts.map((a) => lane(a)).sort((a, b) => order.indexOf(a) - order.indexOf(b))[0];
+  }
+  function alternate(tool, account) {
+    const cur = maxUsed(account);
+    let best = null;
+    for (const alt of tool.accounts) {
+      if (alt.id === account.id || alt.error || alt.active) continue;
+      const m = maxUsed(alt);
+      if (m == null) continue;
+      if (cur != null && m + 15 >= cur) continue;
+      if (!best || m < maxUsed(best)) best = alt;
+    }
+    return best;
+  }
+  function bestHop() {
+    let best = null;
+    for (const tool of TOOLS) {
+      const active = tool.accounts.find((a) => a.active);
+      if (!active) continue;
+      const alt = alternate(tool, active);
+      if (!alt) continue;
+      const gap = (maxUsed(active) ?? 0) - maxUsed(alt);
+      if (!best || gap > best.gap) best = { tool, from: active, to: alt, gap };
+    }
+    return best;
+  }
+  function stuck() {
+    return allAccounts().filter((x) => lane(x.account) === "needs" && !alternate(x.tool, x.account));
+  }
+  function tokens(n) {
+    const v = Math.abs(n || 0);
+    const t = (x, s) => { const r = x >= 100 ? x.toFixed(0) : x.toFixed(1); return (r.endsWith(".0") ? r.slice(0, -2) : r) + s; };
+    if (v >= 1e9) return t(n / 1e9, "B");
+    if (v >= 1e6) return t(n / 1e6, "M");
+    if (v >= 1e3) return t(n / 1e3, "K");
+    return String(Math.round(n || 0));
+  }
+  function todayTotal() { return allAccounts().reduce((s, x) => s + (x.account.today || 0), 0); }
+  function needsN() { return allAccounts().filter((x) => lane(x.account) === "needs").length; }
+  function bar(used, pace, extra = "") {
+    const tone = used >= 90 ? "bad" : used >= 75 ? "warn" : "";
+    const tick = pace == null ? "" : `<i style="left:${pace}%"></i>`;
+    return `<div class="bar ${tone} ${extra}"><span style="width:${Math.max(0, Math.min(100, used))}%"></span>${tick}</div>`;
+  }
+  function mark(kind) { return `<i class="dot ${kind}" aria-hidden="true"></i>`; }
+
+  function headline() {
+    const hop = bestHop();
+    const wall = stuck().find((x) => !x.account.error);
+    const note = wall ? `${wall.tool.name} is at ${maxUsed(wall.account)}% and has no other login.` : "";
+    if (hop && hop.gap >= 15) {
+      const from = topLimit(hop.from);
+      const to = topLimit(hop.to);
+      return {
+        title: `${hop.to.name} still has room.`,
+        sub: `${hop.tool.name} ${hop.from.name} is in use at ${from.used}%. ${hop.to.name} is at ${to.used}%.`,
+        note,
+        target: hop.to.id,
+      };
+    }
+    if (wall && !wall.account.error) {
+      const top = topLimit(wall.account);
+      return {
+        title: `${wall.tool.name} is at ${top.used}%.`,
+        sub: top.runsOut ? `The ${top.label.toLowerCase()} window runs out in about ${top.runsOut}. There is no other login to hop to.` : "There is no other login to hop to.",
+        note: wall.tool.outage || "",
+        target: null,
+      };
+    }
+    return { title: "Every login in use has room.", sub: "Nothing is close to a limit.", note: "", target: null };
+  }
+
+  function go(view, id) {
+    state.view = view;
+    state.account = id || null;
+    state.menu = null;
+    const hash = view === "account" ? `account/${id}` : view === "home" ? "" : view;
+    history.replaceState(null, "", hash ? `#${hash}` : location.pathname + location.search);
+    render();
+  }
+
+  function hop(id) {
+    const found = findAccount(id);
+    if (!found) return;
+    const { tool, account } = found;
+    if (account.error) {
+      toast("That login needs a sign-in before it can be used.");
+      go("account", id);
+      return;
+    }
+    if (account.active) {
+      toast(`${tool.name} is already on ${account.name}.`);
+      return;
+    }
+    for (const a of tool.accounts) a.active = a.id === id;
+    if (state.compTool === tool.id) state.compAccount = id;
+    toast(`${tool.name} is on ${account.name} now.`);
+    render();
+  }
+
+  function toggleTheme() {
+    state.theme = state.theme === "night" ? "day" : "night";
+    try { localStorage.setItem("kh2-theme", state.theme); } catch {}
+    render();
+  }
+
+  let toastTimer;
+  function toast(text) {
+    const el = $("toast");
+    el.textContent = text;
+    el.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("on"), 2400);
+  }
+
+  function sideHTML() {
+    const needs = needsN();
+    const nav = NAV.map(([id, label, ic]) => {
+      const on = state.view === id ? " on" : "";
+      const badge = id === "limits" && needs ? `<span class="count">${needs}</span>` : "";
+      return `<button class="nav-item${on}" type="button" data-act="go" data-view="${id}" ${on ? 'aria-current="page"' : ""}>${icon(ic)}<span class="nm">${label}</span>${badge}</button>`;
+    }).join("");
+    const tree = TOOLS.map((tool) => {
+      const open = !!state.open[tool.id];
+      const rows = open ? tool.accounts.map((account) => {
+        const on = state.view === "account" && state.account === account.id ? " on" : "";
+        const L = lane(account);
+        return `<button class="acct-row ${L}${on}" type="button" data-act="open" data-id="${account.id}">${mark(L)}<span class="nm">${esc(account.name)}</span><span class="plan">${esc(account.plan || "")}</span></button>`;
+      }).join("") : "";
+      return `<button class="tool-row${open ? " open" : ""}" type="button" data-act="fold" data-tool="${tool.id}">${icon("chev").replace("ico", "ico chev")}<span class="nm">${esc(tool.name)}</span>${mark(worst(tool))}</button>${rows}`;
+    }).join("");
+    return `
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><rect x="2.5" y="2.5" width="6" height="19.5" rx="1.5"/><rect x="9.6" y="9.2" width="6" height="6" rx="1.5"/><rect x="16" y="1" width="6" height="6" rx="1.5"/><rect x="16" y="17" width="6" height="6" rx="1.5"/></g></svg>
+        <b>Keyhop</b>
+      </div>
+      <button class="hop-btn" type="button" data-act="palette">${icon("hop")}<span>Hop</span><kbd>${navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}K</kbd></button>
+      <nav class="nav" aria-label="Sections">${nav}</nav>
+      <div class="side-label">Accounts</div>
+      <div class="tree">${tree}</div>
+      <div class="side-foot">
+        <div class="pet-row">
+          <svg class="pet" viewBox="0 0 16 18" shape-rendering="crispEdges" aria-hidden="true">
+            <rect x="5" y="0" width="6" height="2" fill="#241C16"/>
+            <rect x="4" y="2" width="8" height="6" fill="#F6DCC0"/>
+            <rect x="4" y="2" width="1" height="6" fill="#241C16"/><rect x="11" y="2" width="1" height="6" fill="#241C16"/>
+            <rect x="6" y="4" width="1" height="1" fill="#241C16"/><rect x="9" y="4" width="1" height="1" fill="#241C16"/>
+            <rect x="6" y="6" width="4" height="1" fill="#C9821A"/>
+            <rect x="3" y="8" width="10" height="5" fill="#C9821A"/>
+            <rect x="3" y="8" width="10" height="1" fill="#241C16"/>
+            <rect x="4" y="13" width="2" height="3" fill="#241C16"/><rect x="10" y="13" width="2" height="3" fill="#241C16"/>
+          </svg>
+          <span><b>Bulk · Claude</b><small>12 day streak</small></span>
+        </div>
+        <button class="foot-btn${state.view === "settings" ? " on" : ""}" type="button" data-act="go" data-view="settings">${icon("settings")}<span>Settings</span></button>
+      </div>`;
+  }
+
+  function homeRow(row, suggest) {
+    const L = lane(row.account);
+    const top = topLimit(row.account);
+    let meta = row.tool.name + (row.account.plan ? ` · ${row.account.plan}` : "");
+    if (row.account.error) meta += " · login expired";
+    else if (top) meta += ` · ${top.label} ${top.used}%`;
+    if (top?.runsOut) meta += ` · runs out ${top.runsOut}`;
+    const right = row.account.error
+      ? `<span class="pill bad">Expired</span>`
+      : L === "needs"
+        ? `<span class="pill">Needs a hop</span>`
+        : suggest
+          ? `<button class="hop-link" type="button" data-act="hop" data-id="${row.account.id}">Hop</button>`
+          : `<span class="pct">${top ? top.used + "%" : "No limit"}</span>`;
+    return `<div class="login" role="listitem">
+      <button class="login-main" type="button" data-act="open" data-id="${row.account.id}">${mark(L)}<b class="${L === "needs" ? "warn" : ""}">${esc(row.account.name)}</b><span class="meta">${esc(meta)}</span></button>
+      ${right}
+    </div>`;
+  }
+
+  function homeHTML() {
+    const h = headline();
+    const rows = allAccounts();
+    const needs = rows.filter((r) => lane(r.account) === "needs").sort((a, b) => (b.account.error ? 80 : maxUsed(b.account) || 0) - (a.account.error ? 80 : maxUsed(a.account) || 0));
+    const active = rows.filter((r) => lane(r.account) === "active" && maxUsed(r.account) != null).sort((a, b) => maxUsed(b.account) - maxUsed(a.account)).slice(0, 4);
+    const room = rows.filter((r) => lane(r.account) === "room" || lane(r.account) === "hot");
+    const activeShown = active.slice(0, 3);
+    const quiet = rows.filter((r) => lane(r.account) === "quiet" || (lane(r.account) === "active" && maxUsed(r.account) == null));
+    const group = (label, list) => list.length ? `<div class="g">${label}</div>${list.map((r) => homeRow(r, h.target === r.account.id)).join("")}` : "";
+    const quietNames = quiet.map((q) => q.tool.name);
+    const quietLabel = quietNames.length < 2 ? quietNames.join("") : `${quietNames.slice(0, -1).join(", ")} and ${quietNames.at(-1)}`;
+    const quietLine = quiet.length
+      ? `<div class="g">Quiet</div><p class="quiet-line">${esc(quietLabel)} have no limit to read.</p>`
+      : "";
+    const tool = toolById(state.compTool);
+    const picked = findAccount(state.compAccount);
+    const toolPop = state.menu === "tool" ? `<div class="pop" role="menu">${TOOLS.map((t) => `<button type="button" data-act="pick-tool" data-id="${t.id}" class="${t.id === tool.id ? "on" : ""}">${esc(t.name)}</button>`).join("")}</div>` : "";
+    const accPop = state.menu === "account" ? `<div class="pop" role="menu">${tool.accounts.map((a) => `<button type="button" data-act="pick-account" data-id="${a.id}" class="${a.id === state.compAccount ? "on" : ""}">${esc(a.name)}<small>${a.error ? "expired" : (maxUsed(a) == null ? "—" : maxUsed(a) + "%")}</small></button>`).join("")}</div>` : "";
+    return `<div class="home">
+      <div class="stack">
+        <h1>${esc(h.title)}</h1>
+        <p class="sub">${esc(h.sub)}</p>
+        ${h.note ? `<p class="note">${esc(h.note)}</p>` : ""}
+      </div>
+      <form class="composer" data-act="composer">
+        <input id="hop-input" placeholder="Name a login, or hop to the one with room" autocomplete="off" aria-label="Hop">
+        <div class="composer-bar">
+          <div class="chip-wrap" style="position:relative;display:inline-flex">
+            <button class="chip" type="button" data-act="menu" data-menu="tool">${esc(tool.name)}</button>${toolPop}
+          </div>
+          <div class="chip-wrap" style="position:relative;display:inline-flex">
+            <button class="chip" type="button" data-act="menu" data-menu="account">${esc(picked ? picked.account.name : "Account")}${picked && maxUsed(picked.account) != null ? ` · ${maxUsed(picked.account)}%` : ""}</button>${accPop}
+          </div>
+          <button class="go" type="submit" aria-label="Hop"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 12.5V3.5"/><path d="M4.5 7 8 3.5 11.5 7"/></svg></button>
+        </div>
+      </form>
+      <section class="logins" aria-label="Your logins">
+        <div class="logins-head"><b>Your logins</b><button class="text-btn" type="button" data-act="go" data-view="limits">Limits</button></div>
+        <div role="list">${group("Needs a hop", needs)}${group("In use", activeShown)}${group("Room", room)}${quietLine}</div>
+      </section>
+    </div>`;
+  }
+
+  function limitsHTML() {
+    const cols = [
+      ["needs", "Needs a hop"],
+      ["active", "In use"],
+      ["room", "Room"],
+      ["quiet", "Quiet"],
+    ];
+    const rows = allAccounts();
+    const col = ([id, label]) => {
+      const list = rows.filter((r) => {
+        const L = lane(r.account);
+        if (id === "room") return L === "room" || L === "hot";
+        if (id === "quiet") return L === "quiet" || (L === "active" && !r.account.limits.length);
+        if (id === "active") return L === "active" && r.account.limits.length;
+        return L === id;
+      }).sort((a, b) => (maxUsed(b.account) ?? -1) - (maxUsed(a.account) ?? -1));
+      const cards = list.map((r) => {
+        const a = r.account;
+        const top = topLimit(a);
+        const alt = alternate(r.tool, a);
+        const line = a.error
+          ? a.error
+          : top?.runsOut
+            ? `${top.label} at ${top.used}%. Runs out in about ${top.runsOut}.`
+            : top
+              ? a.limits.map((l) => `${l.label} ${l.used}%`).join(" · ")
+              : "No limit to read.";
+        const hopBtn = alt && !a.error ? `<button class="mini" type="button" data-act="hop" data-id="${alt.id}">Hop to ${esc(alt.name)}</button>` : "";
+        return `<article class="kcard ${lane(a)}">
+          <header>${mark(lane(a))}<b>${esc(a.name)}</b><span class="pct">${top ? top.used + "%" : ""}</span></header>
+          <p class="kmeta">${esc(r.tool.name)}${a.plan ? ` · ${esc(a.plan)}` : ""}${r.tool.outage && lane(a) === "needs" ? " · partial outage" : ""}</p>
+          <p class="kline">${esc(line)}</p>
+          ${top ? bar(top.used, top.pace) : ""}
+          <div class="kacts"><button class="mini" type="button" data-act="open" data-id="${a.id}">Open</button>${hopBtn}</div>
+        </article>`;
+      }).join("");
+      return `<section class="col"><h2>${mark(id === "room" ? "room" : id === "quiet" ? "quiet" : id)} ${label}<span class="n">${list.length}</span></h2><div class="col-body">${cards || `<p class="col-empty">Nothing here</p>`}</div></section>`;
+    };
+    return `<header class="page-head"><h1>Limits</h1><p>Every saved login, by how close it is to a wall.</p></header>
+      <div class="board-scroll"><div class="board">${cols.map(col).join("")}</div></div>`;
+  }
+
+  function accountHTML() {
+    const found = findAccount(state.account);
+    if (!found) return `<header class="page-head"><h1>Account</h1><p>That login isn’t in the sample.</p></header>`;
+    const { tool, account } = found;
+    const alt = alternate(tool, account);
+    const L = lane(account);
+    const call = account.error
+      ? `<div class="callout bad"><div><b>Login expired</b><p>${esc(account.error)}</p></div></div>`
+      : tool.outage && L === "needs"
+        ? `<div class="callout"><div><b>${esc(tool.name)} is partly down</b><p>${esc(tool.outage)} Every account is affected, so hopping won’t help.</p></div></div>`
+        : alt
+          ? `<div class="callout"><div><b>${esc(alt.name)} has more room</b><p>Hopping switches the ${esc(tool.name)} login in use. ${esc(alt.name)} is at ${maxUsed(alt)}%.</p></div><button class="hop-link" type="button" data-act="hop" data-id="${alt.id}">Hop to ${esc(alt.name)}</button></div>`
+          : "";
+    const limits = account.limits.length
+      ? `<div class="limits">${account.limits.map((l) => `<div><div class="limit-top"><span>${esc(l.label)}</span><b>${l.used}%</b></div>${bar(l.used, l.pace)}<div class="limit-foot">${l.runsOut ? `Runs out in about ${esc(l.runsOut)} · ` : ""}Resets in ${esc(l.reset)}</div></div>`).join("")}</div>`
+      : `<p class="lede">This tool doesn’t leave a limit Keyhop can read.</p>`;
+    return `<div class="tabs-strip"><div class="tab">${mark(L)}<span>${esc(account.name)}</span><button class="x" type="button" data-act="go" data-view="home" aria-label="Close">×</button></div></div>
+      <div class="doc selectable">
+        <div><h1>${esc(account.name)}</h1><p class="lede">${esc(tool.name)} · ${esc(account.email)}${account.plan ? ` · ${esc(account.plan)}` : ""}${account.active ? " · in use" : ""}</p></div>
+        ${call}
+        <div class="facts">
+          <div class="fact"><span>Today</span><b>${tokens(account.today)}</b></div>
+          <div class="fact"><span>Closest window</span><b>${topLimit(account) ? topLimit(account).used + "%" : "—"}</b></div>
+          <div class="fact"><span>Streak</span><b>12 days</b></div>
+        </div>
+        ${limits}
+      </div>`;
+  }
+
+  function usageHTML() {
+    const keys = Object.keys(SERIES);
+    const totals = DAYS.map((_, i) => keys.reduce((s, k) => s + SERIES[k][i], 0));
+    const peak = Math.max(...totals);
+    const w = 640, h = 180, pad = 28;
+    const gap = 10;
+    const bw = (w - pad * 2 - gap * (DAYS.length - 1)) / DAYS.length;
+    let x0 = pad;
+    const cols = DAYS.map((d, i) => {
+      let y = h - 22;
+      const layers = keys.map((k, ki) => {
+        const hh = (SERIES[k][i] / peak) * (h - 40);
+        y -= hh;
+        const opacity = [0.9, 0.55, 0.32, 0.16][ki];
+        const rect = `<rect x="${x0.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0, hh).toFixed(1)}" fill="var(--ink)" opacity="${opacity}"/>`;
+        return rect;
+      }).join("");
+      const label = `<text class="axis" x="${(x0 + bw / 2).toFixed(1)}" y="${h - 6}" text-anchor="middle">${d}</text>`;
+      x0 += bw + gap;
+      return layers + label;
+    }).join("");
+    const week = Object.values(SERIES).flat().reduce((s, n) => s + n, 0);
+    const legend = keys.map((k, i) => `<li><i class="sw" style="background:var(--ink);opacity:${[0.9, 0.55, 0.32, 0.16][i]}"></i>${k}</li>`).join("");
+    const maxM = MODELS[0][2];
+    const table = MODELS.map(([name, tool, m]) => `<tr><td>${esc(name)}</td><td>${esc(tool)}</td><td class="r">${m.toFixed(0)}M</td><td><div class="share"><span style="width:${(m / maxM) * 100}%"></span></div></td></tr>`).join("");
+    return `<header class="page-head"><h1>Usage</h1><p>Tokens on this Mac, by the tool that spent them.</p>
+      <div class="right"><div class="seg" role="group">${["day", "week", "month"].map((r) => `<button type="button" data-act="range" data-range="${r}" class="${state.range === r ? "on" : ""}">${r[0].toUpperCase() + r.slice(1)}</button>`).join("")}</div></div></header>
+      <section class="panel">
+        <div class="usage-figure"><div class="lbl"><span>This ${state.range}</span><span>+18% on the one before</span></div><p class="num">${state.range === "week" ? week.toFixed(0) + "M" : state.range === "day" ? tokens(todayTotal()) : "310M"}</p></div>
+        <svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Tokens by day">${cols}</svg>
+        <ul class="legend">${legend}</ul>
+      </section>
+      <section class="panel"><table><thead><tr><th>Model</th><th>Tool</th><th class="r">Tokens</th><th>Share</th></tr></thead><tbody>${table}</tbody></table></section>`;
+  }
+
+  function dayHTML() {
+    const rows = COMMITS.map(([t, repo, subject]) => `<div class="day-row"><time>${t}</time><div><span class="repo">${esc(repo)}</span>${esc(subject)}</div></div>`).join("");
+    return `<header class="page-head"><h1>Wednesday</h1><p>4 commits you authored. Merge commits stay out.</p></header><section class="panel">${rows}</section>`;
+  }
+
+  function budgetsHTML() {
+    const items = [
+      ["Everything", 148, 250, "month", 0.23],
+      ["Personal", 22, 60, "week", 0.42],
+    ];
+    const rows = items.map(([name, spent, amount, period, pace]) => {
+      const pct = Math.round((spent / amount) * 100);
+      return `<div class="budget"><div class="top"><b>${name}</b><span>${spent} <span class="meta">/ $${amount}</span></span></div>${bar(pct, pace * 100)}<div class="limit-foot">Per ${period} · ${pct}% used</div></div>`;
+    }).join("");
+    return `<header class="page-head"><h1>Budgets</h1><p>API value against the amounts you set.</p></header><section class="panel">${rows}</section>`;
+  }
+
+  function boardHTML() {
+    const rows = BOARD.map(([name, m], i) => `<div class="rank${name === "you" ? " you" : ""}"><span class="meta">${i + 1}</span><b>${name === "you" ? "You" : esc(name)}</b><span>${m}M</span></div>`).join("");
+    return `<header class="page-head"><h1>Leaderboard</h1><p>This week, by tokens. You are 4th.</p></header><section class="panel">${rows}</section>`;
+  }
+
+  function settingsHTML() {
+    return `<header class="page-head"><h1>Settings</h1><p>This sketch stays on this computer.</p></header>
+      <section class="panel">
+        <div class="set-row"><div><b>Field</b><p>${state.theme === "night" ? "Night field behind Overview." : "Day field behind Overview."}</p></div>
+          <div class="seg">${["night", "day"].map((t) => `<button type="button" data-act="theme-set" data-theme="${t}" class="${state.theme === t ? "on" : ""}">${t === "night" ? "Night" : "Day"}</button>`).join("")}</div>
+        </div>
+        <div class="set-row"><div><b>Sample</b><p>These logins are invented. The Mac window and your real accounts are untouched.</p></div></div>
+      </section>`;
+  }
+
+  function mainHTML() {
+    switch (state.view) {
+      case "limits": return limitsHTML();
+      case "usage": return usageHTML();
+      case "day": return dayHTML();
+      case "budgets": return budgetsHTML();
+      case "board": return boardHTML();
+      case "settings": return settingsHTML();
+      case "account": return accountHTML();
+      default: return homeHTML();
+    }
+  }
+
+  function statusHTML() {
+    const n = needsN();
+    const outage = TOOLS.find((t) => t.outage);
+    const left = [
+      n ? `<button type="button" data-act="go" data-view="limits"><i class="dot-status"></i>${n} need${n === 1 ? "s" : ""} a hop</button>` : `<span>Limits clear</span>`,
+      outage ? `<button type="button" data-act="open" data-id="cx1">${esc(outage.name)} partial outage</button>` : "",
+    ].filter(Boolean).join("");
+    return `<span class="sample" title="Invented logins. Nothing on this Mac is read.">sample</span>${left}<span class="grow"></span>
+      <button type="button" data-act="go" data-view="usage">${tokens(todayTotal())} today</button>
+      <button type="button" data-act="go" data-view="day">12 day streak</button>
+      <button type="button" data-act="theme">${state.theme === "night" ? "Night" : "Day"}</button>
+      <span>read 2m ago</span>`;
+  }
+
+  function paletteEntries() {
+    const q = state.query.trim().toLowerCase();
+    const items = [];
+    const hopTo = bestHop();
+    if (hopTo) items.push({ kind: "hop", id: hopTo.to.id, label: `Hop to ${hopTo.to.name}`, hint: `${hopTo.tool.name} · ${maxUsed(hopTo.to)}%` });
+    for (const [id, label] of NAV) items.push({ kind: "go", id, label, hint: "Section" });
+    items.push({ kind: "go", id: "settings", label: "Settings", hint: "Section" });
+    items.push({ kind: "theme", label: state.theme === "night" ? "Day field" : "Night field", hint: "Appearance" });
+    for (const row of allAccounts()) items.push({ kind: "open", id: row.account.id, label: row.account.name, hint: row.tool.name });
+    const list = q ? items.filter((i) => `${i.label} ${i.hint}`.toLowerCase().includes(q)) : items.filter((i) => i.kind !== "open");
+    return list.slice(0, 12);
+  }
+
+  function paletteListHTML() {
+    const items = paletteEntries();
+    if (state.pi >= items.length) state.pi = 0;
+    if (!items.length) return `<p class="quiet-line">Nothing matches.</p>`;
+    return items.map((item, i) => `<button class="pitem${i === state.pi ? " on" : ""}" type="button" data-act="palette-run" data-i="${i}"><span>${esc(item.label)}</span><small>${esc(item.hint)}</small></button>`).join("");
+  }
+
+  function renderPalette() {
+    const root = $("palette");
+    if (!state.palette) { root.hidden = true; root.innerHTML = ""; return; }
+    root.hidden = false;
+    root.innerHTML = `<div class="palette" role="dialog" aria-label="Hop">
+      <input id="q" placeholder="Hop to a login, or a section" autocomplete="off" value="${esc(state.query)}">
+      <div id="plist">${paletteListHTML()}</div>
+      <div class="pfoot">↑↓ to move · ↵ to open · esc to close</div>
+    </div>`;
+    const q = $("q");
+    q.focus();
+    q.setSelectionRange(q.value.length, q.value.length);
+  }
+
+  function renderPaletteList() {
+    const list = $("plist");
+    if (list) list.innerHTML = paletteListHTML();
+  }
+
+  function runPalette(item) {
+    if (!item) return;
+    state.palette = false;
+    renderPalette();
+    if (item.kind === "hop") hop(item.id);
+    else if (item.kind === "open") go("account", item.id);
+    else if (item.kind === "theme") toggleTheme();
+    else go(item.id);
+  }
+
+  let skyCache = null;
+  let skyKey = "";
+
+  function horizon(nx) {
+    return 0.66 + Math.sin(nx * 4.8 + 0.4) * 0.04 + Math.sin(nx * 10.5 + 1.1) * 0.015;
+  }
+  function clouds(nx, ny) {
+    const blobs = [[0.22, 0.2, 0.2], [0.55, 0.16, 0.26], [0.78, 0.28, 0.18]];
+    let k = 0;
+    for (const [cx, cy, s] of blobs) {
+      const d = ((nx - cx) / s) ** 2 + ((ny - cy) / (s * 0.42)) ** 2;
+      if (d < 1) k = Math.max(k, (1 - d) * 0.7);
+    }
+    return k;
+  }
+
+  function renderSky(w, h, day) {
+    const img = new ImageData(w, h);
+    const bayer = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+    const data = img.data;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const nx = x / w, ny = y / h;
+        const skyT = Math.min(1, ny / 0.72);
+        let r, g, b;
+        if (day) { r = 132 + skyT * 100; g = 188 + skyT * 36; b = 222 - skyT * 20; }
+        else { r = 12 + skyT * 20; g = 18 + skyT * 8; b = 36 - skyT * 16; }
+        const ck = clouds(nx, ny);
+        if (ck) {
+          if (day) { r += (255 - r) * ck * 0.85; g += (255 - g) * ck * 0.85; b += (255 - b) * ck * 0.75; }
+          else { r += 48 * ck; g += 58 * ck; b += 78 * ck; }
+        }
+        if (!day) {
+          const md = Math.hypot(x - 0.9 * w, y - 0.14 * h);
+          if (md < 13) { r = 236; g = 224; b = 196; }
+          else if (md < 46) { const k = (1 - (md - 13) / 33) * 0.4; r += 150 * k; g += 120 * k; b += 60 * k; }
+          const n = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+          if (n > 0.992 && ny < horizon(nx) - 0.08 && md > 20) { r = g = b = 220; }
+        }
+        const h1 = horizon(nx);
+        const h2 = h1 + 0.075 + Math.sin(nx * 3.1) * 0.012;
+        if (ny > h2) {
+          if (day) { r = 198; g = 168; b = 128; } else { r = 18; g = 14; b = 12; }
+        } else if (ny > h1) {
+          if (day) { r = 226; g = 196; b = 156; } else { r = 72; g = 52; b = 36; }
+        }
+        const t = (bayer[y & 3][x & 3] / 16 - 0.5) * 48;
+        const q = (v) => Math.max(0, Math.min(255, Math.round((v + t) / 36) * 36));
+        const i = (y * w + x) * 4;
+        data[i] = q(r); data[i + 1] = q(g); data[i + 2] = q(b); data[i + 3] = 255;
+      }
+    }
+    return img;
+  }
+
+  function drawRunner(ctx, w, h, day) {
+    const nx = ((state.tick % 56) / 56);
+    const x = Math.round(nx * (w + 16) - 8);
+    const y = Math.round(horizon(Math.max(0, Math.min(0.99, x / w))) * h) - 8;
+    const hop = state.tick % 2;
+    ctx.fillStyle = day ? "#2c241c" : "#f3ead8";
+    const sprite = hop
+      ? [[1, 0], [2, 0], [0, 2], [1, 2], [2, 2], [3, 2], [1, 3], [2, 4], [3, 5]]
+      : [[1, 1], [2, 1], [0, 2], [1, 2], [2, 2], [3, 3], [1, 3], [2, 4], [1, 5]];
+    for (const [dx, dy] of sprite) ctx.fillRect(x + dx, y + dy, 1, 1);
+  }
+
+  function paint() {
+    if (state.view !== "home") return;
+    const canvas = $("field");
+    const rect = $("stage").getBoundingClientRect();
+    if (rect.width < 2) return;
+    const w = Math.max(2, Math.round(rect.width / 2));
+    const h = Math.max(2, Math.round(rect.height / 2));
+    const key = `${w}x${h}:${state.theme}`;
+    if (skyKey !== key) {
+      skyCache = renderSky(w, h, state.theme === "day");
+      skyKey = key;
+    }
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.putImageData(skyCache, 0, 0);
+    drawRunner(ctx, w, h, state.theme === "day");
+  }
+
+  function render() {
+    const app = $("app");
+    app.dataset.theme = state.theme;
+    app.dataset.view = state.view;
+    $("side").innerHTML = sideHTML();
+    $("main").innerHTML = mainHTML();
+    $("status").innerHTML = statusHTML();
+    if (state.view === "home") requestAnimationFrame(paint);
+  }
+
+  function readHash() {
+    const h = location.hash.slice(1);
+    if (h.startsWith("account/")) {
+      state.view = "account";
+      state.account = h.slice("account/".length);
+      return;
+    }
+    const known = new Set([...NAV.map((n) => n[0]), "settings"]);
+    state.view = known.has(h) ? h : "home";
+    state.account = null;
+  }
+
+  $("app").addEventListener("click", (e) => {
+    if (e.target.id === "palette") { state.palette = false; renderPalette(); return; }
+    const el = e.target.closest("[data-act]");
+    if (!el) {
+      if (state.menu) { state.menu = null; render(); }
+      return;
+    }
+    const act = el.dataset.act;
+    if (act === "go") go(el.dataset.view);
+    else if (act === "open") go("account", el.dataset.id);
+    else if (act === "hop") hop(el.dataset.id);
+    else if (act === "fold") { state.open[el.dataset.tool] = !state.open[el.dataset.tool]; render(); }
+    else if (act === "palette") { state.palette = true; state.query = ""; state.pi = 0; renderPalette(); }
+    else if (act === "menu") {
+      state.menu = state.menu === el.dataset.menu ? null : el.dataset.menu;
+      render();
+    } else if (act === "pick-tool") {
+      state.compTool = el.dataset.id;
+      const tool = toolById(state.compTool);
+      const room = tool.accounts.filter((a) => !a.error).sort((a, b) => (maxUsed(a) ?? 99) - (maxUsed(b) ?? 99))[0];
+      state.compAccount = (room || tool.accounts[0]).id;
+      state.menu = null;
+      render();
+    } else if (act === "pick-account") {
+      state.compAccount = el.dataset.id;
+      state.menu = null;
+      render();
+    } else if (act === "theme") toggleTheme();
+    else if (act === "theme-set") { if (state.theme !== el.dataset.theme) toggleTheme(); }
+    else if (act === "range") { state.range = el.dataset.range; render(); }
+    else if (act === "palette-run") runPalette(paletteEntries()[Number(el.dataset.i)]);
+  });
+
+  $("app").addEventListener("submit", (e) => {
+    if (!e.target.matches(".composer")) return;
+    e.preventDefault();
+    const q = ($("hop-input").value || "").trim().toLowerCase();
+    if (!q) { hop(state.compAccount); return; }
+    const hit = allAccounts().find((r) => `${r.account.name} ${r.tool.name} ${r.account.email}`.toLowerCase().includes(q));
+    if (hit) hop(hit.account.id);
+    else toast("No login matches that.");
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const meta = e.metaKey || e.ctrlKey;
+    if (meta && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      state.palette = !state.palette;
+      state.query = "";
+      state.pi = 0;
+      renderPalette();
+      return;
+    }
+    if (e.key === "Escape") {
+      if (state.palette) { state.palette = false; renderPalette(); return; }
+      if (state.menu) { state.menu = null; render(); return; }
+      if (state.view === "account") go("home");
+      return;
+    }
+    if (!state.palette) return;
+    const items = paletteEntries();
+    if (e.key === "ArrowDown") { e.preventDefault(); state.pi = Math.min(items.length - 1, state.pi + 1); renderPaletteList(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); state.pi = Math.max(0, state.pi - 1); renderPaletteList(); }
+    else if (e.key === "Enter") { e.preventDefault(); runPalette(items[state.pi]); }
+  });
+
+  $("palette").addEventListener("input", (e) => {
+    if (e.target.id !== "q") return;
+    state.query = e.target.value;
+    state.pi = 0;
+    renderPaletteList();
+  });
+
+  window.addEventListener("hashchange", () => { readHash(); render(); });
+  window.addEventListener("resize", () => { if (state.view === "home") paint(); });
+  if (!reduced) setInterval(() => { state.tick++; if (state.view === "home") paint(); }, 700);
+
+  const hop0 = bestHop();
+  if (hop0) { state.compTool = hop0.tool.id; state.compAccount = hop0.to.id; }
+  readHash();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -7,8 +7,9 @@ import { downloadPage, privacyPage, securityPage, termsPage } from "./marketing"
 import { type ClaimState, claimState } from "./keeps";
 import { creatureMarkup, petFrom, petsFor } from "./pet";
 import { profileBadges, questsFor, type Quest } from "./quests";
-import { TIERS, currentSeason, daysLeft, isSeason, nextStep, seasonBoard, seasonLabel, seasonList, seasonRange, tierFor } from "./seasons";
+import { TIERS, currentSeason, daysLeft, isSeason, nextStep, seasonBoard, seasonLabel, seasonList, seasonRange, tierFor, standing } from "./seasons";
 import { type Entry, type Metric, type Period, METRICS, PERIODS, isMetric, isPeriod, leaderboard, profile } from "./stats";
+import { type Division, DIVISIONS, DIVISION_NAMES, isDivision } from "./env";
 import { inviteInfo, members, myTeams, teamForMember } from "./teams";
 import { parseSubject, span, tasksForDay } from "./tasks";
 import { PERSON_WIDGETS, TEAM_WIDGETS, widgetMarkdown } from "./widgets";
@@ -94,18 +95,20 @@ const PERIOD_PHRASES: Record<Period, string> = {
   all: "of all time",
 };
 
-function readChoice(c: C): { period: Period; metric: Metric } {
+function readChoice(c: C): { period: Period; metric: Metric; division: Division | undefined } {
   const period = c.req.query("period");
   const metric = c.req.query("metric");
-  return { period: isPeriod(period) ? period : "week", metric: isMetric(metric) ? metric : "tokens" };
+  const division = c.req.query("division");
+  return { period: isPeriod(period) ? period : "week", metric: isMetric(metric) ? metric : "efficiency", division: isDivision(division) ? division : undefined };
 }
 
-function controls(base: string, period: Period, metric: Metric): Html {
-  const link = (p: Period, m: Metric) => `${base}?period=${p}&metric=${m}`;
+function controls(base: string, period: Period, metric: Metric, division: Division | undefined): Html {
+  const link = (p: Period, m: Metric, d: Division | undefined) => `${base}?period=${p}&metric=${m}${d ? `&division=${d}` : ""}`;
   const on = (yes: boolean) => (yes ? raw('aria-current="true"') : "");
   return html`<div class="toolbar">
-    <nav class="tabs" aria-label="Period">${(Object.keys(PERIODS) as Period[]).map((p) => html`<a href="${link(p, metric)}" ${on(p === period)}>${PERIODS[p].label}</a>`)}</nav>
-    <nav class="tabs" aria-label="Measure">${(Object.keys(METRICS) as Metric[]).map((m) => html`<a href="${link(period, m)}" ${on(m === metric)}>${METRICS[m].label}</a>`)}</nav>
+    <nav class="tabs" aria-label="Period">${(Object.keys(PERIODS) as Period[]).map((p) => html`<a href="${link(p, metric, division)}" ${on(p === period)}>${PERIODS[p].label}</a>`)}</nav>
+    <nav class="tabs" aria-label="Measure">${(Object.keys(METRICS) as Metric[]).map((m) => html`<a href="${link(period, m, division)}" ${on(m === metric)}>${METRICS[m].label}</a>`)}</nav>
+    <nav class="tabs" aria-label="Division"><a href="${link(period, metric, undefined)}" ${on(!division)}>Everyone</a>${DIVISIONS.map((d) => html`<a href="${link(period, metric, d)}" ${on(d === division)}>${DIVISION_NAMES[d]}</a>`)}</nav>
   </div>`;
 }
 
@@ -225,16 +228,16 @@ pages.get("/welcome", pageUser, (c) => {
 });
 
 pages.get("/leaderboard", async (c) => {
-  const { period, metric } = readChoice(c);
+  const { period, metric, division } = readChoice(c);
   const user = c.get("user");
-  const entries = await leaderboard(c.env.DB, { period, metric });
+  const entries = await leaderboard(c.env.DB, { period, metric, division });
   return render(
     c,
     "Leaderboard · Keyhop",
     html`
       <div class="head">
-        <div><h1>Leaderboard</h1><p class="lede">Ranked by ${METRICS[metric].label.toLowerCase()} ${PERIOD_PHRASES[period]}.</p></div>
-        ${controls("/leaderboard", period, metric)}
+        <div><h1>Leaderboard</h1><p class="lede">Ranked by ${METRICS[metric].label.toLowerCase()} ${PERIOD_PHRASES[period]}${division ? `, ${DIVISION_NAMES[division]} division` : ""}.${metric === "efficiency" ? " Efficiency is commits per million tokens." : ""}</p></div>
+        ${controls("/leaderboard", period, metric, division)}
       </div>
       ${user && !user.public
         ? html`<div class="notice"><div><b>You aren't on the leaderboard</b><p>Your profile is private. Turn it public in <a href="/settings">Settings</a> to join.</p></div></div>`
@@ -288,8 +291,8 @@ function questsCard(goals: Quest[]): Html {
 /** One month of ranked play. Past seasons are counted the same way, so they never go stale. */
 async function seasonPage(c: C, season: string) {
   const viewer = c.get("user");
-  const board = await seasonBoard(c.env.DB, { season, metric: "tokens" });
-  const mine = viewer ? board.find((entry) => entry.userId === viewer.id) : undefined;
+  const board = await seasonBoard(c.env.DB, { season, metric: "efficiency" });
+  const mine = viewer ? await standing(c.env.DB, viewer.id, { season }) : null;
   const range = seasonRange(season);
   const left = daysLeft(season);
   const step = nextStep(mine?.tokens ?? 0);
@@ -301,7 +304,7 @@ async function seasonPage(c: C, season: string) {
     `Season ${seasonLabel(season)} · Keyhop`,
     html`
       <div class="head">
-        <div><h1>Season</h1><p class="lede">${seasonLabel(season)} · ${when}. Your tier comes from the tokens you use this month.</p></div>
+        <div><h1>Season</h1><p class="lede">${seasonLabel(season)} · ${when}. Ranked by efficiency among people on your plan; your tier comes from the tokens you use this month.</p></div>
         ${recent.length > 1
           ? html`<nav class="tabs" aria-label="Season">${recent.map(
               (id) => html`<a href="${id === currentSeason() ? "/season" : `/season/${id}`}" ${id === season ? raw('aria-current="true"') : ""}>${seasonLabel(id).replace(" ", " ")}</a>`,
@@ -312,13 +315,13 @@ async function seasonPage(c: C, season: string) {
         ? html`<section class="card season-head">
             ${tierTag(tierFor(mine?.tokens ?? 0), "lg")}
             <div class="grow">
-              <b>${mine ? `#${mine.rank} of ${board.length}` : "Unranked"}</b>
-              <p class="next">${mine
+              <b>${mine?.rank ? `#${mine.rank} of ${mine.players}${mine.division ? ` in ${DIVISION_NAMES[mine.division]}` : ""}` : "Unranked"}</b>
+              <p class="next">${mine?.rank
                 ? step
                   ? `${tokens(step.tokens)} more tokens for ${step.label}.`
                   : "You're at the top of the ladder."
                 : viewer.public === 1
-                  ? "Sync some usage this month to take a place."
+                  ? "A million tokens and a synced commit this month take a place."
                   : "Turn your profile public in Settings to join the season."}</p>
             </div>
             <span class="mono muted">${tokens(mine?.tokens ?? 0)} this season</span>
@@ -385,13 +388,13 @@ pages.get("/u/:login", async (c) => {
 
   const [stats, season, badges, claim, goals] = await Promise.all([
     profile(c.env.DB, person.id, person.public === 1),
-    seasonBoard(c.env.DB, { season: currentSeason(), metric: "tokens" }),
+    standing(c.env.DB, person.id),
     profileBadges(c.env.DB, person.id),
     claimState(c.env.DB, person.id),
     isSelf ? questsFor(c.env.DB, person.id) : Promise.resolve(null),
   ]);
   const earned = badges.filter((entry) => entry.earned);
-  const place = season.find((entry) => entry.userId === person.id);
+  const place = season.rank ? season : null;
   const url = `${new URL(c.req.url).origin}/u/${person.login}`;
   const display = person.display_name || person.name || person.login;
   const creature = petFrom({
@@ -439,7 +442,7 @@ pages.get("/u/:login", async (c) => {
         ${tierTag(tierFor(place?.tokens ?? 0), "lg")}
         <div class="grow">
           <b><a href="/season" style="text-decoration:none">${seasonLabel(currentSeason())} season</a></b>
-          <p class="next">${place ? `#${place.rank} of ${season.length}, with ${tokens(place.tokens)} tokens.` : "Not ranked this season yet."}</p>
+          <p class="next">${place ? `#${place.rank} of ${place.players}${place.division ? ` in ${DIVISION_NAMES[place.division]}` : ""}, with ${tokens(place.tokens)} tokens.` : "Not ranked this season yet."}</p>
         </div>
       </section>
       ${keepsCard(claim, "profile", isSelf ? c.req.query("claim") : undefined, isSelf)}
@@ -542,7 +545,7 @@ pages.get("/t/:slug", pageUser, async (c) => {
             <a class="text-link" href="/t/${team.slug}/day">See today</a>
           </p>
         </div>
-        ${controls(`/t/${team.slug}`, period, metric)}
+        ${controls(`/t/${team.slug}`, period, metric, undefined)}
       </div>
       <section class="aside-layout">
         <div class="stack">${board(entries, metric, user, "Nobody on this team has synced usage for this period yet.")}</div>
@@ -681,7 +684,7 @@ function personDay(person: PersonDay, viewer: User | null): Html {
       <div class="day-figures">
         <div><b>${count(person.commits)}</b><small>${person.commits === 1 ? "commit" : "commits"}</small></div>
         <div><b>${count(person.repos.length)}</b><small>${person.repos.length === 1 ? "repo" : "repos"}</small></div>
-        <div><b>${tokens(person.tokens)}</b><small>tokens</small></div>
+        <div><b>${tokens(person.tokens)}</b><small>${person.live ? html`<i class="live-dot" title="Sent in the last few minutes"></i>live` : "tokens"}</small></div>
         <div>${diffStat(person.insertions, person.deletions)}<small>lines</small></div>
       </div>
     </header>

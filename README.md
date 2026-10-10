@@ -174,7 +174,7 @@ Keyhop keeps its own record of what every account uses.
 
 Link Keyhop with your GitHub account to compare usage with friends and teams: in Keyhop's window open **Settings** and choose **Link with GitHub**, or run `keyhop cloud login`. Keyhop then sends daily totals per tool about once an hour.
 
-- **Global leaderboard:** ranked by tokens, API value, requests, commits or lines, for today, 7 days, 30 days or all time. Only people who make their profile public appear.
+- **Global leaderboard:** ranked by efficiency (commits per million tokens, the default), cache hit, tokens, API value, requests, commits or lines, for today, 7 days, 30 days or all time, for everyone or one plan-based division (Free, Pro, Max). Only people who make their profile public appear.
 - **Teams:** create a team on the website and share its invite link. Members see each other's totals, even with private profiles.
 - **Ranked seasons:** every calendar month is a season, and the tokens you use in it place you on a ladder of six tiers from Bronze to Master, each with three divisions. Finished seasons stay readable, and quests and badges are counted the same way: from the daily totals themselves, so nothing can drift.
 - **Profiles:** a page at `/u/<login>` with a year of activity, streaks, quests, tools, badges and your weekly rank. The streak counts a day on its own. Claim that day to keep it: Spark, Glow, Ember, Flare, then Beacon. Set a display name, a bio and a link in Settings. Make the profile public to join the global leaderboard and to publish the README images below.

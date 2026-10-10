@@ -5,6 +5,8 @@ import { addDays, shownTools, today } from "../src/env";
 import { streaks } from "../src/stats";
 import { currentSeason, daysLeft, nextStep, seasonRange, tierFor } from "../src/seasons";
 import { parseUsage } from "../src/usage";
+import { LIVE_TTL_SECONDS, parseLive, sweepLive } from "../src/live";
+import { EFFICIENCY_FLOOR, efficiencyOf } from "../src/stats";
 import { LIMIT_TTL_SECONDS, clean, parseLimits, sweepLimits } from "../src/limits";
 import { badgesFrom, questsFrom } from "../src/quests";
 import { webLink } from "../src/account";
@@ -88,16 +90,17 @@ describe("usage uploads", () => {
   const day = today();
 
   it("accepts daily totals per tool", () => {
-    const result = parseUsage({ days: [{ day, tool: "claude", tokens: 1200, cost: 1.5, requests: 3 }] }, day);
-    expect(result).toEqual({ days: [{ day, tool: "claude", tokens: 1200, costMicros: 1_500_000, requests: 3 }] });
-    expect(parseUsage({ days: [{ day, tool: "gemini", tokens: 800, cost: 0.5, requests: 2 }] }, day)).toEqual({
-      days: [{ day, tool: "gemini", tokens: 800, costMicros: 500_000, requests: 2 }],
+    const result = parseUsage({ days: [{ day, tool: "claude", tokens: 1200, cost: 0.9, requests: 3 }] }, day);
+    expect(result).toEqual({ days: [{ day, tool: "claude", tokens: 1200, costMicros: 900_000, requests: 3, cacheRead: null }] });
+    expect(parseUsage({ days: [{ day, tool: "gemini", tokens: 800, cost: 0.5, requests: 2, cacheRead: 300 }] }, day)).toEqual({
+      days: [{ day, tool: "gemini", tokens: 800, costMicros: 500_000, requests: 2, cacheRead: 300 }],
     });
+    expect(parseUsage({ days: [], division: "pro" }, day)).toEqual({ days: [], division: "pro" });
   });
 
   it("accepts measured-only tools in daily totals, and stores them", async () => {
     const result = parseUsage({ days: [{ day, tool: "amp", tokens: 500, cost: 0.2, requests: 1 }] }, day);
-    expect(result).toEqual({ days: [{ day, tool: "amp", tokens: 500, costMicros: 200_000, requests: 1 }] });
+    expect(result).toEqual({ days: [{ day, tool: "amp", tokens: 500, costMicros: 200_000, requests: 1, cacheRead: null }] });
     // Through the endpoint too, so the daily_usage CHECK provably accepts the new tools.
     const cookie = await signIn("measured-tools");
     const token = await linkApp(cookie);
@@ -255,7 +258,7 @@ describe("leaderboards", () => {
     expect((await upload(alice, [{ day, tool: "claude", tokens: 5000, cost: 2, requests: 10 }])).status).toBe(200);
     expect((await upload(bob, [{ day, tool: "codex", tokens: 9000, cost: 1, requests: 4 }])).status).toBe(200);
 
-    const before = (await (await call("/api/leaderboard?period=today")).json()) as { entries: { login: string }[] };
+    const before = (await (await call("/api/leaderboard?period=today&metric=tokens")).json()) as { entries: { login: string }[] };
     expect(before.entries.map((entry) => entry.login)).toEqual(["alice"]);
 
     await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${bob}` }, body: JSON.stringify({ public: true }) });
@@ -266,7 +269,7 @@ describe("leaderboards", () => {
 
     // Uploading the same day again replaces it rather than adding to it.
     await upload(alice, [{ day, tool: "claude", tokens: 20000, cost: 2, requests: 10 }]);
-    const replaced = (await (await call("/api/leaderboard?period=today")).json()) as { entries: { login: string; tokens: number }[] };
+    const replaced = (await (await call("/api/leaderboard?period=today&metric=tokens")).json()) as { entries: { login: string; tokens: number }[] };
     expect(replaced.entries[0]).toMatchObject({ login: "alice", tokens: 20000 });
   });
 
@@ -365,6 +368,7 @@ describe("ranked seasons", () => {
     const ivan = await linkApp(await signIn("ivan"));
     await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${ivan}` }, body: JSON.stringify({ public: true }) });
     await upload(ivan, [{ day, tool: "claude", tokens: 300_000_000, cost: 12, requests: 900 }]);
+    await sendWork(ivan, [{ day, repo: "ivan/atlas", commits: 3, insertions: 30, deletions: 2 }]);
 
     const response = await call("/api/season", { headers: { authorization: `Bearer ${ivan}` } });
     const body = (await response.json()) as {
@@ -423,7 +427,7 @@ describe("teams", () => {
     const daveToken = await linkApp(dave);
     await upload(daveToken, [{ day, tool: "cursor", tokens: 777, cost: 0.5, requests: 2 }]);
 
-    const board = await call("/api/leaderboard?period=today&team=night-shift", { headers: { authorization: `Bearer ${daveToken}` } });
+    const board = await call("/api/leaderboard?period=today&metric=tokens&team=night-shift", { headers: { authorization: `Bearer ${daveToken}` } });
     const entries = ((await board.json()) as { entries: { login: string; isYou: boolean }[] }).entries;
     expect(entries).toEqual([expect.objectContaining({ login: "dave", isYou: true })]);
 
@@ -1507,5 +1511,124 @@ describe("tool rows", () => {
     expect(shownTools({ kilo: 5 })).toEqual(["claude", "cursor", "codex", "gemini", "opencode", "kilo"]);
     expect(shownTools({ claude: 1, cursor: 1, codex: 1, gemini: 1, opencode: 1, pi: 1, amp: 1 })).toHaveLength(7);
     expect(shownTools({ copilot: 9 } as never)).toEqual(["claude", "cursor", "codex", "gemini", "opencode", "pi"]);
+  });
+});
+
+/** The app's commit totals, without subjects. */
+function sendWork(token: string, days: unknown[]): Promise<Response> {
+  return call("/api/work", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ days }) });
+}
+
+describe("verified uploads", () => {
+  const day = today();
+
+  it("refuses a day whose numbers do not fit each other", () => {
+    const refused = (body: unknown) => (parseUsage({ days: [body] }, day) as { error?: string }).error ?? "";
+    expect(refused({ day, tool: "claude", tokens: 1000, cost: 5, requests: 2 })).toContain("list price");
+    expect(refused({ day, tool: "claude", tokens: 10_000_000, cost: 0.01, requests: 2 })).toContain("list price");
+    expect(refused({ day, tool: "claude", tokens: 10, cost: 0.001, requests: 11 })).toContain("Requests");
+    expect(refused({ day, tool: "claude", tokens: 10, cost: 0.001, requests: 0 })).toContain("Requests");
+    expect(refused({ day, tool: "claude", tokens: 0, cost: 0.5, requests: 0 })).toContain("tokens behind it");
+    expect(refused({ day, tool: "claude", tokens: 100, cost: 0.001, requests: 1, cacheRead: 101 })).toContain("Cache reads");
+    expect(refused({ day, tool: "claude", tokens: 100, cost: 0.001, requests: 1, cacheRead: 1.5 })).toContain("Cache reads");
+    expect((parseUsage({ days: [], division: "gold" }, day) as { error?: string }).error).toContain("Division");
+    // Free local models cost nothing, and that is allowed.
+    expect(refused({ day, tool: "opencode", tokens: 5000, cost: 0, requests: 3 })).toBe("");
+  });
+
+  it("stores cache reads and the division, and ranks by them", async () => {
+    const cookie = await signIn("verity");
+    const token = await linkApp(cookie);
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    expect((await upload(token, [{ day, tool: "claude", tokens: 2_000_000, cost: 4, requests: 40, cacheRead: 1_500_000 }])).status).toBe(200);
+    const sent = await call("/api/usage", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ days: [], division: "max" }) });
+    expect(sent.status).toBe(200);
+    await sendWork(token, [{ day, repo: "verity/atlas", commits: 6, insertions: 60, deletions: 6 }]);
+
+    const byCache = (await (await call("/api/leaderboard?period=today&metric=cache")).json()) as { entries: { login: string; cacheHit: number; cacheRead: number }[] };
+    expect(byCache.entries.find((entry) => entry.login === "verity")).toMatchObject({ cacheHit: 75, cacheRead: 1_500_000 });
+
+    const board = (await (await call("/api/leaderboard?period=today")).json()) as { metric: string; entries: { login: string; efficiency: number; division: string }[] };
+    expect(board.metric).toBe("efficiency");
+    expect(board.entries.find((entry) => entry.login === "verity")).toMatchObject({ efficiency: 3, division: "max" });
+
+    const inMax = (await (await call("/api/leaderboard?period=today&division=max")).json()) as { division: string; entries: { login: string }[] };
+    expect(inMax.division).toBe("max");
+    expect(inMax.entries.map((entry) => entry.login)).toContain("verity");
+    const inPro = (await (await call("/api/leaderboard?period=today&division=pro")).json()) as { entries: { login: string }[] };
+    expect(inPro.entries.map((entry) => entry.login)).not.toContain("verity");
+  });
+
+  it("ranks efficiency as commits per million tokens, past a floor", async () => {
+    expect(efficiencyOf(EFFICIENCY_FLOOR - 1, 50)).toBeNull();
+    expect(efficiencyOf(EFFICIENCY_FLOOR, 0)).toBeNull();
+    expect(efficiencyOf(4_000_000, 2)).toBe(0.5);
+
+    const lean = await linkApp(await signIn("lean"));
+    const heavy = await linkApp(await signIn("heavy"));
+    const small = await linkApp(await signIn("small"));
+    for (const token of [lean, heavy, small]) {
+      await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    }
+    await upload(lean, [{ day, tool: "claude", tokens: 2_000_000, cost: 4, requests: 20 }]);
+    await sendWork(lean, [{ day, repo: "lean/atlas", commits: 4, insertions: 40, deletions: 4 }]);
+    await upload(heavy, [{ day, tool: "claude", tokens: 20_000_000, cost: 40, requests: 200 }]);
+    await sendWork(heavy, [{ day, repo: "heavy/atlas", commits: 4, insertions: 40, deletions: 4 }]);
+    await upload(small, [{ day, tool: "claude", tokens: 500_000, cost: 1, requests: 5 }]);
+    await sendWork(small, [{ day, repo: "small/atlas", commits: 9, insertions: 90, deletions: 9 }]);
+
+    const board = (await (await call("/api/leaderboard?period=today&metric=efficiency")).json()) as { entries: { login: string; efficiency: number }[] };
+    const logins = board.entries.map((entry) => entry.login);
+    expect(logins.indexOf("lean")).toBeLessThan(logins.indexOf("heavy"));
+    expect(logins).not.toContain("small");
+    expect(board.entries.find((entry) => entry.login === "lean")?.efficiency).toBe(2);
+
+    const page = await (await call("/leaderboard?period=today")).text();
+    expect(page).toContain("Efficiency is commits per million tokens.");
+    expect(page).toContain("2.0 per M");
+    expect(page).toContain('aria-label="Division"');
+  });
+
+  it("gives a season place inside the division, and a tier without one", async () => {
+    const quiet = await linkApp(await signIn("quiet-max"));
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${quiet}` }, body: JSON.stringify({ public: true }) });
+    await call("/api/usage", { method: "POST", headers: { authorization: `Bearer ${quiet}` }, body: JSON.stringify({ days: [{ day, tool: "codex", tokens: 300_000_000, cost: 30, requests: 300 }], division: "max" }) });
+    const own = (await (await call("/api/season", { headers: { authorization: `Bearer ${quiet}` } })).json()) as { you: { rank: number | null; tier: { key: string } } };
+    expect(own.you.rank).toBeNull();
+    expect(own.you.tier.key).toBe("silver");
+    const profile = await (await call("/u/quiet-max")).text();
+    expect(profile).toContain("Not ranked this season yet.");
+  });
+});
+
+describe("live layer", () => {
+  const day = today();
+
+  it("keeps a reading for today only, and tells a team day it is live", async () => {
+    const cookie = await signIn("liv");
+    const created = await form("/teams", cookie, { name: "Live Wire" });
+    const slug = new URL(created.headers.get("location")!, BASE).pathname.split("/").pop();
+    const token = await linkApp(cookie);
+    const stale = (parseLive({ days: [{ day: addDays(day, -30), tool: "claude", tokens: 10, cost: 0.001, requests: 1 }] }, day) as { error?: string }).error;
+    expect(stale).toContain("today");
+
+    await upload(token, [{ day, tool: "claude", tokens: 1000, cost: 0.5, requests: 10 }]);
+    const sent = await call("/api/live", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ days: [{ day, tool: "claude", tokens: 4000, cost: 2, requests: 40 }, { day, tool: "codex", tokens: 500, cost: 0.1, requests: 5 }] }) });
+    expect(sent.status).toBe(200);
+    expect(await sent.json()).toEqual({ saved: 2, fresh: 180 });
+
+    const api = (await (await call(`/api/teams/${slug}/day`, { headers: { authorization: `Bearer ${token}` } })).json()) as { people: { login: string; tokens: number; live: boolean }[] };
+    expect(api.people.find((person) => person.login === "liv")).toMatchObject({ tokens: 4500, live: true });
+    const page = await (await call(`/t/${slug}/day`, { headers: { cookie } })).text();
+    expect(page).toContain("live-dot");
+
+    // Yesterday is not live, whatever was sent today.
+    const earlier = (await (await call(`/api/teams/${slug}/day?date=${addDays(day, -1)}`, { headers: { authorization: `Bearer ${token}` } })).json()) as { people: { login: string; live: boolean }[] };
+    expect(earlier.people.find((person) => person.login === "liv")?.live).toBe(false);
+
+    // The sweep drops what nobody refreshed, and a stale reading no longer counts.
+    expect(await sweepLive(env.DB, Math.floor(Date.now() / 1000) + LIVE_TTL_SECONDS + 1)).toBe(2);
+    const after = (await (await call(`/api/teams/${slug}/day`, { headers: { authorization: `Bearer ${token}` } })).json()) as { people: { login: string; tokens: number; live: boolean }[] };
+    expect(after.people.find((person) => person.login === "liv")).toMatchObject({ tokens: 1000, live: false });
   });
 });

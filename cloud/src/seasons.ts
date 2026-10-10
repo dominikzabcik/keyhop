@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { type Metric, type Entry, isMetric, leaderboard } from "./stats";
-import { type AppEnv, addDays, today } from "./env";
+import { type AppEnv, type Division, addDays, isDivision, today } from "./env";
 import { teamForMember } from "./teams";
 
 /**
@@ -132,7 +132,7 @@ export interface Ranked extends Entry {
 /** A season's standings, each person with the tier their tokens earned. */
 export async function seasonBoard(
   db: D1Database,
-  options: { season: string; metric: Metric; teamId?: string; limit?: number; reference?: string },
+  options: { season: string; metric: Metric; teamId?: string; limit?: number; reference?: string; division?: Division },
 ): Promise<Ranked[]> {
   const reference = options.reference ?? today();
   const range = seasonRange(options.season, reference);
@@ -144,6 +144,7 @@ export async function seasonBoard(
     from: range.from,
     until: range.to,
     reference,
+    division: options.division,
   });
   return entries.map((entry) => ({ ...entry, tier: tierFor(entry.tokens) }));
 }
@@ -154,6 +155,9 @@ export interface Standing {
   /** Null when this person used nothing in the season, or isn't ranked. */
   rank: number | null;
   players: number;
+  /** The plan-based group the rank was counted in, or null while the app hasn't said. */
+  division: Division | null;
+  efficiency: number | null;
   tokens: number;
   tier: Tier;
   next: { label: string; tokens: number } | null;
@@ -161,7 +165,10 @@ export interface Standing {
   over: boolean;
 }
 
-/** One person's place in a season. */
+/**
+ * One person's place in a season: their rank by efficiency among the people in their division, and
+ * the tier their tokens earned. Someone whose app hasn't said a division ranks among everyone.
+ */
 export async function standing(
   db: D1Database,
   userId: string,
@@ -169,20 +176,34 @@ export async function standing(
 ): Promise<Standing> {
   const reference = options.reference ?? today();
   const season = options.season ?? currentSeason(reference);
-  const board = await seasonBoard(db, { season, metric: "tokens", teamId: options.teamId, limit: 500, reference });
+  const person = await db.prepare("SELECT division FROM users WHERE id = ?").bind(userId).first<{ division: Division | null }>();
+  const division = person?.division ?? null;
+  const board = await seasonBoard(db, { season, metric: "efficiency", teamId: options.teamId, limit: 500, reference, division: division ?? undefined });
   const mine = board.find((entry) => entry.userId === userId);
-  const tokens = mine?.tokens ?? 0;
+  const tokens = mine?.tokens ?? (await seasonTokens(db, userId, season, reference));
   return {
     season,
     label: seasonLabel(season),
     rank: mine?.rank ?? null,
     players: board.length,
+    division,
+    efficiency: mine?.efficiency ?? null,
     tokens,
     tier: tierFor(tokens),
     next: nextStep(tokens),
     daysLeft: daysLeft(season, reference),
     over: seasonRange(season, reference).over,
   };
+}
+
+/** The season's tokens for someone the efficiency board leaves out, so their tier still shows. */
+async function seasonTokens(db: D1Database, userId: string, season: string, reference: string): Promise<number> {
+  const range = seasonRange(season, reference);
+  const row = await db
+    .prepare("SELECT COALESCE(SUM(tokens), 0) AS tokens FROM daily_usage WHERE user_id = ? AND day >= ? AND day <= ?")
+    .bind(userId, range.from, range.to)
+    .first<{ tokens: number }>();
+  return row?.tokens ?? 0;
 }
 
 export const seasons = new Hono<AppEnv>();
@@ -204,20 +225,25 @@ seasons.get("/api/season", async (c) => {
     teamId = membership.team.id;
   }
 
-  const board = await seasonBoard(c.env.DB, { season, metric: isMetric(metric) ? metric : "tokens", teamId });
-  const mine = user ? board.find((entry) => entry.userId === user.id) : undefined;
+  const division = isDivision(c.req.query("division")) ? (c.req.query("division") as Division) : undefined;
+  const board = await seasonBoard(c.env.DB, { season, metric: isMetric(metric) ? metric : "efficiency", teamId, division });
+  // Your own place is counted inside your division, whatever the board on screen is filtered to.
+  const mine = user ? await standing(c.env.DB, user.id, { season, teamId }) : null;
   const range = seasonRange(season);
   return c.json({
     season,
     label: seasonLabel(season),
     daysLeft: daysLeft(season),
     over: range.over,
-    you: user
+    you: mine
       ? {
-          rank: mine?.rank ?? null,
-          tokens: mine?.tokens ?? 0,
-          tier: tierFor(mine?.tokens ?? 0),
-          next: nextStep(mine?.tokens ?? 0),
+          rank: mine.rank,
+          players: mine.players,
+          division: mine.division,
+          efficiency: mine.efficiency,
+          tokens: mine.tokens,
+          tier: mine.tier,
+          next: mine.next,
         }
       : null,
     players: board.length,
@@ -234,6 +260,8 @@ seasons.get("/api/season", async (c) => {
       activeDays: entry.activeDays,
       tools: entry.tools,
       tier: entry.tier,
+      efficiency: entry.efficiency,
+      division: entry.division,
       isYou: !!user && entry.userId === user.id,
     })),
   });

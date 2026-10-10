@@ -85,6 +85,15 @@ export const LIMIT_TOOLS = ["claude", "cursor", "codex", "gemini", "opencode", "
 /** A current human-readable list, so validation errors never name stale tools. */
 export const toolList = (): string => `${TOOLS.slice(0, -1).join(", ")} or ${TOOLS[TOOLS.length - 1]}`;
 
+/**
+ * The plan-based groups a person competes in: the broadest paid plan among their logins, as the app
+ * reads it. "free" also covers a person whose app hasn't said.
+ */
+export const DIVISIONS = ["free", "pro", "max"] as const;
+export type Division = (typeof DIVISIONS)[number];
+export const DIVISION_NAMES: Record<Division, string> = { free: "Free", pro: "Pro", max: "Max" };
+export const isDivision = (value: string | undefined): value is Division => !!value && (DIVISIONS as readonly string[]).includes(value);
+
 export const limitToolList = (): string => `${LIMIT_TOOLS.slice(0, -1).join(", ")} or ${LIMIT_TOOLS[LIMIT_TOOLS.length - 1]}`;
 
 export const now = (): number => Math.floor(Date.now() / 1000);

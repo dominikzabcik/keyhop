@@ -6,6 +6,7 @@ import { randomToken } from "./crypto";
 import type { AppEnv } from "./env";
 import { publicError } from "./errors";
 import { limits, sweepLimits } from "./limits";
+import { live, sweepLive } from "./live";
 import { notFound, pages } from "./pages";
 import { petRoutes } from "./pet";
 import { quests } from "./quests";
@@ -38,6 +39,7 @@ app.route("/", auth);
 app.route("/", usage);
 app.route("/", work);
 app.route("/", limits);
+app.route("/", live);
 app.route("/", card);
 app.route("/", petRoutes);
 app.route("/", widgets);
@@ -64,5 +66,6 @@ export default {
   /** The hourly trigger in wrangler.jsonc. */
   async scheduled(_controller: ScheduledController, env: AppEnv["Bindings"], ctx: ExecutionContext) {
     ctx.waitUntil(sweepLimits(env.DB));
+    ctx.waitUntil(sweepLive(env.DB));
   },
 } satisfies ExportedHandler<AppEnv["Bindings"]>;

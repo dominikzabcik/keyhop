@@ -1,4 +1,4 @@
-import { type MeasuredTool, type Tool, MEASURED_TOOLS, TOOLS, addDays, today } from "./env";
+import { type Division, type MeasuredTool, type Tool, MEASURED_TOOLS, TOOLS, addDays, today } from "./env";
 
 export const PERIODS = {
   today: { label: "Today", days: 1 },
@@ -8,11 +8,20 @@ export const PERIODS = {
 } as const;
 export type Period = keyof typeof PERIODS;
 
+/** Tokens a person must have spent in a window before efficiency ranks them: below it, one commit wins. */
+export const EFFICIENCY_FLOOR = 1_000_000;
+
 /**
  * What a board can be ranked by. `sort` is the expression it orders on, written against the two
- * sources a day comes from: `u` for what the day cost, `w` for what it produced.
+ * sources a day comes from: `u` for what the day cost, `w` for what it produced. Efficiency is the
+ * default: commits per million tokens, for anyone past the floor who synced a commit.
  */
 export const METRICS = {
+  efficiency: {
+    label: "Efficiency",
+    sort: `CASE WHEN COALESCE(u.tokens, 0) >= ${EFFICIENCY_FLOOR} AND COALESCE(w.commits, 0) > 0 THEN w.commits * 1000000.0 / u.tokens ELSE 0 END`,
+  },
+  cache: { label: "Cache hit", sort: "CASE WHEN COALESCE(u.tokens, 0) > 0 AND u.cache_read IS NOT NULL THEN u.cache_read * 100.0 / u.tokens ELSE 0 END" },
   tokens: { label: "Tokens", sort: "COALESCE(u.tokens, 0)" },
   cost: { label: "API value", sort: "COALESCE(u.cost_micros, 0)" },
   requests: { label: "Requests", sort: "COALESCE(u.requests, 0)" },
@@ -29,6 +38,16 @@ export interface Totals {
   costMicros: number;
   requests: number;
   tools: Record<Tool, number>;
+}
+
+/** Commits per million tokens, or null below the floor or without a commit. */
+export function efficiencyOf(tokens: number, commits: number): number | null {
+  return tokens >= EFFICIENCY_FLOOR && commits > 0 ? (commits * 1_000_000) / tokens : null;
+}
+
+/** The share of tokens read back from a cache, as a percentage, or null when the app never said. */
+export function cacheHitOf(tokens: number, cacheRead: number | null): number | null {
+  return cacheRead === null || tokens <= 0 ? null : (cacheRead * 100) / tokens;
 }
 
 /** What came out of the days, next to what they cost. Zero for anyone who hasn't synced commits. */
@@ -49,6 +68,11 @@ export interface Entry extends Totals, Work {
   public: boolean;
   /** Days with tokens or commits, since either one is a day someone worked. */
   activeDays: number;
+  /** Null when no synced day carried a cache count. */
+  cacheRead: number | null;
+  efficiency: number | null;
+  cacheHit: number | null;
+  division: Division | null;
 }
 
 function since(period: Period, reference: string): string {
@@ -72,6 +96,8 @@ type Row = {
   deletions: number;
   repos: number;
   active_days: number;
+  cache_read: number | null;
+  division: Division | null;
 } & Record<`tool_${Tool}`, number>;
 
 /**
@@ -90,6 +116,8 @@ export async function leaderboard(
     from?: string;
     /** Last day to count. Days after it, like the rest of a month in progress, are left out. */
     until?: string;
+    /** Only people in this division: peers on the same plan. */
+    division?: Division;
   },
 ): Promise<Entry[]> {
   const sort = METRICS[options.metric].sort;
@@ -112,11 +140,14 @@ export async function leaderboard(
   forRange();
   const membership = options.teamId ? "p.user_id IN (SELECT user_id FROM team_members WHERE team_id = ?)" : "people.public = 1";
   if (options.teamId) values.push(options.teamId);
+  const division = options.division ? " AND people.division = ?" : "";
+  if (options.division) values.push(options.division);
 
   const { results } = await db
     .prepare(
       `WITH u AS (
-         SELECT user_id, SUM(tokens) AS tokens, SUM(cost_micros) AS cost_micros, SUM(requests) AS requests, ${TOOL_SUMS}
+         SELECT user_id, SUM(tokens) AS tokens, SUM(cost_micros) AS cost_micros, SUM(requests) AS requests,
+           SUM(cache_read) AS cache_read, ${TOOL_SUMS}
          FROM daily_usage WHERE ${range} GROUP BY user_id
        ),
        w AS (
@@ -133,6 +164,7 @@ export async function leaderboard(
        ),
        p AS (SELECT user_id FROM u UNION SELECT user_id FROM w)
        SELECT p.user_id, people.login, COALESCE(people.display_name, people.name) AS name, people.avatar_url, people.public,
+         people.division, u.cache_read,
          COALESCE(u.tokens, 0) AS tokens, COALESCE(u.cost_micros, 0) AS cost_micros, COALESCE(u.requests, 0) AS requests,
          COALESCE(w.commits, 0) AS commits, COALESCE(w.insertions, 0) AS insertions, COALESCE(w.deletions, 0) AS deletions,
          COALESCE(w.repos, 0) AS repos, COALESCE(a.days, 0) AS active_days,
@@ -142,7 +174,7 @@ export async function leaderboard(
        LEFT JOIN u ON u.user_id = p.user_id
        LEFT JOIN w ON w.user_id = p.user_id
        LEFT JOIN a ON a.user_id = p.user_id
-       WHERE ${membership} AND ${sort} > 0
+       WHERE ${membership}${division} AND ${sort} > 0
        ORDER BY ${sort} DESC, people.login COLLATE NOCASE ASC
        LIMIT ${Math.min(Math.max(options.limit ?? 100, 1), 500)}`,
     )
@@ -163,6 +195,10 @@ export async function leaderboard(
     deletions: row.deletions,
     repos: row.repos,
     activeDays: row.active_days,
+    cacheRead: row.cache_read,
+    efficiency: efficiencyOf(row.tokens, row.commits),
+    cacheHit: cacheHitOf(row.tokens, row.cache_read),
+    division: row.division,
     tools: Object.fromEntries(TOOLS.map((tool) => [tool, row[`tool_${tool}`]])) as Record<Tool, number>,
   }));
 }

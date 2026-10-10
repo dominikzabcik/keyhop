@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { apiUser, apiWriter, uploadLimit } from "./auth";
 import { type AppEnv, addDays, now, today } from "./env";
+import { liveFor } from "./live";
 
 /**
  * How long an unfinished index is believed. A computer part-way through reports every sync, so a
@@ -247,6 +248,8 @@ export interface PersonDay {
   repos: DayRepo[];
   /** Set only while this person's figures are still filling in. */
   indexing: Indexing | null;
+  /** True when this person's app sent a reading in the last few minutes, so today's tokens are live. */
+  live: boolean;
 }
 
 /**
@@ -316,6 +319,7 @@ export async function teamDay(db: D1Database, teamId: string, day: string): Prom
       deletions: 0,
       repos: [],
       indexing: null,
+      live: false,
     });
   }
   for (const row of indexes.results) {
@@ -328,6 +332,21 @@ export async function teamDay(db: D1Database, teamId: string, day: string): Prom
     person.tokens = row.tokens;
     person.costMicros = row.cost_micros;
     person.requests = row.requests;
+  }
+  // Today's day is still being written. A live reading for it is newer than the last hourly sync,
+  // and a total can only grow within a day, so the larger figure is the current one.
+  if (day === today()) {
+    const readings = await liveFor(db, [...byPerson.keys()]);
+    for (const [userId, reading] of readings) {
+      const person = byPerson.get(userId);
+      if (!person || reading.day !== day) continue;
+      person.live = true;
+      if (reading.tokens > person.tokens) {
+        person.tokens = reading.tokens;
+        person.costMicros = reading.costMicros;
+        person.requests = reading.requests;
+      }
+    }
   }
   const repoOf = new Map<string, DayRepo>();
   for (const row of repos.results) {

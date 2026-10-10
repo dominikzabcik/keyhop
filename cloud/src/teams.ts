@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { apiUser, apiWriter, pageUser } from "./auth";
 import { randomToken } from "./crypto";
-import { type AppEnv, addDays, now, today } from "./env";
+import { type AppEnv, addDays, isDivision, now, today } from "./env";
+import { type Division } from "./env";
 import { type Metric, type Period, isMetric, isPeriod, leaderboard } from "./stats";
 import { presentDay } from "./tasks";
 import { teamDay } from "./work";
@@ -205,7 +206,8 @@ teams.get("/api/teams", apiUser, async (c) => {
 
 teams.get("/api/leaderboard", async (c) => {
   const period: Period = isPeriod(c.req.query("period")) ? (c.req.query("period") as Period) : "week";
-  const metric: Metric = isMetric(c.req.query("metric")) ? (c.req.query("metric") as Metric) : "tokens";
+  const metric: Metric = isMetric(c.req.query("metric")) ? (c.req.query("metric") as Metric) : "efficiency";
+  const division = isDivision(c.req.query("division")) ? (c.req.query("division") as Division) : undefined;
   const user = c.get("user");
   let teamId: string | undefined;
   const slug = c.req.query("team");
@@ -215,10 +217,11 @@ teams.get("/api/leaderboard", async (c) => {
     if (!membership) return c.json({ error: "No such team." }, 404);
     teamId = membership.team.id;
   }
-  const entries = await leaderboard(c.env.DB, { period, metric, teamId });
+  const entries = await leaderboard(c.env.DB, { period, metric, teamId, division });
   return c.json({
     period,
     metric,
+    division: division ?? null,
     entries: entries.map(({ userId, costMicros, ...entry }) => ({ ...entry, cost: costMicros / 1_000_000, isYou: userId === user?.id })),
   });
 });

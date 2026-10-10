@@ -401,6 +401,7 @@ a.place-card:hover { border-color: var(--border-strong); }
 .day-figures { display: grid; grid-template-columns: repeat(3, 66px) 104px; gap: 20px; }
 .day-figures > div { display: grid; gap: 1px; justify-items: end; }
 .day-figures b { font: 600 16px/1.25 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+.live-dot { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--good); vertical-align: 1px; }
 .day-figures small { color: var(--subtle); font-size: 11.5px; }
 .day-quiet { margin: 0; padding: 0 16px 14px; color: var(--subtle); }
 /* A day that is still filling in says so, in words, with the count it actually has. Deliberately
@@ -746,9 +747,14 @@ export function usd(micros: number): string {
 export const count = (value: number): string => Math.round(value).toLocaleString("en-US");
 
 export function metricValue(
-  totals: { tokens: number; costMicros: number; requests: number; commits?: number; insertions?: number; deletions?: number },
+  totals: {
+    tokens: number; costMicros: number; requests: number; commits?: number; insertions?: number; deletions?: number;
+    efficiency?: number | null; cacheHit?: number | null;
+  },
   metric: Metric,
 ): string {
+  if (metric === "efficiency") return totals.efficiency == null ? "Unranked" : `${totals.efficiency.toFixed(totals.efficiency >= 10 ? 0 : 1)} per M`;
+  if (metric === "cache") return totals.cacheHit == null ? "Unknown" : `${Math.round(totals.cacheHit)}%`;
   if (metric === "cost") return usd(totals.costMicros);
   if (metric === "requests") return count(totals.requests);
   if (metric === "commits") return count(totals.commits ?? 0);

@@ -327,6 +327,7 @@ export function presentDay(people: PersonDay[], viewerId: string) {
       insertions: person.insertions,
       deletions: person.deletions,
       indexing: person.indexing,
+      live: person.live,
       repos: person.repos.map(({ repo, commits, insertions, deletions }) => ({ repo, commits, insertions, deletions })),
       tasks: tasks.map((task) => ({
         title: task.title,

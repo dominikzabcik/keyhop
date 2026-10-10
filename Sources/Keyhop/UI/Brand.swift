@@ -24,6 +24,7 @@ enum Brand {
     static let good = Color(hex: "#5CC98A")
     static let warn = Color(hex: "#E3A64F")
     static let bad = Color(hex: "#EE7A69")
+    static let info = Color(hex: "#7EB0F2")
 
     static let backgroundColor = NSColor(srgbRed: 0.09, green: 0.09, blue: 0.09, alpha: 1)
 

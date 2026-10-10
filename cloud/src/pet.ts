@@ -97,15 +97,14 @@ export interface PetInput {
 }
 
 /**
- * A chibi that fills its frame, the way a Codex pet fills a 192×208 cell: one round body,
- * ears big enough to read, tiny feet, a thick outline, flat colour. Pose only lifts the ears
- * and the paw, so the feet stay put. The tool colour is the ears, the cheeks, and the blocks.
- * Clients paint the rectangles and do not invent a second body.
+ * A block creature on the same grid as the night field: bone body, hard outline, one tool mark.
+ * Pose only lifts the ears, so the feet stay put. Clients paint the rectangles and do not
+ * invent a second body.
  */
-const INK = "#241C16";
-const BODY = "#F6DCC0";
-const SHADE = "#E2BC8C";
-const LIFT = "#FFF3DC";
+const INK = "#140E0C";
+const BODY = "#F3EAD8";
+const SHADE = "#CDBFA6";
+const LIFT = "#FFF6E8";
 const EYE = "#FFF9F2";
 /** The accent when a pet has no single tool: a mid green, never one tool's colour. */
 const NEUTRAL_ACCENT = "#6E7A52";
@@ -141,143 +140,73 @@ class Grid {
 
 }
 
-/** Distances are measured up from the soles, then scaled. `dx` is right of centre. */
-function gx(dx: number, s: number): number {
-  return CX + dx * s;
-}
-function gy(up: number, s: number): number {
-  return FOOT - up * s;
+function fill(g: Grid, x0: number, y0: number, x1: number, y1: number, cell: Cell): void {
+  const xa = Math.round(Math.min(x0, x1));
+  const xb = Math.round(Math.max(x0, x1));
+  const ya = Math.round(Math.min(y0, y1));
+  const yb = Math.round(Math.max(y0, y1));
+  for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) g.set(x, y, cell);
 }
 
-function ellipse(g: Grid, cx: number, cy: number, rx: number, ry: number, cell: Cell, guard?: (current: Cell) => boolean): void {
-  if (rx < 0.45 || ry < 0.45) return;
-  const y0 = Math.max(0, Math.floor(cy - ry));
-  const y1 = Math.min(GRID_H - 1, Math.ceil(cy + ry));
-  for (let y = y0; y <= y1; y++) {
-    const ny = (y + 0.5 - cy) / ry;
-    if (ny * ny > 1) continue;
-    const hx = rx * Math.sqrt(1 - ny * ny);
-    const x0 = Math.max(0, Math.ceil(cx - hx));
-    const x1 = Math.min(GRID_W - 1, Math.floor(cx + hx - 1e-6));
-    for (let x = x0; x <= x1; x++) {
-      if (guard && !guard(g.get(x, y))) continue;
-      g.set(x, y, cell);
+/** Chunk size at each stage. Later stages are the same animal in bigger pixels, so the shape count grows. */
+const CHUNK = [2, 3, 4, 5, 6, 7];
+
+/**
+ * A side-view dune animal, one character per chunk. The amber cell is the tool mark.
+ * Pose only stacks the ear, so the feet stay on the same row.
+ */
+const BODY_ROWS = [
+  "......bbbb..",
+  ".....bEbbbb.",
+  "...bbbbbbbb.",
+  ".bbbbbbbbb..",
+  "Abbbbbbb....",
+  "bbbbbbbb....",
+  "bbbbbbbb....",
+  "ssssssss....",
+  ".bb..bb.....",
+  ".ss..ss.....",
+];
+
+const EAR_ROWS: Record<Pet["pose"], string[]> = {
+  settled: [],
+  up: ["......bb...."],
+  tall: ["......bb....", "......bb...."],
+};
+
+const CHUNK_INK: Record<string, Ink> = { b: "B", s: "S", A: "A", E: "E" };
+
+function stamp(g: Grid, rows: string[], cell: number, top: number, left: number): void {
+  rows.forEach((row, ry) => {
+    [...row].forEach((ch, rx) => {
+      const ink = CHUNK_INK[ch];
+      if (!ink) return;
+      fill(g, left + rx * cell, top + ry * cell, left + (rx + 1) * cell - 1, top + (ry + 1) * cell - 1, ink);
+    });
+  });
+}
+
+/** One pixel of ink around the silhouette, the same edge the night-field runner uses. */
+function outline(g: Grid): void {
+  const marks: [number, number][] = [];
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      if (g.rows[y][x]) continue;
+      if (g.get(x - 1, y) || g.get(x + 1, y) || g.get(x, y - 1) || g.get(x, y + 1)) marks.push([x, y]);
     }
   }
-}
-
-const onBody = (cell: Cell) => cell === "B" || cell === "S" || cell === "L";
-
-/** Ink ring, then a flat fill. The ring is two pixels: thick at card size, still a hard edge. */
-function blob(g: Grid, cx: number, cy: number, rx: number, ry: number, fill: Cell, outline = 2): void {
-  ellipse(g, cx, cy, rx + outline, ry + outline, "K");
-  ellipse(g, cx, cy, rx, ry, fill);
-}
-
-function capsule(g: Grid, x0: number, y0: number, x1: number, y1: number, radius: number, fill: Cell): void {
-  const steps = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)));
-  for (const rad of [radius + 2, radius]) {
-    const cell: Cell = rad === radius ? fill : "K";
-    for (let step = 0; step <= steps; step++) {
-      const t = step / steps;
-      ellipse(g, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, rad, rad * 0.92, cell);
-    }
-  }
-}
-
-/** A fat ear. The tool colour is the outside; the cream is the inside. Settled ears hang beside the cheek. */
-function ear(g: Grid, dx: number, up: number, rx: number, ry: number, s: number): void {
-  const cx = gx(dx, s);
-  const cy = gy(up, s);
-  blob(g, cx, cy, rx * s, ry * s, "A", 2);
-  ellipse(g, cx, cy + ry * s * 0.08, rx * s * 0.48, ry * s * 0.52, "B", (cell) => cell === "A");
-}
-
-function smile(g: Grid, up: number, half: number, rise: number, s: number): void {
-  const cx = gx(0, s);
-  const cy = gy(up, s);
-  const w = Math.max(2, half * s);
-  const h = Math.max(1.2, rise * s);
-  for (let x = Math.round(cx - w); x <= Math.round(cx + w); x++) {
-    const t = (x - cx) / w;
-    const y = Math.round(cy + h * (1 - t * t));
-    g.set(x, y, "K");
-    g.set(x, y + 1, "K");
-  }
-}
-
-function eye(g: Grid, dx: number, up: number, s: number, pose: Pet["pose"]): void {
-  const cx = gx(dx, s);
-  const cy = gy(up, s);
-  const rx = 7.2 * s;
-  const ry = 8.2 * s;
-  if (pose === "settled") {
-    const w = Math.max(2, rx);
-    for (let x = Math.round(cx - w); x <= Math.round(cx + w); x++) {
-      const t = (x - cx) / w;
-      const y = Math.round(cy + ry * 0.28 * (1 - t * t));
-      g.set(x, y, "K");
-      g.set(x, y + 1, "K");
-    }
-    return;
-  }
-  blob(g, cx, cy, rx, ry, "W", 1.4);
-  const side = dx < 0 ? -1 : 1;
-  ellipse(g, cx + side * rx * 0.08, cy + ry * 0.06, rx * 0.58, ry * 0.64, "E");
-  ellipse(g, cx - side * rx * 0.22, cy - ry * 0.28, Math.max(0.9, rx * 0.2), Math.max(0.9, ry * 0.2), "W");
+  for (const [x, y] of marks) g.set(x, y, "K");
 }
 
 function companion(stage: number, pose: Pet["pose"]): Grid {
   const g = new Grid();
-  const s = SCALES[stage];
-  const leg = (dx: number, footDx: number) => {
-    capsule(g, gx(dx, s), gy(16, s), gx(footDx, s), gy(5, s), Math.max(2.2, 3.4 * s), "S");
-    blob(g, gx(footDx, s), gy(3.2, s), 7.2 * s, 3.6 * s, "S", 2);
-  };
-  leg(-8, -13);
-  leg(8, 13);
-
-  // Ears first, then the head covers their base, so they grow out of the skull instead of sitting on it.
-  if (pose !== "settled") {
-    ear(g, -15, 68, 13, 17, s);
-    ear(g, 16, 66, 13, 18, s);
-  }
-
-  const bodyCx = gx(0, s);
-  const bodyCy = gy(34, s);
-  const bodyRx = 33 * s;
-  const bodyRy = 27 * s;
-  blob(g, bodyCx, bodyCy, bodyRx, bodyRy, "B", 2);
-  ellipse(g, bodyCx + bodyRx * 0.1, bodyCy + bodyRy * 0.24, bodyRx * 0.7, bodyRy * 0.5, "S", onBody);
-  ellipse(g, bodyCx - bodyRx * 0.34, bodyCy - bodyRy * 0.38, bodyRx * 0.16, bodyRy * 0.12, "L", (cell) => cell === "B");
-
-  if (pose === "settled") {
-    ear(g, -31, 44, 10, 7.5, s);
-    ear(g, 31, 44, 10, 7.5, s);
-  }
-
-  eye(g, -12, 42, s, pose);
-  eye(g, 12, 42, s, pose);
-  smile(g, 27, pose === "tall" ? 8 : 6.2, pose === "settled" ? 1.6 : 3.4, s);
-  ellipse(g, gx(-20, s), gy(33, s), 4.8 * s, 2.8 * s, "A", onBody);
-  ellipse(g, gx(20, s), gy(33, s), 4.8 * s, 2.8 * s, "A", onBody);
-  ellipse(g, gx(0, s), gy(18, s), 6.4 * s, 3.6 * s, "A", onBody);
-
-  const nub = Math.max(2.6, 4.6 * s);
-  capsule(g, gx(-26, s), gy(32, s), gx(-32, s), gy(18, s), nub, "B");
-  if (pose === "tall") {
-    const thick = Math.max(3.4, 6.4 * s);
-    const pawX = gx(22, s);
-    const pawY = gy(90, s);
-    capsule(g, gx(28, s), gy(40, s), gx(38, s), gy(62, s), thick, "B");
-    capsule(g, gx(38, s), gy(62, s), pawX, pawY, thick, "B");
-    blob(g, pawX, pawY, 10 * s, 8.4 * s, "B", 2);
-    ellipse(g, pawX, pawY + 1.2 * s, 2.2 * s, 1.7 * s, "A", onBody);
-    ellipse(g, pawX - 3.2 * s, pawY + 2.2 * s, 1.3 * s, 1.1 * s, "A", onBody);
-    ellipse(g, pawX + 3.2 * s, pawY + 2.2 * s, 1.3 * s, 1.1 * s, "A", onBody);
-  } else {
-    capsule(g, gx(26, s), gy(32, s), gx(32, s), gy(18, s), nub, "B");
-  }
+  const cell = CHUNK[stage];
+  const left = Math.round(CX - (BODY_ROWS[0].length * cell) / 2);
+  const bodyTop = FOOT - BODY_ROWS.length * cell;
+  const ears = EAR_ROWS[pose];
+  stamp(g, ears, cell, bodyTop - ears.length * cell, left);
+  stamp(g, BODY_ROWS, cell, bodyTop, left);
+  outline(g);
   return g;
 }
 

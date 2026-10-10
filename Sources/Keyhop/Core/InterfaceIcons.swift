@@ -5,6 +5,7 @@ import Foundation
 enum InterfaceIcons {
     static let shapes: [(name: String, body: String)] = [
         ("overview", #"<rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/>"#),
+        ("limits", #"<rect x="1.5" y="2" width="3" height="12" rx="1"/><rect x="6.5" y="2" width="3" height="12" rx="1"/><rect x="11.5" y="2" width="3" height="12" rx="1"/>"#),
         ("accounts", #"<circle cx="6" cy="5.5" r="2.5"/><path d="M1.8 13.5c.5-2.3 2.2-3.5 4.2-3.5s3.7 1.2 4.2 3.5"/><path d="M10.5 3.2a2.4 2.4 0 0 1 0 4.6"/><path d="M12.2 10.3c1.1.5 1.8 1.6 2 3.2"/>"#),
         ("usage", #"<path d="M2 13.5h12"/><path d="M4 11V7"/><path d="M8 11V3.5"/><path d="M12 11V5.5"/>"#),
         ("budgets", #"<rect x="1.8" y="3.5" width="12.4" height="9" rx="1.8"/><path d="M1.8 6.5h12.4"/><path d="M10.5 9.8h1.5"/>"#),

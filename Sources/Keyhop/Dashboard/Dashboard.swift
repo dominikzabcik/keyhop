@@ -19,7 +19,7 @@ enum Dashboard {
         let token: String
     }
 
-    static let sections = ["overview", "accounts", "usage", "budgets", "leaderboard", "season", "teams", "profile", "settings"]
+    static let sections = ["overview", "limits", "accounts", "usage", "budgets", "leaderboard", "season", "teams", "profile", "settings"]
 
     private static var launchFile: URL { Platform.dataDirectory.appendingPathComponent("dashboard.json") }
 

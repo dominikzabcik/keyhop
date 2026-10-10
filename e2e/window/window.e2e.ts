@@ -15,33 +15,48 @@ test('the sidebar lists its sections from the top', async ({ app, browser }) => 
     const items = [...nav.children].filter((el) => !(el as HTMLElement).hidden);
     const boxes = items.map((el) => {
       const box = el.getBoundingClientRect();
-      return { name: (el.textContent || '').replace(/\s+/g, ' ').trim(), top: box.top, bottom: box.bottom };
+      const clone = el.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll('.nav-count').forEach((node) => node.remove());
+      return { name: (clone.textContent || '').replace(/\s+/g, ' ').trim(), top: box.top, bottom: box.bottom };
     });
     let maxGap = 0;
     for (let i = 1; i < boxes.length; i++) maxGap = Math.max(maxGap, boxes[i].top - boxes[i - 1].bottom);
-    const settings = boxes.find((box) => box.name === 'Settings');
-    const navBox = nav.getBoundingClientRect();
+    const tree = document.querySelector('#tree');
+    const settings = document.querySelector('.side-foot a[data-section="settings"]');
+    const treeBox = tree?.getBoundingClientRect();
+    const settingsBox = settings?.getBoundingClientRect();
     return {
       names: boxes.map((box) => box.name),
       maxGap,
-      tail: settings ? navBox.bottom - settings.bottom : 0,
+      treeHeight: treeBox?.height ?? 0,
+      settingsBelow: !!treeBox && !!settingsBox && settingsBox.top >= treeBox.bottom - 1,
     };
   });
 
   expect(layout?.names).toEqual([
-    'Overview', 'Accounts', 'Usage', 'Budgets', 'Cloud',
-    'Leaderboard', 'Season', 'Teams', 'Profile', 'Settings',
+    'Overview', 'Limits', 'Accounts', 'Usage', 'Budgets', 'Cloud',
+    'Leaderboard', 'Season', 'Teams', 'Profile',
   ]);
   // The Cloud label's own margin is the widest intended gap. A stretched row is hundreds of pixels.
   expect(layout?.maxGap ?? 999).toBeLessThan(40);
-  // Leftover height stays under Settings, above the footer, rather than between Budgets and Cloud.
-  expect(layout?.tail ?? 0).toBeGreaterThan(80);
+  // The account tree takes the leftover height. Settings sits under it.
+  expect(layout?.treeHeight ?? 0).toBeGreaterThan(24);
+  expect(layout?.settingsBelow).toBe(true);
 });
 
 test('overview is this computer today', async ({ app, screen, browser }) => {
   await openWindow(app, 'overview');
-  await expect(screen.getByRole('heading', 'Overview', { level: 1 })).toBeVisible();
-  await expect(screen.getByRole('heading', 'In use')).toBeVisible();
+  await expect(screen.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(screen.getByText('Your logins', { exact: true })).toBeVisible();
+  await expect(screen.getByText('In use', { exact: true })).toBeVisible();
+  await assertReadable(browser);
+});
+
+test('limits is the board of logins', async ({ app, screen, browser }) => {
+  await openWindow(app, 'limits');
+  await expect(screen.getByRole('heading', 'Limits', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Needs a hop', { level: 2 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'In use', { level: 2 })).toBeVisible();
   await assertReadable(browser);
 });
 
@@ -126,7 +141,7 @@ test('the sidebar stays packed in the smallest window', async ({ app, browser })
 
 test('Hop lists the sections a linked account can open', async ({ app, screen }) => {
   await openWindow(app, 'overview');
-  await screen.getByRole('button', 'Hop', { exact: false }).tap();
+  await screen.getByRole('button', 'Hop', { exact: true }).tap();
   await expect(screen.getByRole('dialog', 'Hop')).toBeVisible();
   for (const name of ['Overview', 'Leaderboard', 'Season', 'Teams', 'Profile', 'Settings']) {
     await expect(screen.getByRole('option', name, { exact: false })).toBeVisible();

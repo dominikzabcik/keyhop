@@ -44,7 +44,9 @@ enum DashboardPage {
   --focus: hsl(211 92% 62%);
   --good: #5CC98A;
   --warn: #E3A64F;
+  --warn-ink: #f0c27a;
   --bad: #EE7A69;
+  --info: #7eb0f2;
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, Cantarell, "Noto Sans", sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   color-scheme: dark;
@@ -82,15 +84,15 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .skip-link:focus-visible { transform: translateY(0); }
 
 /* Shell */
-.shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); height: 100vh; }
-.sidebar { display: flex; flex-direction: column; background: var(--sidebar); border-right: 1px solid var(--border); min-height: 0; }
+.shell { display: grid; grid-template-columns: 252px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 26px; height: 100vh; }
+.sidebar { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; background: var(--sidebar); border-right: 1px solid var(--border); min-height: 0; }
 .brand { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 18px; border-bottom: 1px solid var(--border); }
 .brand svg { width: 17px; height: 17px; flex: none; }
 .brand b { font-weight: 650; font-size: 14px; letter-spacing: .01em; }
 .brand .badge { margin-left: auto; }
 /* Keys drawn as keys: a cap with a lip along its bottom edge. */
 kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; background: hsl(0 0% 100% / .07); box-shadow: inset 0 -1.5px 0 hsl(0 0% 100% / .09); color: var(--muted); font: 600 11px var(--sans); letter-spacing: .02em; }
-.nav { position: relative; isolation: isolate; display: grid; align-content: start; gap: 2px; padding: 12px 10px; flex: 1; min-height: 0; overflow-y: auto; }
+.nav { position: relative; isolation: isolate; display: grid; align-content: start; gap: 2px; padding: 8px 10px 10px; flex: 0 1 auto; min-height: 0; overflow: auto; }
 .nav-label { margin: 14px 10px 4px; color: var(--subtle); font-size: 12px; font-weight: 560; }
 .nav.has-thumb::before { content: ""; position: absolute; z-index: -1; left: 10px; right: 10px; top: 0; height: var(--nav-h); transform: translateY(var(--nav-y)); border-radius: 8px; background: hsl(0 0% 100% / .08); transition: transform .3s cubic-bezier(.3, .8, .25, 1); }
 .nav.no-slide::before { transition: none; }
@@ -130,7 +132,7 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .mac-window .brand { padding-left: 90px; }
 .mac-window .brand, .mac-window .topbar { -webkit-user-select: none; user-select: none; cursor: default; }
 
-.content { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.content { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; grid-column: 2; grid-row: 1; }
 /* The backdrop: an illustrated scene behind the content. Its motion is transform and opacity
    only, so it stays smooth. */
 .backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; transition: opacity .4s ease; }
@@ -322,22 +324,29 @@ select.field option { background: var(--raised); }
 .dots text { fill: var(--subtle); font: 10.5px var(--mono); }
 
 /* Accounts */
-.group { display: grid; gap: 10px; }
-.group-head { display: flex; align-items: center; gap: 10px; }
-.group-head .mark { width: 18px; height: 18px; fill: var(--text); }
-.group-head h2 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.group { display: grid; gap: 6px; }
+.group-head { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+.group-head .mark { width: 16px; height: 16px; fill: var(--text); }
+.group-head h2 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: -.01em; }
 .group-head .count { color: var(--subtle); font-family: var(--mono); font-size: 12px; }
 .group-head .btn { margin-left: auto; }
-/* Fixed outer columns, so every row's limits and figures line up whatever its buttons are. */
-.account-row { display: grid; grid-template-columns: minmax(220px, 1.1fr) minmax(280px, 1.6fr) 150px 132px; gap: 20px; align-items: center; }
+.acct-sheet { width: min(860px, 100%); margin: 0 auto; display: grid; gap: 14px; }
+.group .list > .row { padding: 8px 12px; }
+.account-row { display: grid; grid-template-columns: minmax(0, 1fr) 132px minmax(108px, max-content); gap: 4px 16px; align-items: center; }
 .account-row .row-actions { flex-wrap: nowrap; }
-.account-name { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.account-meta { margin-top: 3px; color: var(--subtle); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.in-use { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 6px; background: hsl(0 0% 100% / .1); color: var(--text); font-size: 11.5px; font-weight: 600; }
+.account-id { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.account-id .ldot { margin-top: 6px; }
+.account-copy { min-width: 0; }
+.account-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.account-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-name b.warn { color: var(--warn-ink); }
+.account-line { margin-top: 1px; color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.in-use { display: inline-flex; align-items: center; flex: none; height: 20px; padding: 0 8px; border-radius: 6px; background: hsl(0 0% 100% / .1); color: var(--text); font-size: 11.5px; font-weight: 600; }
 .account-row.active { background: hsl(0 0% 100% / .018); }
-.account-row .today { display: grid; gap: 1px; font-family: var(--sans); }
-.account-row .today b { font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: var(--text); line-height: 1.3; font-variant-numeric: tabular-nums; }
-.account-row .today span { color: var(--subtle); font-size: 12px; }
+.list > .account-row:hover { background: var(--hover); }
+.account-row .today { display: grid; gap: 0; justify-items: end; text-align: right; font-family: var(--sans); }
+.account-row .today b { font-size: 14px; font-weight: 600; letter-spacing: -.01em; color: var(--text); line-height: 1.3; font-variant-numeric: tabular-nums; }
+.account-row .today span { color: var(--subtle); font-size: 12px; white-space: nowrap; }
 .menu-anchor { position: relative; display: inline-flex; }
 .btn.icon-only { width: 28px; padding: 0; }
 .btn.icon-only .icon { width: 16px; height: 16px; }
@@ -419,8 +428,10 @@ svg.heat { display: block; margin: 0 auto; }
 .table .bar-cell { width: 34%; }
 .cell-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .cell-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Usage: the total, the quick figures, the ranking and the breakdown. */
-.usage-top { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr); gap: 16px; align-items: stretch; }
+/* Usage sits in two columns that share one gutter: the rail, then the figure and the chart. */
+.usage-board { display: grid; grid-template-columns: minmax(280px, 34%) minmax(0, 1fr); gap: 12px; align-items: start; }
+.usage-side, .usage-main { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.usage-side svg.heat { max-width: 100%; height: auto; }
 .total-card { padding: 20px 22px 22px; display: grid; gap: 14px; align-content: start; }
 .total-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; color: var(--muted); font-size: 13px; }
 .total-change { display: inline-flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
@@ -585,35 +596,188 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .tip div { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-top: 3px; }
 .tip div span:nth-child(2) { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .toast {
-  position: fixed; right: 20px; bottom: 20px; z-index: 30; max-width: min(460px, calc(100vw - 40px)); padding: 12px 14px;
+  position: fixed; right: 20px; bottom: 40px; z-index: 30; max-width: min(460px, calc(100vw - 40px)); padding: 12px 14px;
   background: var(--raised); border: 1px solid var(--border-strong); border-radius: 10px; font-size: 13px;
   box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .7); transition: transform .25s ease, opacity .25s ease;
 }
 .toast.away { transform: translateY(12px); opacity: 0; pointer-events: none; }
 .toast.error { border-color: hsl(8 80% 67% / .45); }
 
+/* The home shell: a night field, an account tree, and a limits board. */
+.hop-side { width: calc(100% - 20px); margin: 8px 10px 0; justify-content: flex-start; }
+.hop-side kbd { margin-left: auto; }
+.nav a .nav-count {
+  margin-left: auto; min-width: 16px; height: 16px; padding: 0 5px; border-radius: 99px;
+  background: var(--warn); color: #1c1408; font-size: 11px; font-weight: 650;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.side-label { margin: 12px 16px 4px; color: var(--subtle); font-size: 12px; }
+.acct-tree { flex: 1 0 72px; min-height: 72px; overflow: auto; padding-bottom: 8px; }
+.tree-tool, .tree-acct {
+  display: flex; align-items: center; gap: 8px; width: calc(100% - 12px); margin: 0 6px; height: 28px; padding: 0 8px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--muted); text-align: left; cursor: pointer;
+}
+.tree-acct { padding-left: 28px; }
+.tree-tool:hover, .tree-acct:hover { background: var(--hover); color: var(--text); }
+.tree-tool .nm, .tree-acct .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-tool .nm { flex: 1; font-weight: 550; }
+.tree-acct .nm { flex: 1; }
+.tree-acct.needs .nm { color: var(--warn-ink); }
+.tree-acct .plan { color: var(--subtle); font-size: 11px; flex: none; }
+.chev { width: 12px; height: 12px; flex: none; }
+.tree-tool.open .chev { transform: rotate(90deg); }
+.tree-wait { margin: 0 16px 4px 34px; color: var(--subtle); font-size: 12px; }
+.ldot { width: 8px; height: 8px; border-radius: 99px; flex: none; box-sizing: border-box; display: inline-block; }
+.ldot.needs { background: var(--warn); }
+.ldot.active { background: transparent; box-shadow: inset 0 0 0 1.6px var(--info); }
+.ldot.room, .ldot.hot { background: var(--good); }
+.ldot.quiet { background: transparent; box-shadow: inset 0 0 0 1.6px var(--subtle); }
+.side-foot { flex: none; border-top: 1px solid var(--border); padding: 6px 0 8px; }
+.foot-link {
+  display: flex; align-items: center; gap: 8px; height: 30px; margin: 0 8px; padding: 0 8px; border-radius: 8px;
+  color: var(--muted); text-decoration: none; font-weight: 520;
+}
+.foot-link:hover, .foot-link[aria-current="page"] { background: hsl(0 0% 100% / .08); color: var(--text); }
+.pet-foot { display: flex; align-items: center; gap: 8px; padding: 2px 14px 6px; }
+.pet-foot .pet { width: 36px; height: auto; flex: none; }
+.pet-foot > span { display: grid; line-height: 1.25; min-width: 0; flex: 1; }
+.pet-foot b { font-size: 12.5px; font-weight: 600; }
+.pet-foot small { color: var(--subtle); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pet-foot .btn { flex: none; }
+#field, #veil { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+#field { image-rendering: pixelated; }
+#veil { background: radial-gradient(ellipse 72% 58% at 50% 42%, rgba(0, 0, 0, .38), transparent 70%); }
+.content.is-field .backdrop { opacity: 0 !important; }
+.content.is-home .topbar {
+  position: absolute; left: 0; right: 0; top: 0; height: 52px; background: transparent; border-bottom-color: transparent; z-index: 4;
+}
+.content.is-home .main { padding: 0; }
+.content.is-field .hcomposer, .content.is-field .hlogins {
+  background: var(--panel); -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.home-wrap {
+  min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 64px 24px 32px; gap: 16px; box-sizing: border-box;
+}
+.hstack, .hcomposer, .hlogins, .hnotices { width: min(620px, 100%); }
+.hstack { display: grid; gap: 8px; justify-items: center; }
+.hstack h1 { margin: 0; font-size: 28px; font-weight: 620; letter-spacing: -.03em; text-align: center; }
+.hsub, .hnote { margin: 0; max-width: 440px; text-align: center; color: var(--muted); font-size: 13.5px; }
+.hnote { color: var(--warn-ink); }
+.content.is-field .hstack h1, .content.is-field .hsub, .content.is-field .hnote { text-shadow: 0 1px 18px rgba(0, 0, 0, .55); }
+.hcomposer { overflow: visible; }
+.hcomposer input {
+  display: block; width: 100%; border: 0; background: transparent; outline: none;
+  padding: 14px 14px 6px; font-size: 14px; color: var(--text);
+}
+.hcomposer input::placeholder { color: var(--subtle); }
+.hcomposer-bar { display: flex; align-items: center; gap: 4px; padding: 6px 8px 8px; }
+.hchip-wrap { position: relative; display: inline-flex; }
+.hchip, .htext {
+  height: 28px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12.5px;
+}
+.hchip:hover, .htext:hover { background: var(--hover); color: var(--text); }
+.hgo {
+  margin-left: auto; width: 28px; height: 28px; border: 0; border-radius: 8px; background: var(--primary); color: var(--on-primary);
+  display: grid; place-items: center; cursor: pointer;
+}
+.hpop {
+  position: absolute; z-index: 6; top: calc(100% + 6px); left: 0; min-width: 200px; max-height: 240px; overflow: auto; padding: 4px;
+  border-radius: 10px; border: 1px solid var(--border); background: var(--raised); box-shadow: 0 18px 50px rgba(0, 0, 0, .35);
+}
+.hpop button {
+  display: flex; width: 100%; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--text); text-align: left; cursor: pointer;
+}
+.hpop button small { margin-left: auto; color: var(--subtle); }
+.hpop button.on, .hpop button:hover { background: var(--hover); }
+.hlogins-head {
+  display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 8px 0 12px; color: var(--muted); font-size: 13px;
+}
+.hlogins-head b { color: var(--text); font-weight: 600; }
+.hgroup { padding: 8px 12px 2px; color: var(--subtle); font-size: 12px; }
+.hlogin { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 0 12px; }
+.hlogin-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; color: inherit;
+  text-align: left; padding: 6px 0; cursor: pointer;
+}
+.hlogin b { font-weight: 620; font-size: 13px; max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hlogin b.warn { color: var(--warn-ink); }
+.hlogin .meta { color: var(--muted); font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hlogin .pct { margin-left: auto; flex: none; color: var(--subtle); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.hlogin:hover { background: var(--hover); }
+.hpill {
+  margin-left: auto; flex: none; height: 20px; padding: 0 7px; border-radius: 6px;
+  background: hsl(36 72% 60% / .16); color: var(--warn-ink); font-size: 11.5px; font-weight: 620;
+  display: inline-flex; align-items: center;
+}
+.hpill.bad { background: hsl(8 80% 67% / .16); color: var(--bad); }
+.hquiet { margin: 0 12px 10px; color: var(--subtle); font-size: 12.5px; }
+.hnotices { border-radius: 12px; }
+.content.is-board .main { padding: 8px 16px 16px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.content.is-board .page { flex: 1; min-height: 0; max-width: none; width: 100%; display: flex; flex-direction: column; }
+.knote { margin: 4px 0 8px; color: var(--muted); }
+.kscroll { flex: 1; min-height: 0; overflow: auto; }
+.kboard { display: flex; gap: 12px; height: 100%; min-width: 920px; align-items: stretch; }
+.kcol {
+  flex: 1; min-width: 220px; min-height: 0; display: flex; flex-direction: column;
+  padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: hsl(0 0% 100% / .03);
+}
+.kcol h2 {
+  margin: 0 0 8px; padding: 2px 4px 0; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 550; color: var(--muted);
+}
+.kcol h2 .n { margin-left: auto; color: var(--subtle); font-weight: 500; font-variant-numeric: tabular-nums; }
+.kcol-body { min-height: 0; overflow: auto; padding-bottom: 8px; }
+.kcard { border: 1px solid var(--border); border-radius: 10px; background: var(--panel); padding: 10px 10px 8px; margin-bottom: 8px; }
+.kcard.needs { border-color: hsl(36 72% 60% / .55); }
+.kcard header { display: flex; align-items: center; gap: 6px; }
+.kcard header b { font-size: 13px; font-weight: 620; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kcard header .pct { margin-left: auto; color: var(--subtle); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.kmeta, .kline { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; }
+.kline { color: var(--text); }
+.kcard .progress { margin-top: 8px; }
+.kacts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.kempty { margin: 0; color: var(--subtle); font-size: 12.5px; }
+.statusbar {
+  position: relative; grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; gap: 14px; padding: 0 12px;
+  border-top: 1px solid var(--border); background: var(--sidebar); color: var(--muted); font-size: 11.5px;
+  white-space: nowrap; overflow: hidden; min-width: 0;
+}
+.statusbar button, .statusbar a {
+  display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: inherit;
+  padding: 0; height: 26px; text-decoration: none; cursor: pointer; min-width: 0;
+}
+.statusbar button:hover, .statusbar a:hover { color: var(--text); }
+.statusbar .status-grow { flex: 1; }
+.status-btn .icon { width: 12px; height: 12px; }
+.status-btn.spin .icon { animation: turn 1s linear infinite; }
+#read { overflow: hidden; text-overflow: ellipsis; }
+.statusbar .meter { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: transparent; }
+
 @media (max-width: 1180px) {
   .hero { grid-template-columns: 1fr; }
-  .usage-top { grid-template-columns: 1fr; }
+  .usage-board { grid-template-columns: 1fr; }
+  .usage-main { order: -1; }
   .chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .stats, .stats.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .split, .split.wide-left { grid-template-columns: 1fr; }
-  .account-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); }
-  .account-row .today { display: none; }
-  .account-row .row-actions { grid-column: 1 / -1; justify-content: flex-start; }
   .tool-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
   .tool-row .row-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
 @media (max-width: 820px) {
-  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto minmax(240px, 1fr) auto; height: auto; min-height: 100vh; }
   body { overflow: auto; }
-  .shell { height: auto; min-height: 100vh; }
-  .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
+  .sidebar, .content, .statusbar { grid-column: 1; }
+  .sidebar { grid-row: 1; border-right: 0; border-bottom: 1px solid var(--border); }
+  .content { grid-row: 2; }
+  .statusbar { grid-row: 3; }
   .nav { grid-auto-flow: column; overflow-x: auto; flex: none; min-height: auto; }
   .nav-label { margin: 0 4px 0 12px; align-self: center; white-space: nowrap; }
-  .sidebar-foot { display: none; }
+  .acct-tree, .side-label, .pet-foot { display: none; }
   .main { overflow: visible; }
   .stats, .limits, .account-row, .tool-row { grid-template-columns: 1fr; }
+  .account-row .today { justify-items: start; text-align: left; }
+  .account-row .row-actions { justify-content: flex-start; }
   .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .top-actions { flex: 1; flex-wrap: wrap; }
   .hop kbd { display: none; }
@@ -644,10 +808,11 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     <div class="brand">
       <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#EBEBEB"><rect x="2.5" y="2.5" width="6" height="19.5" rx="1.5"/><rect x="9.6" y="9.2" width="6" height="6" rx="1.5"/><rect x="16" y="1" width="6" height="6" rx="1.5"/><rect x="16" y="17" width="6" height="6" rx="1.5"/></g></svg>
       <b>Keyhop</b>
-      <span id="mode"></span>
     </div>
+    <button class="hop hop-side" type="button" data-action="palette" aria-keyshortcuts="Meta+K Control+K" aria-haspopup="dialog" aria-controls="palette"><svg class="icon" aria-hidden="true"><use href="#i-hop"/></svg><span>Hop</span><kbd id="hop-key" aria-hidden="true">⌘K</kbd></button>
     <nav class="nav" id="nav" aria-label="Sections">
       <a href="#overview" data-section="overview"><svg><use href="#i-overview"/></svg>Overview</a>
+      <a href="#limits" data-section="limits"><svg><use href="#i-limits"/></svg>Limits<span class="nav-count" id="limits-count" hidden></span></a>
       <a href="#accounts" data-section="accounts"><svg><use href="#i-accounts"/></svg>Accounts</a>
       <a href="#usage" data-section="usage"><svg><use href="#i-usage"/></svg>Usage</a>
       <a href="#budgets" data-section="budgets"><svg><use href="#i-budgets"/></svg>Budgets</a>
@@ -656,17 +821,32 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       <a href="#season" data-section="season" hidden><svg><use href="#i-season"/></svg>Season</a>
       <a href="#teams" data-section="teams" hidden><svg><use href="#i-teams"/></svg>Teams</a>
       <a href="#profile" data-section="profile" hidden><svg><use href="#i-profile"/></svg>Profile</a>
-      <a href="#settings" data-section="settings"><svg><use href="#i-settings"/></svg>Settings</a>
     </nav>
-    <div class="sidebar-foot">
-      <button class="foot-row" id="refresh" data-action="refresh"><svg class="icon"><use href="#i-refresh"/></svg><span style="flex:1"><b>Refresh</b><small id="read">Limits not read yet</small><span class="meter" id="foot-meter" hidden><span></span></span></span></button>
+    <div class="side-label">Accounts</div>
+    <div class="acct-tree" id="tree"></div>
+    <div class="side-foot">
+      <div class="pet-foot" id="pet-foot" hidden></div>
+      <a class="foot-link" href="#settings" data-section="settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>Settings</span></a>
     </div>
   </aside>
-  <div class="content">
+  <div class="content" id="content">
     <div class="backdrop" id="backdrop" aria-hidden="true"></div>
-    <header class="topbar"><h1 id="title">Overview</h1><div class="top-actions"><div class="toolbar" id="toolbar"></div><button class="hop" type="button" data-action="palette" aria-keyshortcuts="Meta+K Control+K" aria-haspopup="dialog" aria-controls="palette"><svg class="icon" aria-hidden="true"><use href="#i-hop"/></svg><span>Hop</span><kbd id="hop-key">⌘K</kbd></button></div><div class="meter" id="top-meter" role="progressbar" aria-label="Keyhop is reading" aria-hidden="true"><span></span></div></header>
+    <canvas id="field" hidden aria-hidden="true"></canvas>
+    <div id="veil" hidden aria-hidden="true"></div>
+    <header class="topbar"><h1 id="title">Overview</h1><div class="top-actions"><div class="toolbar" id="toolbar"></div></div><div class="meter" id="top-meter" role="progressbar" aria-label="Keyhop is reading" aria-hidden="true"><span></span></div></header>
     <main class="main" id="main" tabindex="-1" aria-busy="true"><div class="page"><p class="lede busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span>Reading your accounts…</p></div></main>
   </div>
+  <footer class="statusbar">
+    <span id="mode" hidden></span>
+    <button type="button" id="status-needs" data-action="goto" data-section="limits" hidden></button>
+    <span id="status-clear" hidden>Limits clear</span>
+    <a id="status-outage" href="#" target="_blank" rel="noopener" hidden></a>
+    <span class="status-grow"></span>
+    <button type="button" id="status-today" data-action="goto" data-section="usage"></button>
+    <button type="button" id="status-streak" data-action="goto" data-section="usage" hidden></button>
+    <button type="button" class="status-btn" id="refresh" data-action="refresh"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span id="read">Limits not read yet</span></button>
+    <span class="meter" id="foot-meter" hidden><span></span></span>
+  </footer>
 </div>
 <div class="tip" id="tip" hidden></div>
 <div id="palette" hidden></div>
@@ -676,8 +856,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 <script>
 (() => {
   "use strict";
-  const SECTIONS = ["overview", "accounts", "usage", "budgets", "leaderboard", "season", "teams", "profile", "settings"];
-  const TITLES = { overview: "Overview", accounts: "Accounts", usage: "Usage", budgets: "Budgets", leaderboard: "Leaderboard", season: "Season", teams: "Teams", profile: "Profile", settings: "Settings" };
+  const SECTIONS = ["overview", "limits", "accounts", "usage", "budgets", "leaderboard", "season", "teams", "profile", "settings"];
+  const TITLES = { overview: "Overview", limits: "Limits", accounts: "Accounts", usage: "Usage", budgets: "Budgets", leaderboard: "Leaderboard", season: "Season", teams: "Teams", profile: "Profile", settings: "Settings" };
   const CLOUD_SECTIONS = ["leaderboard", "season", "teams", "profile"];
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -700,6 +880,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     boardPeriod: "week", boardMetric: "tokens", boardTeam: "", boardView: "ranks", boardDate: "", boardSeason: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
     settingsPane: "general", checkingUpdate: false,
+    homeMenu: null, homeTool: "", homeAccount: "", homeQuery: "", treeOpen: {},
     pending: new Map(), loadingUsage: 0,
   };
   history.replaceState(null, "", "#" + ui.section);
@@ -826,7 +1007,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     if (isStatic || servicesLoading || (data.servicesAt && Date.now() - data.servicesAt < 120_000)) return;
     servicesLoading = true;
     api("/api/services")
-      .then((list) => { data.services = list; data.servicesAt = Date.now(); if (ui.section === "overview") render(); })
+      .then((list) => { data.services = list; data.servicesAt = Date.now(); if (ui.section === "overview" || ui.section === "limits") render(); })
       .catch(() => {})
       .finally(() => { servicesLoading = false; });
   }
@@ -864,8 +1045,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 
   async function loadSection() {
     try {
+      if (ui.section === "overview" || ui.section === "limits") loadServices();
       if (ui.section === "overview") {
-        loadServices();
         const jobs = [loadUsage("today"), loadUsage("week")];
         if (!isStatic && data.state?.cloud?.linked) jobs.push(loadPet(), loadQuests());
         await Promise.all(jobs);
@@ -994,14 +1175,15 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   // The sidebar's current section, on the same kind of thumb, running down the list.
   function labelNav() {
     shownSections().forEach((section, i) => {
-      const link = $(`#nav a[data-section="${section}"]`);
-      if (link) link.title = `${TITLES[section]} · press ${i + 1}`;
+      const link = $(`#nav a[data-section="${section}"]`) || $(`.side-foot a[data-section="${section}"]`);
+      if (link) link.title = i < 9 ? `${TITLES[section]} · press ${i + 1}` : TITLES[section];
     });
   }
 
   function slideNav() {
     const nav = $("#nav"), on = nav?.querySelector('a[aria-current="page"]');
-    if (!on || !on.offsetHeight) return;
+    if (!nav) return;
+    if (!on || !on.offsetHeight) { nav.classList.remove("has-thumb"); return; }
     placeThumb(nav, "nav", { x: on.offsetTop, w: on.offsetHeight }, "--nav-y", "--nav-h", (p) => `${p.x}px`, (p) => `${p.w}px`);
   }
 
@@ -1053,7 +1235,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
   // The sections the sidebar shows, in its order; key 1 opens the first, 2 the second, and so on.
-  const shownSections = () => [...document.querySelectorAll("#nav a")].filter((a) => !a.hidden).map((a) => a.dataset.section);
+  const shownSections = () => [...document.querySelectorAll("#nav a, .side-foot a[data-section]")].filter((a) => !a.hidden).map((a) => a.dataset.section);
 
   function paletteItems() {
     const items = [];
@@ -1152,7 +1334,6 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     if (!data.state) return;
     const tools = data.state.status.tools;
     const cloud = data.state.cloud;
-    $("#backdrop")?.classList.toggle("scoped-out", data.state.appearance?.scope === "overview" && ui.section !== "overview");
     const cloudOn = !isStatic && !!cloud?.available;
     const linked = cloudOn && !!cloud.linked && !cloud.linking;
     const cloudLabel = $("#cloud-label");
@@ -1170,11 +1351,11 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         render();
       }, 3000);
     }
-    const page = { overview: overviewPage, accounts: accountsPage, usage: usagePage, budgets: budgetsPage, leaderboard: leaderboardPage, season: seasonPage, teams: teamsPage, profile: profilePage, settings: settingsPage }[ui.section](tools);
+    const page = { overview: overviewPage, limits: limitsPage, accounts: accountsPage, usage: usagePage, budgets: budgetsPage, leaderboard: leaderboardPage, season: seasonPage, teams: teamsPage, profile: profilePage, settings: settingsPage }[ui.section](tools);
     $("#title").textContent = TITLES[ui.section];
     $("#toolbar").innerHTML = page.toolbar || "";
     const offline = ui.offline ? `<div class="notice">${icon("alert")}<div><p>${esc(ui.offline)}</p></div></div>` : "";
-    $("#main").innerHTML = `<div class="page">${offline}${page.body}</div>`;
+    $("#main").innerHTML = ui.section === "overview" ? `<div class="home-wrap">${offline}${page.body}</div>` : `<div class="page">${offline}${page.body}</div>`;
     $("#main").setAttribute("aria-busy", (ui.loadingUsage || data.state.refreshing) ? "true" : "false");
     applyPending();
     renderActivity();
@@ -1264,18 +1445,25 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   }
 
   function renderSidebar() {
-    for (const link of document.querySelectorAll("#nav a")) {
+    for (const link of document.querySelectorAll("#nav a, .side-foot a[data-section]")) {
       if (link.dataset.section === ui.section) link.setAttribute("aria-current", "page"); else link.removeAttribute("aria-current");
     }
     const state = data.state;
-    $("#mode").innerHTML = isStatic ? `<span class="badge">Saved</span>` : state?.mode === "sample" ? `<span class="badge sample">Sample</span>` : "";
-    const read = state?.status?.refreshedAt;
-    $("#refresh").hidden = isStatic;
-    $("#refresh").classList.toggle("spin", !!state?.refreshing);
-    $("#refresh").setAttribute("aria-busy", state?.refreshing ? "true" : "false");
+    const mode = $("#mode");
+    if (mode) {
+      mode.innerHTML = isStatic ? `<span class="badge">Saved</span>` : state?.mode === "sample" ? `<span class="badge sample">Sample</span>` : "";
+      mode.hidden = !mode.textContent.trim();
+    }
+    const refresh = $("#refresh");
+    if (refresh) {
+      refresh.disabled = isStatic;
+      refresh.classList.toggle("spin", !!state?.refreshing);
+      refresh.setAttribute("aria-busy", state?.refreshing ? "true" : "false");
+    }
     renderActivity();
     labelNav();
     slideNav();
+    renderChrome();
   }
 
   function tabs(name, options, current, disabled = false) {
@@ -1298,18 +1486,6 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     return limit.resetsAt ? `Resets in ${fmt.until(limit.resetsAt)}` : "";
   }
 
-  function limits(account, count = 2, note = null) {
-    if (!account.limits?.length) {
-      return account.error ? `<p class="problem">${esc(account.error)}</p>` : `<p class="empty-inline subtle">${esc(note || "Limits not read yet")}</p>`;
-    }
-    return `<div class="limits">${account.limits.slice(0, count).map((limit) => `
-      <div>
-        <div class="limit-top"><span>${esc(windowName(limit.label))}</span><b>${Math.round(limit.usedPercent)}%</b></div>
-        ${progress(limit.usedPercent, limit.pace, undefined, `limit:${account.id}:${limit.label}`)}
-        <div class="limit-foot">${esc(limitFoot(limit))}</div>
-      </div>`).join("")}</div>`;
-  }
-
   function closest(tools) {
     let best = null;
     for (const tool of tools) for (const account of tool.accounts) {
@@ -1327,86 +1503,352 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 
   // MARK: Overview
 
-  function overviewPage(tools) {
-    const status = data.state.status;
-    const near = closest(tools);
-    const today = data.usage["today:all"];
-    const week = data.usage["week:all"];
+  const servicePhrase = {
+    maintenance: "is under maintenance",
+    degraded: "has degraded performance",
+    partial: "is in a partial outage",
+    major: "is in a major outage",
+  };
+  const serviceShort = {
+    maintenance: "under maintenance",
+    degraded: "degraded",
+    partial: "partial outage",
+    major: "major outage",
+  };
 
-    const alerts = (status.alerts || []).map((alert) => `
-      <div class="notice-row">${icon("alert")}<div><b>${esc(alert.title)}</b><p>${esc(alert.body)}</p></div>
-      ${alert.switchTo && !isStatic ? `<button class="btn sm" data-action="switch" data-id="${esc(alert.switchTo)}">Switch</button>` : ""}</div>`).join("");
-
-    // A provider's own outage, which no account switch gets around. Maintenance is said plainly,
-    // without the advice, since it's planned and usually brief.
-    const levelWords = { maintenance: "under maintenance", degraded: "degraded performance", partial: "partial outage", major: "major outage" };
-    const services = data.services || [];
-    const troubled = services.filter((s) => levelWords[s.level]);
-    const outages = troubled.map((s) => {
-      const incident = s.incidents[0];
-      const detail = incident ? `${esc(incident.name)}. ${esc(incident.stage[0].toUpperCase() + incident.stage.slice(1))}${incident.updated ? ` ${esc(ago(incident.updated))}` : ""}.` : "";
-      const advice = s.level === "maintenance" ? "" : " Every account is affected, so switching won't help.";
-      return `<div class="notice-row">${icon("alert")}<div><b>${esc(toolName(s.tool))}: ${levelWords[s.level]}</b><p>${detail}${advice}</p></div>
-        <a class="btn sm secondary" href="${esc(incident?.link || s.page)}" target="_blank" rel="noopener">Status page</a></div>`;
-    }).join("");
-    const serviceHint = services.length && !troubled.length && services.some((s) => s.level === "operational") ? " · Services operational" : "";
-
-    const streak = (week || today)?.streak;
-    // "12× on yesterday" while the ratio still means something. Past that, yesterday's own total.
-    function heroYesterday(digest) {
-      if (!digest) return "";
-      const chip = fmt.change(digest.total.tokens, digest.previous.tokens, fmt.tokens(digest.previous.tokens));
-      if (!chip) return "";
-      return `${chip} ${chip.includes(">from ") ? "yesterday" : "on yesterday"} · `;
-    }
-    // Everything that needs a look, in one place instead of a stack of boxes.
-    const notices = alerts + outages ? `<section class="notices" aria-label="Needs a look">${alerts}${outages}</section>` : "";
-    const hero = `<section class="hero">
-      <div class="hero-main">
-      <h2 class="hero-figure"><span class="num" data-count="${status.today.tokens}" data-count-key="today" data-format="tokens" data-count-intro>${fmt.tokens(status.today.tokens)}</span><span class="unit">tokens today</span></h2>
-      <p class="hero-line">${heroYesterday(today)}${fmt.count(status.today.requests)} requests${today && today.total.requests ? ` · ${esc(busiestHour(today))}` : ""}</p>
-      </div>
-      ${today && today.total.requests ? `<figure class="hero-hours"><figcaption>Today by hour</figcaption>${dotHours(today)}</figure>` : ""}
-      <div class="hero-run${data.state.refreshing ? " on" : ""}" aria-hidden="true">${window.KeyhopBackdrop ? window.KeyhopBackdrop.sprite("blip", "top:0") : ""}</div>
-    </section>`;
-    const stats = hero + companionRow() + `<div class="stats">
-      <div class="card stat"><div class="label">Streak</div><div class="value">${streak ? `${streak.current} ${streak.current === 1 ? "day" : "days"}` : "…"}</div><div class="foot">${streak ? `Longest ${streak.longest} · ${fmt.count(streak.activeDays)} active days` : ""}</div></div>
-      <div class="card stat"><div class="label">API value today</div><div class="value">${fmt.usd(status.today.cost)}</div><div class="foot">At standard API prices</div></div>
-      <div class="card stat"><div class="label">This week ${week ? fmt.change(week.total.tokens, week.previous.tokens, fmt.tokens(week.previous.tokens)) : ""}</div><div class="value">${week ? fmt.tokens(week.total.tokens) : "…"}</div><div class="foot">${week ? `${fmt.usd(week.total.cost)} API value` : ""}</div></div>
-      <div class="card stat"><div class="label">Closest to a limit</div><div class="value">${near ? `${Math.round(near.limit.usedPercent)}%` : "None"}</div><div class="foot">${near ? `${esc(near.tool.name)} · ${esc(windowName(near.limit.label))}` : "No limits read yet"}</div></div>
-    </div>`;
-
-    // Tools with nothing saved would each be a row of instructions; they share one line instead.
-    // On a first run, when nothing is set up at all, every tool keeps its row and its sign-in hint.
-    const isSetUp = (tool) => tool.accounts.length > 0 || data.state.adding.includes(tool.id);
-    const anySetUp = tools.some(isSetUp);
-    const inUseTools = anySetUp ? tools.filter(isSetUp) : tools;
-    const unsetTools = anySetUp ? tools.filter((tool) => !isSetUp(tool)) : [];
-    const inUse = `<section class="card">
-      <div class="card-head"><h2>In use</h2><span class="hint">Each tool's current account and its limits${serviceHint}</span></div>
-      <div class="list">${inUseTools.map((tool) => {
-        const account = tool.accounts.find((a) => a.active);
-        const other = alternative(tool, account);
-        const adding = data.state.adding.includes(tool.id);
-        const outage = troubled.find((s) => s.tool === tool.id);
-        const identity = account
-          ? `<div class="who">${mark(tool.id)}<div><b>${esc(tool.name)}</b><small>${esc(account.name)}${account.plan ? ` · ${esc(account.plan)}` : ""}${outage ? ` · <span class="warn-text">${esc(levelWords[outage.level][0].toUpperCase() + levelWords[outage.level].slice(1))}</span>` : ""}</small></div></div>`
-          : `<div class="who">${mark(tool.id)}<div><b>${esc(tool.name)}</b><small>${tool.accounts.length ? "Signed out" : "No saved accounts"}</small></div></div>`;
-        const middle = adding ? `<div class="waiting"><span class="pulse"><i></i><i></i><i></i></span><span>Waiting for the new login ${waited(tool.id)}</span></div>`
-          : account ? limits(account, 2, tool.limitsNote) : `<p class="empty-inline subtle">${esc(tool.signInHint)}</p>`;
-        const actions = isStatic ? "" : other
-          ? `<button class="btn sm secondary" data-action="switch" data-id="${esc(other.id)}">Switch to ${esc(other.name)}</button>`
-          : `<button class="btn sm ghost" data-action="goto" data-section="accounts">Accounts</button>`;
-        return `<div class="row tool-row">${identity}${middle}<div class="row-actions">${actions}</div></div>`;
-      }).join("")}${unsetTools.length ? `<div class="row unset-row">
-        <div class="unset-marks" aria-hidden="true">${unsetTools.map((tool) => mark(tool.id)).join("")}</div>
-        <p class="subtle">Not set up: ${esc(unsetTools.map((tool) => tool.name).join(", "))}</p>
-        <div class="row-actions">${isStatic ? "" : `<button class="btn sm ghost" data-action="goto" data-section="accounts">Add an account</button>`}</div>
-      </div>` : ""}</div>
-    </section>`;
-
-    return { body: `${notices}${stats}${inUse}` };
+  function tightest(account) {
+    const limits = account.limits || [];
+    if (!limits.length) return null;
+    return limits.reduce((a, b) => (b.usedPercent > a.usedPercent ? b : a));
   }
+
+  function runsOutSoon(limit) {
+    if (!limit?.runsOutAt) return false;
+    const eta = new Date(limit.runsOutAt);
+    if (!(eta > Date.now())) return false;
+    if (limit.resetsAt && eta >= new Date(limit.resetsAt)) return false;
+    return true;
+  }
+
+  // needs: an error, a window at 85%, or one that runs out before it resets.
+  // quiet: nothing to read. active: the login in use, still under that line.
+  function laneOf(account) {
+    if (account.error) return "needs";
+    const limits = account.limits || [];
+    if (!limits.length) return "quiet";
+    const used = maxUsed(account);
+    if (used >= 85 || limits.some(runsOutSoon)) return "needs";
+    if (account.active) return "active";
+    if (used >= 60) return "hot";
+    return "room";
+  }
+
+  function worstLane(tool) {
+    const order = ["needs", "hot", "active", "room", "quiet"];
+    const lanes = tool.accounts.map(laneOf);
+    if (!lanes.length) return "quiet";
+    return lanes.sort((a, b) => order.indexOf(a) - order.indexOf(b))[0];
+  }
+
+  function accountRows(tools) {
+    const rows = [];
+    for (const tool of tools) for (const account of tool.accounts) rows.push({ tool, account });
+    return rows;
+  }
+
+  function byPressure(a, b) {
+    const score = (row) => (row.account.error ? -1 : maxUsed(row.account));
+    return score(b) - score(a);
+  }
+
+  function bestHop(tools) {
+    let best = null;
+    for (const tool of tools) {
+      const active = tool.accounts.find((a) => a.active);
+      const alt = alternative(tool, active);
+      if (!active || !alt) continue;
+      const gap = maxUsed(active) - maxUsed(alt);
+      if (!best || gap > best.gap) best = { tool, from: active, to: alt, gap };
+    }
+    return best;
+  }
+
+  function stuckAccounts(tools) {
+    return accountRows(tools).filter((row) => laneOf(row.account) === "needs" && !alternative(row.tool, row.account));
+  }
+
+  function serviceFor(toolId) {
+    return (data.services || []).find((s) => s.tool === toolId && servicePhrase[s.level]) || null;
+  }
+
+  function outageSentence(service) {
+    const phrase = servicePhrase[service.level];
+    if (!phrase) return "";
+    const advice = service.level === "maintenance" ? "" : " Every account is affected, so hopping won't help.";
+    return `${toolName(service.tool)} ${phrase}.${advice}`;
+  }
+
+  const chev = () => `<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4.5 10 8 6 11.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const dot = (kind) => `<i class="ldot ${kind}" aria-hidden="true"></i>`;
+
+  function treeIsOpen(tool) {
+    if (!tool) return false;
+    if (ui.treeOpen[tool.id] === undefined) ui.treeOpen[tool.id] = tool.accounts.length > 0;
+    return !!ui.treeOpen[tool.id];
+  }
+
+  function treeHTML(tools) {
+    return tools.map((tool) => {
+      const open = treeIsOpen(tool);
+      const rows = open ? tool.accounts.map((account) => {
+        const lane = laneOf(account);
+        return `<button class="tree-acct ${lane}" type="button" data-action="goto" data-section="accounts">${dot(lane)}<span class="nm">${esc(account.name)}</span><span class="plan">${esc(account.plan || "")}</span></button>`;
+      }).join("") : "";
+      const waiting = open && (data.state.adding || []).includes(tool.id)
+        ? `<p class="tree-wait">Waiting for a login ${waited(tool.id)}</p>` : "";
+      return `<button class="tree-tool${open ? " open" : ""}" type="button" data-action="fold" data-tool="${esc(tool.id)}" aria-expanded="${open ? "true" : "false"}">${chev()}<span class="nm">${esc(tool.name)}</span>${dot(worstLane(tool))}</button>${rows}${waiting}`;
+    }).join("");
+  }
+
+  function petFootHTML() {
+    const claim = currentClaim();
+    const kick = claim && !claim.claimed && claim.active && claim.today
+      ? `<button class="btn sm" type="button" data-action="streak-claim">Claim</button>` : "";
+    if (!data.pet && !kick) return "";
+    const title = data.pet
+      ? (data.pet.lineageName ? `${data.pet.stageName} · ${data.pet.lineageName}` : data.pet.stageName)
+      : "Streak";
+    const note = data.pet && data.pet.next ? `${fmt.tokens(data.pet.next.tokens)} to ${data.pet.next.label}`
+      : data.pet ? "Monument" : (claim && claim.today ? claim.today.name : "");
+    return `<span><b>${esc(title)}</b>${note ? `<small>${esc(note)}</small>` : ""}</span>${kick}`;
+  }
+
+  let treeStamp = "";
+  function renderChrome() {
+    const home = ui.section === "overview";
+    $("#content")?.classList.toggle("is-home", home);
+    $("#content")?.classList.toggle("is-board", ui.section === "limits");
+    const title = $("#title");
+    if (title && data.state) title.hidden = home;
+    const tools = data.state?.status?.tools || [];
+    const needs = tools.reduce((sum, tool) => sum + tool.accounts.filter((account) => laneOf(account) === "needs").length, 0);
+    const badge = $("#limits-count");
+    if (badge) {
+      badge.hidden = needs === 0;
+      badge.textContent = needs ? String(needs) : "";
+    }
+    const tree = $("#tree");
+    if (tree && data.state) {
+      const html = treeHTML(tools);
+      if (treeStamp !== html) {
+        const top = tree.scrollTop;
+        tree.innerHTML = html;
+        tree.scrollTop = top;
+        treeStamp = html;
+      }
+    }
+    const petHost = $("#pet-foot");
+    if (petHost) {
+      const html = data.state ? petFootHTML() : "";
+      petHost.hidden = !html;
+      if (petHost.innerHTML !== html) petHost.innerHTML = html;
+    }
+    renderStatus(needs);
+    syncField();
+  }
+
+  function renderStatus(needs) {
+    const status = data.state?.status;
+    const todayBtn = $("#status-today");
+    if (todayBtn) todayBtn.textContent = status ? `${fmt.tokens(status.today.tokens)} today` : "";
+    const streakEl = $("#status-streak");
+    const streak = (data.usage["week:all"] || data.usage["today:all"])?.streak;
+    if (streakEl) {
+      streakEl.hidden = !streak;
+      if (streak) streakEl.textContent = `${streak.current} day streak`;
+    }
+    const needsBtn = $("#status-needs");
+    const clear = $("#status-clear");
+    if (needsBtn && clear) {
+      if (!data.state) {
+        needsBtn.hidden = true;
+        clear.hidden = true;
+      } else if (needs > 0) {
+        needsBtn.hidden = false;
+        needsBtn.innerHTML = `<i class="ldot needs" aria-hidden="true"></i>${needs} need${needs === 1 ? "s" : ""} a hop`;
+        clear.hidden = true;
+      } else {
+        needsBtn.hidden = true;
+        clear.hidden = false;
+      }
+    }
+    const out = $("#status-outage");
+    const troubled = (data.services || []).find((service) => serviceShort[service.level]);
+    if (out) {
+      out.hidden = !troubled;
+      if (troubled) {
+        const incident = troubled.incidents && troubled.incidents[0];
+        out.href = incident?.link || troubled.page || "#";
+        out.textContent = `${toolName(troubled.tool)} ${serviceShort[troubled.level]}`;
+      }
+    }
+  }
+
+  function homeHeadline(tools) {
+    const hop = bestHop(tools);
+    const wall = stuckAccounts(tools).find((row) => !row.account.error) || null;
+    const outage = (wall && serviceFor(wall.tool.id)) || (data.services || []).find((service) => servicePhrase[service.level]) || null;
+    const note = outage ? outageSentence(outage) : "";
+    if (hop) {
+      const wallNote = wall ? `${wall.tool.name} is at ${Math.round(maxUsed(wall.account))}% and has no other login.` : "";
+      return {
+        title: `${hop.to.name} still has room.`,
+        sub: `${hop.tool.name} ${hop.from.name} is in use at ${Math.round(maxUsed(hop.from))}%. ${hop.to.name} is at ${Math.round(maxUsed(hop.to))}%.`,
+        note: note || wallNote,
+        target: hop.to.id,
+      };
+    }
+    if (wall) {
+      const top = tightest(wall.account);
+      const when = top && runsOutSoon(top)
+        ? `The ${windowName(top.label).toLowerCase()} window runs out around ${fmt.clock(top.runsOutAt)}. `
+        : "";
+      return {
+        title: `${wall.tool.name} is at ${Math.round(maxUsed(wall.account))}%.`,
+        sub: `${when}There is no other login to hop to.`,
+        note,
+        target: null,
+      };
+    }
+    return { title: "Every login in use has room.", sub: "Nothing is close to a limit.", note, target: null };
+  }
+
+  function ensureHomePick(tools) {
+    const tool = tools.find((item) => item.id === ui.homeTool);
+    if (tool && tool.accounts.some((account) => account.id === ui.homeAccount)) return;
+    const hop = bestHop(tools);
+    if (hop) { ui.homeTool = hop.tool.id; ui.homeAccount = hop.to.id; return; }
+    const withAccounts = tools.find((item) => item.accounts.length) || tools[0];
+    ui.homeTool = withAccounts?.id || "";
+    const list = withAccounts?.accounts || [];
+    const room = list.filter((account) => !account.error).sort((a, b) => maxUsed(a) - maxUsed(b))[0];
+    ui.homeAccount = (room || list[0])?.id || "";
+  }
+
+  function nameList(names) {
+    if (names.length < 2) return names.join("");
+    return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  }
+
+  function homeLogin(row, hopId) {
+    const account = row.account;
+    const lane = laneOf(account);
+    const top = tightest(account);
+    let meta = row.tool.name + (account.plan ? ` · ${account.plan}` : "");
+    if (account.error) meta += " · login expired";
+    else if (top) meta += ` · ${windowName(top.label)} ${Math.round(top.usedPercent)}%`;
+    if (top && runsOutSoon(top)) meta += ` · runs out ${fmt.until(top.runsOutAt)}`;
+    const right = account.error
+      ? `<span class="hpill bad">Expired</span>`
+      : lane === "needs"
+        ? `<span class="hpill">Needs a hop</span>`
+        : !isStatic && hopId === account.id
+          ? `<button class="btn sm" type="button" data-action="switch" data-id="${esc(account.id)}">Hop</button>`
+          : `<span class="pct">${top ? Math.round(top.usedPercent) + "%" : "No limit"}</span>`;
+    return `<div class="hlogin" role="listitem"><button class="hlogin-main" type="button" data-action="goto" data-section="accounts">${dot(lane)}<b class="${lane === "needs" ? "warn" : ""}">${esc(account.name)}</b><span class="meta">${esc(meta)}</span></button>${right}</div>`;
+  }
+
+  function budgetStrip() {
+    const alerts = (data.state.status.alerts || []).filter((alert) => /budget/i.test(alert.title));
+    if (!alerts.length) return "";
+    return `<section class="notices hnotices" aria-label="Budgets">${alerts.map((alert) => `<div class="notice-row">${icon("alert")}<div><b>${esc(alert.title)}</b><p>${esc(alert.body)}</p></div></div>`).join("")}</section>`;
+  }
+
+  function homeHop(query) {
+    if (isStatic) { toast("This is a saved page, so it can't switch logins."); return; }
+    const tools = data.state?.status.tools || [];
+    const words = String(query || "").trim().toLowerCase();
+    let target = null;
+    if (words) {
+      const hits = [];
+      for (const tool of tools) for (const account of tool.accounts) {
+        if (`${account.name} ${account.email || ""} ${tool.name}`.toLowerCase().includes(words)) hits.push({ tool, account });
+      }
+      target = hits.find((hit) => !hit.account.active && !hit.account.error) || hits[0] || null;
+    } else {
+      for (const tool of tools) {
+        const account = tool.accounts.find((item) => item.id === ui.homeAccount);
+        if (account) target = { tool, account };
+      }
+    }
+    if (!target) { toast(words ? "No login matches that." : "Name a saved login.", true); return; }
+    if (target.account.error) { toast(target.account.error, true); go("accounts"); return; }
+    if (target.account.active) { toast(`${target.tool.name} is already on ${target.account.name}.`); return; }
+    ui.homeQuery = "";
+    ui.homeTool = target.tool.id;
+    ui.homeAccount = target.account.id;
+    fieldDash = still.matches ? 0 : 6;
+    act(null, () => api("/api/switch", { id: target.account.id }), "Switching", true);
+  }
+
+  function overviewPage(tools) {
+    const adding = (id) => (data.state.adding || []).includes(id);
+    if (!tools.some((tool) => tool.accounts.length || adding(tool.id))) {
+      const rows = tools.map((tool) => `<div class="hlogin"><div class="hlogin-main">${mark(tool.id)}<b>${esc(tool.name)}</b><span class="meta">${esc(tool.signInHint)}</span></div>${isStatic ? "" : `<button class="btn sm" type="button" data-action="add" data-tool="${esc(tool.id)}">Add</button>`}</div>`).join("");
+      return { body: `<div class="hstack"><h1>Add a login.</h1><p class="hsub">No saved accounts yet. Sign in once and Keyhop keeps the login.</p></div><section class="hlogins card" aria-label="Your logins"><div class="hlogins-head"><b>Your logins</b></div>${rows}</section>` };
+    }
+    ensureHomePick(tools);
+    const head = homeHeadline(tools);
+    const rows = accountRows(tools);
+    const needs = rows.filter((row) => laneOf(row.account) === "needs").sort(byPressure);
+    const active = rows.filter((row) => laneOf(row.account) === "active").sort(byPressure);
+    const room = rows.filter((row) => { const lane = laneOf(row.account); return lane === "room" || lane === "hot"; }).sort(byPressure);
+    const quiet = rows.filter((row) => laneOf(row.account) === "quiet");
+    const shown = active.slice(0, 4);
+    const more = active.length - shown.length;
+    const group = (label, list) => list.length ? `<div class="hgroup">${label}</div>${list.map((row) => homeLogin(row, head.target)).join("")}` : "";
+    const waiting = tools.filter((tool) => adding(tool.id)).map((tool) => `<div class="hlogin"><div class="hlogin-main"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span><b>${esc(tool.name)}</b><span class="meta">Waiting for the new login ${waited(tool.id)}</span></div>${isStatic ? "" : `<button class="btn sm ghost" type="button" data-action="add-stop" data-tool="${esc(tool.id)}">Stop</button>`}</div>`).join("");
+    const quietNames = [...new Set(quiet.map((row) => row.tool.name))];
+    const unset = tools.filter((tool) => !tool.accounts.length && !adding(tool.id)).map((tool) => tool.name);
+    const quietVerb = quietNames.length === 1 ? "has" : "have";
+    const quietLine = quietNames.length ? `<div class="hgroup">Quiet</div><p class="hquiet">${esc(nameList(quietNames))} ${quietVerb} no limit to read.</p>` : "";
+    const unsetLine = unset.length ? `<p class="hquiet">Not set up: ${esc(unset.join(", "))}.</p>` : "";
+    const moreLine = more ? `<p class="hquiet"><button class="htext" type="button" data-action="goto" data-section="limits">${more} more in use</button></p>` : "";
+    const tool = tools.find((item) => item.id === ui.homeTool) || tools[0];
+    const picked = tool?.accounts.find((account) => account.id === ui.homeAccount);
+    const toolPop = ui.homeMenu === "tool" ? `<div class="hpop">${tools.map((item) => `<button type="button" data-action="home-tool" data-id="${esc(item.id)}" class="${item.id === tool?.id ? "on" : ""}">${esc(item.name)}</button>`).join("")}</div>` : "";
+    const accountPop = ui.homeMenu === "account" && tool ? `<div class="hpop">${tool.accounts.map((account) => `<button type="button" data-action="home-account" data-id="${esc(account.id)}" class="${account.id === ui.homeAccount ? "on" : ""}">${esc(account.name)}<small>${account.error ? "expired" : account.limits?.length ? Math.round(maxUsed(account)) + "%" : "no limit"}</small></button>`).join("")}</div>` : "";
+    const pct = picked && !picked.error && picked.limits?.length ? ` · ${Math.round(maxUsed(picked))}%` : picked?.error ? " · expired" : "";
+    const composer = `<form class="hcomposer card" data-form="home-hop"><input name="query" value="${esc(ui.homeQuery || "")}" placeholder="Name a login, or hop to the one with room" autocomplete="off" aria-label="Where to hop"><div class="hcomposer-bar"><div class="hchip-wrap"><button class="hchip" type="button" data-action="home-menu" data-menu="tool">${esc(tool?.name || "Tool")}</button>${toolPop}</div><div class="hchip-wrap"><button class="hchip" type="button" data-action="home-menu" data-menu="account">${esc(picked ? picked.name : "Account")}${esc(pct)}</button>${accountPop}</div><button class="hgo" type="submit" aria-label="Go"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 12.5V3.5"/><path d="M4.5 7 8 3.5 11.5 7"/></svg></button></div></form>`;
+    return { body: `<div class="hstack"><h1>${esc(head.title)}</h1><p class="hsub">${esc(head.sub)}</p>${head.note ? `<p class="hnote">${esc(head.note)}</p>` : ""}</div>${composer}<section class="hlogins card" aria-label="Your logins"><div class="hlogins-head"><b>Your logins</b><button class="htext" type="button" data-action="goto" data-section="limits">Limits</button></div><div role="list">${waiting}${group("Needs a hop", needs)}${group("In use", shown)}${moreLine}${group("Room", room)}${quietLine}${unsetLine}</div></section>${budgetStrip()}` };
+  }
+
+  function limitCard(tool, account) {
+    const lane = laneOf(account);
+    const top = tightest(account);
+    const alt = alternative(tool, account);
+    const line = account.error ? account.error : top ? `${windowName(top.label)} at ${Math.round(top.usedPercent)}%. ${limitFoot(top)}`.trim() : (tool.limitsNote || "No limit to read.");
+    const hopBtn = !isStatic && alt && !account.error ? `<button class="btn sm" type="button" data-action="switch" data-id="${esc(alt.id)}">Hop to ${esc(alt.name)}</button>` : "";
+    const bar = top ? progress(top.usedPercent, top.pace, undefined, `board:${account.id}:${top.label}`) : "";
+    return `<article class="kcard ${lane}"><header>${dot(lane)}<b>${esc(account.name)}</b><span class="pct">${top ? Math.round(top.usedPercent) + "%" : ""}</span></header><p class="kmeta">${esc(tool.name)}${account.plan ? ` · ${esc(account.plan)}` : ""}</p><p class="kline">${esc(line)}</p>${bar}<div class="kacts"><button class="btn sm ghost" type="button" data-action="goto" data-section="accounts">Open</button>${hopBtn}</div></article>`;
+  }
+
+  function limitsPage(tools) {
+    const rows = accountRows(tools);
+    const cols = [
+      ["needs", "Needs a hop", (lane) => lane === "needs"],
+      ["active", "In use", (lane) => lane === "active"],
+      ["room", "Room", (lane) => lane === "room" || lane === "hot"],
+      ["quiet", "Quiet", (lane) => lane === "quiet"],
+    ];
+    const board = cols.map(([id, label, match]) => {
+      const list = rows.filter((row) => match(laneOf(row.account))).sort(byPressure);
+      const cards = list.map((row) => limitCard(row.tool, row.account)).join("");
+      return `<section class="kcol"><h2>${dot(id)}<span>${label}</span><span class="n" aria-hidden="true">${list.length}</span></h2><div class="kcol-body">${cards || `<p class="kempty">Nothing here</p>`}</div></section>`;
+    }).join("");
+    return { body: `<p class="knote">Every saved login, by how close it is to a wall.</p><div class="kscroll"><div class="kboard">${board}</div></div>` };
+  }
+
 
   function petSvg(pet) {
     const caption = pet.lineageName ? `${pet.stageName} · ${pet.lineageName}` : pet.stageName;
@@ -1506,19 +1948,28 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         <div class="card list">${waiting}${rows}${empty}</div>
       </section>`;
     }).join("");
-    return { body: `<p class="lede">Every login Keyhop keeps. Switching saves the login in use first, so none is ever lost.</p>${body}` };
+    return { body: `<div class="acct-sheet"><p class="lede">Every login Keyhop keeps. Switching saves the login in use first, so none is ever lost.</p>${body}</div>` };
   }
 
-  // One saved login: who it is, how much room its limits have, what it used today, and what can be
-  // done with it. The login in use carries a mark that moves to the next one when you switch.
+  // One saved login: a status dot, the name, and one sentence for the tightest window.
+  // The login in use carries a mark that moves to the next one when you switch.
+  function accountSentence(account, tool) {
+    const top = tightest(account);
+    if (account.error) return account.error;
+    if (!top) return tool.limitsNote || "No limit to read.";
+    const foot = limitFoot(top);
+    return `${windowName(top.label)} at ${Math.round(top.usedPercent)}%.${foot ? ` ${foot}` : ""}`;
+  }
+
   function accountRow(account, tool) {
     const editing = ui.editing === account.id;
     const confirming = ui.confirming === account.id;
-    const meta = [account.plan, account.label ? account.email : ""].filter(Boolean).map(esc).join(" · ");
+    const lane = laneOf(account);
+    const line = [account.plan, account.label ? account.email : "", accountSentence(account, tool)].filter(Boolean).join(" · ");
     const name = editing
       ? `<form class="rename" data-form="rename" data-id="${esc(account.id)}"><input class="field" name="name" value="${esc(account.label || "")}" placeholder="${esc(account.email)}" maxlength="60" aria-label="Name"><button class="btn sm">Save</button><button type="button" class="btn sm ghost" data-action="cancel-edit">Cancel</button></form>`
-      : `<div class="account-name"><b>${esc(account.name)}</b>${account.active ? `<span class="in-use" style="view-transition-name:in-use-${esc(tool.id)}">In use</span>` : ""}</div>
-         ${meta ? `<div class="account-meta">${meta}</div>` : ""}`;
+      : `<div class="account-name"><b class="${lane === "needs" ? "warn" : ""}">${esc(account.name)}</b>${account.active ? `<span class="in-use" style="view-transition-name:in-use-${esc(tool.id)}">In use</span>` : ""}</div>
+         <div class="account-line">${esc(line)}</div>`;
     let actions = "";
     if (!isStatic && !editing) {
       if (confirming) {
@@ -1537,8 +1988,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       ? `<b data-count="${account.today.tokens}" data-count-key="acct:${esc(account.id)}" data-format="tokens">${fmt.tokens(account.today.tokens)}</b><span>tokens today · ${fmt.usd(account.today.cost)}</span>`
       : `<span>No usage today</span>`;
     return `<div class="row account-row${account.active ? " active" : ""}" style="view-transition-name:acct-${esc(account.id)}">
-      <div class="account-id">${name}</div>
-      <div>${limits(account, 2, tool.limitsNote)}</div>
+      <div class="account-id">${dot(lane)}<div class="account-copy">${name}</div></div>
       <div class="today">${today}</div>
       <div class="row-actions">${actions}</div>
     </div>`;
@@ -1556,9 +2006,9 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       ? `<div class="notice">${icon("alert")}<div><b>Showing the last complete reading</b><p>${esc(data.usageErrors[`${ui.range}:${ui.tool}`])}</p></div></div>` : "";
 
     const t = usage.total;
-    const top = `<div class="usage-top">${totalCard(usage)}${summaryCard(usage)}</div>`;
+    const board = (main, side) => `<div class="usage-board"><div class="usage-side">${side}</div><div class="usage-main">${main}</div></div>`;
     if (!t.requests) {
-      return { toolbar, body: `${stale}${top}<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code, Codex, Gemini CLI, OpenCode and Pi records on this computer, and Cursor's usage export after a refresh.</p></div>${heatCard(usage)}` };
+      return { toolbar, body: `${stale}${board(`<div class="card"><p class="empty">No usage in this range. Keyhop reads Claude Code, Codex, Gemini CLI, OpenCode and Pi records on this computer, and Cursor's usage export after a refresh.</p></div>`, `${summaryCard(usage)}${heatCard(usage)}`)}` };
     }
     const grouped = chartGroup(usage);
     // The legend doubles as a filter: each entry hides or shows its part of every bar.
@@ -1566,13 +2016,13 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const legend = `<ul class="legend">${grouped.series.map((s) => `<li><button type="button" class="legend-item" data-action="series" data-value="${esc(s.id)}" aria-pressed="${!hidden.includes(s.id)}" title="${hidden.includes(s.id) ? "Show" : "Hide"} ${esc(s.name)}"><span class="swatch" style="background:${s.color}"></span>${esc(s.name)}</button></li>`).join("")}</ul>`;
     const chart = `<section class="card">
       <div class="card-head"><h2>${ui.metric === "tokens" ? "Tokens" : "API value"} by ${usage.bucket}</h2>${tabs("group", [["account", "Accounts"], ["tool", "Tools"], ["model", "Models"]], ui.group)}</div>
-      <div class="card-body chart-body">${legend}<div class="chart" style="view-transition-name:usage-chart">${stackedChart(usage, ui.metric, 260, "full", ui.group, hidden)}</div></div>
+      <div class="card-body chart-body">${legend}<div class="chart" style="view-transition-name:usage-chart">${stackedChart(usage, ui.metric, 260, "board", ui.group, hidden)}</div></div>
     </section>`;
     const mix = `<section class="card">
       <div class="card-head"><h2>Token mix</h2><span class="hint mono">${fmt.tokens(t.tokens)}</span></div>
       <div class="card-body">${mixBlock(t)}</div>
     </section>`;
-    return { toolbar, body: `${stale}${top}${chart}<div class="split wide-left">${heatCard(usage)}${mix}</div>${breakdownCard(usage)}` };
+    return { toolbar, body: `${stale}${board(`${totalCard(usage)}${chart}${mix}`, `${summaryCard(usage)}${heatCard(usage)}`)}${breakdownCard(usage)}` };
   }
 
   // The range's total, exact, set large; what it was worth; and how it splits across tools, or
@@ -1761,10 +2211,14 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   function chartWidth(size) {
     const page = Math.min(1320, ($("#main")?.clientWidth || 1200) - 48);
     const columns = matchMedia("(max-width: 1180px)").matches ? 1 : 2;
+    const gap = 12;
+    const side = columns === 2 ? Math.round(page * 0.34) : page;
+    const board = columns === 2 ? page - gap - side : page;
     const half = columns === 2 ? (page - 16) / 2 : page;
-    const widths = { full: page, half, wide: columns === 2 ? (page - 16) * 0.608 : page, narrow: columns === 2 ? (page - 16) * 0.392 : page };
+    const widths = { full: page, half, wide: columns === 2 ? (page - 16) * 0.608 : page, narrow: columns === 2 ? (page - 16) * 0.392 : page, side, board };
     // Card padding and borders, with a little room so rounding never adds a scrollbar.
-    return Math.max(420, Math.floor((widths[size] || page) - 40));
+    const raw = Math.floor((widths[size] || page) - 40);
+    return Math.max(size === "side" ? 220 : 420, raw);
   }
 
   function roundedTop(x, y, w, h) {
@@ -1846,7 +2300,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const offset = (parse(days[0].day).getDay() + 6) % 7;
     const columns = Math.ceil((days.length + offset) / 7);
     const gap = 3, top = 18;
-    const size = Math.max(9, Math.min(16, Math.floor((chartWidth("wide") - (columns - 1) * gap) / columns)));
+    const size = Math.max(9, Math.min(16, Math.floor((chartWidth("side") - (columns - 1) * gap) / columns)));
     const active = days.map((d) => d.tokens).filter((v) => v > 0).sort((a, b) => a - b);
     const quartile = (q) => (active.length ? active[Math.min(active.length - 1, Math.floor(q * active.length))] : 0);
     const cuts = [quartile(0.25), quartile(0.5), quartile(0.75)];
@@ -2054,13 +2508,279 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 
   // MARK: Backdrop
 
+  let fieldLoop = null;
+  let fieldBeat = 0;
+  let runnerPhase = 0;
+  let fieldDash = 0;
+  let shownPressure = null;
+  let gaitHold = "sit";
+  let skyCache = null;
+  let skyKey = "";
+
+  function fieldWanted() {
+    if (ui.section !== "overview" || !data.state) return false;
+    return (data.state.appearance?.scene || "leaves") === "leaves";
+  }
+
+  function horizon(nx) {
+    return 0.66 + Math.sin(nx * 4.8 + 0.4) * 0.04 + Math.sin(nx * 10.5 + 1.1) * 0.015;
+  }
+
+  function nightSky(w, h) {
+    const img = new ImageData(w, h);
+    const bayer = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+    const px = img.data;
+    const clouds = [[0.22, 0.2, 0.2], [0.55, 0.16, 0.26], [0.78, 0.28, 0.18]];
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const nx = x / w, ny = y / h;
+        const skyT = Math.min(1, ny / 0.72);
+        let r = 12 + skyT * 20, g = 18 + skyT * 8, b = 36 - skyT * 16;
+        let ck = 0;
+        for (const [cx, cy, s] of clouds) {
+          const d = ((nx - cx) / s) ** 2 + ((ny - cy) / (s * 0.42)) ** 2;
+          if (d < 1) ck = Math.max(ck, (1 - d) * 0.7);
+        }
+        if (ck) { r += 48 * ck; g += 58 * ck; b += 78 * ck; }
+        const n = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+        if (n > 0.992 && ny < horizon(nx) - 0.08) r = g = b = 220;
+        const h1 = horizon(nx);
+        const h2 = h1 + 0.075 + Math.sin(nx * 3.1) * 0.012;
+        if (ny > h2) { r = 18; g = 14; b = 12; }
+        else if (ny > h1) { r = 72; g = 52; b = 36; }
+        const t = (bayer[y & 3][x & 3] / 16 - 0.5) * 48;
+        const q = (v) => Math.max(0, Math.min(255, Math.round((v + t) / 36) * 36));
+        const i = (y * w + x) * 4;
+        px[i] = q(r); px[i + 1] = q(g); px[i + 2] = q(b); px[i + 3] = 255;
+      }
+    }
+    return img;
+  }
+
+  // Same enamels as the usage chart. The body stays bone so it reads on the dune; one pixel wears the tool.
+  const fieldInkOf = {
+    claude: "#C9821A", cursor: "#2F6FC0", codex: "#B8423F", gemini: "#1E9A78",
+    opencode: "#7A6BC4", pi: "#C45B8A", copilot: "#6B8F9E", windsurf: "#3D8B9A", codebuff: "#A67C52",
+  };
+
+  // The sky stays cached. The moon and the runner are the meter: low and warm when a login is
+  // against its limit, sitting when nothing has a limit to read. The head wears the tool that
+  // sets that pace. A hop repaints it with the destination for one sprint.
+  function fieldTarget() {
+    const tools = data.state?.status?.tools || [];
+    let pressure = 0;
+    let gait = "sit";
+    let pace = "";
+    for (const row of accountRows(tools)) {
+      const lane = laneOf(row.account);
+      const used = Math.max(0, maxUsed(row.account)) / 100;
+      const weight = lane === "needs" ? Math.max(used, 0.92) : used;
+      if (weight > pressure) { pressure = weight; pace = row.tool.id; }
+      if (lane === "needs") gait = "run";
+      else if (gait === "sit" && lane !== "quiet") gait = "walk";
+    }
+    const tool = fieldDash > 0 ? ui.homeTool : pace;
+    return { pressure: Math.min(1, pressure), gait, ink: fieldInkOf[tool] || "#f3ead8" };
+  }
+
+  // Hold a gait past the line that entered it, so a login flickering around 85% does not strobe the runner.
+  function shownGait(pressure, raw) {
+    if (raw === "run" || pressure >= 0.85) gaitHold = "run";
+    else if (gaitHold === "run" && pressure >= 0.72) gaitHold = "run";
+    else if (raw === "sit") gaitHold = pressure >= 0.12 && gaitHold !== "sit" ? "walk" : "sit";
+    else gaitHold = "walk";
+    return gaitHold;
+  }
+
+  function fieldMood() {
+    const target = fieldTarget();
+    if (shownPressure == null || still.matches) shownPressure = target.pressure;
+    else {
+      const gap = target.pressure - shownPressure;
+      shownPressure = Math.abs(gap) < 0.02 ? target.pressure : shownPressure + gap * 0.35;
+    }
+    const gait = fieldDash > 0 ? "run" : shownGait(target.pressure, target.gait);
+    return { pressure: shownPressure, gait, ink: target.ink };
+  }
+
+  function paintMoon(ctx, w, h, pressure) {
+    const cx = Math.round(w * 0.86 / 2) * 2;
+    const cy = Math.round(h * (0.11 + pressure * 0.28) / 2) * 2;
+    const heat = Math.max(0, Math.min(1, (pressure - 0.45) / 0.55));
+    const disc = [
+      236 + (227 - 236) * heat,
+      224 + (166 - 224) * heat,
+      196 + (79 - 196) * heat,
+    ];
+    const bayer = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+    const glow = 42;
+    const img = ctx.getImageData(0, 0, w, h);
+    const px = img.data;
+    const x0 = Math.max(0, cx - glow), x1 = Math.min(w - 1, cx + glow);
+    const y0 = Math.max(0, cy - glow), y1 = Math.min(h - 1, cy + glow);
+    const q = (v, x, y) => {
+      const t = (bayer[y & 3][x & 3] / 16 - 0.5) * 48;
+      return Math.max(0, Math.min(255, Math.round((v + t) / 36) * 36));
+    };
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const d = Math.hypot(x - cx, y - cy);
+        const i = (y * w + x) * 4;
+        if (d < 12) {
+          px[i] = q(disc[0], x, y); px[i + 1] = q(disc[1], x, y); px[i + 2] = q(disc[2], x, y);
+        } else if (d < glow) {
+          const k = (1 - (d - 12) / (glow - 12)) * (0.34 + heat * 0.4);
+          px[i] = q(px[i] + (150 + heat * 50) * k, x, y);
+          px[i + 1] = q(px[i + 1] + (120 - heat * 30) * k, x, y);
+          px[i + 2] = q(px[i + 2] + (60 - heat * 24) * k, x, y);
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  function stampSprite(ctx, x, y, cells, mark, scale) {
+    const origin = Math.round(x / 2) * 2;
+    const top = Math.round(y / 2) * 2;
+    ctx.fillStyle = "#140e0c";
+    for (const [dx, dy] of cells) {
+      for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        ctx.fillRect(origin + dx * scale + ox, top + dy * scale + oy, scale, scale);
+      }
+    }
+    ctx.fillStyle = "#f3ead8";
+    for (const [dx, dy] of cells) ctx.fillRect(origin + dx * scale, top + dy * scale, scale, scale);
+    const head = cells[0];
+    if (head && mark) {
+      ctx.fillStyle = mark;
+      ctx.fillRect(origin + head[0] * scale, top + head[1] * scale, scale, scale);
+    }
+  }
+
+  function paintField() {
+    const canvas = $("#field");
+    const stage = $("#content");
+    if (!canvas || !stage || !fieldWanted()) return;
+    const rect = stage.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return;
+    const w = Math.max(2, Math.round(rect.width / 2));
+    const h = Math.max(2, Math.round(rect.height / 2));
+    const key = w + "x" + h;
+    if (skyKey !== key) { skyCache = nightSky(w, h); skyKey = key; }
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx || !skyCache) return;
+    ctx.putImageData(skyCache, 0, 0);
+    const mood = fieldMood();
+    paintMoon(ctx, w, h, mood.pressure);
+    const walk = [
+      [[2, 0], [1, 1], [2, 1], [3, 1], [0, 2], [2, 2], [4, 2], [1, 3], [3, 4]],
+      [[2, 0], [1, 1], [2, 1], [3, 1], [1, 2], [3, 2], [2, 3], [2, 4]],
+    ];
+    const run = [
+      [[4, 0], [2, 1], [3, 1], [4, 1], [1, 2], [3, 2], [5, 2], [2, 3], [4, 3], [0, 3], [5, 4]],
+      [[4, 1], [3, 1], [4, 1], [5, 1], [2, 2], [4, 2], [3, 3], [5, 3], [1, 4]],
+    ];
+    const sit = [
+      [[2, 1], [1, 2], [2, 2], [3, 2], [1, 3], [2, 3], [3, 3]],
+      [[2, 1], [1, 2], [2, 2], [3, 2], [1, 3], [2, 3], [3, 3], [2, 4]],
+    ];
+    const frames = mood.gait === "run" ? run : mood.gait === "walk" ? walk : sit;
+    const along = still.matches || mood.gait === "sit" ? 0.45
+      : mood.gait === "run" ? (runnerPhase % 24) / 24
+      : (runnerPhase % 48) / 48;
+    // The logins card covers the middle. The runner stays on the open dune under the moon.
+    const nx = 0.78 + along * 0.14;
+    const cells = frames[(still.matches ? 0 : fieldBeat) % 2];
+    const scale = 4;
+    const tall = cells.reduce((top, cell) => Math.max(top, cell[1]), 0) + 1;
+    const x = Math.round(nx * w / 2) * 2;
+    const y = Math.round((horizon(Math.max(0, Math.min(0.99, nx))) * h - tall * scale) / 2) * 2;
+    stampSprite(ctx, x, y, cells, mood.ink, scale);
+    paintDunePet(ctx, w, h, rect.width);
+  }
+
+  let petStamp = null;
+  let petStampKey = "";
+
+  // The sidebar used to squash this drawing into 36px. On the dune one of its own pixels stays one pixel.
+  function paintDunePet(ctx, w, h, stageW) {
+    const pet = data.pet;
+    if (!pet?.shapes?.length || !stageW) return;
+    const card = Math.min(620, Math.max(0, stageW - 48));
+    const gutter = (stageW - card) / 2;
+    if (gutter < 96) return;
+    const cssW = Math.min(pet.width, gutter - 28);
+    const dw = Math.max(8, Math.round(cssW / 4) * 2);
+    const dh = Math.max(8, Math.round(dw * pet.height / pet.width / 2) * 2);
+    const blink = still.matches || fieldBeat % 6 !== 0;
+    const key = [pet.stage, pet.pose, pet.lineage, pet.build, pet.tokens, blink].join(":");
+    if (!petStamp || petStampKey !== key) {
+      const plate = document.createElement("canvas");
+      plate.width = pet.width;
+      plate.height = pet.height;
+      const pen = plate.getContext("2d");
+      if (!pen) return;
+      for (const shape of pet.shapes) {
+        if (!blink && (shape.kind === "shine" || shape.kind === "eye")) continue;
+        pen.globalAlpha = shape.opacity == null ? 1 : shape.opacity;
+        pen.fillStyle = shape.fill;
+        const bob = shape.kind === "flame" && !blink ? -2 : 0;
+        pen.fillRect(shape.x, shape.y + bob, shape.w, shape.h);
+      }
+      petStamp = plate;
+      petStampKey = key;
+    }
+    const span = (dw * 2) / stageW;
+    const left = Math.max(0.015, Math.min(0.06, (gutter - 16) / stageW - span));
+    const foot = left + span / 2;
+    const x = Math.round(left * w / 2) * 2;
+    const y = Math.round((horizon(Math.max(0, Math.min(0.99, foot))) * h - dh) / 2) * 2;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(petStamp, x, y, dw, dh);
+  }
+
+  function syncField() {
+    const on = fieldWanted();
+    $("#content")?.classList.toggle("is-field", on);
+    const canvas = $("#field");
+    const veil = $("#veil");
+    if (canvas) canvas.hidden = !on;
+    if (veil) veil.hidden = !on;
+    const host = $("#backdrop");
+    if (host && data.state) {
+      const scope = data.state.appearance?.scope;
+      host.classList.toggle("scoped-out", on || (scope === "overview" && ui.section !== "overview"));
+    }
+    if (!on) {
+      if (fieldLoop) { clearInterval(fieldLoop); fieldLoop = null; }
+      return;
+    }
+    paintField();
+    requestAnimationFrame(paintField);
+    if (!fieldLoop && !still.matches) {
+      fieldLoop = setInterval(() => {
+        if (document.hidden) return;
+        fieldBeat += 1;
+        const target = fieldTarget();
+        const gait = fieldDash > 0 ? "run" : shownGait(target.pressure, target.gait);
+        if (fieldDash > 0) { runnerPhase += 6; fieldDash -= 1; }
+        else if (gait === "run") runnerPhase += 2;
+        else if (gait === "walk") runnerPhase += 1;
+        paintField();
+      }, 700);
+    }
+  }
+
+
   let backdrop = null;
   let backdropImage = null;
   let backdropImageLoading = false;
 
   async function applyBackdrop() {
     const host = $("#backdrop");
-    if (!host || !window.KeyhopBackdrop) return;
+    if (!host || !window.KeyhopBackdrop) { syncField(); return; }
     const look = data.state?.appearance || { scene: "leaves", opacity: 0.8, scope: "all", image: false, glass: 1 };
     applyGlass(look.glass ?? 1, look.blur ?? 24);
     let scene = look.scene;
@@ -2072,10 +2792,11 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       }
     }
     document.documentElement.classList.toggle("has-backdrop", scene !== "off");
-    host.classList.toggle("scoped-out", look.scope === "overview" && ui.section !== "overview");
+    host.classList.toggle("scoped-out", fieldWanted() || (look.scope === "overview" && ui.section !== "overview"));
     const options = { scene, opacity: look.opacity, image: scene === "image" ? backdropImage : null };
     if (backdrop) backdrop.update(options);
     else backdrop = window.KeyhopBackdrop.mount(host, options);
+    syncField();
   }
 
   // Below full window opacity, the Mac app's whole window is glass over the blurred desktop.
@@ -2137,7 +2858,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       return `<button data-action="appearance" data-key="${key}" data-value="${value}" aria-pressed="${value === current}"${locked ? ` disabled title="Choose a picture first"` : ""}>${label}</button>`;
     }).join("")}</div>`;
     const about = {
-      leaves: "Dark leaves swaying on their stems, a few drifting down.",
+      leaves: "On Overview, a dithered night field. The moon drops as a login nears its limit. A runner keeps that pace, and its head wears the tool. Behind the other sections, dark leaves sway on their stems.",
       dunes: "A desert world's horizon, turning slowly under the stars.",
       orbit: "A ringed planet floating in the dark.",
       arcade: "Pixel runners racing along a ridge of pixel hills.",
@@ -2654,7 +3375,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 
   // MARK: Actions
 
-  const editing = () => ui.editing || ui.confirming || ui.rangeOpen || ui.menu || palette || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
+  const editing = () => ui.editing || ui.confirming || ui.rangeOpen || ui.menu || ui.homeMenu || palette || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
 
   // `morph` cross-fades the page into its new state once the call is done, for changes that move
   // things around, like switching which login is in use.
@@ -2699,6 +3420,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   }
 
   document.addEventListener("input", (event) => {
+    const hop = event.target.closest(".hcomposer input");
+    if (hop) ui.homeQuery = hop.value;
     if (!palette || !event.target.closest("#palette")) return;
     palette.query = event.target.value;
     palette.index = 0;
@@ -2709,17 +3432,50 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     if (event.target.closest("[data-palette-close]")) { closePalette(); return; }
     const option = event.target.closest("[data-palette]");
     if (option) { runPalette(+option.dataset.palette); return; }
-    const link = event.target.closest("#nav a");
-    if (link) { event.preventDefault(); if (link.dataset.section !== ui.section) go(link.dataset.section); return; }
+    const link = event.target.closest("#nav a, .side-foot a[data-section]");
+    if (link) {
+      event.preventDefault();
+      const menuWas = ui.homeMenu;
+      ui.homeMenu = null;
+      if (link.dataset.section !== ui.section) go(link.dataset.section);
+      else if (menuWas) render();
+      return;
+    }
+    const closeHomeMenu = !!(ui.homeMenu && !event.target.closest(".hchip-wrap"));
+    if (closeHomeMenu) ui.homeMenu = null;
     // A click anywhere outside the open range menu closes it.
     if (ui.rangeOpen && !event.target.closest(".range-pick")) { ui.rangeOpen = false; render(); }
     if (ui.menu && !event.target.closest(".menu-anchor")) { ui.menu = null; render(); }
     const el = event.target.closest("[data-action]");
-    if (!el || el.disabled || el.tagName === "SELECT") return;
+    if (!el || el.disabled || el.tagName === "SELECT") { if (closeHomeMenu) render(); return; }
     const id = el.dataset.id;
     switch (el.dataset.action) {
       case "palette": openPalette(); break;
       case "goto": go(el.dataset.section); break;
+      case "fold": {
+        const tool = (data.state?.status.tools || []).find((t) => t.id === el.dataset.tool);
+        if (tool) ui.treeOpen[tool.id] = !treeIsOpen(tool);
+        renderChrome();
+        break;
+      }
+      case "home-menu":
+        ui.homeMenu = ui.homeMenu === el.dataset.menu ? null : el.dataset.menu;
+        render();
+        break;
+      case "home-tool": {
+        ui.homeTool = el.dataset.id;
+        ui.homeMenu = null;
+        const picked = (data.state?.status.tools || []).find((t) => t.id === ui.homeTool);
+        const room = (picked?.accounts || []).filter((a) => !a.error).sort((a, b) => maxUsed(a) - maxUsed(b))[0];
+        ui.homeAccount = (room || picked?.accounts?.[0])?.id || "";
+        render();
+        break;
+      }
+      case "home-account":
+        ui.homeAccount = el.dataset.id;
+        ui.homeMenu = null;
+        render();
+        break;
       case "skip-content": $("#main")?.focus(); break;
       case "settings-pane": ui.settingsPane = el.dataset.value; render(); break;
       case "refresh":
@@ -2863,6 +3619,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
         }, "Unlinking");
         break;
     }
+    if (closeHomeMenu && document.querySelector(".hpop")) render();
   });
 
   // Window opacity and blur follow their sliders while they move, and save when let go.
@@ -2915,6 +3672,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   document.addEventListener("submit", (event) => {
     const form = event.target;
     event.preventDefault();
+    if (form.dataset.form === "home-hop") { homeHop(form.elements.query.value); return; }
     const button = form.querySelector("button:not([type=button])");
     if (form.dataset.form === "rename") {
       const id = form.dataset.id, name = form.elements.name.value;
@@ -3019,6 +3777,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       const section = shownSections()[+event.key - 1];
       if (section && section !== ui.section) { event.preventDefault(); go(section); return; }
     }
+    if (event.key === "Escape" && ui.homeMenu) { ui.homeMenu = null; render(); return; }
     if (event.key === "Escape" && ui.menu) { ui.menu = null; render(); return; }
     if (event.key === "Escape" && ui.rangeOpen) { ui.rangeOpen = false; render(); $(".range-button")?.focus(); return; }
     if (event.key === "Escape" && (ui.editing || ui.confirming || ui.budgetEdit)) { ui.editing = ui.confirming = ui.budgetEdit = null; render(); }
@@ -3029,7 +3788,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     if (document.hidden || isStatic || !data.state) return;
     try {
       await loadState();
-      if (ui.section === "overview" || ui.section === "usage") await loadSection();
+      if (ui.section === "overview" || ui.section === "usage" || ui.section === "limits") await loadSection();
       if (!editing()) render(); else renderSidebar();
     } catch (error) {
       ui.offline = error.message;
@@ -3067,7 +3826,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       if (document.hidden) return;
       try {
         await loadState();
-        if (ui.section === "overview" || ui.section === "usage") await loadSection();
+        if (ui.section === "overview" || ui.section === "usage" || ui.section === "limits") await loadSection();
         if (!editing()) render(); else renderSidebar();
         watchActivity();
       } catch (error) {

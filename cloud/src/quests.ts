@@ -85,7 +85,13 @@ const byWorkDay = (rows: WorkRow[]) => {
 
 const measuredTools = new Set<Tool>(MEASURED_TOOLS);
 const measuredCount = (tools: Set<Tool>): number => [...tools].filter((tool) => measuredTools.has(tool)).length;
-const hasEveryMeasuredTool = (tools: Set<Tool>): boolean => MEASURED_TOOLS.every((tool) => tools.has(tool));
+
+/**
+ * Fixed counts rather than "every measured tool": with thirteen tools counted, all of them in a
+ * week is out of reach, and a badge earned with the first six must stay earned.
+ */
+const WEEK_TOOLS_TARGET = 4;
+const FULL_HOUSE_TOOLS = 5;
 
 const quest = (key: string, name: string, note: string, period: "day" | "week", done: number, target: number): Quest => ({
   key,
@@ -142,7 +148,7 @@ export function questsFrom(rows: DayRow[], work: WorkRow[] = [], reference = tod
     quest("five-days", "Five days", "Use Keyhop on five days this week.", "week", weekActive, 5),
     quest("week-commits", "Twenty commits", "Land twenty commits this week.", "week", weekCommits, 20),
     quest("three-repos", "Three repositories", "Commit to three repositories this week.", "week", weekRepos.size, 3),
-    quest("every-tool", "Every tool", `Use all ${MEASURED_TOOLS.length} tracked tools this week.`, "week", weekTools.size, MEASURED_TOOLS.length),
+    quest("four-tools", "Four tools", "Use four different tools this week.", "week", weekTools.size, WEEK_TOOLS_TARGET),
     quest(
       "beat-last-week",
       "Beat last week",
@@ -192,7 +198,7 @@ export function badgesFrom(
   const active = new Set([...days.entries()].filter(([, entry]) => entry.tokens > 0).map(([day]) => day));
   const { longest } = streaks(active, reference);
   const allTime = [...days.values()].reduce((sum, entry) => sum + entry.tokens, 0);
-  const allTools = [...days.entries()].find(([, entry]) => hasEveryMeasuredTool(entry.tools));
+  const fullHouse = [...days.entries()].find(([, entry]) => measuredCount(entry.tools) >= FULL_HOUSE_TOOLS);
   const biggest = [...days.entries()].sort(([, a], [, b]) => b.tokens - a.tokens)[0];
   const firstDay = [...active].sort()[0];
 
@@ -225,7 +231,7 @@ export function badgesFrom(
     badge("streak-7", "Seven in a row", "A seven-day streak.", longest >= 7, dayCompletingStreak(active, 7)),
     badge("streak-30", "Thirty in a row", "A thirty-day streak.", longest >= 30, dayCompletingStreak(active, 30)),
     badge("streak-100", "A hundred in a row", "A hundred-day streak.", longest >= 100, dayCompletingStreak(active, 100)),
-    badge("all-tools", "Full house", "Used all six token-tracked tools in one day.", !!allTools, allTools?.[0]),
+    badge("all-tools", "Full house", "Used five token-tracked tools in one day.", !!fullHouse, fullHouse?.[0]),
     badge("big-day", "Big day", "A billion tokens in a single day.", !!biggest && biggest[1].tokens >= 1_000_000_000, biggest?.[0]),
     badge("billion", "Billion", "A billion tokens all told.", allTime >= 1_000_000_000, dayReaching(rows, 1_000_000_000)),
     badge("ten-billion", "Ten billion", "Ten billion tokens all told.", allTime >= 10_000_000_000, dayReaching(rows, 10_000_000_000)),

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { apiUser } from "./auth";
-import { type AppEnv, type Tool, MEASURED_TOOLS, today } from "./env";
+import { type AppEnv, type MeasuredTool, type Tool, MEASURED_TOOLS, today } from "./env";
 import { streaks } from "./stats";
 import { esc, frame, MONO, SANS, shortTokens, svgHeaders, svgOpen, themeOf, type Theme } from "./svg";
 
@@ -13,23 +13,40 @@ import { esc, frame, MONO, SANS, shortTokens, svgHeaders, svgOpen, themeOf, type
  * layout.
  */
 
-/** The same tool colours the dashboard charts use, so a Claude pet is the same amber as a Claude bar. */
-const TOOL_COLORS: Record<(typeof MEASURED_TOOLS)[number], string> = {
+/**
+ * The same tool colours the dashboard charts use, so a Claude pet is the same amber as a Claude bar.
+ * The measured-only tools take hues between the first six; the V2 design pass may retune them.
+ */
+const TOOL_COLORS: Record<MeasuredTool, string> = {
   claude: "#C9821A",
   cursor: "#2F6FC0",
   codex: "#B8423F",
   gemini: "#1E9A78",
   opencode: "#7A6BC4",
   pi: "#C45B8A",
+  amp: "#D2622A",
+  goose: "#3F9A3B",
+  qwen: "#9C49B8",
+  kimi: "#1C8FB0",
+  grok: "#4A5A72",
+  kilo: "#8A9A1E",
+  openclaw: "#9B2D6E",
 };
 
-const LINEAGE_NAMES: Record<(typeof MEASURED_TOOLS)[number] | "mix", string> = {
+const LINEAGE_NAMES: Record<MeasuredTool | "mix", string> = {
   claude: "Claude",
   cursor: "Cursor",
   codex: "Codex",
   gemini: "Gemini",
   opencode: "OpenCode",
   pi: "Pi",
+  amp: "Amp",
+  goose: "Goose",
+  qwen: "Qwen",
+  kimi: "Kimi",
+  grok: "Grok",
+  kilo: "Kilo",
+  openclaw: "OpenClaw",
   mix: "Mix",
 };
 
@@ -331,7 +348,7 @@ function stageIndex(tokens: number): number {
 /** The measured tool with at least half the tokens. A tie keeps the earlier tool. Below half, mix. */
 export function lineageFor(tools: Partial<Record<Tool, number>>): { key: string; name: string } | null {
   let total = 0;
-  let best: { key: (typeof MEASURED_TOOLS)[number]; tokens: number } | null = null;
+  let best: { key: MeasuredTool; tokens: number } | null = null;
   for (const tool of MEASURED_TOOLS) {
     const tokens = tools[tool] ?? 0;
     total += tokens;
@@ -366,7 +383,7 @@ export function petFrom(input: PetInput): Pet {
   const lineage = lineageFor(input.tools);
   const pose = poseFor(streak);
   const build = buildFor(commits);
-  const tint = lineage && lineage.key !== "mix" ? TOOL_COLORS[lineage.key as (typeof MEASURED_TOOLS)[number]] : null;
+  const tint = lineage && lineage.key !== "mix" ? TOOL_COLORS[lineage.key as MeasuredTool] : null;
   const accent = tint ?? NEUTRAL_ACCENT;
   const shapes = [...raster(companion(index, pose), accent), ...stack(index, build, accent)];
 

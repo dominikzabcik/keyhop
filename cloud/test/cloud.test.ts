@@ -1,7 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { publicError } from "../src/errors";
-import { addDays, today } from "../src/env";
+import { addDays, shownTools, today } from "../src/env";
 import { streaks } from "../src/stats";
 import { currentSeason, daysLeft, nextStep, seasonRange, tierFor } from "../src/seasons";
 import { parseUsage } from "../src/usage";
@@ -623,7 +623,7 @@ describe("quests and badges", () => {
     expect(by["two-tools"]).toMatchObject({ done: 2, target: 2, complete: true });
     expect(by["beat-yesterday"].complete).toBe(true);
     expect(by["five-days"]).toMatchObject({ done: 5, complete: true });
-    expect(by["every-tool"]).toMatchObject({ done: 6, target: 6, complete: true });
+    expect(by["four-tools"]).toMatchObject({ done: 4, target: 4, complete: true });
   });
 
   it("leaves a goal short when the days do not add up", () => {
@@ -644,8 +644,28 @@ describe("quests and badges", () => {
     const data = rows(tracked);
     const quests = Object.fromEntries(questsFrom(data, [], reference).map((entry) => [entry.key, entry]));
     const badges = Object.fromEntries(badgesFrom(data, { top3: false, bestTier: null }, reference).map((entry) => [entry.key, entry]));
-    expect(quests["every-tool"]).toMatchObject({ done: 6, target: 6, complete: true });
+    expect(quests["four-tools"]).toMatchObject({ done: 4, target: 4, complete: true });
     expect(badges["all-tools"].earned).toBe(true);
+  });
+
+  it("counts measured-only tools toward the tool goals, with fixed targets", () => {
+    const reference = "2026-09-13";
+    const week = rows([
+      [reference, "amp", 10],
+      [addDays(reference, -1), "goose", 10],
+      [addDays(reference, -2), "qwen", 10],
+      [addDays(reference, -3), "claude", 10],
+    ]);
+    const quests = Object.fromEntries(questsFrom(week, [], reference).map((entry) => [entry.key, entry]));
+    expect(quests["four-tools"]).toMatchObject({ done: 4, target: 4, complete: true });
+    expect(quests["every-tool"]).toBeUndefined();
+
+    const four = rows(["claude", "amp", "goose", "qwen"].map((tool) => [reference, tool, 1]));
+    const five = rows(["claude", "amp", "goose", "qwen", "openclaw"].map((tool) => [reference, tool, 1]));
+    const badge = (data: ReturnType<typeof rows>) =>
+      Object.fromEntries(badgesFrom(data, { top3: false, bestTier: null }, reference).map((entry) => [entry.key, entry]));
+    expect(badge(four)["all-tools"].earned).toBe(false);
+    expect(badge(five)["all-tools"]).toMatchObject({ earned: true, day: reference });
   });
 
   it("earns badges from the days themselves", () => {
@@ -785,6 +805,9 @@ describe("pet", () => {
     const claude = petFrom({ ...base, tokens: 2_000_000, tools: { claude: 2_000_000 } });
     expect(claude.shapes.some((shape) => shape.fill === "#C9821A")).toBe(true);
     expect(petFrom(base).lineage).toBeNull();
+    const amp = petFrom({ ...base, tokens: 2_000_000, tools: { amp: 1_500_000, claude: 500_000 } });
+    expect(amp).toMatchObject({ lineage: "amp", lineageName: "Amp" });
+    expect(amp.shapes.some((shape) => shape.fill === "#D2622A")).toBe(true);
   });
 
   it("raises its pose with the current streak and adds build from commits", () => {
@@ -894,6 +917,10 @@ describe("widgets", () => {
 
     expect(await (await call("/u/widge/streak.svg")).text()).toContain("1 day");
     expect(await (await call("/u/widge/tools.svg")).text()).toContain("Claude Code");
+    await upload(token, [{ day: today(), tool: "goose", tokens: 100, cost: 0.1, requests: 1 }]);
+    const tools = await (await call("/u/widge/tools.svg")).text();
+    expect(tools).toContain("Goose");
+    expect(tools).not.toContain("Kilo");
     const graph = await call("/u/widge/graph.svg");
     expect(graph.status).toBe(200);
     expect(graph.headers.get("content-type")).toContain("image/svg+xml");
@@ -1469,5 +1496,14 @@ describe("indexing progress", () => {
   it("believes an unfinished index only while it is being refreshed", () => {
     // The window the day page trusts, so a stopped app stops claiming to be indexing.
     expect(INDEX_TTL_SECONDS).toBe(6 * 3600);
+  });
+});
+
+describe("tool rows", () => {
+  it("shows the tools with tokens, padded to six in the fixed order", () => {
+    expect(shownTools({})).toEqual(["claude", "cursor", "codex", "gemini", "opencode", "pi"]);
+    expect(shownTools({ kilo: 5 })).toEqual(["claude", "cursor", "codex", "gemini", "opencode", "kilo"]);
+    expect(shownTools({ claude: 1, cursor: 1, codex: 1, gemini: 1, opencode: 1, pi: 1, amp: 1 })).toHaveLength(7);
+    expect(shownTools({ copilot: 9 } as never)).toEqual(["claude", "cursor", "codex", "gemini", "opencode", "pi"]);
   });
 });

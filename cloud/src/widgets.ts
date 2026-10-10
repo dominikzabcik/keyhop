@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { type AppEnv, MEASURED_TOOLS, TOOL_NAMES, addDays, today } from "./env";
+import { type AppEnv, TOOL_NAMES, addDays, shownTools, today } from "./env";
 import { currentSeason, seasonBoard, seasonRange, tierFor, tierLabel } from "./seasons";
 import { type Period, type Subject, type WindowTotals, activity, dailyTokens, leaderboard, summed } from "./stats";
 import { dollars, esc, fit, frame, grouped, keyhopMark, MONO, SANS, shortTokens, svgHeaders, svgOpen, themeOf, type Theme } from "./svg";
@@ -167,9 +167,10 @@ function streakImage(theme: Theme, title: string, subtitle: string, path: string
 function toolsImage(theme: Theme, title: string, path: string, period: BadgePeriod, tools: WindowTotals["tools"]): string {
   const width = 880;
   const row = 36;
-  const height = 148 + MEASURED_TOOLS.length * row;
-  const max = Math.max(...MEASURED_TOOLS.map((tool) => tools[tool]), 1);
-  const bars = MEASURED_TOOLS.map((tool, index) => {
+  const shown = shownTools(tools);
+  const height = 148 + shown.length * row;
+  const max = Math.max(...shown.map((tool) => tools[tool]), 1);
+  const bars = shown.map((tool, index) => {
     const y = 136 + index * row;
     const widthOf = tools[tool] > 0 ? Math.max(4, (tools[tool] / max) * 360) : 0;
     return `<text x="40" y="${y + 16}" font-size="15" fill="${theme.text}" font-family="${SANS}">${esc(TOOL_NAMES[tool])}</text>

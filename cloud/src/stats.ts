@@ -1,4 +1,4 @@
-import { type Tool, MEASURED_TOOLS, TOOLS, addDays, today } from "./env";
+import { type MeasuredTool, type Tool, MEASURED_TOOLS, TOOLS, addDays, today } from "./env";
 
 export const PERIODS = {
   today: { label: "Today", days: 1 },
@@ -324,7 +324,7 @@ export interface WindowTotals {
   commits: number;
   insertions: number;
   deletions: number;
-  tools: Record<(typeof MEASURED_TOOLS)[number], number>;
+  tools: Record<MeasuredTool, number>;
 }
 
 const MEASURED_SUMS = MEASURED_TOOLS.map((tool) => `SUM(CASE WHEN tool = '${tool}' THEN tokens ELSE 0 END) AS tool_${tool}`).join(", ");
@@ -355,7 +355,7 @@ export async function summed(db: D1Database, who: Subject, from: string, until: 
        FROM daily_usage WHERE ${clause} AND day >= ? AND day <= ?`,
     )
     .bind(id, from, until)
-    .first<{ tokens: number; cost_micros: number; requests: number } & Record<`tool_${(typeof MEASURED_TOOLS)[number]}`, number>>();
+    .first<{ tokens: number; cost_micros: number; requests: number } & Record<`tool_${MeasuredTool}`, number>>();
   const work = await db
     .prepare(
       `SELECT COALESCE(SUM(commits), 0) AS commits, COALESCE(SUM(insertions), 0) AS insertions, COALESCE(SUM(deletions), 0) AS deletions

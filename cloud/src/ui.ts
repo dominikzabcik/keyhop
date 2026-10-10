@@ -1,6 +1,6 @@
 import { html, raw } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
-import { MEASURED_TOOLS, type Tool, TOOLS, TOOL_NAMES, type User, addDays } from "./env";
+import { MEASURED_TOOLS, type Tool, TOOLS, TOOL_NAMES, type User, addDays, shownTools } from "./env";
 import { BACKDROP_SCRIPT } from "./backdrop";
 import type { Metric, Totals } from "./stats";
 
@@ -189,6 +189,14 @@ a.place-card:hover { border-color: var(--border-strong); }
 .mix .gemini, .swatch.gemini { background: hsl(0 0% 100% / .14); }
 .mix .opencode, .swatch.opencode { background: hsl(0 0% 100% / .11); }
 .mix .pi, .swatch.pi { background: hsl(0 0% 100% / .08); }
+/* Measured-only tools, in the order the leaderboard lists them. */
+.mix .amp, .swatch.amp { background: hsl(0 0% 100% / .4); }
+.mix .goose, .swatch.goose { background: hsl(0 0% 100% / .34); }
+.mix .qwen, .swatch.qwen { background: hsl(0 0% 100% / .22); }
+.mix .kimi, .swatch.kimi { background: hsl(0 0% 100% / .18); }
+.mix .grok, .swatch.grok { background: hsl(0 0% 100% / .125); }
+.mix .kilo, .swatch.kilo { background: hsl(0 0% 100% / .1); }
+.mix .openclaw, .swatch.openclaw { background: hsl(0 0% 100% / .07); }
 /* Copilot, Windsurf and Codebuff can carry limits but have no counted token history. */
 .mix .copilot, .swatch.copilot { background: hsl(0 0% 100% / .09); }
 .mix .windsurf, .swatch.windsurf, .mix .codebuff, .swatch.codebuff { background: hsl(0 0% 100% / .05); }
@@ -725,8 +733,9 @@ export function legend(): Html {
 }
 
 export function toolRows(totals: Totals): Html {
-  const max = Math.max(1, ...MEASURED_TOOLS.map((tool) => totals.tools[tool]));
-  return html`${MEASURED_TOOLS.map(
+  const shown = shownTools(totals.tools);
+  const max = Math.max(1, ...shown.map((tool) => totals.tools[tool]));
+  return html`${shown.map(
     (tool) => html`<div class="tool-row">${mark(tool)}<div><div>${TOOL_NAMES[tool]}</div><div class="bar"><span style="width:${((totals.tools[tool] / max) * 100).toFixed(2)}%"></span></div></div><span class="mono" style="text-align:right">${tokens(totals.tools[tool])}</span></div>`,
   )}`;
 }

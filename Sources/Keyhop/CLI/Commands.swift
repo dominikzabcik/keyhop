@@ -238,12 +238,13 @@ enum Commands {
         workspace.state.save()
 
         let message = "Switched \(account.provider.name) to \(account.displayName)."
-        let note = account.provider.switchNote.map(Output.plain)
+        let overrides = Overrides.list(for: account.provider)
+        let note = ([account.provider.switchNote].compactMap { $0 } + overrides).map(Output.plain).joined(separator: "\n")
         if json {
-            try Output.json(ActionResult(ok: true, message: message, account: account.id, note: note))
+            try Output.json(ActionResult(ok: true, message: message, account: account.id, note: note.isEmpty ? nil : note))
         } else {
             print(message)
-            if let note { print(note) }
+            if !note.isEmpty { print(note) }
         }
     }
 
@@ -525,7 +526,8 @@ enum Commands {
                 }
             }
             tools.append(DoctorDocument.Tool(id: provider.rawValue, name: provider.name, installed: sample || ToolDetection.installed(provider),
-                                             signedInAs: email, problem: problem, loginLocation: ToolDetection.loginLocation(provider)))
+                                             signedInAs: email, problem: problem, loginLocation: ToolDetection.loginLocation(provider),
+                                             overrides: sample ? [] : Overrides.list(for: provider)))
         }
         return DoctorDocument(
             version: AppVersion.current,

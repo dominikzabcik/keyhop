@@ -142,6 +142,7 @@ enum Commands {
             try await tracker.store(records)
             workspace.state.cursorExports[key] = now
         }
+        await MergeFolder.syncIfDue(tracker: tracker, accounts: accounts, now: now)
         for account in accounts {
             guard let snapshot = usage[account.id], snapshot.error == nil, let fetchedAt = snapshot.fetchedAt else { continue }
             try await tracker.addSamples(account: account.id, windows: snapshot.windows, at: fetchedAt)
@@ -486,6 +487,72 @@ enum Commands {
         print(file.path)
         if !noOpen, !Desktop.open(file.absoluteString) {
             Output.error("Couldn't open a browser. Open \(file.path) yourself.")
+        }
+    }
+
+    // MARK: Merge folder
+
+    struct MergeDocument: Encodable {
+        let folder: String?
+        let file: String
+        var machines: Int?
+        var exported: Int?
+        var imported: Int?
+    }
+
+    static func merge(_ args: inout Arguments) async throws {
+        let json = args.flag("--json")
+        let word = args.nextPositional() ?? "status"
+        switch word {
+        case "status":
+            try args.finish()
+            let settings = MergeFolder.Settings.load()
+            let document = MergeDocument(folder: settings.folder, file: MergeFolder.machineFile())
+            if json {
+                try Output.json(document)
+            } else if let folder = settings.folder {
+                print("Merging through \(folder) as \(document.file).")
+            } else {
+                print("Merging is off. Point it at a folder your machines already sync: keyhop merge <folder>")
+            }
+        case "off":
+            try args.finish()
+            var settings = MergeFolder.Settings.load()
+            guard settings.folder != nil else { throw UsageError("Merging is already off.") }
+            settings.folder = nil
+            settings.lastSync = nil
+            try settings.save()
+            print("Merging is off. The files already in the folder stay as they are.")
+        case "now":
+            try args.finish()
+            let workspace = try Workspace.open()
+            let outcome = try await MergeFolder.sync(tracker: workspace.tracker, accounts: await workspace.service.accounts)
+            try reportMerge(outcome, json: json)
+        default:
+            try args.finish()
+            let url = URL(fileURLWithPath: (word as NSString).expandingTildeInPath, isDirectory: true)
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+                throw UsageError("\(word) isn't a folder. Pick one your machines already sync, like one in iCloud Drive.")
+            }
+            var settings = MergeFolder.Settings.load()
+            settings.folder = word
+            try settings.save()
+            let workspace = try Workspace.open()
+            let outcome = try await MergeFolder.sync(tracker: workspace.tracker, accounts: await workspace.service.accounts)
+            if !json { print("Merging through \(word) as \(MergeFolder.machineFile()). Run the same command on your other machines.") }
+            try reportMerge(outcome, json: json)
+        }
+    }
+
+    private static func reportMerge(_ outcome: MergeFolder.Outcome, json: Bool) throws {
+        let settings = MergeFolder.Settings.load()
+        if json {
+            try Output.json(MergeDocument(folder: settings.folder, file: MergeFolder.machineFile(),
+                                          machines: outcome.machines, exported: outcome.exported, imported: outcome.imported))
+        } else {
+            let others = outcome.machines == 1 ? "1 other machine" : "\(outcome.machines) other machines"
+            print("Wrote \(outcome.exported) new events, read \(outcome.imported) from \(others).")
         }
     }
 

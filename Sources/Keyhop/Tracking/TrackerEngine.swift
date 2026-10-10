@@ -12,6 +12,7 @@ actor TrackerEngine {
         directory = url.deletingLastPathComponent()
         try db.script(Self.schema)
         try Self.addProjects(to: db)
+        try Self.addOrigin(to: db)
         PriceCatalog.load(from: directory)
     }
 
@@ -62,6 +63,18 @@ actor TrackerEngine {
             """)
     }
 
+    private static func addOrigin(to db: Database) throws {
+        var present = false
+        try db.query("PRAGMA table_info(events)") { row in
+            if row.text(1) == "origin" { present = true }
+        }
+        guard !present else { return }
+        try db.script("ALTER TABLE events ADD COLUMN origin TEXT;")
+    }
+
+    /// `origin` is NULL for everything this machine read itself, and the sending machine's name
+    /// on rows that arrived through the merge folder. Only NULL rows are exported, so merged
+    /// usage can never bounce between machines.
     private static let schema = """
     CREATE TABLE IF NOT EXISTS events (
         key TEXT PRIMARY KEY,
@@ -78,7 +91,8 @@ actor TrackerEngine {
         output INTEGER NOT NULL,
         reasoning INTEGER NOT NULL,
         cost REAL NOT NULL,
-        billed REAL
+        billed REAL,
+        origin TEXT
     );
     CREATE INDEX IF NOT EXISTS events_by_time ON events (ts, provider);
     CREATE INDEX IF NOT EXISTS events_by_session ON events (kind, session);
@@ -244,6 +258,100 @@ actor TrackerEngine {
             ])
     }
 
+    // MARK: Merge folder
+
+    struct MergeBatch {
+        let lines: [String]
+        let lastRow: Int64
+    }
+
+    /// Rows this machine read itself, after `row`, as JSON lines. The account is resolved the
+    /// same way reports resolve it and written as the account's identity, so another machine
+    /// can match it to its own saved account for the same login.
+    func exportMergeEvents(after row: Int64, identities: [String: String], limit: Int = 20000) throws -> MergeBatch {
+        var lines: [String] = []
+        var lastRow = row
+        try db.query("""
+            SELECT e.rowid, e.key, e.provider, \(Self.accountColumn), e.session, e.kind, e.ts, e.model,
+                   e.input, e.cache_write, e.cache_write_1h, e.cache_read, e.output, e.reasoning,
+                   e.cost, e.billed, e.project
+            FROM events e
+            WHERE e.origin IS NULL AND e.rowid > ?
+            ORDER BY e.rowid
+            LIMIT ?
+            """, [.int(row), .int(Int64(limit))]) { row in
+            lastRow = row.int(0)
+            var object: [String: Any] = [
+                "key": row.text(1) ?? "",
+                "provider": row.text(2) ?? "",
+                "kind": row.text(5) ?? "",
+                "ts": row.double(6),
+                "model": row.text(7) ?? "",
+                "input": row.int(8), "cacheWrite": row.int(9), "cacheWrite1h": row.int(10),
+                "cacheRead": row.int(11), "output": row.int(12), "reasoning": row.int(13),
+                "cost": row.double(14),
+            ]
+            if let account = row.text(3), let identity = identities[account] { object["account"] = identity }
+            if let session = row.text(4) { object["session"] = session }
+            if !row.isNull(15) { object["billed"] = row.double(15) }
+            if let project = row.text(16) { object["project"] = project }
+            if let line = try? JSON.string(object) { lines.append(line) }
+        }
+        return MergeBatch(lines: lines, lastRow: lastRow)
+    }
+
+    /// Stores lines another machine exported. The provider string is kept as written, so usage
+    /// from a tool this build doesn't know yet survives until an update can read it. A key seen
+    /// before keeps what it has: this machine's own reading always wins.
+    @discardableResult
+    func importMergeLines<S: Sequence>(_ lines: S, origin: String, accountsByIdentity: [String: String]) throws -> Int where S.Element: StringProtocol {
+        var imported = 0
+        try db.transaction {
+            for line in lines {
+                guard let object = JSON.object(String(line)),
+                      let key = object["key"] as? String, !key.isEmpty,
+                      let provider = object["provider"] as? String, !provider.isEmpty,
+                      let kind = object["kind"] as? String,
+                      let ts = JSON.number(object["ts"]),
+                      let model = object["model"] as? String else { continue }
+                func count(_ name: String) -> Int64 { Int64(JSON.number(object[name]) ?? 0) }
+                let identity = object["account"] as? String
+                let account = identity.flatMap { accountsByIdentity["\(provider)|\($0)"] }
+                try db.execute("""
+                    INSERT INTO events
+                        (key, provider, account, session, kind, ts, model, input, cache_write, cache_write_1h,
+                         cache_read, output, reasoning, cost, billed, project, origin)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(key) DO NOTHING
+                    """, [
+                        .text(key), .text(provider), .text(account), .text(object["session"] as? String),
+                        .text(kind), .real(ts), .text(model),
+                        .int(count("input")), .int(count("cacheWrite")), .int(count("cacheWrite1h")),
+                        .int(count("cacheRead")), .int(count("output")), .int(count("reasoning")),
+                        .real(JSON.number(object["cost"]) ?? 0),
+                        JSON.number(object["billed"]).map(SQL.real) ?? .null,
+                        .text(object["project"] as? String), .text(origin),
+                    ])
+                imported += db.changes
+            }
+        }
+        return imported
+    }
+
+    /// The read position of a merge file, shared with the log readers' bookkeeping.
+    func sourceMark(_ path: String) throws -> (size: Int64, offset: Int64)? {
+        var mark: (Int64, Int64)?
+        try db.query("SELECT size, offset FROM sources WHERE path = ?", [.text(path)]) { row in
+            mark = (row.int(0), row.int(1))
+        }
+        return mark
+    }
+
+    func setSourceMark(_ path: String, size: Int64, offset: Int64) throws {
+        try db.execute("INSERT OR REPLACE INTO sources (path, size, offset, state) VALUES (?, ?, ?, '{}')",
+                       [.text(path), .int(size), .int(offset)])
+    }
+
     // MARK: Accounts over time
 
     /// Records the account in use from now on, if it changed.
@@ -354,9 +462,12 @@ actor TrackerEngine {
 
     // MARK: Reports
 
-    /// The account in use when the request happened, unless the source already named one.
+    /// The account in use when the request happened, unless the source already named one. Rows
+    /// that arrived through the merge folder never fall back to this machine's switch history:
+    /// they were resolved on the machine that read them, or they stay unattributed.
     private static let accountColumn = """
-        COALESCE(e.account, (SELECT p.account FROM periods p WHERE p.provider = e.provider AND p.since <= e.ts ORDER BY p.since DESC LIMIT 1))
+        COALESCE(e.account, CASE WHEN e.origin IS NULL THEN
+            (SELECT p.account FROM periods p WHERE p.provider = e.provider AND p.since <= e.ts ORDER BY p.since DESC LIMIT 1) END)
         """
     private static let sums = """
         SUM(e.input), SUM(e.cache_write), SUM(e.cache_write_1h), SUM(e.cache_read), SUM(e.output), SUM(e.reasoning),

@@ -128,6 +128,7 @@ final class UsageTracker: ObservableObject {
                 try await engine.store(records)
                 cursorExports[account.id] = now
             }
+            await MergeFolder.syncIfDue(tracker: engine, accounts: accounts, now: now)
 
             var forecasts: [String: Date] = [:]
             for account in accounts {

@@ -258,6 +258,100 @@ enum MeasuredFeeds {
         return record(model: "grok", usage: usage, suffix: "").map { [$0] } ?? []
     }
 
+    // MARK: Goose
+
+    /// Goose's sessions database carries a per-request `usage_ledger`, including compaction
+    /// calls and the synthetic `carried_forward` rows older sessions were migrated with, so the
+    /// sums reconcile with Goose's own totals. A database from before the ledger existed is
+    /// skipped rather than guessed at from session summaries.
+    static func gooseRecords(databaseURL: URL, since: Int64) throws -> (records: [UsageRecord], watermark: Int64) {
+        guard FileManager.default.fileExists(atPath: databaseURL.path) else { return ([], since) }
+        let source = try Database(url: databaseURL, readOnly: true)
+        var hasLedger = false
+        try source.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'usage_ledger'") { _ in hasLedger = true }
+        guard hasLedger else { return ([], since) }
+
+        var records: [UsageRecord] = []
+        var watermark = since
+        try source.query("""
+            SELECT id, session_id, created_timestamp, model, input_tokens, output_tokens,
+                   cache_read_tokens, cache_write_tokens, cost
+            FROM usage_ledger
+            WHERE created_timestamp >= ?
+            ORDER BY created_timestamp, id
+            """, [.int(since)]) { row in
+            guard let id = row.text(0) else { return }
+            let created = row.int(2)
+            watermark = max(watermark, created)
+            let tokens = TokenCounts(input: Int(row.int(4)), cacheWrite: Int(row.int(7)),
+                                     cacheRead: Int(row.int(6)), output: Int(row.int(5)))
+            let logged = row.double(8)
+            guard tokens.total > 0 || logged > 0 else { return }
+            let model = row.text(3) ?? "unknown"
+            records.append(UsageRecord(
+                key: "goose:\(id)", provider: .goose, account: nil, session: row.text(1),
+                kind: .request, timestamp: Date(timeIntervalSince1970: Double(created)),
+                model: model, tokens: tokens,
+                cost: logged > 0 ? logged : Pricing.cost(model: model, tokens: tokens), billed: nil
+            ))
+        }
+        return (records, watermark)
+    }
+
+    // MARK: Amp
+
+    /// One Amp thread file, parsed whole. The usage ledger is preferred: each event carries the
+    /// model and input/output counts, and cache tokens come from the message it points at. Files
+    /// without a ledger fall back to per-message usage.
+    static func ampRecords(_ data: Data) -> [UsageRecord] {
+        guard let root = JSON.object(data) else { return [] }
+        let thread = root["id"] as? String ?? "amp"
+        let messages = (root["messages"] as? [[String: Any]]) ?? []
+        func number(_ value: Any?) -> Int { Int(JSON.number(value) ?? 0) }
+
+        let ledger = (root["usageLedger"] as? [String: Any])?["events"] as? [[String: Any]] ?? []
+        if !ledger.isEmpty {
+            var usageByMessage: [String: [String: Any]] = [:]
+            for message in messages {
+                guard let id = message["messageId"] as? String ?? message["id"] as? String,
+                      let usage = message["usage"] as? [String: Any] else { continue }
+                usageByMessage[id] = usage
+            }
+            return ledger.compactMap { event in
+                guard let id = event["id"] as? String,
+                      let timestamp = Dates.parse(event["timestamp"]),
+                      let eventTokens = event["tokens"] as? [String: Any] else { return nil }
+                let joined = (event["toMessageId"] as? String).flatMap { usageByMessage[$0] }
+                var tokens = TokenCounts()
+                tokens.input = number(eventTokens["input"])
+                tokens.output = number(eventTokens["output"])
+                tokens.cacheWrite = number(joined?["cacheCreationInputTokens"])
+                tokens.cacheRead = number(joined?["cacheReadInputTokens"])
+                guard tokens.total > 0 else { return nil }
+                let model = event["model"] as? String ?? "unknown"
+                return UsageRecord(key: "amp:\(thread):\(id)", provider: .amp, account: nil, session: thread,
+                                   kind: .request, timestamp: timestamp, model: model, tokens: tokens,
+                                   cost: Pricing.cost(model: model, tokens: tokens), billed: nil)
+            }
+        }
+
+        return messages.compactMap { message in
+            guard let usage = message["usage"] as? [String: Any],
+                  let id = message["messageId"] as? String ?? message["id"] as? String,
+                  let timestamp = Dates.parse(usage["timestamp"] ?? message["timestamp"]) else { return nil }
+            var tokens = TokenCounts()
+            tokens.input = number(usage["inputTokens"])
+            tokens.output = number(usage["outputTokens"])
+            tokens.cacheWrite = number(usage["cacheCreationInputTokens"])
+            tokens.cacheRead = number(usage["cacheReadInputTokens"])
+            guard tokens.total > 0 else { return nil }
+            let model = usage["model"] as? String ?? "unknown"
+            return UsageRecord(key: "amp:\(thread):\(id)", provider: .amp, account: nil, session: thread,
+                               kind: .request, timestamp: timestamp, model: model, tokens: tokens,
+                               cost: Pricing.cost(model: model, tokens: tokens), billed: nil)
+        }
+    }
+
     /// The turn's working directory comes from `summary.json` next to `updates.jsonl`.
     private static func grokProject(_ file: URL, _ state: inout [String: String]) -> String? {
         if let cached = state["cwd"] { return cached == "-" ? nil : Projects.root(for: cached) }

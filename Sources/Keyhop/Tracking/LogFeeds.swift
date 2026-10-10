@@ -238,7 +238,9 @@ struct LogFeed {
 /// `time_updated`, not creation time, and a row counts only once it is complete: a row read
 /// mid-response would otherwise be stored with partial counts that are never corrected.
 enum OpenCodeFeed {
-    static func records(databaseURL: URL, since: Int64) throws -> (records: [UsageRecord], watermark: Int64) {
+    /// Kilo stores messages in the same schema under its own path, so `provider` names whose
+    /// ledger this is.
+    static func records(databaseURL: URL, since: Int64, provider tool: Provider = .opencode) throws -> (records: [UsageRecord], watermark: Int64) {
         guard FileManager.default.fileExists(atPath: databaseURL.path) else { return ([], since) }
         let source = try Database(url: databaseURL, readOnly: true)
         var records: [UsageRecord] = []
@@ -270,7 +272,7 @@ enum OpenCodeFeed {
             let modelID = message["modelID"] as? String
             let model = provider.flatMap { p in modelID.map { "\(p)/\($0)" } } ?? modelID ?? "unknown/unknown"
             records.append(UsageRecord(
-                key: "opencode:\(id)", provider: .opencode, account: nil, session: session,
+                key: "\(tool.rawValue):\(id)", provider: tool, account: nil, session: session,
                 kind: .request, timestamp: Date(timeIntervalSince1970: Double(created) / 1000),
                 model: model, tokens: tokens,
                 cost: logged > 0 ? logged : Pricing.cost(model: model, tokens: tokens), billed: nil,

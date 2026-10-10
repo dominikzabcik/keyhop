@@ -26,7 +26,7 @@ final class MenuScreenTests: XCTestCase {
     }
 
     /// Renders a screen at the menu's real width and reads every word on it.
-    private func words<V: View>(of view: V, width: CGFloat = 340) throws -> [String] {
+    private func words<V: View>(of view: V, width: CGFloat = 520) throws -> [String] {
         let renderer = ImageRenderer(content: view.frame(width: width).environment(\.colorScheme, .dark))
         renderer.scale = 2
         guard let image = renderer.cgImage else { throw XCTSkip("This machine can't render SwiftUI offscreen.") }
@@ -75,9 +75,10 @@ final class MenuScreenTests: XCTestCase {
         XCTAssertTrue(said.contains("Add"), "there is no way to add an account: \(said)")
     }
 
-    /// Every tool draws its own panel, and every panel keeps its footer.
+    /// Every switchable tool draws its own panel, and every panel keeps its footer. Measured-only
+    /// tools have no logins, so they never get a panel of their own.
     func testEveryToolsPanelNamesItself() throws {
-        for tool in Provider.allCases {
+        for tool in Provider.switchable {
             let said = try words(of: menu(tab: tool)).joined(separator: " | ")
             XCTAssertTrue(said.contains(tool.shortName) || said.contains(tool.name),
                           "\(tool.name)'s panel never names it: \(said)")
@@ -110,7 +111,7 @@ final class MenuScreenTests: XCTestCase {
         let store = AccountStore(preview: ())
         let said = try words(of: WelcomeView(canMove: false, dismiss: {}).environmentObject(store), width: 420)
             .joined(separator: " | ")
-        for tool in Provider.allCases {
+        for tool in Provider.switchable {
             XCTAssertTrue(said.contains(tool.name) || said.contains(tool.shortName),
                           "the welcome window never mentions \(tool.name): \(said)")
         }

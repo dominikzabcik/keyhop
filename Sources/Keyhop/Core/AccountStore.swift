@@ -191,7 +191,9 @@ final class AccountStore: ObservableObject {
             do {
                 try await service.switchTo(account.id)
                 setFocus(account.provider)
-                notice = account.provider.switchNote
+                // A credential that outranks the saved login means the hop won't take effect;
+                // that matters more than the usual note.
+                notice = Overrides.list(for: account.provider).first ?? account.provider.switchNote
             } catch {
                 notice = "Couldn't switch: \(error.localizedDescription)"
             }

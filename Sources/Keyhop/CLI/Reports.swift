@@ -332,6 +332,8 @@ struct DoctorDocument: Encodable {
         let signedInAs: String?
         let problem: String?
         let loginLocation: String
+        /// Credentials that outrank the saved login, so a switch wouldn't take effect.
+        let overrides: [String]
     }
 }
 
@@ -524,6 +526,9 @@ enum Reports {
                 state = tool.installed ? "signed out" : "not found"
             }
             lines.append("\(tool.name + ":")\(String(repeating: " ", count: max(1, 15 - tool.name.count - 1)))\(state)  [\(tool.loginLocation)]")
+            for override in tool.overrides {
+                lines.append("               ! \(override)")
+            }
         }
         if let host = document.statusNotifierHost {
             lines.append("Tray:          \(document.trayInstalled ? "keyhop-tray installed" : "keyhop-tray not installed"), "

@@ -1,0 +1,3 @@
+# V2 is built on a long-lived `v2` branch; the cloud evolves additively on `main`
+
+Keyhop 2.0 ships as one big-bang release so the redesign and the new tracker land as a single product moment. The apps and CLI are rebuilt on the `v2` branch (main keeps shipping 0.14.x fixes, which are cherry-picked across; `v2` is rebased weekly to limit drift). The cloud is deliberately excluded from the big bang: keyhop.app runs one Worker over one production D1 database with 0.14.x clients syncing throughout, so every D1 migration and API change lands on `main`, stays backwards compatible, and deploys continuously. "Big bang" is the experience in the app and on the site, never the deploy.

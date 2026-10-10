@@ -11,6 +11,8 @@ final class UsageTracker: ObservableObject {
     @Published private(set) var revision = 0
     @Published private(set) var isUpdating = false
     @Published private(set) var today: [UUID: Totals] = [:]
+    @Published private(set) var todayByProvider: [Provider: Totals] = [:]
+    @Published private(set) var todayTotal = Totals()
     @Published private(set) var budgets: [Budget] = []
     @Published private(set) var budgetSpend: [String: Double] = [:]
     @Published private(set) var forecasts: [String: Date] = [:]
@@ -45,6 +47,11 @@ final class UsageTracker: ObservableObject {
         let sample = SampleUsage(store: store)
         self.sample = sample
         today = sample.today
+        for account in store.accounts {
+            guard let totals = sample.today[account.id] else { continue }
+            todayByProvider[account.provider, default: Totals()] += totals
+        }
+        todayTotal = sample.today.values.reduce(Totals(), +)
         budgets = sample.budgets
         budgetSpend = sample.budgetSpend
         forecasts = sample.forecasts
@@ -143,7 +150,10 @@ final class UsageTracker: ObservableObject {
             self.forecasts = forecasts
 
             budgets = try await engine.budgets()
-            today = try await engine.accountTotals(in: BudgetPeriod.day.interval(containing: now), sole: sole).byAccount
+            let totals = try await engine.accountTotals(in: BudgetPeriod.day.interval(containing: now), sole: sole)
+            today = totals.byAccount
+            todayByProvider = totals.byProvider
+            todayTotal = totals.all
             budgetSpend = try await engine.budgetSpend(for: budgets, now: now, sole: sole)
             lastUpdate = now
             problem = nil

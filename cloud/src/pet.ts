@@ -104,13 +104,11 @@ export interface PetInput {
 const INK = "#140E0C";
 const BODY = "#F3EAD8";
 const SHADE = "#CDBFA6";
-const LIFT = "#FFF6E8";
-const EYE = "#FFF9F2";
 /** The accent when a pet has no single tool: a mid green, never one tool's colour. */
 const NEUTRAL_ACCENT = "#6E7A52";
 
-/** K outline, B body, S the lower shade, L the highlight, A the marking, W the eye, E the pupil. */
-type Ink = "K" | "B" | "S" | "L" | "A" | "W" | "E";
+/** K outline, B body, S the lower shade, A the marking, E the eye. */
+type Ink = "K" | "B" | "S" | "A" | "E";
 type Cell = Ink | null;
 
 /** A Codex pet cell is 192×208. Two units per drawn pixel keeps the outline chunky at card size. */
@@ -120,8 +118,6 @@ const PX = 2;
 /** The row the soles rest on. Every pose shares it. */
 const FOOT = 99;
 const CX = 48;
-/** Each stage is a larger copy of the same character, anchored on the soles. */
-const SCALES = [0.5, 0.62, 0.73, 0.84, 0.93, 1];
 
 class Grid {
   readonly rows: Cell[][];
@@ -219,7 +215,7 @@ function rect(x: number, y: number, w: number, h: number, fill: string, kind?: P
 }
 
 function raster(grid: Grid, accent: string): PetShape[] {
-  const colours: Record<Ink, string> = { K: INK, B: BODY, S: SHADE, L: LIFT, A: accent, W: EYE, E: INK };
+  const colours: Record<Ink, string> = { K: INK, B: BODY, S: SHADE, A: accent, E: INK };
   const shapes: PetShape[] = [];
   for (let y = 0; y < GRID_H; y++) {
     let run: PetShape | null = null;
@@ -247,16 +243,20 @@ function raster(grid: Grid, accent: string): PetShape[] {
   return shapes;
 }
 
-/** Blocks beside the feet, one more at each step of build. They stay above the sole. */
+/**
+ * Blocks in front of the creature, one more at each step of build. They stand in the four empty
+ * columns under its chin (the body rows leave columns 8 to 11 clear below the head), on the same
+ * row as the soles, and are sized from the chunk so three of them never reach the head.
+ */
 function stack(stage: number, build: number, fill: string): PetShape[] {
   const shapes: PetShape[] = [];
-  const s = SCALES[stage];
-  const footLeft = CX + -20 * s;
+  const cell = CHUNK[stage];
+  const left = Math.round(CX - (BODY_ROWS[0].length * cell) / 2);
+  const x = left + 8 * cell + 1;
+  const w = Math.max(4, 3 * cell - 2);
+  const h = Math.max(2, 2 * cell - 2);
   for (let i = 0; i < build; i++) {
-    const w = Math.max(4, Math.round((8 - i) * Math.max(s, 0.7)));
-    const h = Math.max(3, Math.round(4.5 * Math.max(s, 0.7)));
-    const x = Math.max(1, Math.round(footLeft - w - 3));
-    const y = Math.max(1, Math.round(FOOT - 2 - (i + 1) * (h + 1)));
+    const y = FOOT - (i + 1) * (h + 1);
     shapes.push(rect(x - 1, y - 1, w + 2, h + 2, INK));
     shapes.push(rect(x, y, w, h, fill));
   }

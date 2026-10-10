@@ -95,6 +95,16 @@ describe("usage uploads", () => {
     });
   });
 
+  it("accepts measured-only tools in daily totals, and stores them", async () => {
+    const result = parseUsage({ days: [{ day, tool: "amp", tokens: 500, cost: 0.2, requests: 1 }] }, day);
+    expect(result).toEqual({ days: [{ day, tool: "amp", tokens: 500, costMicros: 200_000, requests: 1 }] });
+    // Through the endpoint too, so the daily_usage CHECK provably accepts the new tools.
+    const cookie = await signIn("measured-tools");
+    const token = await linkApp(cookie);
+    const saved = await upload(token, [{ day, tool: "kimi", tokens: 900, cost: 0.4, requests: 2 }]);
+    expect(saved.status).toBe(200);
+  });
+
   it("refuses impossible dates, unknown tools, duplicates and negative numbers", () => {
     const entry = { day, tool: "claude", tokens: 1, cost: 0, requests: 1 };
     expect(parseUsage({ days: [{ ...entry, day: "2026-02-30" }] }, day)).toHaveProperty("error");

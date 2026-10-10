@@ -25,7 +25,10 @@ export type AppEnv = {
   };
 };
 
-export const TOOLS = ["claude", "cursor", "codex", "gemini", "opencode", "pi", "copilot", "windsurf", "codebuff"] as const;
+export const TOOLS = [
+  "claude", "cursor", "codex", "gemini", "opencode", "pi", "copilot", "windsurf", "codebuff",
+  "amp", "goose", "qwen", "kimi", "grok", "kilo", "openclaw",
+] as const;
 export type Tool = (typeof TOOLS)[number];
 
 /**
@@ -44,10 +47,26 @@ export const TOOL_NAMES: Record<Tool, string> = {
   copilot: "GitHub Copilot",
   windsurf: "Windsurf",
   codebuff: "Codebuff",
+  amp: "Amp",
+  goose: "Goose",
+  qwen: "Qwen Code",
+  kimi: "Kimi Code",
+  grok: "Grok Build",
+  kilo: "Kilo",
+  openclaw: "OpenClaw",
 };
+
+/**
+ * The tools that report limit windows. Measured-only tools (amp, goose, qwen, kimi, grok, kilo,
+ * openclaw) have no logins and no limits, so limit uploads keep to this narrower list, matching
+ * account_limits' CHECK.
+ */
+export const LIMIT_TOOLS = ["claude", "cursor", "codex", "gemini", "opencode", "pi", "copilot", "windsurf", "codebuff"] as const;
 
 /** A current human-readable list, so validation errors never name stale tools. */
 export const toolList = (): string => `${TOOLS.slice(0, -1).join(", ")} or ${TOOLS[TOOLS.length - 1]}`;
+
+export const limitToolList = (): string => `${LIMIT_TOOLS.slice(0, -1).join(", ")} or ${LIMIT_TOOLS[LIMIT_TOOLS.length - 1]}`;
 
 export const now = (): number => Math.floor(Date.now() / 1000);
 

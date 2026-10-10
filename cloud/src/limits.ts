@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { apiUser, apiWriter, uploadLimit } from "./auth";
-import { type AppEnv, type Tool, TOOLS, now, toolList } from "./env";
+import { type AppEnv, LIMIT_TOOLS, type Tool, limitToolList, now } from "./env";
 
 /**
  * Where a person stands against their providers' limits, so a linked phone can count down to the
@@ -71,8 +71,8 @@ export function parseLimits(body: unknown, reference = now()): { limits: LimitRo
       return { error: `Each account key must be up to ${MAX_KEY} letters, digits, dashes or underscores.` };
     }
     const tool = entry?.tool;
-    if (typeof tool !== "string" || !(TOOLS as readonly string[]).includes(tool)) {
-      return { error: `Tool must be ${toolList()}.` };
+    if (typeof tool !== "string" || !(LIMIT_TOOLS as readonly string[]).includes(tool)) {
+      return { error: `Tool must be ${limitToolList()}.` };
     }
     const windowLabel = typeof entry?.windowLabel === "string" ? clean(entry.windowLabel) : "";
     if (!windowLabel || windowLabel.length > MAX_WINDOW) {

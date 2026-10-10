@@ -40,6 +40,8 @@ final class AccountStore: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 Updater.shared.checkIfDue()
+                // A log tree that appeared since the last pass gets watched from now on.
+                if let self { UsageTracker.shared.ensureWatching(store: self) }
                 // With automatic checks off, usage is only read when the menu opens or on Refresh.
                 guard UserDefaults.standard.bool(forKey: "autoRefresh") else { return }
                 self?.refresh()
@@ -50,6 +52,7 @@ final class AccountStore: ObservableObject {
             Task { @MainActor in self?.refresh(force: false) }
         }
         refresh()
+        UsageTracker.shared.ensureWatching(store: self)
     }
 
     /// Sample data for previews. Touches no files, Keychain or network.

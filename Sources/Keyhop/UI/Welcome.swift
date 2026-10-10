@@ -234,7 +234,7 @@ struct WelcomeView: View {
     private var summary: String? {
         if store.lastRefresh == nil && found.isEmpty { return "Looking for AI-tool logins on this Mac…" }
         let alsoFound = found.dropFirst(Self.rowLimit).map(\.name)
-        let rest = Provider.allCases.filter { !found.contains($0) }.map(\.name)
+        let rest = Provider.switchable.filter { !found.contains($0) }.map(\.name)
         var parts: [String] = []
         if found.isEmpty { parts.append("No AI-tool logins found yet.") }
         if !alsoFound.isEmpty { parts.append("Also found \(Self.list(alsoFound)).") }

@@ -51,7 +51,7 @@ enum SmartHop {
         budgetSpend: [String: Double],
         now: Date = Date()
     ) -> [AccountRecommendation] {
-        Provider.allCases.compactMap {
+        Provider.switchable.compactMap {
             recommendation(for: $0, accounts: accounts, active: active, usage: usage, forecasts: forecasts,
                            budgets: budgets, budgetSpend: budgetSpend, now: now)
         }

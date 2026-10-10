@@ -96,7 +96,7 @@ enum MCPServer {
             name: "keyhop_recommendation",
             title: "Smart Hop recommendation",
             description: "Choose the best current account runway from remaining limits, forecasts, reset timing and budgets.",
-            properties: ["tool": ["type": "string", "enum": Provider.allCases.map(\.rawValue)]]
+            properties: ["tool": ["type": "string", "enum": Provider.switchable.map(\.rawValue)]]
         ),
         tool(
             name: "keyhop_services",

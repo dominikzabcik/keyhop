@@ -522,6 +522,8 @@ enum Reports {
                 state = "signed in as \(email)"
             } else if let problem = tool.problem {
                 state = problem
+            } else if Provider(rawValue: tool.id)?.isSwitchable == false {
+                state = tool.installed ? "measured from its local history" : "not found"
             } else {
                 state = tool.installed ? "signed out" : "not found"
             }

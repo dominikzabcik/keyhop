@@ -154,8 +154,8 @@ final class ExtendedUsageSourceTests: XCTestCase {
 
     private func records(_ feed: LogFeed, _ lines: [String]) -> [UsageRecord] {
         var state: [String: String] = [:]
-        return lines.compactMap { line in
-            guard let object = JSON.object(line) else { return nil }
+        return lines.flatMap { line -> [UsageRecord] in
+            guard let object = JSON.object(line) else { return [] }
             return feed.parse(object, file, &state)
         }
     }

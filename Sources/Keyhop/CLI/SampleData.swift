@@ -102,6 +102,7 @@ enum SampleData {
         case .codex: return "\(home)/code/atlas"
         case .opencode, .pi: return "\(home)/code/field-notes"
         case .copilot, .windsurf, .codebuff: return "\(home)/code/keyhop"
+        case .amp, .goose, .qwen, .kimi, .grok, .kilo, .openclaw: return "\(home)/code/keyhop"
         }
     }
 
@@ -161,6 +162,7 @@ enum SampleData {
                 case .opencode: 6
                 case .pi: 7
                 case .cursor, .copilot, .windsurf, .codebuff: 2
+                case .amp, .goose, .qwen, .kimi, .grok, .kilo, .openclaw: 2
                 }
                 let name = models[model]
                 digest.points.append(UsageDigest.Point(start: start, key: key, model: name, totals: totals))

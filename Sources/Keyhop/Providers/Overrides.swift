@@ -18,6 +18,8 @@ enum Overrides {
         case .opencode: opencode(environment)
         case .copilot: copilot(environment, home)
         case .pi, .windsurf, .codebuff: []
+        // Measured-only tools have no login Keyhop swaps, so nothing can outrank it.
+        case .amp, .goose, .qwen, .kimi, .grok, .kilo, .openclaw: []
         }
     }
 

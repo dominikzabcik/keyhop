@@ -220,7 +220,11 @@ final class NewProviderTests: XCTestCase {
 
     func testEveryToolHasAnAdapterAndAMark() {
         for provider in Provider.allCases {
-            XCTAssertNotNil(Adapters.all[provider], "\(provider.rawValue) needs an adapter")
+            if provider.isSwitchable {
+                XCTAssertNotNil(Adapters.all[provider], "\(provider.rawValue) needs an adapter")
+            } else {
+                XCTAssertNil(Adapters.all[provider], "\(provider.rawValue) is measured only and must have no adapter")
+            }
             XCTAssertFalse(ProviderMarks.path(for: provider).isEmpty, "\(provider.rawValue) needs a mark")
             XCTAssertFalse(provider.name.isEmpty)
             XCTAssertFalse(provider.shortName.isEmpty)

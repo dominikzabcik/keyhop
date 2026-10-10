@@ -9,7 +9,7 @@ final class LogFeedTests: XCTestCase {
         var result: [UsageRecord] = []
         for line in lines {
             guard let object = (try? JSONSerialization.jsonObject(with: Data(line.utf8))) as? [String: Any] else { continue }
-            if let record = feed.parse(object, rolloutFile, &state) { result.append(record) }
+            result.append(contentsOf: feed.parse(object, rolloutFile, &state))
         }
         return result
     }

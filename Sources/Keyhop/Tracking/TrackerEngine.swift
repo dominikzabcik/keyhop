@@ -221,9 +221,8 @@ actor TrackerEngine {
                     let line = pending[lineStart..<newline]
                     lineStart = newline + 1
                     guard feed.markers.contains(where: { line.range(of: $0) != nil }),
-                          let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any],
-                          let record = feed.parse(object, url, &state) else { continue }
-                    records.append(record)
+                          let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any] else { continue }
+                    records.append(contentsOf: feed.parse(object, url, &state))
                 }
                 consumed += Int64(lineStart - pending.startIndex)
                 pending = Data(pending[lineStart...])
@@ -489,9 +488,12 @@ actor TrackerEngine {
         )
     }
 
-    /// Totals per account in an interval. `sole` assigns unattributed usage to a tool's only saved account.
-    func accountTotals(in interval: DateInterval, sole: [Provider: UUID]) throws -> (byAccount: [UUID: Totals], all: Totals) {
+    /// Totals per account and per tool in an interval. `sole` assigns unattributed usage to a
+    /// tool's only saved account. Measured-only tools never have accounts, so `byProvider` and
+    /// `all` are the totals that cover everything.
+    func accountTotals(in interval: DateInterval, sole: [Provider: UUID]) throws -> (byAccount: [UUID: Totals], byProvider: [Provider: Totals], all: Totals) {
         var byAccount: [UUID: Totals] = [:]
+        var byProvider: [Provider: Totals] = [:]
         var all = Totals()
         try db.query("""
             SELECT e.provider, \(Self.accountColumn), \(Self.sums)
@@ -502,11 +504,12 @@ actor TrackerEngine {
             let totals = Self.totals(row, from: 2)
             all += totals
             let provider = Provider(rawValue: row.text(0) ?? "")
+            if let provider { byProvider[provider, default: Totals()] += totals }
             if let id = row.text(1).flatMap({ UUID(uuidString: $0) }) ?? provider.flatMap({ sole[$0] }) {
                 byAccount[id, default: Totals()] += totals
             }
         }
-        return (byAccount, all)
+        return (byAccount, byProvider, all)
     }
 
     func digest(interval: DateInterval, previous: DateInterval, bucket: Bucket, provider: Provider?, sole: [Provider: UUID]) throws -> UsageDigest {

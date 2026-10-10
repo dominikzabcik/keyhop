@@ -112,8 +112,8 @@ enum Commands {
         let service = workspace.service
         let tracker = workspace.tracker
         var notices: [String] = []
-        for (index, provider) in Provider.allCases.enumerated() {
-            progress?(WorkProgress(step: .logins, done: index, total: Provider.allCases.count, detail: provider.name))
+        for (index, provider) in Provider.switchable.enumerated() {
+            progress?(WorkProgress(step: .logins, done: index, total: Provider.switchable.count, detail: provider.name))
             switch await service.syncLive(provider) {
             case .saved(let id):
                 if let account = await service.account(id) { notices.append("Saved \(account.email) to \(provider.name).") }
@@ -128,7 +128,7 @@ enum Commands {
         let active = await service.active
         let now = Date()
 
-        for provider in Provider.allCases {
+        for provider in Provider.switchable {
             try await tracker.noteActive(provider, account: active[provider], at: now)
         }
         // New prices first, so the logs read next are priced with them.
@@ -257,6 +257,9 @@ enum Commands {
             return seconds
         } ?? 600
         let provider = try tool(try args.positional("a tool: \(Provider.wordList)"))
+        guard provider.isSwitchable else {
+            throw UsageError("\(provider.name) is measured only; it has no login Keyhop can switch.")
+        }
         try args.finish()
 
         var workspace = try Workspace.open()
@@ -687,6 +690,8 @@ enum ToolDetection {
         case .codebuff:
             return Shell.which("codebuff") != nil || Shell.which("manicode") != nil
                 || FileManager.default.fileExists(atPath: CodebuffAdapter.directory.path)
+        case .amp, .goose, .qwen, .kimi, .grok, .kilo, .openclaw:
+            return MeasuredFeeds.present(provider)
         }
     }
 
@@ -729,6 +734,8 @@ enum ToolDetection {
             return WindsurfAdapter.credentialsURL.path
         case .codebuff:
             return CodebuffAdapter.credentialsURL.path
+        case .amp, .goose, .qwen, .kimi, .grok, .kilo, .openclaw:
+            return MeasuredFeeds.usageLocation(provider)
         }
     }
 

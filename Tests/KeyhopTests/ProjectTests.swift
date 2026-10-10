@@ -73,7 +73,7 @@ final class ProjectTests: XCTestCase {
         let line = #"{"type":"assistant","cwd":"\#(inside.path)","requestId":"r","sessionId":"s","timestamp":"2026-09-10T08:00:00Z","message":{"id":"m","model":"claude-opus-5","usage":{"input_tokens":10,"output_tokens":20}}}"#
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
         var state: [String: String] = [:]
-        let record = try XCTUnwrap(LogFeed.claudeCode.parse(object, URL(fileURLWithPath: "/tmp/s.jsonl"), &state))
+        let record = try XCTUnwrap(LogFeed.claudeCode.parse(object, URL(fileURLWithPath: "/tmp/s.jsonl"), &state).first)
         XCTAssertEqual(record.project, repository.path)
     }
 
@@ -88,7 +88,7 @@ final class ProjectTests: XCTestCase {
         var records: [UsageRecord] = []
         for line in lines {
             let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
-            if let record = LogFeed.codex.parse(object, URL(fileURLWithPath: "/tmp/rollout-x.jsonl"), &state) { records.append(record) }
+            records.append(contentsOf: LogFeed.codex.parse(object, URL(fileURLWithPath: "/tmp/rollout-x.jsonl"), &state))
         }
         XCTAssertEqual(records.first?.project, repository.path)
     }

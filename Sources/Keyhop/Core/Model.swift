@@ -2,8 +2,21 @@ import Foundation
 
 enum Provider: String, Codable, CaseIterable, Identifiable {
     case claude, cursor, codex, gemini, opencode, pi, copilot, windsurf, codebuff
+    // Measured only: their local usage is read and counted, but they have no login to switch.
+    case amp, goose, qwen, kimi, grok, kilo, openclaw
 
     var id: String { rawValue }
+
+    /// Tools with saved logins Keyhop can hop between. Login flows, limit reads and switch
+    /// history only ever concern these; usage reports cover every tool.
+    static var switchable: [Provider] { allCases.filter(\.isSwitchable) }
+
+    var isSwitchable: Bool {
+        switch self {
+        case .amp, .goose, .qwen, .kimi, .grok, .kilo, .openclaw: false
+        default: true
+        }
+    }
 
     var name: String {
         switch self {
@@ -16,6 +29,13 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .copilot: "GitHub Copilot"
         case .windsurf: "Windsurf"
         case .codebuff: "Codebuff"
+        case .amp: "Amp"
+        case .goose: "Goose"
+        case .qwen: "Qwen Code"
+        case .kimi: "Kimi Code"
+        case .grok: "Grok Build"
+        case .kilo: "Kilo"
+        case .openclaw: "OpenClaw"
         }
     }
 
@@ -30,6 +50,13 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .copilot: "Copilot"
         case .windsurf: "Windsurf"
         case .codebuff: "Codebuff"
+        case .amp: "Amp"
+        case .goose: "Goose"
+        case .qwen: "Qwen"
+        case .kimi: "Kimi"
+        case .grok: "Grok"
+        case .kilo: "Kilo"
+        case .openclaw: "OpenClaw"
         }
     }
 
@@ -45,6 +72,8 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .copilot: "Run `gh auth login` and sign in as the other account. Keyhop saves it automatically."
         case .windsurf: "Sign in to Windsurf with the other account. Keyhop saves it automatically."
         case .codebuff: "Run `codebuff login` with the other account. Keyhop saves it automatically."
+        case .amp, .goose, .qwen, .kimi, .grok, .kilo, .openclaw:
+            "\(name) is measured only; Keyhop doesn't switch its login."
         }
     }
 
@@ -63,6 +92,7 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .windsurf: "Restart Windsurf to move open windows to this account."
         case .codebuff: "New Codebuff sessions use this account. Restart a running session to move it to the new login."
         case .cursor: nil
+        case .amp, .goose, .qwen, .kimi, .grok, .kilo, .openclaw: nil
         }
     }
 
@@ -83,6 +113,8 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
         case .windsurf: "Windsurf exposes limits only for the profile in use; Keyhop reads its local cache."
         case .codebuff: "Codebuff exposes credit and subscription limits; its local history does not include model token counts."
         case .claude, .cursor, .codex: nil
+        case .amp, .goose, .qwen, .kimi, .grok, .kilo, .openclaw:
+            "\(name) is measured from its local history; it has no login Keyhop reads limits for."
         }
     }
 }

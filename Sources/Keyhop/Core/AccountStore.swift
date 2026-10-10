@@ -138,7 +138,7 @@ final class AccountStore: ObservableObject {
         isRefreshing = true
         let progress = progress
         refreshTask = Task {
-            let tools = Provider.allCases.filter { $0 != addingFor }
+            let tools = Provider.switchable.filter { $0 != addingFor }
             for (index, provider) in tools.enumerated() {
                 progress.set(WorkProgress(step: .logins, done: index, total: tools.count, detail: provider.name))
                 await report(await service.syncLive(provider), for: provider)

@@ -23,6 +23,8 @@ and started on 2026-10-10. **M1 (tracker core) is essentially done**; M2 (UI reb
 
 Verification that passed before the handoff: `swift test` (211), `cd cloud && npm test` (86)
 plus typecheck, and a live two-machine `keyhop merge` smoke test via `KEYHOP_DATA_DIR`.
+On the Linux box the whole suite runs too (Swift 6.3.3 toolchain, Playwright Chromium): as of
+2026-10-10 evening, `swift test` 206, window e2e 28, cloud 88, app checks 14 screens clean.
 
 ## Everything travels in this branch
 
@@ -39,8 +41,24 @@ file are all committed here. The owner's previously uncommitted pet/dashboard wo
    `4158a86` or later on main). The server side is done: `4158a86` on main.
 2. **Pre-flight before M3:** confirm the Cloudflare account is on a paid plan — D1 hard-fails
    on Workers Free since 2026-09-01, and the live layer adds query volume.
-3. **M2** (UI per `design/keyhop-v2/index.html`): finish or land the WIP commit's direction
-   first — it touches the same files M2 rewrites (DashboardPage.swift above all).
+3. **M2** (UI per `design/keyhop-v2/index.html`) — in progress, on `v2` since 2026-10-10:
+   - Landed: the WIP's home shell (252 px sidebar, Limits board, account tree, status bar,
+     home composer, night field) with its dead code removed; the pet's commit blocks moved in
+     front of the creature (`cloud/scripts/pet-sample.mjs` regenerates `CloudPet.sample`);
+     a **day field** (`theme` in the appearance: night/day/auto, status-bar switch, Settings →
+     Appearance → Field; every overlay tint reads `--on`, see `Dashboard/Page/DashboardStyles.swift`);
+     the leaderboard mix bar covers all thirteen measured tools; the page split into
+     `Sources/Keyhop/Dashboard/Page/` (styles, shell, one script per section).
+   - keyhop.app got the same day field on `main` (system setting plus a header switch kept in
+     localStorage; the night scenes mount at a quarter strength by day).
+   - Still open in M2: the Mac menu bar (numbers in the menu-bar text, outage badge, live
+     ticker) and the WKWebView chrome following a live theme switch — both need a Mac to build
+     and verify (`AppWindow.swift` only reads the saved theme at launch); a Rams/design review
+     of each screen (no review skill was available here); the sketch's "Day" section (this
+     computer's commits today) is not in the window — the team day lives under Teams.
+   - How to verify here: `swift build && swift test`, `npm run test:e2e` (window + CLI),
+     `cd checks && node run.mjs --app`, and `.shots/shot-app.mjs night|day` (untracked helper)
+     for screenshots of every section.
 4. **Deferred from M1:** `keyhop run <account>` + directory→account mapping (own design block:
    per-account credential materialisation via CLAUDE_CONFIG_DIR/CODEX_HOME); feeds skipped on
    evidence grounds (Antigravity protobuf, Droid/Hermes session totals, Copilot shutdown

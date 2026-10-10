@@ -276,10 +276,12 @@ describe("leaderboards", () => {
     expect(page.headers.get("content-security-policy")).toContain("default-src 'none'");
     const body = await page.text();
     expect(body).toContain("<h1>Leaderboard</h1>");
-    // The only script is the backdrop, allowed by this response's nonce.
+    // Two scripts: the saved field applied before paint, then the page's own. Both carry this response's nonce.
     const nonce = page.headers.get("content-security-policy")!.match(/script-src 'nonce-([^']+)'/)?.[1];
     expect(nonce).toBeTruthy();
-    expect(body.match(/<script\b[^>]*>/g)).toEqual([`<script nonce="${nonce}">`]);
+    expect(body.match(/<script\b[^>]*>/g)).toEqual([`<script nonce="${nonce}">`, `<script nonce="${nonce}">`]);
+    expect(body).toContain('data-field-switch');
+    expect(body).toContain(':root[data-theme="day"]');
   });
 });
 

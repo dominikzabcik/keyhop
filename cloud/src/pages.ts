@@ -643,7 +643,7 @@ function dayNav(slug: string, day: string, reference: string): Html {
  * biggest piece of someone's day reads loudest without a colour being invented for it.
  */
 const REPO_SHADES = [0.9, 0.55, 0.32, 0.2, 0.13, 0.09];
-const repoShade = (index: number): string => `hsl(0 0% 100% / ${REPO_SHADES[Math.min(index, REPO_SHADES.length - 1)]})`;
+const repoShade = (index: number): string => `hsl(var(--on) / ${REPO_SHADES[Math.min(index, REPO_SHADES.length - 1)]})`;
 
 function repoMix(repos: DayRepo[]): Html {
   const total = repos.reduce((sum, entry) => sum + entry.commits, 0);

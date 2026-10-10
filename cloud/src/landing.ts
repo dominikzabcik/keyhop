@@ -324,7 +324,7 @@ body.landing { overflow-x: clip; }
 .landing-main h3 { font-size: 15px; font-weight: 620; letter-spacing: -.01em; }
 .landing-main .tone { color: var(--muted); }
 .landing-main .btn { height: 42px; padding: 0 18px; border-radius: 9px; }
-.landing-main code { font-family: var(--mono); font-size: .92em; color: hsl(0 0% 80%); }
+.landing-main code { font-family: var(--mono); font-size: .92em; color: var(--text); }
 
 /* The first screen. */
 .hop-stage { min-height: calc(100vh - 56px); padding: 64px 0 40px; display: flex; flex-direction: column; justify-content: center; gap: 44px; }
@@ -332,12 +332,12 @@ body.landing { overflow-x: clip; }
 .hop-head h1 { font-size: clamp(46px, 6vw, 84px); line-height: .98; letter-spacing: -.055em; font-weight: 680; }
 .hop-head h1 .line { display: block; white-space: nowrap; }
 .hop-intro { display: grid; gap: 22px; padding-bottom: 8px; }
-.hop-intro p { color: hsl(0 0% 72%); font-size: 17px; line-height: 1.55; text-wrap: pretty; }
+.hop-intro p { color: var(--muted); font-size: 17px; line-height: 1.55; text-wrap: pretty; }
 .hop-action { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .hop-action span { color: var(--subtle); font-size: 12.5px; }
 
 /* The board. */
-.board { margin: 0; padding: 22px 24px 18px; border: 1px solid hsl(0 0% 100% / .09); border-radius: 16px; background: hsl(0 0% 8.5% / .78); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .05); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.board { margin: 0; padding: 22px 24px 18px; border: 1px solid hsl(var(--on) / .09); border-radius: 16px; background: hsl(var(--bg-base) / .78); box-shadow: inset 0 1px 0 hsl(var(--on) / .05); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .board-top { margin-bottom: 18px; display: flex; align-items: baseline; gap: 28px; flex-wrap: wrap; }
 .clock { min-width: 64px; font: 600 22px/1 var(--mono); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .readout-row { display: inline-flex; align-items: baseline; gap: 8px; color: var(--muted); font-size: 13px; }
@@ -357,15 +357,15 @@ body.landing { overflow-x: clip; }
 .lane-name small { overflow: hidden; color: var(--subtle); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
 .tracks { position: relative; }
 .tracks svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.rail { stroke: hsl(0 0% 100% / .07); stroke-width: 6; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.run { fill: none; stroke: hsl(0 0% 90%); stroke-width: 6; stroke-linecap: round; vector-effect: non-scaling-stroke;
+.rail { stroke: hsl(var(--on) / .07); stroke-width: 6; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.run { fill: none; stroke: var(--text); stroke-width: 6; stroke-linecap: round; vector-effect: non-scaling-stroke;
 }
 .day { clip-path: inset(-12px calc((1 - var(--t)) * 100% - 8px) -12px -12px); }
-.run.hop { stroke: hsl(0 0% 72%); stroke-width: 2.5; }
+.run.hop { stroke: var(--muted); stroke-width: 2.5; }
 .cap { fill: hsl(34 58% 62%); }
-.hop-note { position: absolute; transform: translate(-50%, -26px); padding: 2px 6px; border-radius: 5px; color: var(--muted); background: hsl(0 0% 8.5%); font: 11px/1.4 var(--mono); white-space: nowrap; pointer-events: none;
+.hop-note { position: absolute; transform: translate(-50%, -26px); padding: 2px 6px; border-radius: 5px; color: var(--muted); background: var(--bg); font: 11px/1.4 var(--mono); white-space: nowrap; pointer-events: none;
   opacity: clamp(0, (var(--t) - var(--a)) * 60, 1); }
-.playhead { position: absolute; top: -8px; bottom: -4px; left: calc(var(--t) * 100%); width: 1px; background: hsl(0 0% 100% / .22); }
+.playhead { position: absolute; top: -8px; bottom: -4px; left: calc(var(--t) * 100%); width: 1px; background: hsl(var(--on) / .22); }
 .hours { position: absolute; left: 0; right: 0; bottom: -26px; display: flex; justify-content: space-between; color: var(--subtle); font: 11px/1 var(--mono); }
 .board-body { padding-bottom: 24px; }
 
@@ -393,7 +393,7 @@ body.landing { overflow-x: clip; }
 
 .table-scroll { overflow-x: auto; }
 .tool-table { width: 100%; min-width: 720px; border-collapse: collapse; }
-.tool-table th, .tool-table td { padding: 13px 16px 13px 0; border-bottom: 1px solid hsl(0 0% 100% / .07); text-align: left; vertical-align: middle; }
+.tool-table th, .tool-table td { padding: 13px 16px 13px 0; border-bottom: 1px solid hsl(var(--on) / .07); text-align: left; vertical-align: middle; }
 .tool-table thead th { color: var(--subtle); font-size: 12.5px; font-weight: 520; }
 .tool-table tbody th { font-weight: 600; white-space: nowrap; }
 .tool-table tbody th .mark { width: 16px; height: 16px; margin: -3px 12px 0 0; vertical-align: middle; fill: var(--text); }
@@ -405,7 +405,7 @@ body.landing { overflow-x: clip; }
 .elsewhere-item > p { max-width: 460px; color: var(--muted); line-height: 1.6; }
 .mcp-tools { margin-top: 8px; display: grid; grid-template-columns: auto 1fr; gap: 12px 20px; }
 .mcp-tools dd { color: var(--muted); }
-.ping { max-width: 360px; margin-top: 8px; padding: 14px 16px; display: grid; gap: 3px; border-radius: 16px; background: hsl(0 0% 16% / .9); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .06); }
+.ping { max-width: 360px; margin-top: 8px; padding: 14px 16px; display: grid; gap: 3px; border-radius: 16px; background: var(--raised); box-shadow: inset 0 1px 0 hsl(var(--on) / .06); }
 .ping-top { margin-bottom: 4px; display: flex; justify-content: space-between; color: var(--subtle); font-size: 12px; }
 .ping-app { color: var(--muted); font-weight: 600; }
 .ping b { font-weight: 600; }
@@ -416,11 +416,11 @@ body.landing { overflow-x: clip; }
 .social-copy p { max-width: 460px; margin-bottom: 18px; color: var(--muted); line-height: 1.6; }
 .social-copy .text-link { margin-left: -10px; }
 .mini-board { margin: 0; padding: 0; list-style: none; }
-.mini-board li { padding: 12px 0; display: grid; grid-template-columns: 28px 90px minmax(0, 1fr) 64px; gap: 14px; align-items: center; border-bottom: 1px solid hsl(0 0% 100% / .07); }
+.mini-board li { padding: 12px 0; display: grid; grid-template-columns: 28px 90px minmax(0, 1fr) 64px; gap: 14px; align-items: center; border-bottom: 1px solid hsl(var(--on) / .07); }
 .mini-board .rank { color: var(--subtle); font-variant-numeric: tabular-nums; }
 .mini-board .who-name { font-weight: 560; }
-.mini-board .bar { height: 6px; border-radius: 99px; background: hsl(0 0% 100% / .07); overflow: hidden; }
-.mini-board .bar i { display: block; height: 100%; border-radius: inherit; background: hsl(0 0% 80%); }
+.mini-board .bar { height: 6px; border-radius: 99px; background: hsl(var(--on) / .07); overflow: hidden; }
+.mini-board .bar i { display: block; height: 100%; border-radius: inherit; background: var(--text); }
 .mini-board .total { text-align: right; font-variant-numeric: tabular-nums; }
 
 .install { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 56px; align-items: start; }
@@ -432,8 +432,8 @@ body.landing { overflow-x: clip; }
 .command-top span { color: var(--subtle); font-size: 12px; font-weight: 520; }
 .command code { font: 12.5px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 
-.faq-list { max-width: 860px; border-top: 1px solid hsl(0 0% 100% / .08); }
-.faq-list details { border-bottom: 1px solid hsl(0 0% 100% / .08); }
+.faq-list { max-width: 860px; border-top: 1px solid hsl(var(--on) / .08); }
+.faq-list details { border-bottom: 1px solid hsl(var(--on) / .08); }
 .faq-list summary { min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 20px; cursor: pointer; font-weight: 560; list-style: none; }
 .faq-list summary::-webkit-details-marker { display: none; }
 .faq-list summary::after { content: "+"; color: var(--subtle); font-size: 18px; }
@@ -463,7 +463,7 @@ body.landing { overflow-x: clip; }
   /* The table becomes one short block per tool, each value named. */
   .tool-table { min-width: 0; }
   .tool-table thead { display: none; }
-  .tool-table tr { padding: 16px 0; display: grid; gap: 6px; border-bottom: 1px solid hsl(0 0% 100% / .07); }
+  .tool-table tr { padding: 16px 0; display: grid; gap: 6px; border-bottom: 1px solid hsl(var(--on) / .07); }
   .tool-table th, .tool-table td { padding: 0; border: 0; }
   .tool-table tbody th { margin-bottom: 4px; }
   .tool-table td { display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: 12px; }

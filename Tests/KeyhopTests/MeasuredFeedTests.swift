@@ -101,4 +101,75 @@ final class MeasuredFeedTests: XCTestCase {
         let line = #"{"params":{"sessionId":"g1","update":{"sessionUpdate":"message","usage":{"inputTokens":5}}}}"#
         XCTAssertTrue(records(MeasuredFeeds.grok, [line], file: grokFile).isEmpty)
     }
+
+    // MARK: Goose
+
+    func testGooseLedgerRowsBecomeRecords() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("goose-\(UUID().uuidString).db")
+        defer { for suffix in ["", "-wal", "-shm"] { try? FileManager.default.removeItem(atPath: url.path + suffix) } }
+        let db = try Database(url: url)
+        try db.script("""
+            CREATE TABLE usage_ledger (id TEXT PRIMARY KEY, session_id TEXT, created_timestamp INTEGER, model TEXT,
+                input_tokens INTEGER, output_tokens INTEGER, total_tokens INTEGER,
+                cache_read_tokens INTEGER, cache_write_tokens INTEGER, cost REAL, cost_source TEXT, is_compaction INTEGER);
+            INSERT INTO usage_ledger VALUES ('l1', 's1', 1776162403, 'claude-opus-5', 100, 50, 150, 20, 5, 0.3, 'provider', 0);
+            INSERT INTO usage_ledger VALUES ('l2', 's1', 1776162404, 'claude-opus-5', 0, 0, 0, 0, 0, 0, 'provider', 0);
+            """)
+        let result = try MeasuredFeeds.gooseRecords(databaseURL: url, since: 0)
+        XCTAssertEqual(result.records.count, 1, "empty rows don't count")
+        XCTAssertEqual(result.records[0].key, "goose:l1")
+        XCTAssertEqual(result.records[0].tokens, TokenCounts(input: 100, cacheWrite: 5, cacheRead: 20, output: 50))
+        XCTAssertEqual(result.records[0].cost, 0.3, accuracy: 1e-9)
+        XCTAssertEqual(result.watermark, 1776162404)
+    }
+
+    func testGooseWithoutALedgerIsSkipped() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("goose-old-\(UUID().uuidString).db")
+        defer { for suffix in ["", "-wal", "-shm"] { try? FileManager.default.removeItem(atPath: url.path + suffix) } }
+        let db = try Database(url: url)
+        try db.script("CREATE TABLE sessions (id TEXT PRIMARY KEY, total_tokens INTEGER);")
+        let result = try MeasuredFeeds.gooseRecords(databaseURL: url, since: 0)
+        XCTAssertTrue(result.records.isEmpty)
+    }
+
+    // MARK: Kilo
+
+    func testKiloReusesTheOpenCodeSchemaUnderItsOwnName() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("kilo-\(UUID().uuidString).db")
+        defer { for suffix in ["", "-wal", "-shm"] { try? FileManager.default.removeItem(atPath: url.path + suffix) } }
+        let db = try Database(url: url)
+        let data = #"{"role":"assistant","providerID":"anthropic","modelID":"claude-opus-5","cost":0.2,"time":{"completed":1776162403000},"tokens":{"input":100,"output":50,"reasoning":0,"cache":{"read":20,"write":5}}}"#
+        try db.script("CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);")
+        try db.execute("INSERT INTO message VALUES ('m1', 's1', 1776162403000, 1776162403000, ?)", [.text(data)])
+        let result = try OpenCodeFeed.records(databaseURL: url, since: 0, provider: .kilo)
+        XCTAssertEqual(result.records.count, 1)
+        XCTAssertEqual(result.records[0].key, "kilo:m1")
+        XCTAssertEqual(result.records[0].provider, .kilo)
+    }
+
+    // MARK: Amp
+
+    func testAmpLedgerEventsJoinCacheTokensFromTheirMessage() {
+        let thread = #"{"id":"T-abc","messages":[{"messageId":"m1","usage":{"model":"claude-opus-5","inputTokens":100,"outputTokens":50,"cacheCreationInputTokens":30,"cacheReadInputTokens":400,"totalTokens":580}}],"usageLedger":{"events":[{"id":"e1","timestamp":"2026-10-01T08:00:00Z","model":"claude-opus-5","tokens":{"input":100,"output":50,"total":580},"toMessageId":"m1","credits":12}]}}"#
+        let result = MeasuredFeeds.ampRecords(Data(thread.utf8))
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].key, "amp:T-abc:e1")
+        XCTAssertEqual(result[0].session, "T-abc")
+        XCTAssertEqual(result[0].tokens, TokenCounts(input: 100, cacheWrite: 30, cacheRead: 400, output: 50))
+    }
+
+    func testAmpFallsBackToMessageUsageWithoutALedger() {
+        let thread = #"{"id":"T-xyz","messages":[{"messageId":"m1","usage":{"model":"claude-opus-5","timestamp":"2026-10-01T08:00:00Z","inputTokens":10,"outputTokens":5,"cacheCreationInputTokens":1,"cacheReadInputTokens":2}},{"messageId":"m2"}]}"#
+        let result = MeasuredFeeds.ampRecords(Data(thread.utf8))
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].key, "amp:T-xyz:m1")
+        XCTAssertEqual(result[0].tokens, TokenCounts(input: 10, cacheWrite: 1, cacheRead: 2, output: 5))
+    }
+
+    func testAmpRereadsCountNothingTwiceThroughKeys() {
+        let thread = #"{"id":"T-abc","messages":[],"usageLedger":{"events":[{"id":"e1","timestamp":"2026-10-01T08:00:00Z","model":"m","tokens":{"input":10,"output":5}}]}}"#
+        let first = MeasuredFeeds.ampRecords(Data(thread.utf8))
+        let second = MeasuredFeeds.ampRecords(Data(thread.utf8))
+        XCTAssertEqual(first.map(\.key), second.map(\.key), "keys are stable, so the database dedups rereads")
+    }
 }

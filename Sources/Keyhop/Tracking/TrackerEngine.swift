@@ -148,7 +148,9 @@ actor TrackerEngine {
         for file in files {
             added += try ingest(file.url, feed: file.feed, size: file.size) { report($0) }
         }
-        added += try ingestOpenCode()
+        added += try ingestMessageLedgers()
+        added += try ingestGoose()
+        added += try ingestAmp()
         if progress != nil {
             done = total
             report(0, force: true)
@@ -156,27 +158,86 @@ actor TrackerEngine {
         return added
     }
 
-    /// OpenCode stores messages in SQLite instead of JSONL. The source row reuses `offset` as a
-    /// millisecond `time_updated` watermark; querying `>=` plus event primary keys makes equal-time
-    /// writes safe and idempotent.
-    private func ingestOpenCode() throws -> Int {
-        let url = OpenCodeAdapter.databaseURL
-        guard FileManager.default.fileExists(atPath: url.path) else { return 0 }
-        let size = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
-        var previousSize: Int64 = 0
-        var watermark: Int64 = 0
-        try db.query("SELECT size, offset FROM sources WHERE path = ?", [.text(url.path)]) { row in
-            previousSize = row.int(0)
-            watermark = row.int(1)
+    /// OpenCode and Kilo store messages in the same SQLite schema. The source row reuses `offset`
+    /// as a millisecond `time_updated` watermark; querying `>=` plus event primary keys makes
+    /// equal-time writes safe and idempotent.
+    private func ingestMessageLedgers() throws -> Int {
+        var added = 0
+        let ledgers: [(url: URL, provider: Provider)] = [
+            (OpenCodeAdapter.databaseURL, .opencode),
+            (MeasuredFeeds.kiloDatabaseURL, .kilo),
+        ]
+        for ledger in ledgers {
+            let url = ledger.url
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            let size = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+            var previousSize: Int64 = 0
+            var watermark: Int64 = 0
+            try db.query("SELECT size, offset FROM sources WHERE path = ?", [.text(url.path)]) { row in
+                previousSize = row.int(0)
+                watermark = row.int(1)
+            }
+            if size < previousSize { watermark = 0 }
+            let result = try OpenCodeFeed.records(databaseURL: url, since: watermark, provider: ledger.provider)
+            try db.transaction {
+                for record in result.records { try insert(record) }
+                try db.execute("INSERT OR REPLACE INTO sources (path, size, offset, state) VALUES (?, ?, ?, ?)",
+                               [.text(url.path), .int(size), .int(result.watermark), .text("{}")])
+            }
+            added += result.records.count
         }
-        if size < previousSize { watermark = 0 }
-        let result = try OpenCodeFeed.records(databaseURL: url, since: watermark)
+        return added
+    }
+
+    /// Goose keeps a per-request `usage_ledger` in its sessions database. The watermark follows
+    /// `created_timestamp` with `>=`, and row ids key out the overlap.
+    private func ingestGoose() throws -> Int {
+        let url = MeasuredFeeds.gooseDatabaseURL
+        guard FileManager.default.fileExists(atPath: url.path) else { return 0 }
+        var watermark: Int64 = 0
+        try db.query("SELECT offset FROM sources WHERE path = ?", [.text(url.path)]) { row in
+            watermark = row.int(0)
+        }
+        let result = try MeasuredFeeds.gooseRecords(databaseURL: url, since: watermark)
         try db.transaction {
             for record in result.records { try insert(record) }
-            try db.execute("INSERT OR REPLACE INTO sources (path, size, offset, state) VALUES (?, ?, ?, ?)",
-                           [.text(url.path), .int(size), .int(result.watermark), .text("{}")])
+            try db.execute("INSERT OR REPLACE INTO sources (path, size, offset, state) VALUES (?, 0, ?, '{}')",
+                           [.text(url.path), .int(result.watermark)])
         }
         return result.records.count
+    }
+
+    /// Amp rewrites each thread's JSON file in place as the thread grows, so there is no offset
+    /// to resume from: a file whose size or modification time changed is parsed whole again, and
+    /// record keys keep the overlap from counting twice.
+    private func ingestAmp() throws -> Int {
+        var added = 0
+        for root in MeasuredFeeds.ampDirectories {
+            let threads = root.appendingPathComponent("threads", isDirectory: true)
+            guard FileManager.default.fileExists(atPath: threads.path) else { continue }
+            let files = (try? FileManager.default.contentsOfDirectory(at: threads, includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey])) ?? []
+            for file in files where file.pathExtension == "json" && file.lastPathComponent.hasPrefix("T-") {
+                let values = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+                let size = Int64(values?.fileSize ?? 0)
+                let modified = Int64((values?.contentModificationDate?.timeIntervalSince1970 ?? 0) * 1000)
+                var seenSize: Int64 = -1
+                var seenModified: Int64 = -1
+                try db.query("SELECT size, offset FROM sources WHERE path = ?", [.text(file.path)]) { row in
+                    seenSize = row.int(0)
+                    seenModified = row.int(1)
+                }
+                guard size != seenSize || modified != seenModified else { continue }
+                guard let data = try? Data(contentsOf: file) else { continue }
+                let records = MeasuredFeeds.ampRecords(data)
+                try db.transaction {
+                    for record in records { try insert(record) }
+                    try db.execute("INSERT OR REPLACE INTO sources (path, size, offset, state) VALUES (?, ?, ?, '{}')",
+                                   [.text(file.path), .int(size), .int(modified)])
+                }
+                added += records.count
+            }
+        }
+        return added
     }
 
     func store(_ records: [UsageRecord]) throws {

@@ -32,5 +32,24 @@ final class BackdropTests: XCTestCase {
         XCTAssertEqual(appearance.scene, "orbit")
         XCTAssertEqual(appearance.glass, 0.85)
         XCTAssertEqual(appearance.blur, 24)
+        XCTAssertEqual(appearance.theme, "night")
+    }
+
+    func testTheSavedFieldRoundTrips() throws {
+        var appearance = DashboardAppearance()
+        appearance.theme = "day"
+        let data = try DashboardJSON.encoder.encode(appearance)
+        XCTAssertEqual(try DashboardJSON.decoder.decode(DashboardAppearance.self, from: data).theme, "day")
+        XCTAssertEqual(DashboardAppearance.themes, ["night", "day", "auto"])
+    }
+
+    func testThePageCarriesBothFields() {
+        let page = DashboardPage.render(boot: nil)
+        XCTAssertTrue(page.contains(#":root[data-theme="day"]"#))
+        XCTAssertTrue(page.contains("prefers-color-scheme: light"))
+        XCTAssertTrue(page.contains(#"id="status-theme""#))
+        // Every overlay tint reads from the ink hue, so the day field never paints white on white.
+        let style = page.components(separatedBy: "<style>")[1].components(separatedBy: "</style>")[0]
+        XCTAssertFalse(style.contains("hsl(0 0% 100% / "))
     }
 }

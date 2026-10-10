@@ -133,7 +133,9 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
         toolbar.showsBaselineSeparator = false
         window.toolbar = toolbar
         window.toolbarStyle = .unified
-        window.appearance = NSAppearance(named: .darkAqua)
+        // The window chrome follows the saved field; "auto" leaves it to the system.
+        let theme = DashboardAppearance.load().theme
+        window.appearance = theme == "auto" ? nil : NSAppearance(named: theme == "day" ? .aqua : .darkAqua)
         window.isOpaque = false
         // Fully clear with a shadow leaves a notch at the rounded corners; a trace of alpha keeps them clean.
         window.backgroundColor = NSColor.black.withAlphaComponent(0.01)

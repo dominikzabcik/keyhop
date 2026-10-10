@@ -179,6 +179,8 @@ export async function pokeControls(page, screen) {
       label = (await handle.evaluate((el) => (el.getAttribute("aria-label") || el.textContent || "").trim().replace(/\s+/g, " "))).slice(0, 60);
       if (!label || LEAVE_ALONE.test(label)) continue;
       if (!(await handle.isVisible()) || !(await handle.isEnabled())) continue;
+      // A tab that is already the chosen one has nothing to do when pressed again.
+      if ((await handle.getAttribute("aria-pressed")) === "true") continue;
     } catch {
       continue;
     }

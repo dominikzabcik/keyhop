@@ -160,3 +160,18 @@ test('settings keeps the link, the profile and the phone together', async ({ app
   await expect(screen.getByRole('heading', 'App & Privacy')).toBeVisible();
   await assertReadable(browser);
 });
+
+test('the status bar turns the field from night to day and back', async ({ app, screen, browser }) => {
+  await openWindow(app, 'overview');
+  const field = () => browser.evaluate(() => document.documentElement.dataset.theme ?? '');
+  await expect.poll(field).toBe('night');
+  await screen.getByRole('button', { name: 'Night', exact: true }).click();
+  await expect.poll(field).toBe('day');
+  await expect(screen.getByRole('button', { name: 'Day', exact: true })).toBeVisible();
+  // The choice is saved, so another open of the window is still by day.
+  await openWindow(app, 'usage');
+  await expect.poll(field).toBe('day');
+  await assertReadable(browser);
+  await screen.getByRole('button', { name: 'Day', exact: true }).click();
+  await expect.poll(field).toBe('night');
+});

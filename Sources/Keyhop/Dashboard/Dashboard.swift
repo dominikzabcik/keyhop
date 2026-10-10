@@ -202,6 +202,7 @@ struct DashboardState: Encodable {
 struct DashboardAppearance: Codable, Equatable {
     static let scenes = ["leaves", "dunes", "orbit", "arcade", "image", "off"]
     static let scopes = ["all", "overview"]
+    static let themes = ["night", "day", "auto"]
 
     var scene = "leaves"
     var opacity = 0.8
@@ -213,8 +214,10 @@ struct DashboardAppearance: Codable, Equatable {
     var glass = 0.85
     /// How much the desktop behind that glass is blurred, in points.
     var blur = 24
+    /// "night" or "day" for the window's field, or "auto" to follow the system.
+    var theme = "night"
 
-    enum CodingKeys: String, CodingKey { case scene, opacity, scope, image, glass, blur }
+    enum CodingKeys: String, CodingKey { case scene, opacity, scope, image, glass, blur, theme }
 
     static var url: URL { Platform.dataDirectory.appendingPathComponent("appearance.json") }
     static var imageURL: URL { Platform.dataDirectory.appendingPathComponent("background.jpg") }
@@ -242,6 +245,8 @@ extension DashboardAppearance {
         // Saved before the window could be see-through.
         glass = try values.decodeIfPresent(Double.self, forKey: .glass) ?? DashboardAppearance().glass
         blur = try values.decodeIfPresent(Int.self, forKey: .blur) ?? DashboardAppearance().blur
+        // Saved before the window had a day field.
+        theme = try values.decodeIfPresent(String.self, forKey: .theme) ?? DashboardAppearance().theme
     }
 }
 
@@ -1147,6 +1152,7 @@ actor DashboardSession {
         let scope: String?
         let glass: Double?
         let blur: Int?
+        let theme: String?
         /// A JPEG data URL for the image scene, or an empty string to remove the saved picture.
         let image: String?
     }
@@ -1176,6 +1182,10 @@ actor DashboardSession {
         }
         if let blur = body.blur {
             appearance.blur = min(64, max(1, blur))
+        }
+        if let theme = body.theme {
+            guard DashboardAppearance.themes.contains(theme) else { throw UsageError("Unknown theme.") }
+            appearance.theme = theme
         }
         var message = "Saved."
         if let image = body.image {

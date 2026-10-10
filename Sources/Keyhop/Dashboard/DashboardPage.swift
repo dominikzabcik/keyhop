@@ -32,13 +32,13 @@ enum DashboardPage {
   --sidebar: hsl(0 0% 7.2%);
   --panel: hsl(0 0% 10.6%);
   --raised: hsl(0 0% 13.5%);
-  --hover: hsl(0 0% 100% / .05);
-  --border: hsl(0 0% 100% / .08);
-  --border-strong: hsl(0 0% 100% / .14);
+  --hover: hsl(var(--on) / .05);
+  --border: hsl(var(--on) / .08);
+  --border-strong: hsl(var(--on) / .14);
   --text: hsl(0 0% 92%);
   --muted: hsl(0 0% 63%);
   --subtle: hsl(0 0% 53%);
-  --faint: hsl(0 0% 100% / .08);
+  --faint: hsl(var(--on) / .08);
   --primary: hsl(0 0% 95%);
   --on-primary: hsl(0 0% 9%);
   --focus: hsl(211 92% 62%);
@@ -47,12 +47,50 @@ enum DashboardPage {
   --warn-ink: #f0c27a;
   --bad: #EE7A69;
   --info: #7eb0f2;
+  /* The overlay tints: --on is the ink's hue, --off the surface's. Day flips them. */
+  --on: 0 0% 100%;
+  --off: 0 0% 0%;
+  --bg-base: 0 0% 9%;
+  --side: hsl(0 0% 56%);
+  --overlay: hsl(0 0% 12.5% / .95);
+  --scrim: hsl(0 0% 4% / .55);
+  --headline-shadow: 0 1px 18px rgba(0, 0, 0, .55);
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, Cantarell, "Noto Sans", sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   color-scheme: dark;
   /* Only the named content surfaces transition. The browser's implicit `root` snapshot includes
      the sidebar and cross-fades its old and new selection states over the moving thumb. */
   view-transition-name: none;
+}
+/* The day field: the same tokens read the other way up. Chosen in Settings, or follows the system. */
+:root[data-theme="day"] {
+  color-scheme: light;
+  --bg: #f4f4f1;
+  --sidebar: #efefec;
+  --panel: #ffffff;
+  --raised: #f1f1ee;
+  --hover: hsl(0 0% 0% / .045);
+  --border: hsl(0 0% 0% / .08);
+  --border-strong: hsl(0 0% 0% / .14);
+  --text: #1c1c1c;
+  --muted: #5f5f5a;
+  --subtle: #8a8a84;
+  --faint: hsl(0 0% 0% / .08);
+  --primary: #1c1c1c;
+  --on-primary: #f4f4f1;
+  --focus: hsl(211 60% 46%);
+  --good: #1f8a4c;
+  --warn: #b86e12;
+  --warn-ink: #9a5b0c;
+  --bad: #c44b3c;
+  --info: #2f6fbe;
+  --on: 0 0% 0%;
+  --off: 0 0% 100%;
+  --bg-base: 0 0% 96%;
+  --side: #5c5c57;
+  --overlay: hsl(var(--off) / .96);
+  --scrim: hsl(0 0% 0% / .12);
+  --headline-shadow: 0 1px 14px rgba(255, 255, 255, .75);
 }
 
 * { box-sizing: border-box; }
@@ -69,7 +107,7 @@ button, input, select { font: inherit; color: inherit; }
 button, a, input, select, summary { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: hsl(0 0% 100% / .12); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb { background: hsl(var(--on) / .12); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-track { background: transparent; }
 .mono { font-family: var(--mono); font-size: 12px; }
 .mark { width: 16px; height: 16px; flex: none; fill: currentColor; }
@@ -91,18 +129,18 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .brand b { font-weight: 650; font-size: 14px; letter-spacing: .01em; }
 .brand .badge { margin-left: auto; }
 /* Keys drawn as keys: a cap with a lip along its bottom edge. */
-kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; background: hsl(0 0% 100% / .07); box-shadow: inset 0 -1.5px 0 hsl(0 0% 100% / .09); color: var(--muted); font: 600 11px var(--sans); letter-spacing: .02em; }
+kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; background: hsl(var(--on) / .07); box-shadow: inset 0 -1.5px 0 hsl(var(--on) / .09); color: var(--muted); font: 600 11px var(--sans); letter-spacing: .02em; }
 .nav { position: relative; isolation: isolate; display: grid; align-content: start; gap: 2px; padding: 8px 10px 10px; flex: 0 1 auto; min-height: 0; overflow: auto; }
 .nav-label { margin: 14px 10px 4px; color: var(--subtle); font-size: 12px; font-weight: 560; }
-.nav.has-thumb::before { content: ""; position: absolute; z-index: -1; left: 10px; right: 10px; top: 0; height: var(--nav-h); transform: translateY(var(--nav-y)); border-radius: 8px; background: hsl(0 0% 100% / .08); transition: transform .3s cubic-bezier(.3, .8, .25, 1); }
+.nav.has-thumb::before { content: ""; position: absolute; z-index: -1; left: 10px; right: 10px; top: 0; height: var(--nav-h); transform: translateY(var(--nav-y)); border-radius: 8px; background: hsl(var(--on) / .08); transition: transform .3s cubic-bezier(.3, .8, .25, 1); }
 .nav.no-slide::before { transition: none; }
 .nav.has-thumb a[aria-current="page"] { background: transparent; }
 .nav a {
   display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px;
-  color: hsl(0 0% 56%); text-decoration: none; font-weight: 520; transition: background .12s ease, color .12s ease;
+  color: var(--side); text-decoration: none; font-weight: 520; transition: background .12s ease, color .12s ease;
 }
 .nav a:hover { background: var(--hover); color: var(--text); }
-.nav a[aria-current="page"] { background: hsl(0 0% 100% / .08); color: var(--text); }
+.nav a[aria-current="page"] { background: hsl(var(--on) / .08); color: var(--text); }
 .nav svg, .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .sidebar-foot { margin-top: auto; padding: 10px; border-top: 1px solid var(--border); display: grid; gap: 2px; }
 .foot-row {
@@ -142,8 +180,8 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .has-backdrop .topbar { background: transparent; border-bottom-color: transparent; }
 .topbar h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; }
 .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
-.hop { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px 0 11px; border: 1px solid hsl(0 0% 100% / .1); border-radius: 8px; background: hsl(0 0% 100% / .045); color: var(--text); font-weight: 560; white-space: nowrap; cursor: pointer; transition: background-color .14s ease, border-color .14s ease, transform .08s ease-out; }
-.hop:hover { background: hsl(0 0% 100% / .08); border-color: hsl(0 0% 100% / .16); }
+.hop { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px 0 11px; border: 1px solid hsl(var(--on) / .1); border-radius: 8px; background: hsl(var(--on) / .045); color: var(--text); font-weight: 560; white-space: nowrap; cursor: pointer; transition: background-color .14s ease, border-color .14s ease, transform .08s ease-out; }
+.hop:hover { background: hsl(var(--on) / .08); border-color: hsl(var(--on) / .16); }
 .hop:active { transform: scale(.97); }
 /* The whole window's progress, along the bottom edge of the top bar. */
 .topbar .meter { position: absolute; left: 24px; right: 24px; bottom: -2px; height: 3px; background: transparent; opacity: 0; transition: opacity .25s ease; }
@@ -154,26 +192,22 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .lede { margin: 0 0 4px; color: var(--muted); }
 
 /* Components */
-.card { background: var(--panel); border: 1px solid hsl(0 0% 100% / .06); border-radius: 12px; min-width: 0; box-shadow: inset 0 1px 0 hsl(0 0% 100% / .045); }
+.card { background: var(--panel); border: 1px solid hsl(var(--on) / .06); border-radius: 12px; min-width: 0; box-shadow: inset 0 1px 0 hsl(var(--on) / .045); }
 /* Over a scene, panels are tinted sheets: the scene reads through them, softened just enough to keep text crisp. */
-.has-backdrop .card { background: hsl(0 0% 9.5% / .64); border-color: hsl(0 0% 100% / .07); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.has-backdrop .card { background: hsl(var(--bg-base) / .64); border-color: hsl(var(--on) / .07); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+/* The scenes are painted for the night. By day a card stays nearly solid over them. */
+:root[data-theme="day"] .has-backdrop .card { background: hsl(var(--bg-base) / .92); }
 /* In the Mac app the whole window can be glass: the desktop shows through, blurred, under one tint at
    the chosen window opacity. Panels, tabs and buttons turn into light washes over that glass, and
    scenes drop their own ground so only their artwork sits on it. */
-.has-glass { --sidebar: hsl(0 0% 0% / .16); --panel: hsl(0 0% 100% / .035); --raised: hsl(0 0% 100% / .075); --border: hsl(0 0% 100% / .09); }
+.has-glass { --sidebar: hsl(var(--off) / .16); --panel: hsl(var(--on) / .035); --raised: hsl(var(--on) / .075); --border: hsl(var(--on) / .09); }
 .has-glass body { background: transparent; }
-.has-glass .shell { background: hsl(0 0% 9% / var(--glass, .85)); }
+.has-glass .shell { background: hsl(var(--bg-base) / var(--glass, .85)); }
 .has-glass .card { background: var(--panel); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .has-glass .bd-scene:not(.bd-picture) { background: none; }
 /* Overlays float over live content, so they stay nearly solid. */
-.has-glass .tip, .has-glass .toast { background: hsl(0 0% 12.5% / .95); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
-.has-glass select.field option { background: hsl(0 0% 13.5%); }.range { width: 180px; accent-color: hsl(0 0% 92%); }
-/* Overview opens on today's figure, set large over the Field. */
-.hero { position: relative; padding: 44px 4px 36px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 24px 40px; }
-.hero-main { display: grid; gap: 10px; min-width: 0; }
-.hero-hours { margin: 0; display: grid; gap: 8px; justify-items: start; }
-.hero-hours figcaption { color: var(--subtle); font-size: 12px; }
-.has-backdrop .hero-hours figcaption { text-shadow: 0 1px 12px hsl(0 0% 9% / .9); }
+.has-glass .tip, .has-glass .toast { background: var(--overlay); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+.has-glass select.field option { background: var(--raised); }.range { width: 180px; accent-color: var(--text); }
 .notices { display: grid; border-radius: 12px; border: 1px solid hsl(36 72% 60% / .24); background: hsl(36 40% 12% / .55); box-shadow: inset 0 1px 0 hsl(36 72% 70% / .06); }
 .notice-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
 .notice-row + .notice-row { border-top: 1px solid hsl(36 72% 60% / .12); }
@@ -181,20 +215,8 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .notice-row > div { flex: 1; min-width: 0; }
 .notice-row b { font-weight: 600; }
 .notice-row p { margin: 0; color: var(--muted); }
-/* While a refresh runs, a pixel runner hops along the bottom of the hero. */
-.hero-run { position: absolute; left: 0; right: 0; bottom: 12px; height: 24px; opacity: 0; transition: opacity .3s ease; pointer-events: none; }
-.hero-run.on { opacity: 1; }
-.hero-figure { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 0; font-weight: 400; }
-.hero-figure .num { font-size: 56px; font-weight: 600; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
-.hero-figure .unit { font-size: 19px; color: var(--muted); font-weight: 520; }
-.hero-line { margin: 0; color: var(--muted); font-size: 14px; }
 .pet-card { display: flex; align-items: center; gap: 8px 22px; padding: 8px 22px 8px 6px; }
 .pet-card .pet { width: 140px; height: auto; flex: none; }
-.companion { display: flex; align-items: center; gap: 8px 18px; padding: 8px 18px 8px 4px; }
-.companion .pet { width: 140px; height: auto; flex: none; }
-.companion .grow { flex: 1; min-width: 0; }
-.companion b { font-size: 16px; font-weight: 620; letter-spacing: -.02em; }
-.companion p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 @media (prefers-reduced-motion: no-preference) {
   .pet { animation: pet-live 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center 80%; }
 }
@@ -209,9 +231,7 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .card-body .btn.claim-kick { width: 100%; }
 .pet-slot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; }
 .pet-slot p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
-/* A soft shadow right behind the words keeps them clear of bright dots, without a band behind them. */
-.has-backdrop .hero-figure, .has-backdrop .hero-line { text-shadow: 0 1px 20px hsl(0 0% 9% / .95), 0 0 2px hsl(0 0% 9% / .8); }
-.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid hsl(0 0% 100% / .05); min-height: 50px; flex-wrap: wrap; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid hsl(var(--on) / .05); min-height: 50px; flex-wrap: wrap; }
 .card-head h2 { margin: 0; font-size: 14px; font-weight: 560; display: flex; align-items: center; gap: 8px; }
 .card-head .hint { color: var(--subtle); font-size: 12.5px; }
 .card-body { padding: 16px; }
@@ -229,9 +249,9 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
   border-radius: 7px; border: 1px solid transparent; cursor: pointer; font-weight: 560; font-size: 13px; white-space: nowrap;
   background: var(--primary); color: var(--on-primary); transition: background .12s ease, border-color .12s ease, color .12s ease;
 }
-.btn:hover { background: hsl(0 0% 100%); }
+.btn:hover { background: hsl(var(--on)); }
 .btn.secondary { background: var(--raised); color: var(--text); border-color: var(--border); }
-.btn.secondary:hover { background: hsl(0 0% 16%); border-color: var(--border-strong); }
+.btn.secondary:hover { background: hsl(var(--on) / .12); border-color: var(--border-strong); }
 .btn.ghost { background: transparent; color: var(--muted); }
 .btn.ghost:hover { background: var(--hover); color: var(--text); }
 .btn.danger:hover { color: var(--bad); }
@@ -247,50 +267,50 @@ a.btn { text-decoration: none; }
 /* A contained status, used sparingly: plain words on a quiet surface, no dot and no capitals. */
 .badge {
   display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 6px;
-  background: hsl(0 0% 100% / .07); color: var(--muted); font-size: 11.5px; font-weight: 560; white-space: nowrap;
+  background: hsl(var(--on) / .07); color: var(--muted); font-size: 11.5px; font-weight: 560; white-space: nowrap;
 }
 .badge.live { color: hsl(145 28% 72%); background: hsl(145 30% 50% / .1); }
 .badge.sample { color: var(--warn); background: hsl(36 72% 60% / .1); }
 
 .tabs { position: relative; isolation: isolate; display: inline-flex; padding: 3px; gap: 2px; border-radius: 8px; background: var(--raised); border: 1px solid var(--border); }
 /* The pressed option rides a thumb that slides to the next one; without it, the option keeps its own fill. */
-.tabs.has-thumb::before { content: ""; position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 0; width: var(--thumb-w); transform: translateX(var(--thumb-x)); border-radius: 5px; background: hsl(0 0% 100% / .1); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .06); transition: transform .28s cubic-bezier(.3, .8, .25, 1), width .28s cubic-bezier(.3, .8, .25, 1); }
+.tabs.has-thumb::before { content: ""; position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 0; width: var(--thumb-w); transform: translateX(var(--thumb-x)); border-radius: 5px; background: hsl(var(--on) / .1); box-shadow: inset 0 1px 0 hsl(var(--on) / .06); transition: transform .28s cubic-bezier(.3, .8, .25, 1), width .28s cubic-bezier(.3, .8, .25, 1); }
 .tabs.no-slide::before { transition: none; }
 .tabs.has-thumb button[aria-pressed="true"] { background: transparent; }
 .tabs button { height: 26px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12.5px; font-weight: 540; transition: color .18s ease; }
 .tabs button:hover { color: var(--text); }
-.tabs button[aria-pressed="true"] { background: hsl(0 0% 100% / .1); color: var(--text); }
+.tabs button[aria-pressed="true"] { background: hsl(var(--on) / .1); color: var(--text); }
 .tabs button:disabled { opacity: .4; cursor: default; }
 
 .field {
   height: 32px; width: 100%; padding: 0 10px; border-radius: 7px; border: 1px solid var(--border-strong);
   background: transparent; color: var(--text); transition: border-color .12s ease;
 }
-.field:hover { border-color: hsl(0 0% 100% / .22); }
+.field:hover { border-color: hsl(var(--on) / .22); }
 .field::placeholder { color: var(--subtle); }
 select.field { appearance: none; padding-right: 28px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 15px) 14px, calc(100% - 11px) 14px; background-size: 4px 4px; background-repeat: no-repeat; }
 select.field option { background: var(--raised); }
 .toolbar select.field { width: auto; height: 32px; }
 .range-pick { position: relative; }
 .range-button { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px 0 12px; border-radius: 7px; border: 1px solid var(--border-strong); background: var(--raised); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 560; cursor: pointer; white-space: nowrap; }
-.range-button:hover { border-color: hsl(0 0% 100% / .22); }
+.range-button:hover { border-color: hsl(var(--on) / .22); }
 .range-button svg { width: 10px; height: 10px; color: var(--muted); transition: transform .16s ease; }
 .range-button[aria-expanded="true"] svg { transform: rotate(180deg); }
-.range-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: 268px; padding: 6px; border-radius: 10px; border: 1px solid var(--border-strong); background: hsl(0 0% 12.5%); box-shadow: 0 8px 20px -10px rgba(0, 0, 0, .6); }
+.range-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: 268px; padding: 6px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--raised); box-shadow: 0 8px 20px -10px rgba(0, 0, 0, .6); }
 .range-list { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
 .range-list button { height: 30px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer; }
-.range-list button:hover { color: var(--text); background: hsl(0 0% 100% / .05); }
-.range-list button[aria-checked="true"] { color: var(--text); background: hsl(0 0% 100% / .1); font-weight: 560; }
+.range-list button:hover { color: var(--text); background: hsl(var(--on) / .05); }
+.range-list button[aria-checked="true"] { color: var(--text); background: hsl(var(--on) / .1); font-weight: 560; }
 .range-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; padding: 10px 4px 4px; border-top: 1px solid var(--border); }
 .range-dates label { display: grid; gap: 4px; font-size: 11.5px; color: var(--muted); }
-.range-dates .field { height: 30px; padding: 0 8px; font-size: 12.5px; color-scheme: dark; }
+.range-dates .field { height: 30px; padding: 0 8px; font-size: 12.5px; }
 .range-dates .btn { grid-column: 1 / -1; justify-content: center; }
 
 .progress { position: relative; height: 6px; border-radius: 99px; background: var(--faint); overflow: visible; }
 .progress > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: var(--text); transition: width .5s ease; }
 .progress.warn > span { background: var(--warn); }
 .progress.bad > span { background: var(--bad); }
-.progress > i { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: hsl(0 0% 100% / .45); }
+.progress > i { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: hsl(var(--on) / .45); }
 
 .list > .row { padding: 14px 16px; }
 .list > .row + .row { border-top: 1px solid var(--border); }
@@ -317,11 +337,6 @@ select.field option { background: var(--raised); }
 .limit-foot { margin-top: 6px; font-size: 11.5px; color: var(--subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
 .problem { color: var(--bad); font-size: 12.5px; margin: 0; }
-.dots { display: block; max-width: 100%; height: auto; }
-.dots circle { fill: var(--faint); }
-.dots circle.on { fill: hsl(0 0% 100% / .62); }
-.dots circle.now { fill: var(--text); }
-.dots text { fill: var(--subtle); font: 10.5px var(--mono); }
 
 /* Accounts */
 .group { display: grid; gap: 6px; }
@@ -341,8 +356,8 @@ select.field option { background: var(--raised); }
 .account-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-name b.warn { color: var(--warn-ink); }
 .account-line { margin-top: 1px; color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.in-use { display: inline-flex; align-items: center; flex: none; height: 20px; padding: 0 8px; border-radius: 6px; background: hsl(0 0% 100% / .1); color: var(--text); font-size: 11.5px; font-weight: 600; }
-.account-row.active { background: hsl(0 0% 100% / .018); }
+.in-use { display: inline-flex; align-items: center; flex: none; height: 20px; padding: 0 8px; border-radius: 6px; background: hsl(var(--on) / .1); color: var(--text); font-size: 11.5px; font-weight: 600; }
+.account-row.active { background: hsl(var(--on) / .018); }
 .list > .account-row:hover { background: var(--hover); }
 .account-row .today { display: grid; gap: 0; justify-items: end; text-align: right; font-family: var(--sans); }
 .account-row .today b { font-size: 14px; font-weight: 600; letter-spacing: -.01em; color: var(--text); line-height: 1.3; font-variant-numeric: tabular-nums; }
@@ -350,9 +365,9 @@ select.field option { background: var(--raised); }
 .menu-anchor { position: relative; display: inline-flex; }
 .btn.icon-only { width: 28px; padding: 0; }
 .btn.icon-only .icon { width: 16px; height: 16px; }
-.row-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 190px; padding: 5px; display: grid; gap: 2px; border-radius: 10px; border: 1px solid var(--border-strong); background: hsl(0 0% 12.5%); box-shadow: 0 8px 20px -10px rgba(0, 0, 0, .6); animation: menu-in .14s cubic-bezier(.2, .8, .2, 1); }
+.row-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 190px; padding: 5px; display: grid; gap: 2px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--raised); box-shadow: 0 8px 20px -10px rgba(0, 0, 0, .6); animation: menu-in .14s cubic-bezier(.2, .8, .2, 1); }
 .row-menu button { height: 30px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--text); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
-.row-menu button:hover { background: hsl(0 0% 100% / .06); }
+.row-menu button:hover { background: hsl(var(--on) / .06); }
 .row-menu button.danger { color: var(--bad); }
 @keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } }
 .account-name b { font-weight: 600; font-size: 14px; }
@@ -383,28 +398,28 @@ select.field option { background: var(--raised); }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none; margin: 0; padding: 0; font-size: 12px; color: var(--muted); }
 .legend li { display: flex; align-items: center; }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; padding: 2px 6px; margin: -2px -6px; border: 0; border-radius: 5px; background: transparent; color: inherit; font: inherit; cursor: pointer; transition: color .15s ease, opacity .15s ease, background .15s ease; }
-.legend-item:hover { color: var(--text); background: hsl(0 0% 100% / .04); }
+.legend-item:hover { color: var(--text); background: hsl(var(--on) / .04); }
 .legend-item[aria-pressed="false"] { opacity: .45; }
 .legend-item[aria-pressed="false"] .swatch { background: transparent !important; box-shadow: inset 0 0 0 1.5px var(--subtle); }
 .swatch { width: 8px; height: 8px; border-radius: 2px; flex: none; }
 .chart { overflow-x: auto; }
 .chart svg { display: block; }
-.chart .grid { stroke: hsl(0 0% 100% / .06); }
-.chart .base { stroke: hsl(0 0% 100% / .16); }
+.chart .grid { stroke: hsl(var(--on) / .06); }
+.chart .base { stroke: hsl(var(--on) / .16); }
 .chart .axis { fill: var(--subtle); font: 11px var(--mono); }
 .chart .hit { fill: transparent; }
-.chart .hit:hover { fill: hsl(0 0% 100% / .03); }
+.chart .hit:hover { fill: hsl(var(--on) / .03); }
 .chart .col { transition: opacity .18s ease; }
 .chart svg[data-hover] .col { opacity: .4; }
 .chart svg[data-hover] .col.on { opacity: 1; }
 .heat rect[data-action] { cursor: pointer; }
-.heat rect[data-action]:hover { stroke: hsl(0 0% 100% / .7); stroke-width: 1.2; }
+.heat rect[data-action]:hover { stroke: hsl(var(--on) / .7); stroke-width: 1.2; }
 ::view-transition-group(usage-chart) { animation-duration: .24s; }
-.heat rect.l0 { fill: hsl(0 0% 100% / .05); }
-.heat rect.l1 { fill: hsl(0 0% 100% / .18); }
-.heat rect.l2 { fill: hsl(0 0% 100% / .36); }
-.heat rect.l3 { fill: hsl(0 0% 100% / .6); }
-.heat rect.l4 { fill: hsl(0 0% 100% / .9); }
+.heat rect.l0 { fill: hsl(var(--on) / .05); }
+.heat rect.l1 { fill: hsl(var(--on) / .18); }
+.heat rect.l2 { fill: hsl(var(--on) / .36); }
+.heat rect.l3 { fill: hsl(var(--on) / .6); }
+.heat rect.l4 { fill: hsl(var(--on) / .9); }
 .heat text { fill: var(--subtle); font: 10.5px var(--mono); }
 svg.heat { display: block; margin: 0 auto; }
 .scale { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--subtle); }
@@ -416,13 +431,13 @@ svg.heat { display: block; margin: 0 auto; }
 .facts span { color: var(--subtle); font-size: 12px; }
 .mix-bar { display: flex; gap: 2px; height: 8px; border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
 .mix-bar span { min-width: 2px; }
-.m1 { background: hsl(0 0% 100% / .9); } .m2 { background: hsl(0 0% 100% / .55); } .m3 { background: hsl(0 0% 100% / .3); } .m4 { background: hsl(0 0% 100% / .18); }
-.m5 { background: hsl(0 0% 100% / .1); }
+.m1 { background: hsl(var(--on) / .9); } .m2 { background: hsl(var(--on) / .55); } .m3 { background: hsl(var(--on) / .3); } .m4 { background: hsl(var(--on) / .18); }
+.m5 { background: hsl(var(--on) / .1); }
 .table { width: 100%; border-collapse: collapse; }
 .table th { text-align: left; font-weight: 500; color: var(--subtle); font-size: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
-.table td { padding: 10px 16px; border-bottom: 1px solid hsl(0 0% 100% / .045); vertical-align: middle; font-variant-numeric: tabular-nums; }
+.table td { padding: 10px 16px; border-bottom: 1px solid hsl(var(--on) / .045); vertical-align: middle; font-variant-numeric: tabular-nums; }
 .table tr:last-child td { border-bottom: 0; }
-.table tbody tr:hover td { background: hsl(0 0% 100% / .02); }
+.table tbody tr:hover td { background: hsl(var(--on) / .02); }
 .table tbody tr.clickable { cursor: pointer; }
 .table .right { text-align: right; }
 .table .bar-cell { width: 34%; }
@@ -444,9 +459,9 @@ svg.heat { display: block; margin: 0 auto; }
 .tile-mid { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; min-width: 0; }
 .spark { width: 64px; height: 24px; flex: none; overflow: visible; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px; }
-.tile { display: grid; gap: 6px; align-content: start; padding: 11px 12px 12px; border-radius: 10px; border: 1px solid hsl(0 0% 100% / .055); background: hsl(0 0% 100% / .022); color: var(--text); text-align: left; font: inherit; min-width: 0; }
+.tile { display: grid; gap: 6px; align-content: start; padding: 11px 12px 12px; border-radius: 10px; border: 1px solid hsl(var(--on) / .055); background: hsl(var(--on) / .022); color: var(--text); text-align: left; font: inherit; min-width: 0; }
 button.tile { cursor: pointer; transition: background .14s ease, border-color .14s ease; }
-button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100% / .1); }
+button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on) / .1); }
 .tile-name { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; color: var(--muted); }
 .tile-name > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tile-name .mark { width: 14px; height: 14px; fill: var(--text); }
@@ -455,7 +470,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .tile-foot .swatch { width: 6px; height: 6px; border-radius: 50%; }
 .summary-card { padding: 16px; display: grid; gap: 16px; align-content: start; }
 .chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.chip { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: hsl(0 0% 100% / .03); }
+.chip { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: hsl(var(--on) / .03); }
 .chip b { font-weight: 600; font-size: 18px; letter-spacing: -.015em; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .chip span { color: var(--subtle); font-size: 11.5px; }
 .ranked { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
@@ -467,8 +482,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .ranked-share { font: 12px var(--mono); color: var(--text); }
 .ranked-value { margin-left: auto; font: 11.5px var(--mono); }
 .ranked-track { grid-column: 2 / -1; height: 3px; border-radius: 99px; background: var(--faint); overflow: hidden; }
-.ranked-track span { display: block; height: 100%; border-radius: inherit; background: hsl(0 0% 100% / .55); }
-.summary-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 12px; border-top: 1px solid hsl(0 0% 100% / .05); color: var(--subtle); font-size: 12px; }
+.ranked-track span { display: block; height: 100%; border-radius: inherit; background: hsl(var(--on) / .55); }
+.summary-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 12px; border-top: 1px solid hsl(var(--on) / .05); color: var(--subtle); font-size: 12px; }
 .chart-body { display: grid; gap: 14px; }
 .table-wrap { overflow-x: auto; }
 .table.data th, .table.data td { padding-left: 14px; padding-right: 14px; }
@@ -476,7 +491,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .table td.mono { color: var(--muted); }
 .table td.mono.strong { color: var(--text); }
 .place-cell { width: 36px; text-align: center; }
-.table-more { display: flex; justify-content: center; padding: 10px; border-top: 1px solid hsl(0 0% 100% / .045); }
+.table-more { display: flex; justify-content: center; padding: 10px; border-top: 1px solid hsl(var(--on) / .045); }
 
 /* Leaderboard */
 .avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--raised); color: var(--muted); font-weight: 600; }
@@ -491,7 +506,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .tier-gold { --tier: hsl(42 26% 66%); }
 .tier-platinum { --tier: hsl(190 12% 72%); }
 .tier-diamond { --tier: hsl(205 20% 80%); }
-.tier-master { --tier: hsl(0 0% 95%); }
+.tier-master { --tier: var(--primary); }
 .season-row { display: flex; align-items: center; gap: 16px; padding: 14px 16px; flex-wrap: wrap; }
 .quest-row { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 4px 18px; align-items: center; padding: 11px 16px; }
 .quest-row + .quest-row { border-top: 1px solid var(--border); }
@@ -523,7 +538,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .sha { font-family: var(--mono); font-size: 11.5px; color: var(--subtle); }
 .day-nav { display: flex; align-items: center; gap: 6px; }
 .day-nav .now { padding: 0 8px; font-weight: 600; }
-.table tr.me td { background: hsl(0 0% 100% / .035); }
+.table tr.me td { background: hsl(var(--on) / .035); }
 .plain-link { color: inherit; text-decoration: none; }
 .plain-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 
@@ -543,7 +558,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .settings-nav { position: sticky; top: 0; display: grid; gap: 3px; padding: 6px; }
 .settings-nav button { display: flex; align-items: center; gap: 9px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); text-align: left; cursor: pointer; transition: background-color .12s ease, color .12s ease; }
 .settings-nav button:hover { background: var(--hover); color: var(--text); }
-.settings-nav button[aria-current="page"] { background: hsl(0 0% 100% / .08); color: var(--text); }
+.settings-nav button[aria-current="page"] { background: hsl(var(--on) / .08); color: var(--text); }
 .settings-pane { display: grid; gap: 16px; min-width: 0; }
 .settings-intro { padding: 4px 2px 2px; }
 .settings-intro h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
@@ -553,12 +568,12 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 
 /* Jump to */
 #palette { position: fixed; inset: 0; z-index: 40; }
-.palette-scrim { position: absolute; inset: 0; background: hsl(0 0% 4% / .55); animation: fade-in .14s ease; }
+.palette-scrim { position: absolute; inset: 0; background: var(--scrim); animation: fade-in .14s ease; }
 .palette { position: absolute; left: 50%; top: 14vh; width: min(560px, calc(100vw - 32px)); transform: translateX(-50%); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; max-height: min(520px, 72vh);
-  border-radius: 14px; border: 1px solid hsl(0 0% 100% / .1); background: hsl(0 0% 11.5%); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .06), 0 12px 24px -14px rgba(0, 0, 0, .75); animation: palette-in .16s cubic-bezier(.2, .8, .2, 1); overflow: hidden; }
+  border-radius: 14px; border: 1px solid hsl(var(--on) / .1); background: var(--overlay); box-shadow: inset 0 1px 0 hsl(var(--on) / .06), 0 12px 24px -14px rgba(0, 0, 0, .75); animation: palette-in .16s cubic-bezier(.2, .8, .2, 1); overflow: hidden; }
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes palette-in { from { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(.985); } }
-.palette-search { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 52px; border-bottom: 1px solid hsl(0 0% 100% / .06); color: var(--muted); }
+.palette-search { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 52px; border-bottom: 1px solid hsl(var(--on) / .06); color: var(--muted); }
 .palette-search:focus-within { box-shadow: inset 0 0 0 2px var(--focus); }
 .palette-search input { flex: 1; height: 100%; border: 0; background: transparent; outline: none; font-size: 15px; color: var(--text); }
 .palette-search input::placeholder { color: var(--subtle); }
@@ -570,11 +585,11 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .palette-item small { margin-left: auto; color: var(--subtle); font-size: 12px; }
 .palette-item kbd { margin-left: auto; }
 .palette-item small + kbd { margin-left: 8px; }
-.palette-item[aria-selected="true"] { background: hsl(0 0% 100% / .07); }
+.palette-item[aria-selected="true"] { background: hsl(var(--on) / .07); }
 .palette-dot { width: 15px; display: grid; place-items: center; }
-.palette-dot::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: hsl(0 0% 100% / .28); }
+.palette-dot::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: hsl(var(--on) / .28); }
 .palette-empty { margin: 0; padding: 18px 12px; color: var(--muted); }
-.palette-foot { display: flex; gap: 16px; padding: 10px 16px; border-top: 1px solid hsl(0 0% 100% / .06); color: var(--subtle); font-size: 12px; }
+.palette-foot { display: flex; gap: 16px; padding: 10px 16px; border-top: 1px solid hsl(var(--on) / .06); color: var(--subtle); font-size: 12px; }
 .palette-foot span { display: inline-flex; align-items: center; gap: 4px; }
 
 /* Moving between sections: the page settles in place of the last one. */
@@ -637,7 +652,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   display: flex; align-items: center; gap: 8px; height: 30px; margin: 0 8px; padding: 0 8px; border-radius: 8px;
   color: var(--muted); text-decoration: none; font-weight: 520;
 }
-.foot-link:hover, .foot-link[aria-current="page"] { background: hsl(0 0% 100% / .08); color: var(--text); }
+.foot-link:hover, .foot-link[aria-current="page"] { background: hsl(var(--on) / .08); color: var(--text); }
 .pet-foot { display: flex; align-items: center; gap: 8px; padding: 2px 14px 6px; }
 .pet-foot .pet { width: 36px; height: auto; flex: none; }
 .pet-foot > span { display: grid; line-height: 1.25; min-width: 0; flex: 1; }
@@ -664,7 +679,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .hstack h1 { margin: 0; font-size: 28px; font-weight: 620; letter-spacing: -.03em; text-align: center; }
 .hsub, .hnote { margin: 0; max-width: 440px; text-align: center; color: var(--muted); font-size: 13.5px; }
 .hnote { color: var(--warn-ink); }
-.content.is-field .hstack h1, .content.is-field .hsub, .content.is-field .hnote { text-shadow: 0 1px 18px rgba(0, 0, 0, .55); }
+.content.is-field .hstack h1, .content.is-field .hsub, .content.is-field .hnote { text-shadow: var(--headline-shadow); }
 .hcomposer { overflow: visible; }
 .hcomposer input {
   display: block; width: 100%; border: 0; background: transparent; outline: none;
@@ -721,7 +736,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .kboard { display: flex; gap: 12px; height: 100%; min-width: 920px; align-items: stretch; }
 .kcol {
   flex: 1; min-width: 220px; min-height: 0; display: flex; flex-direction: column;
-  padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: hsl(0 0% 100% / .03);
+  padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: hsl(var(--on) / .03);
 }
 .kcol h2 {
   margin: 0 0 8px; padding: 2px 4px 0; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 550; color: var(--muted);
@@ -755,7 +770,6 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 .statusbar .meter { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: transparent; }
 
 @media (max-width: 1180px) {
-  .hero { grid-template-columns: 1fr; }
   .usage-board { grid-template-columns: 1fr; }
   .usage-main { order: -1; }
   .chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -792,7 +806,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 }
 @media (prefers-reduced-transparency: reduce) {
   .has-backdrop .card, .has-glass .tip, .has-glass .toast { -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .has-backdrop .card { background: hsl(0 0% 10% / .98); }
+  .has-backdrop .card { background: hsl(var(--bg-base) / .98); }
 }
 </style>
 </head>
@@ -806,7 +820,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
 <div class="shell">
   <aside class="sidebar">
     <div class="brand">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#EBEBEB"><rect x="2.5" y="2.5" width="6" height="19.5" rx="1.5"/><rect x="9.6" y="9.2" width="6" height="6" rx="1.5"/><rect x="16" y="1" width="6" height="6" rx="1.5"/><rect x="16" y="17" width="6" height="6" rx="1.5"/></g></svg>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><rect x="2.5" y="2.5" width="6" height="19.5" rx="1.5"/><rect x="9.6" y="9.2" width="6" height="6" rx="1.5"/><rect x="16" y="1" width="6" height="6" rx="1.5"/><rect x="16" y="17" width="6" height="6" rx="1.5"/></g></svg>
       <b>Keyhop</b>
     </div>
     <button class="hop hop-side" type="button" data-action="palette" aria-keyshortcuts="Meta+K Control+K" aria-haspopup="dialog" aria-controls="palette"><svg class="icon" aria-hidden="true"><use href="#i-hop"/></svg><span>Hop</span><kbd id="hop-key" aria-hidden="true">⌘K</kbd></button>
@@ -844,6 +858,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     <span class="status-grow"></span>
     <button type="button" id="status-today" data-action="goto" data-section="usage"></button>
     <button type="button" id="status-streak" data-action="goto" data-section="usage" hidden></button>
+    <button type="button" id="status-theme" data-action="theme-toggle" title="Switch the field between night and day">Night</button>
     <button type="button" class="status-btn" id="refresh" data-action="refresh"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span id="read">Limits not read yet</span></button>
     <span class="meter" id="foot-meter" hidden><span></span></span>
   </footer>
@@ -882,6 +897,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     settingsPane: "general", checkingUpdate: false,
     homeMenu: null, homeTool: "", homeAccount: "", homeQuery: "", treeOpen: {},
     pending: new Map(), loadingUsage: 0,
+    // The field in force: "night" or "day". Empty until the saved choice has been applied.
+    theme: "",
   };
   history.replaceState(null, "", "#" + ui.section);
   const data = { state: boot?.state || null, usage: {}, usageErrors: {}, doctor: null, update: null, updateError: null, pet: null, petError: null, quests: null };
@@ -1330,6 +1347,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   let linkPoll = null;
 
   function render() {
+    if (data.state) applyTheme();
     renderSidebar();
     if (!data.state) return;
     const tools = data.state.status.tools;
@@ -1394,8 +1412,6 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       if (known) meter.setAttribute("aria-valuenow", Math.round(step.fraction * 100)); else meter.removeAttribute("aria-valuenow");
     }
     for (const node of document.querySelectorAll("[data-loading]")) node.innerHTML = loadingInner(node.dataset.loading);
-    const run = $(".hero-run");
-    if (run) run.classList.toggle("on", busyNow);
   }
 
   // While Keyhop is working, ask how far it has got a few times a second; otherwise every 20 seconds.
@@ -1661,6 +1677,8 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const status = data.state?.status;
     const todayBtn = $("#status-today");
     if (todayBtn) todayBtn.textContent = status ? `${fmt.tokens(status.today.tokens)} today` : "";
+    const themeBtn = $("#status-theme");
+    if (themeBtn) themeBtn.textContent = ui.theme === "day" ? "Day" : "Night";
     const streakEl = $("#status-streak");
     const streak = (data.usage["week:all"] || data.usage["today:all"])?.streak;
     if (streakEl) {
@@ -1866,20 +1884,6 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     return `<button class="btn claim-kick" type="button" data-action="streak-claim">Claim ${esc(claim.today.name)}</button>`;
   }
 
-  // The creature sits with today's work. Claiming the streak is the action on that row.
-  function companionRow() {
-    const claim = currentClaim();
-    const kick = claimKick(claim);
-    if (!data.pet && !kick) return "";
-    const drawn = data.pet ? petSvg(data.pet) : null;
-    const title = drawn ? drawn.caption : "Streak";
-    const note = kick && claim.today ? claim.today.note
-      : claim && claim.claimed && claim.today ? `Claimed today · ${claim.today.name}`
-      : data.pet && data.pet.next ? `${fmt.tokens(data.pet.next.tokens)} to ${data.pet.next.label}`
-      : data.pet ? "Monument" : "";
-    return `<section class="card companion">${drawn ? drawn.svg : ""}<div class="grow"><b>${esc(title)}</b>${note ? `<p>${esc(note)}</p>` : ""}</div>${kick}</section>`;
-  }
-
   function petCard() {
     if (data.pet) {
       const pet = data.pet;
@@ -1893,34 +1897,6 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     }
     if (data.petError) return `<section class="card"><p class="empty">${esc(data.petError)}</p></section>`;
     return "";
-  }
-
-  function busiestHour(usage) {
-    let best = null;
-    usage.buckets.forEach((bucket) => {
-      const total = Object.values(bucket.values).reduce((sum, v) => sum + v.tokens, 0);
-      if (total && (!best || total > best.total)) best = { total, start: bucket.start };
-    });
-    return best ? `Busiest at ${fmt.clock(best.start)}` : "";
-  }
-
-  /// Today as a dot matrix: one column per hour, lit from the bottom by its share of the busiest hour.
-  function dotHours(usage) {
-    const totals = usage.buckets.map((b) => Object.values(b.values).reduce((sum, v) => sum + v.tokens, 0));
-    const peak = Math.max(1, ...totals);
-    const hour = new Date().getHours();
-    const rows = 7, step = Math.max(12, Math.min(24, Math.floor(chartWidth("half") / 24))), radius = step * 0.26;
-    const width = 24 * step, height = rows * step + 18;
-    let dots = "";
-    totals.forEach((value, col) => {
-      const lit = value ? Math.max(1, Math.round((value / peak) * rows)) : 0;
-      for (let row = 0; row < rows; row++) {
-        const on = rows - row <= lit;
-        dots += `<circle cx="${col * step + step / 2}" cy="${row * step + step / 2}" r="${radius}" class="${on ? (col === hour ? "now" : "on") : ""}"><title>${String(col).padStart(2, "0")}:00 · ${fmt.tokens(value)} tokens</title></circle>`;
-      }
-    });
-    const labels = [0, 6, 12, 18, 23].map((h) => `<text x="${h * step + step / 2}" y="${height - 3}" text-anchor="middle">${String(h).padStart(2, "0")}</text>`).join("");
-    return `<svg class="dots" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Tokens by hour today">${dots}${labels}</svg>`;
   }
 
   function budgetRow(budget) {
@@ -2284,7 +2260,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   function heatCard(usage) {
     const s = usage.streak;
     return `<section class="card">
-      <div class="card-head"><h2>Activity</h2><span class="scale">Less <i style="background:hsl(0 0% 100% / .05)"></i><i style="background:hsl(0 0% 100% / .18)"></i><i style="background:hsl(0 0% 100% / .36)"></i><i style="background:hsl(0 0% 100% / .6)"></i><i style="background:hsl(0 0% 100% / .9)"></i> More</span></div>
+      <div class="card-head"><h2>Activity</h2><span class="scale">Less <i style="background:hsl(var(--on) / .05)"></i><i style="background:hsl(var(--on) / .18)"></i><i style="background:hsl(var(--on) / .36)"></i><i style="background:hsl(var(--on) / .6)"></i><i style="background:hsl(var(--on) / .9)"></i> More</span></div>
       <div class="card-body chart">${heatmap(usage.heatmap)}</div>
       <div class="facts">
         <div><b>${s.current}</b><span>day streak</span></div>
@@ -2484,14 +2460,14 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     let marks = "";
     if (budget) {
       const by = y(budget.amount).toFixed(1);
-      marks += `<line x1="${L}" x2="${W - R}" y1="${by}" y2="${by}" stroke="hsl(0 0% 100% / .4)" stroke-dasharray="4 5"/><text class="axis" x="${W - R}" y="${(y(budget.amount) - 7).toFixed(1)}" text-anchor="end">budget ${fmt.usd(budget.amount)}</text>`;
-      marks += `<line x1="${x(0).toFixed(1)}" y1="${y(0).toFixed(1)}" x2="${x(days - 1).toFixed(1)}" y2="${by}" stroke="hsl(0 0% 100% / .12)"/>`;
+      marks += `<line x1="${L}" x2="${W - R}" y1="${by}" y2="${by}" style="stroke:hsl(var(--on) / .4)" stroke-dasharray="4 5"/><text class="axis" x="${W - R}" y="${(y(budget.amount) - 7).toFixed(1)}" text-anchor="end">budget ${fmt.usd(budget.amount)}</text>`;
+      marks += `<line x1="${x(0).toFixed(1)}" y1="${y(0).toFixed(1)}" x2="${x(days - 1).toFixed(1)}" y2="${by}" style="stroke:hsl(var(--on) / .12)"/>`;
     }
     let line = "";
     if (points.length) {
       const path = points.map((p, k) => `${k ? "L" : "M"}${x(p.i).toFixed(1)},${y(p.total).toFixed(1)}`).join("");
       const last = points[points.length - 1];
-      line = `<path d="${path}L${x(last.i).toFixed(1)},${y(0).toFixed(1)}L${x(points[0].i).toFixed(1)},${y(0).toFixed(1)}Z" fill="hsl(0 0% 100% / .05)"/><path d="${path}" fill="none" stroke="hsl(0 0% 92%)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(last.i).toFixed(1)}" cy="${y(last.total).toFixed(1)}" r="3.5" fill="hsl(0 0% 92%)"/>`;
+      line = `<path d="${path}L${x(last.i).toFixed(1)},${y(0).toFixed(1)}L${x(points[0].i).toFixed(1)},${y(0).toFixed(1)}Z" style="fill:hsl(var(--on) / .05)"/><path d="${path}" fill="none" stroke="hsl(0 0% 92%)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(last.i).toFixed(1)}" cy="${y(last.total).toFixed(1)}" r="3.5" fill="hsl(0 0% 92%)"/>`;
     }
     const elapsed = periodProgress("month").elapsed;
     return `<section class="card">
@@ -2517,6 +2493,21 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
   let skyCache = null;
   let skyKey = "";
 
+  // Night or day is a saved choice; "auto" follows the system. The sky is painted again on a change.
+  const daylight = matchMedia("(prefers-color-scheme: light)");
+  function applyTheme() {
+    const wanted = data.state?.appearance?.theme || "night";
+    const theme = wanted === "auto" ? (daylight.matches ? "day" : "night") : wanted;
+    if (ui.theme === theme) return;
+    ui.theme = theme;
+    document.documentElement.dataset.theme = theme;
+    const meta = document.querySelector('meta[name="color-scheme"]');
+    if (meta) meta.content = theme === "day" ? "light" : "dark";
+    skyKey = "";
+    paintField();
+  }
+  daylight.addEventListener("change", () => { if (data.state) { applyTheme(); render(); applyBackdrop(); } });
+
   function fieldWanted() {
     if (ui.section !== "overview" || !data.state) return false;
     return (data.state.appearance?.scene || "leaves") === "leaves";
@@ -2526,7 +2517,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     return 0.66 + Math.sin(nx * 4.8 + 0.4) * 0.04 + Math.sin(nx * 10.5 + 1.1) * 0.015;
   }
 
-  function nightSky(w, h) {
+  function skyOf(w, h, day) {
     const img = new ImageData(w, h);
     const bayer = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
     const px = img.data;
@@ -2535,19 +2526,26 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       for (let x = 0; x < w; x++) {
         const nx = x / w, ny = y / h;
         const skyT = Math.min(1, ny / 0.72);
-        let r = 12 + skyT * 20, g = 18 + skyT * 8, b = 36 - skyT * 16;
+        let r, g, b;
+        if (day) { r = 132 + skyT * 100; g = 188 + skyT * 36; b = 222 - skyT * 20; }
+        else { r = 12 + skyT * 20; g = 18 + skyT * 8; b = 36 - skyT * 16; }
         let ck = 0;
         for (const [cx, cy, s] of clouds) {
           const d = ((nx - cx) / s) ** 2 + ((ny - cy) / (s * 0.42)) ** 2;
           if (d < 1) ck = Math.max(ck, (1 - d) * 0.7);
         }
-        if (ck) { r += 48 * ck; g += 58 * ck; b += 78 * ck; }
-        const n = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
-        if (n > 0.992 && ny < horizon(nx) - 0.08) r = g = b = 220;
+        if (ck) {
+          if (day) { r += (255 - r) * ck * 0.85; g += (255 - g) * ck * 0.85; b += (255 - b) * ck * 0.75; }
+          else { r += 48 * ck; g += 58 * ck; b += 78 * ck; }
+        }
+        if (!day) {
+          const n = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+          if (n > 0.992 && ny < horizon(nx) - 0.08) r = g = b = 220;
+        }
         const h1 = horizon(nx);
         const h2 = h1 + 0.075 + Math.sin(nx * 3.1) * 0.012;
-        if (ny > h2) { r = 18; g = 14; b = 12; }
-        else if (ny > h1) { r = 72; g = 52; b = 36; }
+        if (ny > h2) { if (day) { r = 198; g = 168; b = 128; } else { r = 18; g = 14; b = 12; } }
+        else if (ny > h1) { if (day) { r = 226; g = 196; b = 156; } else { r = 72; g = 52; b = 36; } }
         const t = (bayer[y & 3][x & 3] / 16 - 0.5) * 48;
         const q = (v) => Math.max(0, Math.min(255, Math.round((v + t) / 36) * 36));
         const i = (y * w + x) * 4;
@@ -2603,15 +2601,14 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     return { pressure: shownPressure, gait, ink: target.ink };
   }
 
-  function paintMoon(ctx, w, h, pressure) {
+  // By day the same disc is the sun: it sinks and reddens as a login nears its limit.
+  function paintMoon(ctx, w, h, pressure, day) {
     const cx = Math.round(w * 0.86 / 2) * 2;
     const cy = Math.round(h * (0.11 + pressure * 0.28) / 2) * 2;
     const heat = Math.max(0, Math.min(1, (pressure - 0.45) / 0.55));
-    const disc = [
-      236 + (227 - 236) * heat,
-      224 + (166 - 224) * heat,
-      196 + (79 - 196) * heat,
-    ];
+    const disc = day
+      ? [255, 222 + (150 - 222) * heat, 140 + (70 - 140) * heat]
+      : [236 + (227 - 236) * heat, 224 + (166 - 224) * heat, 196 + (79 - 196) * heat];
     const bayer = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
     const glow = 42;
     const img = ctx.getImageData(0, 0, w, h);
@@ -2639,16 +2636,16 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     ctx.putImageData(img, 0, 0);
   }
 
-  function stampSprite(ctx, x, y, cells, mark, scale) {
+  function stampSprite(ctx, x, y, cells, mark, scale, day) {
     const origin = Math.round(x / 2) * 2;
     const top = Math.round(y / 2) * 2;
-    ctx.fillStyle = "#140e0c";
+    ctx.fillStyle = day ? "#f3ead8" : "#140e0c";
     for (const [dx, dy] of cells) {
       for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         ctx.fillRect(origin + dx * scale + ox, top + dy * scale + oy, scale, scale);
       }
     }
-    ctx.fillStyle = "#f3ead8";
+    ctx.fillStyle = day ? "#2c241c" : "#f3ead8";
     for (const [dx, dy] of cells) ctx.fillRect(origin + dx * scale, top + dy * scale, scale, scale);
     const head = cells[0];
     if (head && mark) {
@@ -2665,15 +2662,16 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     if (rect.width < 2 || rect.height < 2) return;
     const w = Math.max(2, Math.round(rect.width / 2));
     const h = Math.max(2, Math.round(rect.height / 2));
-    const key = w + "x" + h;
-    if (skyKey !== key) { skyCache = nightSky(w, h); skyKey = key; }
+    const day = ui.theme === "day";
+    const key = w + "x" + h + (day ? ":day" : ":night");
+    if (skyKey !== key) { skyCache = skyOf(w, h, day); skyKey = key; }
     if (canvas.width !== w) canvas.width = w;
     if (canvas.height !== h) canvas.height = h;
     const ctx = canvas.getContext("2d");
     if (!ctx || !skyCache) return;
     ctx.putImageData(skyCache, 0, 0);
     const mood = fieldMood();
-    paintMoon(ctx, w, h, mood.pressure);
+    paintMoon(ctx, w, h, mood.pressure, day);
     const walk = [
       [[2, 0], [1, 1], [2, 1], [3, 1], [0, 2], [2, 2], [4, 2], [1, 3], [3, 4]],
       [[2, 0], [1, 1], [2, 1], [3, 1], [1, 2], [3, 2], [2, 3], [2, 4]],
@@ -2697,7 +2695,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     const tall = cells.reduce((top, cell) => Math.max(top, cell[1]), 0) + 1;
     const x = Math.round(nx * w / 2) * 2;
     const y = Math.round((horizon(Math.max(0, Math.min(0.99, nx))) * h - tall * scale) / 2) * 2;
-    stampSprite(ctx, x, y, cells, mood.ink, scale);
+    stampSprite(ctx, x, y, cells, mood.ink, scale, day);
     paintDunePet(ctx, w, h, rect.width);
   }
 
@@ -2793,7 +2791,9 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     }
     document.documentElement.classList.toggle("has-backdrop", scene !== "off");
     host.classList.toggle("scoped-out", fieldWanted() || (look.scope === "overview" && ui.section !== "overview"));
-    const options = { scene, opacity: look.opacity, image: scene === "image" ? backdropImage : null };
+    // The scenes are painted for the night. By day they show at under half their strength.
+    const opacity = ui.theme === "day" && scene !== "image" ? look.opacity * 0.4 : look.opacity;
+    const options = { scene, opacity, image: scene === "image" ? backdropImage : null };
     if (backdrop) backdrop.update(options);
     else backdrop = window.KeyhopBackdrop.mount(host, options);
     syncField();
@@ -2858,15 +2858,17 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       return `<button data-action="appearance" data-key="${key}" data-value="${value}" aria-pressed="${value === current}"${locked ? ` disabled title="Choose a picture first"` : ""}>${label}</button>`;
     }).join("")}</div>`;
     const about = {
-      leaves: "On Overview, a dithered night field. The moon drops as a login nears its limit. A runner keeps that pace, and its head wears the tool. Behind the other sections, dark leaves sway on their stems.",
+      leaves: "On Overview, a dithered field. The moon, or by day the sun, drops as a login nears its limit. A runner keeps that pace, and its head wears the tool. Behind the other sections, leaves sway on their stems.",
       dunes: "A desert world's horizon, turning slowly under the stars.",
       orbit: "A ringed planet floating in the dark.",
       arcade: "Pixel runners racing along a ridge of pixel hills.",
       image: "Your picture, softly behind everything.",
       off: "A plain surface.",
     }[look.scene];
+    const themeNote = { night: "The night field: dark surfaces, light ink.", day: "The day field: light surfaces, dark ink.", auto: "Follows the system's light or dark setting." }[look.theme || "night"];
     return `<section class="card"><div class="card-head"><h2>Backdrop</h2><span class="hint">Window scene & material</span></div>
       <div class="list">
+        <div class="row setting-row"><div><b>Field</b><p>${themeNote}</p></div>${pick("theme", [["night", "Night"], ["day", "Day"], ["auto", "Auto"]], look.theme || "night")}</div>
         <div class="row setting-row"><div><b>Scene</b><p>${about}</p></div>${pick("scene", [["leaves", "Leaves"], ["dunes", "Dunes"], ["orbit", "Orbit"], ["arcade", "Arcade"], ["image", "Picture"], ["off", "Off"]], look.scene)}</div>
         <div class="row setting-row"><div><b>Show on</b><p>${look.scope === "overview" ? "Only behind Overview." : "Behind every section."}</p></div>${pick("scope", [["all", "Everywhere"], ["overview", "Overview only"]], look.scope)}</div>
         <div class="row setting-row"><div><b>Opacity</b><p>How strongly the scene shows through.</p></div>
@@ -3185,15 +3187,21 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
     return { toolbar: `${toolbar}${nav}`, body: sum + people.map(card).join("") + empty + note };
   }
 
+  const MIX_TONES = {
+    claude: .9, cursor: .55, codex: .28, gemini: .14, opencode: .11, pi: .08,
+    amp: .4, goose: .34, qwen: .22, kimi: .18, grok: .125, kilo: .1, openclaw: .07,
+  };
+
   function ranksBody(entries, scope) {
     const cloud = data.state.cloud;
     const value = boardValue;
     const avatar = (e, size) => `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px" aria-hidden="true">${esc(e.login.slice(0, 1).toUpperCase())}</span>`;
     const person = (e, size) => `<div class="who">${avatar(e, size)}<div><b>${esc(e.name || e.login)}</b><small>@${esc(e.login)}</small></div></div>`;
+    // Every measured tool, in the website's order and at its shade, so the two bars agree.
     const mix = (e) => {
-      const parts = [["claude", "m1"], ["cursor", "m2"], ["codex", "m3"], ["gemini", "m4"]].filter(([tool]) => (e.tools[tool] || 0) > 0);
-      const total = parts.reduce((sum, [tool]) => sum + e.tools[tool], 0);
-      return `<div class="mix-bar">${parts.map(([tool, tone]) => `<span class="${tone}" style="width:${(e.tools[tool] / total * 100).toFixed(2)}%" title="${esc(toolName(tool))} ${fmt.tokens(e.tools[tool])}"></span>`).join("")}</div>`;
+      const parts = Object.keys(MIX_TONES).filter((tool) => (e.tools[tool] || 0) > 0);
+      const total = parts.reduce((sum, tool) => sum + e.tools[tool], 0);
+      return `<div class="mix-bar">${parts.map((tool) => `<span style="width:${(e.tools[tool] / total * 100).toFixed(2)}%;background:hsl(var(--on) / ${MIX_TONES[tool]})" title="${esc(toolName(tool))} ${fmt.tokens(e.tools[tool])}"></span>`).join("")}</div>`;
     };
     const me = entries.find((e) => e.isYou);
     const ahead = me && me.rank > 1 ? entries[me.rank - 2] : null;
@@ -3545,6 +3553,7 @@ button.tile:hover { background: hsl(0 0% 100% / .05); border-color: hsl(0 0% 100
       case "cloud-limits-off": act(el, () => api("/api/cloud/limits", { on: false }), "Stopping"); break;
       case "appearance": setAppearance({ [el.dataset.key]: el.dataset.value }); break;
       case "appearance-clear": setAppearance({ image: "" }); break;
+      case "theme-toggle": setAppearance({ theme: ui.theme === "day" ? "night" : "day" }); break;
       case "board-season":
         if (el.dataset.value === ui.boardSeason) break;
         ui.boardSeason = el.dataset.value;

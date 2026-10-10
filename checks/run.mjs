@@ -258,7 +258,8 @@ async function checkApp(browser) {
         // Hop stays at one physical anchor while section-specific tools change around it.
         const rightEdges = [];
         for (const section of ["overview", "usage", "settings"]) {
-          await page.locator(`#nav a[data-section="${section}"]`).click();
+          // Settings sits under the account tree, outside the section list, but still in the sidebar.
+          await page.locator(`.sidebar a[data-section="${section}"]`).click();
           const box = await page.locator(".hop").boundingBox();
           rightEdges.push(Math.round(box.x + box.width));
         }

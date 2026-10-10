@@ -553,10 +553,10 @@ struct CloudPet: Codable, Equatable {
             Shape(x: 106, y: 196, w: 3, h: 3, opacity: 1, fill: "#140E0C", kind: nil),
             Shape(x: 46, y: 198, w: 21, h: 3, opacity: 1, fill: "#140E0C", kind: nil),
             Shape(x: 86, y: 198, w: 21, h: 3, opacity: 1, fill: "#140E0C", kind: nil),
-            Shape(x: 40, y: 182, w: 19, h: 13, opacity: 1, fill: "#140E0C", kind: nil),
-            Shape(x: 42, y: 184, w: 15, h: 9, opacity: 1, fill: "#C9821A", kind: nil),
-            Shape(x: 42, y: 172, w: 17, h: 13, opacity: 1, fill: "#140E0C", kind: nil),
-            Shape(x: 44, y: 174, w: 13, h: 9, opacity: 1, fill: "#C9821A", kind: nil),
+            Shape(x: 116, y: 178, w: 31, h: 21, opacity: 1, fill: "#140E0C", kind: nil),
+            Shape(x: 118, y: 180, w: 27, h: 17, opacity: 1, fill: "#C9821A", kind: nil),
+            Shape(x: 116, y: 160, w: 31, h: 21, opacity: 1, fill: "#140E0C", kind: nil),
+            Shape(x: 118, y: 162, w: 27, h: 17, opacity: 1, fill: "#C9821A", kind: nil),
         ]
     )
 }

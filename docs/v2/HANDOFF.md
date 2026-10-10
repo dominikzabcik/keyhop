@@ -13,9 +13,13 @@ and started on 2026-10-10. **M1 (tracker core) is essentially done**; M2 (UI reb
   credential-override detection → multi-machine merge folder → seven new measured-only tools
   (13 token sources) → opt-in auto-hop before a limit → the owner's WIP pet/dashboard commit.
 - `main` carries cloud migration 0013 (`042b2ab`, widens daily_usage's tool CHECK,
-  TOOLS/LIMIT_TOOLS split). It is in this branch's history too. **Deployment to keyhop.app has
-  NOT happened**: a push of main starts CI and a production deploy that waits for the owner's
-  approval, and a stale waiting run blocks later ones.
+  TOOLS/LIMIT_TOOLS split) and, since 2026-10-10 16:29 UTC, `4158a86`: MEASURED_TOOLS is all
+  thirteen tools (pet lineage with a colour and name per tool, quest "Four tools" replaces
+  "Every tool", Full house badge = five tools in one day, tool rows padded to six). Both are in
+  this branch's history. **Deployment to keyhop.app has NOT happened** (checked 2026-10-10
+  16:22 UTC: the deploy run for `042b2ab` was still `waiting` for the owner's approval): a push
+  of main starts CI and a production deploy that waits for approval, and a stale waiting run
+  blocks later ones. Approving the newest run deploys both commits.
 
 Verification that passed before the handoff: `swift test` (211), `cd cloud && npm test` (86)
 plus typecheck, and a live two-machine `keyhop merge` smoke test via `KEYHOP_DATA_DIR`.
@@ -31,8 +35,8 @@ file are all committed here. The owner's previously uncommitted pet/dashboard wo
 
 1. **Client upload filter:** `CloudSync.cloudAcceptedTools` in
    `Sources/Keyhop/Cloud/Cloud.swift` keeps the new tools out of uploads until migration 0013
-   is deployed. Lift it (and decide how new tools join the server's MEASURED_TOOLS, pet and
-   quests) only after the deploy is confirmed.
+   is deployed. Lift it only after the deploy is confirmed (a successful "Deploy cloud" run for
+   `4158a86` or later on main). The server side is done: `4158a86` on main.
 2. **Pre-flight before M3:** confirm the Cloudflare account is on a paid plan — D1 hard-fails
    on Workers Free since 2026-09-01, and the live layer adds query volume.
 3. **M2** (UI per `design/keyhop-v2/index.html`): finish or land the WIP commit's direction

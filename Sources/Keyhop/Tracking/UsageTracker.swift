@@ -20,6 +20,9 @@ final class UsageTracker: ObservableObject {
     private let engine: TrackerEngine?
     private let sample: SampleUsage?
     private var cursorExports: [UUID: Date] = [:]
+    private var watcher: LogWatch?
+    private var watchedPaths: [String] = []
+    private var livePending = false
 
     init() {
         let url = Platform.dataDirectory.appendingPathComponent("usage.sqlite")
@@ -57,6 +60,46 @@ final class UsageTracker: ObservableObject {
     func noteActive(_ provider: Provider, _ account: UUID?) {
         guard let engine else { return }
         Task { try? await engine.noteActive(provider, account: account, at: Date()) }
+    }
+
+    /// Starts, or rebuilds, the file watch over whichever log roots exist right now. Called at
+    /// startup and again by the poll timer, so a tool that appears later gets watched too. The
+    /// watch makes new usage show within seconds; the poll stays as the fallback.
+    func ensureWatching(store: AccountStore) {
+        guard engine != nil else { return }
+        var roots = LogFeed.all.flatMap { feed in feed.roots().map(\.path) }
+        roots.append(OpenCodeAdapter.databaseURL.deletingLastPathComponent().path)
+        let existing = Array(Set(roots.filter { FileManager.default.fileExists(atPath: $0) })).sorted()
+        guard existing != watchedPaths else { return }
+        watcher?.stop()
+        watchedPaths = existing
+        guard !existing.isEmpty else {
+            watcher = nil
+            return
+        }
+        let watch = LogWatch(paths: existing) { [weak self, weak store] in
+            Task { @MainActor in
+                // The same switch that pauses the poll pauses the watch: off means usage is
+                // only read when the menu opens or on Refresh.
+                guard let self, let store, UserDefaults.standard.bool(forKey: "autoRefresh") else { return }
+                await self.liveRefresh(store: store)
+            }
+        }
+        watcher = watch
+        watch.start()
+    }
+
+    /// A change that lands while an update is running is not lost: it queues exactly one more pass.
+    private func liveRefresh(store: AccountStore) async {
+        if isUpdating {
+            livePending = true
+            return
+        }
+        await refresh(store: store)
+        if livePending {
+            livePending = false
+            await refresh(store: store)
+        }
     }
 
     func refresh(store: AccountStore) async {

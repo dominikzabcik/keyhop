@@ -217,3 +217,22 @@ extension SampleData {
         return PlansReport.build(accounts: overview.accounts, usage: overview.usage, apiValue: value, peaks: peaks, now: now)
     }
 }
+
+
+extension SampleData {
+    /// The sample's coaching: its own thirty days, and two repositories' worth of commits.
+    static func coach(now: Date = Date()) -> CoachReport {
+        let overview = overview(now: now)
+        let range = InsightsRange.thirtyDays.resolved(firstUse: now.addingTimeInterval(-400 * 86_400))
+        var digest = digest(range: range, accounts: overview.accounts, now: now)
+        let paths = ["/Users/you/Code/keyhop", "/Users/you/Code/atlas"]
+        var split: [String: Totals] = [:]
+        for (index, totals) in digest.byProvider.values.enumerated() { split[paths[index % 2], default: Totals()] += totals }
+        digest.byProject = split
+        let work = WorkYield(enabled: true, repos: [
+            WorkYield.Repo(name: "keyhop", path: paths[0], commits: 46, merges: 9),
+            WorkYield.Repo(name: "atlas", path: paths[1], commits: 18, merges: 4),
+        ])
+        return CoachReport.build(digest: digest, sessions: digest.sessions, work: work)
+    }
+}

@@ -34,7 +34,7 @@ test('the sidebar lists its sections from the top', async ({ app, browser }) => 
   });
 
   expect(layout?.names).toEqual([
-    'Overview', 'Limits', 'Accounts', 'Usage', 'Budgets', 'Plans', 'Cloud',
+    'Overview', 'Limits', 'Accounts', 'Usage', 'Budgets', 'Plans', 'Coach', 'Cloud',
     'Leaderboard', 'Season', 'Teams', 'Profile',
   ]);
   // The Cloud label's own margin is the widest intended gap. A stretched row is hundreds of pixels.
@@ -87,6 +87,16 @@ test('plans price each login against the month', async ({ app, screen, browser }
   await expect(screen.getByRole('heading', 'Plans', { level: 1 })).toBeVisible();
   await expect(screen.getByText('You pay', { exact: false })).toBeVisible();
   await expect(screen.getByText('API value this month', { exact: false }).first()).toBeVisible();
+  await assertReadable(browser);
+});
+
+test('coach reads optimize, compare and yield', async ({ app, screen, browser }) => {
+  await openWindow(app, 'coach');
+  await expect(screen.getByRole('heading', 'Coach', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Optimize', { level: 2 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Compare', { level: 2 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Yield', { level: 2 })).toBeVisible();
+  await expect(screen.getByText('Per merge').first()).toBeVisible();
   await assertReadable(browser);
 });
 

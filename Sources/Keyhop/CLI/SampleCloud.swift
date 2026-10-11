@@ -23,27 +23,29 @@ extension SampleData {
             let cost = tools.enumerated().reduce(0.0) { $0 + Double(split[$1.element] ?? 0) / 1_000_000 * prices[$1.offset] }
             return (person, tokens, (cost * 100).rounded() / 100, tokens / 42_000, Int(person.daily * days * Double(person.login.count % 4 + 1) * 0.6), split)
         }
-        let efficiency = { (row: (person: (login: String, name: String?, daily: Double, mix: [Double], you: Bool, onTeam: Bool), tokens: Int, cost: Double, requests: Int, commits: Int, split: [String: Int])) -> Double in
-            Double(row.commits) * 1_000_000 / Double(max(row.tokens, 1))
-        }
+        func rate(_ commits: Int, _ tokens: Int) -> Double { Double(commits) * 1_000_000 / Double(max(tokens, 1)) }
         let sorted = rows.sorted {
             switch metric {
             case "cost": $0.cost > $1.cost
             case "requests": $0.requests > $1.requests
             case "commits": $0.commits > $1.commits
             case "lines": $0.commits > $1.commits
-            case "efficiency": efficiency($0) > efficiency($1)
+            case "efficiency": rate($0.commits, $0.tokens) > rate($1.commits, $1.tokens)
             case "cache": $0.person.mix[0] > $1.person.mix[0]
             default: $0.tokens > $1.tokens
             }
         }
         let divisions = ["max", "pro", "max", "free", "pro", "max"]
-        let entries = sorted.enumerated().map { index, row in
-            CloudBoard.Entry(rank: index + 1, login: row.person.login, name: row.person.name, avatarUrl: nil, isPublic: true,
-                             tokens: row.tokens, cost: row.cost, requests: row.requests, activeDays: min(Int(days), Int(days * 0.8) + 1),
-                             tools: row.split, isYou: row.person.you, commits: row.commits, insertions: row.commits * 40, deletions: row.commits * 6,
-                             efficiency: (efficiency(row) * 10).rounded() / 10, cacheHit: (row.person.mix[0] * 90).rounded(),
-                             division: divisions[index % divisions.count])
+        var entries: [CloudBoard.Entry] = []
+        for (index, row) in sorted.enumerated() {
+            let efficiency = (rate(row.commits, row.tokens) * 10).rounded() / 10
+            let cacheHit = (row.person.mix[0] * 90).rounded()
+            // The leader is mid-session, so the sample shows the live dot.
+            entries.append(CloudBoard.Entry(rank: index + 1, login: row.person.login, name: row.person.name, avatarUrl: nil, isPublic: true,
+                                            tokens: row.tokens, cost: row.cost, requests: row.requests, activeDays: min(Int(days), Int(days * 0.8) + 1),
+                                            tools: row.split, isYou: row.person.you, commits: row.commits, insertions: row.commits * 40,
+                                            deletions: row.commits * 6, efficiency: efficiency, cacheHit: cacheHit,
+                                            division: divisions[index % divisions.count], live: index == 0 && period == "today"))
         }
         let sampleQuests = CloudQuests(
             quests: [

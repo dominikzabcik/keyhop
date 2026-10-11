@@ -1360,9 +1360,13 @@ actor DashboardSession {
         let confirm: String?
         let delete: String?
         let publish: Bool?
+        /// A webhook and an hour set the digest; an empty webhook with `digestOff` takes it down.
+        let digestUrl: String?
+        let digestHour: Int?
+        let digestOff: String?
 
         enum CodingKeys: String, CodingKey {
-            case name, code, invite, revoke, leave, slug, member, confirm, delete
+            case name, code, invite, revoke, leave, slug, member, confirm, delete, digestUrl, digestHour, digestOff
             case publish = "public"
         }
     }
@@ -1521,6 +1525,17 @@ actor DashboardSession {
         if let publish = body.publish, let slug = body.slug?.trimmingCharacters(in: .whitespacesAndNewlines), !slug.isEmpty {
             try await client.setTeamPublic(slug: slug, isPublic: publish)
             return TeamAction(message: publish ? "This team's totals are on a public badge." : "This team's badge is off.", note: nil, slug: slug, url: nil)
+        }
+        if let slug = body.digestOff?.trimmingCharacters(in: .whitespacesAndNewlines), !slug.isEmpty {
+            try await client.setDigest(slug: slug, url: "", hour: body.digestHour ?? 17)
+            return TeamAction(message: "The digest is off.", note: nil, slug: slug, url: nil)
+        }
+        if let url = body.digestUrl?.trimmingCharacters(in: .whitespacesAndNewlines),
+           let slug = body.slug?.trimmingCharacters(in: .whitespacesAndNewlines), !slug.isEmpty {
+            let hour = body.digestHour ?? 17
+            guard (0...23).contains(hour) else { throw UsageError("The hour must be 0 to 23, in UTC.") }
+            try await client.setDigest(slug: slug, url: url, hour: hour)
+            return TeamAction(message: url.isEmpty ? "The digest keeps its webhook and goes at \(String(format: "%02d", hour)):00 UTC." : "The day goes to that channel at \(String(format: "%02d", hour)):00 UTC.", note: nil, slug: slug, url: nil)
         }
         if let slug = body.leave?.trimmingCharacters(in: .whitespacesAndNewlines), !slug.isEmpty {
             try await client.leaveTeam(slug: slug)

@@ -264,6 +264,14 @@ extension DashboardPage {
       ? `<label class="check"><input type="checkbox" data-action="team-public" ${current.public ? "checked" : ""}> Publish this team's totals</label>
          <p class="empty-inline subtle">The image shows summed totals and how many members there are. Anyone with the link can load it.</p>`
       : "";
+    // The daily digest: the owner's Slack or Discord webhook and the UTC hour the day is posted.
+    const digest = current.role === "owner"
+      ? `<div class="team-digest"><b>Daily digest</b>
+         <p class="empty-inline subtle">${current.digest ? `Goes to ${esc(current.digest.to)} at ${String(current.digest.hour).padStart(2, "0")}:00 UTC. The saved webhook is kept unless you paste a new one.` : "Post the team's day to Slack or Discord once a day: who worked, their commits and tokens."}</p>
+         <form class="form" data-form="team-digest"><label>Incoming webhook<input class="field mono" name="url" placeholder="${current.digest ? "Kept as it is; paste a new one to change it" : "https://hooks.slack.com/services/…"}" autocomplete="off"></label>
+           <label>Hour, UTC<input class="field" name="hour" type="number" min="0" max="23" value="${current.digest ? current.digest.hour : 17}"></label>
+           <div class="row-actions" style="justify-content:flex-start"><button class="btn sm">Save digest</button>${current.digest ? `<button class="btn sm ghost" type="button" data-action="team-digest-off">Turn the digest off</button>` : ""}</div></form></div>`
+      : "";
     const snippets = current.public
       ? `<div class="form">${shareLines(`${website}/t/${current.slug}`, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"], ["Year", "graph.svg"]])}
          <p class="empty-inline subtle">The badge shows this team's tokens for the last 7 days. A team image takes tokens, cost, requests, commits, lines or streak.</p></div>`
@@ -273,7 +281,7 @@ extension DashboardPage {
         <form class="form" data-form="team-delete"><label>Delete this team<input class="field" name="confirm" placeholder="Type ${esc(current.slug)} to confirm" autocomplete="off"></label><button class="btn sm secondary danger">Delete team</button></form>`
       : `${people}<div class="row-actions" style="justify-content:flex-start"><button class="btn sm ghost" type="button" data-action="team-leave">Leave ${esc(current.name)}</button></div>`;
     return `<section class="card"><div class="card-head"><h2>${esc(current.name)}</h2><span class="hint">${current.members} ${current.members === 1 ? "member" : "members"}</span></div>
-      <div class="card-body">${publish}${snippets}${actions}</div></section>`;
+      <div class="card-body">${publish}${snippets}${digest}${actions}</div></section>`;
   }
 
   function boardValue(entry) {
@@ -337,7 +345,7 @@ extension DashboardPage {
     const cloud = data.state.cloud;
     const value = boardValue;
     const avatar = (e, size) => `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px" aria-hidden="true">${esc(e.login.slice(0, 1).toUpperCase())}</span>`;
-    const person = (e, size) => `<div class="who">${avatar(e, size)}<div><b>${esc(e.name || e.login)}</b><small>@${esc(e.login)}</small></div></div>`;
+    const person = (e, size) => `<div class="who">${avatar(e, size)}<div><b>${esc(e.name || e.login)}${e.live ? ` <i class="live-dot" title="Sent in the last few minutes"></i>` : ""}</b><small>@${esc(e.login)}</small></div></div>`;
     // Every measured tool, in the website's order and at its shade, so the two bars agree.
     const mix = (e) => {
       const parts = Object.keys(MIX_TONES).filter((tool) => (e.tools[tool] || 0) > 0);
@@ -398,7 +406,9 @@ extension DashboardPage {
     const cloud = data.state.cloud;
     if (data.boardError) return { body: boardProblem() };
     if (!data.board) return { body: busy("Reading your profile", "lede") };
-    const link = cloud.profile ? `<p class="empty-inline subtle"><a href="${esc(cloud.profile)}" target="_blank" rel="noopener">Open the full profile</a></p>` : "";
+    const link = cloud.profile
+      ? `<p class="empty-inline subtle"><a href="${esc(cloud.profile)}" target="_blank" rel="noopener">Open the full profile</a> · <a href="${esc(cloud.profile)}/wrapped" target="_blank" rel="noopener">Your year, wrapped</a></p>`
+      : "";
     return { body: petCard() + claimCard(data.board.quests) + questsCard(data.board.quests) + badgesCard(data.board.quests) + link };
   }
 

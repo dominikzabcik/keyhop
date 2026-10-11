@@ -137,7 +137,7 @@ extension SampleData {
 
     static let sampleTeams = [
         CloudTeam(slug: "night-shift", name: "Night Shift", role: "member", members: 4),
-        CloudTeam(slug: "studio", name: "Studio", role: "owner", members: 2),
+        CloudTeam(slug: "studio", name: "Studio", role: "owner", members: 2, digest: CloudTeam.Digest(to: "hooks.slack.com/services/T0/B0/…", hour: 17)),
     ]
 
     static let nightShift = [

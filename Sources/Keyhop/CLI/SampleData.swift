@@ -227,7 +227,9 @@ extension SampleData {
         var digest = digest(range: range, accounts: overview.accounts, now: now)
         let paths = ["/Users/you/Code/keyhop", "/Users/you/Code/atlas"]
         var split: [String: Totals] = [:]
-        for (index, totals) in digest.byProvider.values.enumerated() { split[paths[index % 2], default: Totals()] += totals }
+        for (index, provider) in digest.byProvider.keys.sorted(by: { $0.rawValue < $1.rawValue }).enumerated() {
+            split[paths[index % 2], default: Totals()] += digest.byProvider[provider] ?? Totals()
+        }
         digest.byProject = split
         let work = WorkYield(enabled: true, repos: [
             WorkYield.Repo(name: "keyhop", path: paths[0], commits: 46, merges: 9),

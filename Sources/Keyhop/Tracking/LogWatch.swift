@@ -6,6 +6,13 @@ import Foundation
 /// within seconds instead of on the next poll. Directory-granularity FSEvents are enough: the
 /// ingest is incremental anyway, so one callback per burst of writes is all that's needed.
 final class LogWatch {
+    /// What the stream holds instead of the watcher itself: a weak hand-back, retained by the stream
+    /// and released with it, so a callback already in flight after `deinit` finds nothing to call.
+    private final class Handle {
+        weak var watch: LogWatch?
+        init(_ watch: LogWatch) { self.watch = watch }
+    }
+
     private let paths: [String]
     private let debounce: TimeInterval
     private let onChange: @Sendable () -> Void
@@ -25,11 +32,16 @@ final class LogWatch {
     @discardableResult
     func start() -> Bool {
         guard stream == nil, !paths.isEmpty else { return false }
-        var context = FSEventStreamContext(version: 0, info: Unmanaged.passUnretained(self).toOpaque(),
-                                           retain: nil, release: nil, copyDescription: nil)
+        let handle = Unmanaged.passRetained(Handle(self))
+        var context = FSEventStreamContext(version: 0, info: handle.toOpaque(), retain: nil,
+                                           release: { info in
+                                               guard let info else { return }
+                                               Unmanaged<Handle>.fromOpaque(info).release()
+                                           },
+                                           copyDescription: nil)
         let callback: FSEventStreamCallback = { _, info, _, _, _, _ in
             guard let info else { return }
-            Unmanaged<LogWatch>.fromOpaque(info).takeUnretainedValue().schedule()
+            Unmanaged<Handle>.fromOpaque(info).takeUnretainedValue().watch?.schedule()
         }
         guard let stream = FSEventStreamCreate(nil, callback, &context, paths as CFArray,
                                                FSEventStreamEventId(kFSEventStreamEventIdSinceNow), 0.5,

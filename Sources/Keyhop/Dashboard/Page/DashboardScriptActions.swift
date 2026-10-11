@@ -173,6 +173,21 @@ extension DashboardPage {
       case "cloud-unlink": data.board = null; act(el, () => api("/api/cloud/unlink", {}), "Unlinking"); break;
       case "cloud-limits-on": act(el, () => api("/api/cloud/limits", { on: true }), "Turning on"); break;
       case "cloud-limits-off": act(el, () => api("/api/cloud/limits", { on: false }), "Stopping"); break;
+      case "cloud-live-on": act(el, () => api("/api/cloud/live", { on: true }), "Turning on"); break;
+      case "cloud-live-off": act(el, () => api("/api/cloud/live", { on: false }), "Stopping"); break;
+      case "cloud-show-data":
+        data.outbound = null;
+        data.outboundError = null;
+        try { data.outbound = await api("/api/cloud/show-data"); } catch (error) { data.outboundError = error.message; }
+        render();
+        break;
+      case "board-division":
+        ui.boardDivision = el.dataset.value;
+        data.board = null;
+        render();
+        await loadSection();
+        render();
+        break;
       case "appearance": setAppearance({ [el.dataset.key]: el.dataset.value }); break;
       case "appearance-clear": setAppearance({ image: "" }); break;
       case "theme-toggle": setAppearance({ theme: ui.theme === "day" ? "night" : "day" }); break;

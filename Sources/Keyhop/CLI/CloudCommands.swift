@@ -9,6 +9,8 @@ extension Commands {
         case "status": try cloudStatus(&args)
         case "sync": try await cloudSync(&args)
         case "limits": try await cloudLimits(&args)
+        case "live": try await cloudLive(&args)
+        case "show-data": try await cloudShowData(&args)
         case "badge": try await cloudBadge(&args)
         case "open":
             try args.finish()
@@ -98,6 +100,7 @@ extension Commands {
         if let lastSync = link.lastSync { print("Last sync: \(Output.relative(lastSync))") } else { print("Not synced yet") }
         if let problem = link.lastSyncError { print("Last sync failed: \(problem)") }
         print("Limit sharing: \(link.sharesLimits ? "on" : "off")")
+        print("Live sharing: \(link.sharesLive ? "on" : "off")")
     }
 
     /// `keyhop cloud badge [team]`: markdown for a public profile, or a team its owner has published.
@@ -166,6 +169,48 @@ extension Commands {
         }
     }
 
+    private static func cloudLive(_ args: inout Arguments) async throws {
+        let choice = args.nextPositional()
+        try args.finish()
+        guard var link = CloudLink.load() else { throw KeyhopError("Not linked yet. Run keyhop cloud login.") }
+        switch choice {
+        case nil, "status":
+            print("Live sharing is \(link.sharesLive ? "on" : "off").")
+            if link.sharesLive, let last = link.lastLiveSync { print("Last sent: \(Output.relative(last))") }
+            if !link.sharesLive { print("Turn it on with keyhop cloud live on, so your team's day moves with your work instead of an hour later.") }
+        case "on":
+            let workspace = try Workspace.open()
+            link.sharesLive = true
+            link.lastLiveSync = Date()
+            try link.save()
+            let readings = try await CloudSync.today(tracker: workspace.tracker)
+            do {
+                if !readings.isEmpty { _ = try await CloudClient(server: link.server, token: link.token).live(readings) }
+            } catch let error as CloudError where error.kind == .unlinked {
+                CloudLink.remove()
+                throw error
+            }
+            print("Live sharing is on. Sent today's totals for \(readings.count) \(readings.count == 1 ? "tool" : "tools") to @\(link.login).")
+            print("Every ninety seconds Keyhop sends today's tokens, API value and requests per tool. Nothing about a request, a session or a prompt.")
+        case "off":
+            guard link.sharesLive else { return print("Live sharing is already off.") }
+            try await CloudSync.stopSharingLive(&link)
+            print("Live sharing is off, and today's readings are off the website.")
+        case let other?:
+            throw UsageError("Unknown live command '\(other)'. Use on, off or status.")
+        }
+    }
+
+    /// Prints exactly what this computer would send to keyhop.app right now, section by section.
+    private static func cloudShowData(_ args: inout Arguments) async throws {
+        try args.finish()
+        guard let link = CloudLink.load() else { throw KeyhopError("Not linked yet. Run keyhop cloud login.") }
+        let workspace = try Workspace.open()
+        let outbound = try await CloudSync.outbound(link: link, tracker: workspace.tracker, accounts: await workspace.service.accounts,
+                                                    usage: workspace.state.usageByID)
+        try Output.json(outbound)
+    }
+
     private static func cloudSync(_ args: inout Arguments) async throws {
         let json = args.flag("--json")
         try args.finish()
@@ -175,7 +220,7 @@ extension Commands {
         _ = try await workspace.tracker.ingestLocalLogs(progress: terminal.handler)
         terminal.finish()
         do {
-            let saved = try await CloudSync.run(&link, tracker: workspace.tracker)
+            let saved = try await CloudSync.run(&link, tracker: workspace.tracker, accounts: await workspace.service.accounts)
             if json {
                 struct Document: Encodable { let saved: Int; let profile: String }
                 try Output.json(Document(saved: saved, profile: link.profileURL))

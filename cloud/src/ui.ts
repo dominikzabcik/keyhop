@@ -135,11 +135,13 @@ button, input { font: inherit; color: inherit; }
 body { position: relative; }
 main { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 32px 24px 56px; display: grid; gap: 20px; }
 .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+/* A flex child's floor is its content; with rows of tabs that would widen the page on a phone. */
+.head > * { min-width: 0; max-width: 100%; }
 h1 { margin: 0; font-size: 22px; font-weight: 640; letter-spacing: -.01em; line-height: 1.25; }
 /* A soft shadow right behind the words keeps them clear of bright dots, without a band behind them. */
 .head h1, .head .lede { text-shadow: var(--headline-shadow); }
 .lede { margin: 4px 0 0; color: var(--muted); }
-.toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; min-width: 0; max-width: 100%; }
 
 .card { background: hsl(var(--bg-base) / .8); -webkit-backdrop-filter: blur(18px) saturate(1.05); backdrop-filter: blur(18px) saturate(1.05); border: 1px solid var(--border); border-radius: 10px; min-width: 0; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }

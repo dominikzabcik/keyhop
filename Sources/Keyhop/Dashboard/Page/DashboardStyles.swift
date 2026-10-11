@@ -506,6 +506,13 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .day-figures div { text-align: right; }
 .day-figures b { display: block; font-variant-numeric: tabular-nums; font-weight: 600; }
 .live-dot { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--good); vertical-align: 1px; }
+/* Coach: findings first, then the figures that back them. */
+.coach-finding { margin: 0 0 8px; padding: 10px 12px; border-radius: 8px; background: hsl(var(--on) / .04); font-size: 13px; }
+.coach-finding.fine, .coach-finding.quiet { color: var(--muted); }
+.coach-finding.cache, .coach-finding.premium, .coach-finding.session { border-left: 3px solid var(--warn); }
+.coach-deltas { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.coach-delta { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: hsl(var(--on) / .03); font-size: 12px; }
+.coach-delta b { font-size: 18px; font-weight: 640; letter-spacing: -.02em; }
 /* Plans: one card per login, the month's API value against the plan's price. */
 .plans-headline { margin: 0 0 6px; font-size: 17px; font-weight: 620; letter-spacing: -.015em; text-wrap: pretty; }
 .plans-head .subtle { margin: 0; font-size: 12.5px; max-width: 72ch; }

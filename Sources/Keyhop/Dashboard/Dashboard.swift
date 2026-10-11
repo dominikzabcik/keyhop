@@ -19,7 +19,7 @@ enum Dashboard {
         let token: String
     }
 
-    static let sections = ["overview", "limits", "accounts", "usage", "budgets", "plans", "leaderboard", "season", "teams", "profile", "settings"]
+    static let sections = ["overview", "limits", "accounts", "usage", "budgets", "plans", "coach", "leaderboard", "season", "teams", "profile", "settings"]
 
     private static var launchFile: URL { Platform.dataDirectory.appendingPathComponent("dashboard.json") }
 
@@ -834,6 +834,8 @@ actor DashboardSession {
                 return .json(try await applyWork(try Self.decode(WorkBody.self, request)))
             case ("GET", "/api/plans"):
                 return .json(try await plans())
+            case ("GET", "/api/coach"):
+                return .json(try await coach())
             case ("GET", "/api/usage"):
                 guard let range = InsightsRange(argument: request.query["range"] ?? "week") else { throw UsageError("Unknown range.") }
                 let word = request.query["tool"] ?? "all"
@@ -897,6 +899,14 @@ actor DashboardSession {
         if sample { return SampleData.plans(now: now) }
         let workspace = try openWorkspace()
         return try await Commands.plansReport(workspace: workspace, now: now)
+    }
+
+    /// Efficiency coaching from this computer's store. The sample coaches the sample.
+    func coach() async throws -> CoachReport {
+        let now = Date()
+        if sample { return SampleData.coach(now: now) }
+        let workspace = try openWorkspace()
+        return try await Commands.coachReport(workspace: workspace, now: now)
     }
 
     func usage(range asked: InsightsRange, tool: Provider?, readLogs: Bool) async throws -> DashboardUsage {

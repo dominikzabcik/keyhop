@@ -631,6 +631,16 @@ actor TrackerEngine {
             """, [.real(previous.start.timeIntervalSince1970), .real(previous.end.timeIntervalSince1970), providerFilter]) { row in
             digest.previous = Self.totals(row, from: 0)
         }
+        try db.query("""
+            SELECT e.provider, e.model, \(Self.sums) FROM events e
+            WHERE e.ts >= ?1 AND e.ts < ?2 AND (?3 IS NULL OR e.provider = ?3) AND \(Self.notDoubleCounted)
+            GROUP BY 1, 2
+            """, [.real(previous.start.timeIntervalSince1970), .real(previous.end.timeIntervalSince1970), providerFilter]) { row in
+            guard let provider = Provider(rawValue: row.text(0) ?? "") else { return }
+            let totals = Self.totals(row, from: 2)
+            digest.previousByProvider[provider, default: Totals()] += totals
+            digest.previousByModel[ModelKey(provider: provider, model: Pricing.normalize(row.text(1) ?? "unknown")), default: Totals()] += totals
+        }
         return digest
     }
 

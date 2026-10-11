@@ -53,6 +53,7 @@ export const APP_SCREENS = [
   { name: "usage", section: "usage", mustSay: ["Tokens", "Tools", "Sessions", "Cache read", "API value"] },
   { name: "budgets", section: "budgets", mustSay: ["Budget"] },
   { name: "plans", section: "plans", mustSay: ["API value this month"] },
+  { name: "coach", section: "coach", mustSay: ["Optimize", "Compare", "Yield"] },
   { name: "leaderboard", section: "leaderboard", mustSay: ["Your rank"] },
   { name: "season", section: "season", mustSay: ["Season standings"] },
   { name: "teams", section: "teams", mustSay: ["Your teams"] },

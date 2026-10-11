@@ -25,6 +25,7 @@ extension DashboardPage {
       <a href="#usage" data-section="usage"><svg><use href="#i-usage"/></svg>Usage</a>
       <a href="#budgets" data-section="budgets"><svg><use href="#i-budgets"/></svg>Budgets</a>
       <a href="#plans" data-section="plans"><svg><use href="#i-plans"/></svg>Plans</a>
+      <a href="#coach" data-section="coach"><svg><use href="#i-coach"/></svg>Coach</a>
       <span class="nav-label" id="cloud-label" hidden>Cloud</span>
       <a href="#leaderboard" data-section="leaderboard" hidden><svg><use href="#i-leaderboard"/></svg>Leaderboard</a>
       <a href="#season" data-section="season" hidden><svg><use href="#i-season"/></svg>Season</a>

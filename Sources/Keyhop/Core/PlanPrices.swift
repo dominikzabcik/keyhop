@@ -27,9 +27,13 @@ enum PlanPrices {
         return fits.max(by: { $0.plan.count < $1.plan.count })?.monthly
     }
 
-    /// The plans of this tool that cost at least this much a month, cheapest first.
+    /// The plans of this tool that cost at least this much a month, cheapest first, with a person's
+    /// own plans ahead of seats on a team plan.
     static func plans(for provider: Provider, atLeast dollars: Double) -> [(plan: String, monthly: Double)] {
-        (ladders[provider] ?? []).filter { $0.monthly >= dollars }.sorted { $0.monthly < $1.monthly }
+        let seat = ["team", "business", "enterprise"]
+        let fitting = (ladders[provider] ?? []).filter { $0.monthly >= dollars }.sorted { $0.monthly < $1.monthly }
+        let own = fitting.filter { plan in !seat.contains { plan.plan.lowercased().contains($0) } }
+        return own.isEmpty ? fitting : own
     }
 
     /// The plans of this tool cheaper than this one, dearest first.

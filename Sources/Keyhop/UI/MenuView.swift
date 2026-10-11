@@ -508,7 +508,11 @@ private struct MenuFacts {
         }
         if let wall = rows.first(where: { $0.lane == .needs }) {
             let n = Int((wall.used ?? 0).rounded())
-            return ("\(wall.account.provider.shortName) is at \(n)%.", "There is no other login to hop to.")
+            let others = rows.filter { $0.account.provider == wall.account.provider && $0.account.id != wall.account.id }
+            let why = others.isEmpty ? "There is no other login to hop to."
+                : others.contains(where: { $0.lane == .needs }) ? "The other \(wall.account.provider.shortName) logins are close to a limit too."
+                : "No other \(wall.account.provider.shortName) login has enough more room for a hop."
+            return ("\(wall.account.provider.shortName) is at \(n)%.", why)
         }
         if empty { return ("Add a login.", "No saved accounts yet. Sign in once and Keyhop keeps the login.") }
         return ("Every login in use has room.", "Nothing is close to a limit.")

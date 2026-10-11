@@ -579,6 +579,8 @@ enum Commands {
                 try Output.json(document)
             } else if let folder = settings.folder {
                 print("Merging through \(folder) as \(document.file).")
+                if let last = settings.lastSync { print("Last pass: \(Output.relative(last))") }
+                if let problem = settings.lastError { print("Last pass failed: \(problem)") }
             } else {
                 print("Merging is off. Point it at a folder your machines already sync: keyhop merge <folder>")
             }
@@ -603,7 +605,8 @@ enum Commands {
                 throw UsageError("\(word) isn't a folder. Pick one your machines already sync, like one in iCloud Drive.")
             }
             var settings = MergeFolder.Settings.load()
-            settings.folder = word
+            // Saved absolute: the app's working directory is not the terminal's.
+            settings.folder = url.path
             try settings.save()
             let workspace = try Workspace.open()
             let outcome = try await MergeFolder.sync(tracker: workspace.tracker, accounts: await workspace.service.accounts)

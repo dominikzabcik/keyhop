@@ -106,12 +106,19 @@ final class CloudTests: XCTestCase {
         }
         XCTAssertNil(CloudSync.division(accounts: []))
         XCTAssertNil(CloudSync.division(accounts: [account(nil)]))
+        XCTAssertNil(CloudSync.division(accounts: [account("Mystery")]))
         XCTAssertEqual(CloudSync.division(accounts: [account("Free")]), "free")
         XCTAssertEqual(CloudSync.division(accounts: [account("Pro"), account("Free")]), "pro")
-        XCTAssertEqual(CloudSync.division(accounts: [account("Plus")]), "pro")
         XCTAssertEqual(CloudSync.division(accounts: [account("Max 5x"), account("Pro")]), "max")
-        XCTAssertEqual(CloudSync.division(accounts: [account("Ultra")]), "max")
-        XCTAssertEqual(CloudSync.division(accounts: [account("Team")]), "max")
+        XCTAssertEqual(CloudSync.division(accounts: [account("Max")]), "max")
+        XCTAssertEqual(CloudSync.division(accounts: [account("Team")]), "pro")
+        // The same table prices the plans, so a bare Max and Cursor's Pro Plus are known.
+        XCTAssertEqual(PlanPrices.monthly(provider: .claude, plan: "Max"), 100)
+        XCTAssertEqual(PlanPrices.monthly(provider: .claude, plan: "Max 20x"), 200)
+        XCTAssertEqual(PlanPrices.monthly(provider: .cursor, plan: "Pro Plus"), 60)
+        XCTAssertEqual(PlanPrices.monthly(provider: .codebuff, plan: "$49/mo"), 49)
+        XCTAssertNil(PlanPrices.monthly(provider: .claude, plan: "Mystery"))
+        XCTAssertEqual(PlanPrices.plans(for: .codex, atLeast: 21).first?.plan, "Pro")
     }
 
     func testLiveSharingStaysOffUntilItIsTurnedOnAndRoundTrips() throws {

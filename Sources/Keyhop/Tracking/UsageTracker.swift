@@ -98,23 +98,26 @@ final class UsageTracker: ObservableObject {
         watch.start()
     }
 
-    /// A change that lands while an update is running is not lost: it queues exactly one more pass.
+    /// A change that lands while an update is running is not lost: it queues exactly one more pass,
+    /// whichever refresh was running at the time.
     private func liveRefresh(store: AccountStore) async {
         if isUpdating {
             livePending = true
             return
         }
         await refresh(store: store)
-        if livePending {
-            livePending = false
-            await refresh(store: store)
-        }
     }
 
     func refresh(store: AccountStore) async {
         guard let engine, !isUpdating else { return }
         isUpdating = true
-        defer { isUpdating = false }
+        defer {
+            isUpdating = false
+            if livePending {
+                livePending = false
+                Task { @MainActor in await self.refresh(store: store) }
+            }
+        }
 
         let now = Date()
         let accounts = store.accounts

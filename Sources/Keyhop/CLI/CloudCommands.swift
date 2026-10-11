@@ -101,6 +101,7 @@ extension Commands {
         if let problem = link.lastSyncError { print("Last sync failed: \(problem)") }
         print("Limit sharing: \(link.sharesLimits ? "on" : "off")")
         print("Live sharing: \(link.sharesLive ? "on" : "off")")
+        if link.sharesLive, let problem = link.lastLiveError { print("Last live send failed: \(problem)") }
     }
 
     /// `keyhop cloud badge [team]`: markdown for a public profile, or a team its owner has published.
@@ -177,6 +178,7 @@ extension Commands {
         case nil, "status":
             print("Live sharing is \(link.sharesLive ? "on" : "off").")
             if link.sharesLive, let last = link.lastLiveSync { print("Last sent: \(Output.relative(last))") }
+            if link.sharesLive, let problem = link.lastLiveError { print("Last send failed: \(problem)") }
             if !link.sharesLive { print("Turn it on with keyhop cloud live on, so your team's day moves with your work instead of an hour later.") }
         case "on":
             let workspace = try Workspace.open()

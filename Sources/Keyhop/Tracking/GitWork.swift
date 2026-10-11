@@ -299,10 +299,13 @@ enum GitWork {
     // MARK: Running git
 
     /// Runs git in a repository. A missing git, or a folder git refuses, simply reads as no commits.
-    /// Merge commits since a day, counted once each along the first parent: the merges that landed.
-    static func merges(in repo: URL, since day: String) -> Int {
-        guard let output = git(repo, ["rev-list", "--merges", "--all", "--count", "--since=\(day)"]) else { return 0 }
-        return Int(output.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+    /// Merge commits the person landed since a day: along the first parent of the current branch,
+    /// authored or committed by one of their identities. A teammate's merge is not their yield.
+    static func merges(in repo: URL, since day: String, mine: Set<String>) -> Int {
+        guard let output = git(repo, ["log", "--merges", "--first-parent", "--since=\(day)", "--format=%ae%x1f%ce"]) else { return 0 }
+        return output.split(separator: "\n").filter { line in
+            line.split(separator: "\u{1f}", omittingEmptySubsequences: false).contains { mine.contains($0.lowercased()) }
+        }.count
     }
 
     private static func git(_ repo: URL, _ arguments: [String]) -> String? {

@@ -163,8 +163,10 @@ h1 { margin: 0; font-size: 22px; font-weight: 640; letter-spacing: -.01em; line-
 
 .badge { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; background: hsl(var(--on) / .07); color: var(--muted);
   font-size: 10.5px; font-weight: 650; letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; }
-.tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: 8px; background: var(--raised); border: 1px solid var(--border); }
-.tabs a { height: 28px; padding: 0 11px; border-radius: 5px; display: inline-flex; align-items: center; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 540; }
+/* A row of tabs scrolls inside itself on a narrow screen rather than pushing the page sideways. */
+.tabs { display: inline-flex; max-width: 100%; padding: 3px; gap: 2px; border-radius: 8px; background: var(--raised); border: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs a { height: 28px; padding: 0 11px; border-radius: 5px; display: inline-flex; align-items: center; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 540; white-space: nowrap; flex: none; }
 .tabs a:hover { color: var(--text); }
 .tabs a[aria-current="true"] { background: hsl(var(--on) / .1); color: var(--text); }
 .field { height: 34px; width: 100%; padding: 0 10px; border-radius: 7px; border: 1px solid var(--border-strong); background: transparent; color: var(--text); }

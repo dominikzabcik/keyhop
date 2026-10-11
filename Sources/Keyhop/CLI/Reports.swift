@@ -483,6 +483,47 @@ enum Reports {
         return lines.joined(separator: "\n")
     }
 
+    static func coach(_ report: CoachReport, part: String?) -> String {
+        var lines: [String] = []
+        let change = { (delta: CoachReport.Delta) -> String in
+            delta.change.map { "\($0 >= 0 ? "+" : "")\(Int($0.rounded()))%" } ?? "new"
+        }
+        if part == nil || part == "optimize" {
+            lines.append("Optimize, last \(report.days) days")
+            for finding in report.optimize.findings { lines.append("  \(finding.text)") }
+            for mix in report.optimize.tools {
+                lines.append("  \(mix.toolName.padding(toLength: 16, withPad: " ", startingAt: 0)) \(Numbers.usd(mix.apiValue).leftPadded(9))  cache hit \(mix.cacheHit.map { "\(Int($0.rounded()))%" } ?? "n/a")  premium \(Int(mix.premiumShare.rounded()))%")
+            }
+            for session in report.optimize.sessions {
+                lines.append("  \(Numbers.usd(session.apiValue).leftPadded(9))  \(session.toolName) · \(session.model), \(session.minutes) min, \(Int(session.share.rounded()))% of the period")
+            }
+        }
+        if part == nil || part == "compare" {
+            if !lines.isEmpty { lines.append("") }
+            lines.append("Compare, last \(report.days) days against the \(report.days) before")
+            lines.append("  Tokens     \(Numbers.tokens(Int(report.compare.tokens.now)).leftPadded(8)) from \(Numbers.tokens(Int(report.compare.tokens.before))) (\(change(report.compare.tokens)))")
+            lines.append("  API value  \(Numbers.usd(report.compare.apiValue.now).leftPadded(8)) from \(Numbers.usd(report.compare.apiValue.before)) (\(change(report.compare.apiValue)))")
+            lines.append("  Requests   \(Int(report.compare.requests.now).description.leftPadded(8)) from \(Int(report.compare.requests.before)) (\(change(report.compare.requests)))")
+            lines.append("  Cache hit  \("\(Int(report.compare.cacheHit.now.rounded()))%".leftPadded(8)) from \(Int(report.compare.cacheHit.before.rounded()))%")
+            for tool in report.compare.tools { lines.append("  \(tool.label.padding(toLength: 16, withPad: " ", startingAt: 0)) \(Numbers.usd(tool.now).leftPadded(9)) from \(Numbers.usd(tool.before)) (\(change(tool)))") }
+        }
+        if part == nil || part == "yield" {
+            if !lines.isEmpty { lines.append("") }
+            lines.append("Yield, last \(report.days) days")
+            let y = report.yield
+            if let note = y.note { lines.append("  \(note)") }
+            if y.enabled {
+                lines.append("  \(y.commits) commits, \(y.merges) merges, \(Numbers.tokens(y.tokens)) tokens, \(Numbers.usd(y.apiValue)) at API prices")
+                if let perCommit = y.tokensPerCommit, let value = y.valuePerCommit { lines.append("  Per commit: \(Numbers.tokens(perCommit)) tokens, \(Numbers.usd(value))") }
+                if let perMerge = y.tokensPerMerge, let value = y.valuePerMerge { lines.append("  Per merge:  \(Numbers.tokens(perMerge)) tokens, \(Numbers.usd(value))") }
+                for repo in y.repos {
+                    lines.append("  \(repo.repo.padding(toLength: 28, withPad: " ", startingAt: 0)) \(repo.commits) commits, \(repo.merges) merges, \(Numbers.tokens(repo.tokens)) tokens\(repo.tokensPerCommit.map { ", \(Numbers.tokens($0)) per commit" } ?? "")")
+                }
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+
     static func makers(_ digest: UsageDigest) -> [(maker: String, models: [String], totals: Totals)] {
         var totals: [String: Totals] = [:]
         var models: [String: Set<String>] = [:]

@@ -343,6 +343,41 @@ enum Commands {
         if json { try Output.json(report) } else { print(Reports.plans(report)) }
     }
 
+    /// Efficiency coaching from this computer's store: optimize, compare and yield.
+    static func coach(_ args: inout Arguments) async throws {
+        let json = args.flag("--json")
+        let skipLogs = args.flag("--no-read")
+        let part = args.nextPositional()
+        try args.finish()
+        if let part, !["optimize", "compare", "yield"].contains(part) {
+            throw UsageError("Unknown coach reading '\(part)'. Use optimize, compare or yield.")
+        }
+        let workspace = try Workspace.open()
+        if !skipLogs {
+            let terminal = TerminalProgress()
+            defer { terminal.finish() }
+            await workspace.tracker.refreshPrices()
+            try await workspace.tracker.ingestLocalLogs(progress: terminal.handler)
+        }
+        let report = try await Self.coachReport(workspace: workspace, now: Date())
+        if json { try Output.json(report) } else { print(Reports.coach(report, part: part)) }
+    }
+
+    static func coachReport(workspace: Workspace, now: Date) async throws -> CoachReport {
+        let sole = await workspace.service.soleAccounts
+        let range = InsightsRange.thirtyDays.resolved(firstUse: nil)
+        let digest = try await workspace.tracker.digest(interval: range.interval(now: now), previous: range.previous(now: now),
+                                                        bucket: .day, provider: nil, sole: sole)
+        let sessions = (try? await workspace.tracker.sessions(in: range.interval(now: now), provider: nil, sole: sole, limit: 200)) ?? []
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        let work = WorkYield.read(settings: WorkSettings.load(), since: formatter.string(from: range.interval(now: now).start),
+                                  login: CloudLink.load()?.login)
+        return CoachReport.build(digest: digest, sessions: sessions, work: work)
+    }
+
     static func plansReport(workspace: Workspace, now: Date) async throws -> PlansReport {
         let accounts = await workspace.service.accounts
         let sole = await workspace.service.soleAccounts

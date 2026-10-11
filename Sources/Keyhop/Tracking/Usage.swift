@@ -144,6 +144,9 @@ struct UsageDigest {
     var byAccount: [AccountKey: Totals] = [:]
     var byModel: [ModelKey: Totals] = [:]
     var byProvider: [Provider: Totals] = [:]
+    /// The period before, per tool and model, for a comparison. Filled by the engine's digest.
+    var previousByProvider: [Provider: Totals] = [:]
+    var previousByModel: [ModelKey: Totals] = [:]
     /// Keyed by project path. Usage no tool placed in a folder is under "".
     var byProject: [String: Totals] = [:]
     var sessions: [Session] = []

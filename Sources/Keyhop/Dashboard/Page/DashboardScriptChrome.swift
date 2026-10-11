@@ -265,7 +265,7 @@ extension DashboardPage {
         render();
       }, 3000);
     }
-    const page = { overview: overviewPage, limits: limitsPage, accounts: accountsPage, usage: usagePage, budgets: budgetsPage, leaderboard: leaderboardPage, season: seasonPage, teams: teamsPage, profile: profilePage, settings: settingsPage }[ui.section](tools);
+    const page = { overview: overviewPage, limits: limitsPage, accounts: accountsPage, usage: usagePage, budgets: budgetsPage, plans: plansPage, leaderboard: leaderboardPage, season: seasonPage, teams: teamsPage, profile: profilePage, settings: settingsPage }[ui.section](tools);
     $("#title").textContent = TITLES[ui.section];
     $("#toolbar").innerHTML = page.toolbar || "";
     const offline = ui.offline ? `<div class="notice">${icon("alert")}<div><p>${esc(ui.offline)}</p></div></div>` : "";

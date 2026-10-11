@@ -451,6 +451,17 @@ actor TrackerEngine {
         let used: Double
     }
 
+    /// The highest fill each window reached since a date, per account, from the kept samples.
+    func windowPeaks(since: Date) throws -> [UUID: [String: Double]] {
+        var peaks: [UUID: [String: Double]] = [:]
+        try db.query("SELECT account, label, MAX(used) FROM samples WHERE ts >= ? GROUP BY account, label",
+                     [.real(since.timeIntervalSince1970)]) { row in
+            guard let id = row.text(0).flatMap(UUID.init(uuidString:)), let label = row.text(1) else { return }
+            peaks[id, default: [:]][label] = row.double(2)
+        }
+        return peaks
+    }
+
     /// When the window reaches 100% at its rate over the last 90 minutes, if that's before it resets.
     func forecast(account: UUID, window: UsageWindow, now: Date) throws -> Date? {
         guard window.usedPercent < 100 else { return nil }

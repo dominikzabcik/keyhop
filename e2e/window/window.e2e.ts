@@ -34,7 +34,7 @@ test('the sidebar lists its sections from the top', async ({ app, browser }) => 
   });
 
   expect(layout?.names).toEqual([
-    'Overview', 'Limits', 'Accounts', 'Usage', 'Budgets', 'Cloud',
+    'Overview', 'Limits', 'Accounts', 'Usage', 'Budgets', 'Plans', 'Cloud',
     'Leaderboard', 'Season', 'Teams', 'Profile',
   ]);
   // The Cloud label's own margin is the widest intended gap. A stretched row is hundreds of pixels.
@@ -79,6 +79,14 @@ test('budgets is its own list', async ({ app, screen, browser }) => {
   await openWindow(app, 'budgets');
   await expect(screen.getByRole('heading', 'Budgets', { level: 1 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Budgets', { level: 2 })).toBeVisible();
+  await assertReadable(browser);
+});
+
+test('plans price each login against the month', async ({ app, screen, browser }) => {
+  await openWindow(app, 'plans');
+  await expect(screen.getByRole('heading', 'Plans', { level: 1 })).toBeVisible();
+  await expect(screen.getByText('You pay', { exact: false })).toBeVisible();
+  await expect(screen.getByText('API value this month', { exact: false }).first()).toBeVisible();
   await assertReadable(browser);
 });
 

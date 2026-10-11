@@ -200,3 +200,20 @@ enum SampleData {
         }
     }
 }
+
+
+extension SampleData {
+    /// The sample's plans: its logins priced against a month of its own usage and a week of its windows.
+    static func plans(now: Date = Date()) -> PlansReport {
+        let overview = overview(now: now)
+        let month = InsightsRange.month.resolved(firstUse: now.addingTimeInterval(-400 * 86_400))
+        let digest = digest(range: month, accounts: overview.accounts, now: now)
+        var value: [UUID: Totals] = [:]
+        for (key, totals) in digest.byAccount { if let id = key.account { value[id] = totals } }
+        var peaks: [UUID: [String: Double]] = [:]
+        for (id, snapshot) in overview.usage {
+            for window in snapshot.windows { peaks[id, default: [:]][window.label] = min(100, window.usedPercent + 9) }
+        }
+        return PlansReport.build(accounts: overview.accounts, usage: overview.usage, apiValue: value, peaks: peaks, now: now)
+    }
+}

@@ -468,6 +468,21 @@ enum Reports {
 
     /// Makers, most used first, each with its models by name. The same model run through two
     /// tools is one model here.
+    static func plans(_ report: PlansReport) -> String {
+        var lines = ["Plans, \(report.month)", report.headline]
+        for row in report.rows {
+            lines.append("")
+            let price = row.price.map { $0 == 0 ? "free" : "\(Numbers.usd($0))/mo" } ?? "unpriced"
+            lines.append("\(row.toolName) · \(row.name) · \(row.plan ?? "no plan") (\(price))")
+            lines.append("  \(row.verdict)")
+            if let advice = row.advice { lines.append("  \(advice)") }
+            for window in row.windows {
+                lines.append("  \(window.label.padding(toLength: 10, withPad: " ", startingAt: 0)) peak \(Int(window.peak.rounded()))% this week\(window.usedNow.map { ", \(Int($0.rounded()))% now" } ?? "")")
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+
     static func makers(_ digest: UsageDigest) -> [(maker: String, models: [String], totals: Totals)] {
         var totals: [String: Totals] = [:]
         var models: [String: Set<String>] = [:]

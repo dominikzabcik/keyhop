@@ -45,7 +45,7 @@ Opt-in counting of the person's own git commits (merge commits excluded). Subjec
 A group of a day's commits that belong together, derived from their subjects by heuristic.
 
 **Efficiency**:
-Outcome per spend — the metric family (tokens per merged unit of work, cache-hit, streak) that ranks V2 seasons and leaderboards by default, in place of raw token volume.
+Outcome per spend. The ranking metric is commits per million tokens in the window, counted only past a floor of one million tokens and at least one synced commit; below that a person is unranked (and keeps their tier). Cache hit (cache reads over tokens) is the second efficiency metric. Raw tokens stay available as one optional metric.
 
 ### Cloud and social
 
@@ -54,13 +54,13 @@ The approval that ties a machine or phone to a keyhop.app user. A read link can 
 _Avoid_: pairing, connect
 
 **Live layer**:
-Short-interval usage aggregates that power live views (team day, leaderboard). Transient by definition: only daily totals are ever stored durably.
+Short-interval usage aggregates that power live views (team day, leaderboard). Transient by definition: only daily totals are ever stored durably. Concretely: with live sharing on, the app sends today's per-tool totals every ninety seconds; the website keeps one row per tool, counts it live for three minutes and sweeps it after ten. Nothing about a request, a session or a prompt travels, and `keyhop cloud show-data` (Settings, Cloud in the window) shows every payload before it goes.
 
 **Season**:
 One UTC calendar month of ranked play, with tiers Bronze through Master.
 
 **Division**:
-The plan-based group a person competes in within a season, so peers on the same plan are ranked against each other.
+The plan-based group a person competes in within a season, so peers on the same plan are ranked against each other. Three of them: Free, Pro and Max. The app reports the broadest paid plan among its logins; a person whose app never said ranks among everyone.
 _Avoid_: league
 
 **Streak**:

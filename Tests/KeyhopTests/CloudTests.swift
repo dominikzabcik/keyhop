@@ -75,10 +75,55 @@ final class CloudTests: XCTestCase {
         let todayLabel = formatter.string(from: today), yesterdayLabel = formatter.string(from: yesterday)
 
         XCTAssertEqual(days, [
-            CloudDay(day: yesterdayLabel, tool: "claude", tokens: 30, cost: 0.3, requests: 1),
-            CloudDay(day: todayLabel, tool: "claude", tokens: 200, cost: 2, requests: 2),
-            CloudDay(day: todayLabel, tool: "codex", tokens: 50, cost: 0.5, requests: 1),
+            CloudDay(day: yesterdayLabel, tool: "claude", tokens: 30, cost: 0.3, requests: 1, cacheRead: 0),
+            CloudDay(day: todayLabel, tool: "claude", tokens: 200, cost: 2, requests: 2, cacheRead: 0),
+            CloudDay(day: todayLabel, tool: "codex", tokens: 50, cost: 0.5, requests: 1, cacheRead: 0),
         ])
+    }
+
+    func testCacheReadsTravelWithTheDayAndTodayIsTheLiveReading() async throws {
+        let engine = try TrackerEngine(url: url)
+        let now = Date()
+        let today = Calendar.current.startOfDay(for: now)
+        let counts = TokenCounts(input: 40, cacheRead: 160, output: 20)
+        try await engine.store([
+            UsageRecord(key: "a", provider: .claude, account: nil, session: nil, kind: .request, timestamp: today.addingTimeInterval(5),
+                        model: "model", tokens: counts, cost: 0.4, billed: nil),
+            UsageRecord(key: "b", provider: .claude, account: nil, session: nil, kind: .request, timestamp: today.addingTimeInterval(-5),
+                        model: "model", tokens: counts, cost: 0.4, billed: nil),
+        ])
+        let live = try await CloudSync.today(tracker: engine, now: now)
+        XCTAssertEqual(live.count, 1)
+        XCTAssertEqual(live.first?.tokens, 220)
+        XCTAssertEqual(live.first?.cacheRead, 160)
+        let all = try await CloudSync.days(tracker: engine, since: today.addingTimeInterval(-86400), now: now)
+        XCTAssertEqual(all.count, 2)
+    }
+
+    func testTheDivisionIsTheBroadestPaidPlanAmongTheLogins() {
+        func account(_ plan: String?) -> Account {
+            Account(id: UUID(), provider: .claude, identity: "a", email: "a@example.com", label: "x", plan: plan, addedAt: Date())
+        }
+        XCTAssertNil(CloudSync.division(accounts: []))
+        XCTAssertNil(CloudSync.division(accounts: [account(nil)]))
+        XCTAssertEqual(CloudSync.division(accounts: [account("Free")]), "free")
+        XCTAssertEqual(CloudSync.division(accounts: [account("Pro"), account("Free")]), "pro")
+        XCTAssertEqual(CloudSync.division(accounts: [account("Plus")]), "pro")
+        XCTAssertEqual(CloudSync.division(accounts: [account("Max 5x"), account("Pro")]), "max")
+        XCTAssertEqual(CloudSync.division(accounts: [account("Ultra")]), "max")
+        XCTAssertEqual(CloudSync.division(accounts: [account("Team")]), "max")
+    }
+
+    func testLiveSharingStaysOffUntilItIsTurnedOnAndRoundTrips() throws {
+        let json = #"{"server":"https://keyhop.example","login":"mira","isPublic":false,"linkedAt":"2027-01-15T08:00:00Z"}"#
+        var link = try DashboardJSON.decoder.decode(CloudLink.self, from: Data(json.utf8))
+        XCTAssertFalse(link.sharesLive)
+        XCTAssertNil(link.lastLiveSync)
+        link.sharesLive = true
+        link.lastLiveSync = Date(timeIntervalSince1970: 1_800_000_000)
+        let round = try DashboardJSON.decoder.decode(CloudLink.self, from: DashboardJSON.encoder.encode(link))
+        XCTAssertTrue(round.sharesLive)
+        XCTAssertEqual(round.lastLiveSync, link.lastLiveSync)
     }
 
     func testSharedLimitsCarryLabelsButNeverEmails() {

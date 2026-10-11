@@ -24,6 +24,14 @@ struct CloudDay: Codable, Equatable {
     let tokens: Int
     let cost: Double
     let requests: Int
+    /// Tokens read back from a prompt cache. Nil on a website that doesn't take it yet.
+    var cacheRead: Int? = nil
+}
+
+/// The daily totals as the website receives them, with the plan-based division beside them.
+struct CloudUsageUpload: Encodable {
+    let days: [CloudDay]
+    let division: String?
 }
 
 /// One commit, as the website stores it. Only the subject line travels: never the body, the diff
@@ -117,17 +125,23 @@ struct CloudBoard: Codable {
         let commits: Int?
         let insertions: Int?
         let deletions: Int?
+        /// Commits per million tokens, cache-hit percent and the plan-based division. Absent on an older website.
+        let efficiency: Double?
+        let cacheHit: Double?
+        let division: String?
 
         enum CodingKeys: String, CodingKey {
             case rank, login, name, avatarUrl, tokens, cost, requests, activeDays, tools, isYou
             case isPublic = "public"
-            case commits, insertions, deletions
+            case commits, insertions, deletions, efficiency, cacheHit, division
         }
     }
 
     let period: String
     let metric: String
     let entries: [Entry]
+    /// The division the board is filtered to, when it is.
+    var division: String? = nil
 }
 
 /// A ranked season: one calendar month, with the tier your tokens earned in it.
@@ -149,6 +163,10 @@ struct CloudSeason: Codable {
         let tokens: Int
         let tier: Tier
         let next: Step?
+        /// How many were ranked beside you, and in which division. Absent on an older website.
+        var players: Int? = nil
+        var division: String? = nil
+        var efficiency: Double? = nil
     }
 
     let season: String
@@ -646,6 +664,8 @@ struct CloudTeamDay: Codable {
         let indexing: Indexing?
         let repos: [Repo]
         let tasks: [Task]
+        /// True when this person's app sent a reading in the last few minutes. Absent on an older website.
+        var live: Bool? = nil
     }
 
     let team: Team
@@ -820,18 +840,32 @@ struct CloudClient {
         return try JSONDecoder().decode(Response.self, from: data).user
     }
 
-    /// Replaces the website's totals for each day and tool sent.
-    func upload(_ days: [CloudDay]) async throws -> Int {
+    /// Replaces the website's totals for each day and tool sent. The division rides on every batch.
+    func upload(_ days: [CloudDay], division: String? = nil) async throws -> Int {
         struct Response: Decodable { let saved: Int }
         var saved = 0
         // The website takes up to 1200 entries per request.
-        for start in stride(from: 0, to: days.count, by: 1000) {
+        for start in stride(from: 0, to: max(days.count, 1), by: 1000) {
             let chunk = Array(days[start..<min(start + 1000, days.count)])
-            let (data, status) = try await send("POST", "/api/usage", body: ["days": chunk])
+            let (data, status) = try await send("POST", "/api/usage", body: CloudUsageUpload(days: chunk, division: division))
             guard status == 200 else { throw problem(data, status) }
             saved += try JSONDecoder().decode(Response.self, from: data).saved
         }
         return saved
+    }
+
+    /// Where today stands, per tool, for the live layer. Each reading replaces the one before it.
+    func live(_ days: [CloudDay]) async throws -> Int {
+        struct Response: Decodable { let saved: Int }
+        let (data, status) = try await send("POST", "/api/live", body: ["days": days])
+        guard status == 200 else { throw problem(data, status) }
+        return try JSONDecoder().decode(Response.self, from: data).saved
+    }
+
+    /// Takes the live readings down, for when live sharing is turned off. An older website has none.
+    func clearLive() async throws {
+        let (data, status) = try await send("DELETE", "/api/live")
+        guard status == 204 || status == 401 || status == 404 else { throw problem(data, status) }
     }
 
     /// Replaces the website's commits for each day and repository sent.
@@ -904,11 +938,12 @@ struct CloudClient {
         return try JSONDecoder().decode(CloudTeamDay.self, from: data)
     }
 
-    func leaderboard(period: String, metric: String, team: String?) async throws -> CloudBoard {
+    func leaderboard(period: String, metric: String, team: String?, division: String? = nil) async throws -> CloudBoard {
         var query = "period=\(period)&metric=\(metric)"
         if let team, let encoded = team.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-_"))) {
             query += "&team=\(encoded)"
         }
+        if let division, ["free", "pro", "max"].contains(division) { query += "&division=\(division)" }
         let (data, status) = try await send("GET", "/api/leaderboard?\(query)")
         guard status == 200 else { throw problem(data, status) }
         return try JSONDecoder().decode(CloudBoard.self, from: data)

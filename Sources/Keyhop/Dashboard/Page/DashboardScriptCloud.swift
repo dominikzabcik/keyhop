@@ -106,6 +106,22 @@ extension DashboardPage {
       : `<div class="card-body setting-row"><div><b>Let your phone see your limits</b>
           <p>The Keyhop app on your phone can then tell you when an account comes back. It sends how full each account is and the name you gave it, never an email.</p></div>
           <button class="btn sm secondary" data-action="cloud-limits-on">Share limits</button></div>`;
+    const live = cloud.sharesLive
+      ? `<div class="card-body setting-row"><div><b>Your team's day moves with your work</b>
+          <p>Every ninety seconds Keyhop sends today's tokens, API value and requests per tool. Nothing about a request, a session or a prompt.</p></div>
+          <button class="btn sm ghost danger" data-action="cloud-live-off">Stop sharing</button></div>`
+      : `<div class="card-body setting-row"><div><b>Let your team's day move with your work</b>
+          <p>Keyhop then sends today's totals per tool every ninety seconds instead of once an hour. The readings are kept for minutes, never as history.</p></div>
+          <button class="btn sm secondary" data-action="cloud-live-on">Share live</button></div>`;
+    const outbound = data.outbound
+      ? data.outbound.sections.map((section) => `<details class="outbound"${section.on ? " open" : ""}><summary><b class="mono">${esc(section.endpoint)}</b><span class="subtle">${esc(section.when)}</span></summary><pre class="mono">${esc(JSON.stringify(section.payload, null, 2))}</pre></details>`).join("")
+      : data.outboundError
+        ? `<p class="empty-inline">${esc(data.outboundError)}</p>`
+        : `<button class="btn sm secondary" data-action="cloud-show-data">Show the exact data</button>`;
+    const shows = `<section class="card"><div class="card-head"><h2>What this computer sends</h2><span class="hint">Shown before anything goes</span></div>
+      <div class="card-body setting-row"><div><b>Exactly the payloads, as they would go right now</b>
+        <p>Daily totals per tool, commit counts per repository, limit readings and today's live totals. Never a prompt, an email or an account name.</p></div></div>
+      <div class="card-body">${outbound}</div></section>`;
     const images = cloud.isPublic && cloud.profile
       ? `<section class="card"><div class="card-head"><h2>README images</h2></div><div class="form card-body">${shareLines(cloud.profile, [["Badge", "badge.svg"], ["Card", "card.svg"], ["Streak", "streak.svg"], ["Tools", "tools.svg"], ["Year", "graph.svg"], ["Pet", "pet.svg"]])}
         <p class="empty-inline subtle">The badge shows tokens for the last 7 days. Add ?metric= and ?period= to the image address, and ?theme=light on a light page. <a href="https://github.com/dominikzabcik/keyhop#readme-images" target="_blank" rel="noopener">How the images work</a></p></div></section>`
@@ -119,6 +135,8 @@ extension DashboardPage {
       ${images}
       <section class="card">${appsCard()}</section>
       <section class="card"><div class="card-head"><h2>Phone</h2></div>${limits}</section>
+      <section class="card"><div class="card-head"><h2>Live</h2></div>${live}</section>
+      ${shows}
       <section class="card"><div class="card-head"><h2>Delete account</h2></div>${deleteAccountForm()}</section>`;
   }
 
@@ -147,7 +165,8 @@ extension DashboardPage {
       : you.next
         ? `${fmt.tokens(you.next.tokens)} more tokens for ${esc(you.next.label)}.`
         : "You're at the top of the ladder.";
-    const place = you && you.rank ? `#${you.rank} of ${season.players}. ` : "";
+    const divisionName = { free: "Free", pro: "Pro", max: "Max" }[you && you.division] || "";
+    const place = you && you.rank ? `#${you.rank} of ${you.players || season.players}${divisionName ? ` in ${divisionName}` : ""}. ` : "";
     const seasons = season.seasons || [];
     const tabs = seasons.length > 1
       ? `<div class="tabs">${seasons.map((item) => `<button type="button" data-action="board-season" data-value="${esc(item.id)}" aria-pressed="${item.id === season.season}">${esc(item.label)}</button>`).join("")}</div>`
@@ -258,6 +277,8 @@ extension DashboardPage {
   }
 
   function boardValue(entry) {
+    if (ui.boardMetric === "efficiency") return entry.efficiency == null ? "Unranked" : `${entry.efficiency >= 10 ? Math.round(entry.efficiency) : entry.efficiency.toFixed(1)} per M`;
+    if (ui.boardMetric === "cache") return entry.cacheHit == null ? "Unknown" : `${Math.round(entry.cacheHit)}%`;
     if (ui.boardMetric === "cost") return fmt.usd(entry.cost);
     if (ui.boardMetric === "requests") return fmt.count(entry.requests);
     if (ui.boardMetric === "commits") return fmt.count(entry.commits);
@@ -300,7 +321,7 @@ extension DashboardPage {
       const more = tasks.length > 6 ? `<li class="task"><span class="day-note">and ${tasks.length - 6} more</span></li>` : "";
       const indexing = person.indexing ? `<p class="day-note" style="padding:0 16px 12px">Still reading this computer's repositories, ${fmt.count(person.indexing.done)} of ${fmt.count(person.indexing.total)}. What's here is real, but it isn't all of it yet.</p>` : "";
       const quiet = person.commits === 0 && person.tokens === 0 && !person.indexing ? `<p class="day-note" style="padding:0 16px 14px">Nothing synced for this day.</p>` : "";
-      return `<section class="card day-person"><header class="card-head day-head"><h2>${esc(person.name || person.login)}${person.isYou ? " · you" : ""}</h2><div class="day-figures"><div><b>${fmt.count(person.commits)}</b><small>${person.commits === 1 ? "commit" : "commits"}</small></div><div><b>${fmt.tokens(person.tokens)}</b><small>tokens</small></div><div>${diffStat(person.insertions, person.deletions) || "<b>0</b>"}<small>lines</small></div></div></header>${indexing}${quiet}<ol class="tasks">${lines}${more}</ol></section>`;
+      return `<section class="card day-person"><header class="card-head day-head"><h2>${esc(person.name || person.login)}${person.isYou ? " · you" : ""}</h2><div class="day-figures"><div><b>${fmt.count(person.commits)}</b><small>${person.commits === 1 ? "commit" : "commits"}</small></div><div><b>${fmt.tokens(person.tokens)}</b><small>${person.live ? `<i class="live-dot" title="Sent in the last few minutes"></i>live` : "tokens"}</small></div><div>${diffStat(person.insertions, person.deletions) || "<b>0</b>"}<small>lines</small></div></div></header>${indexing}${quiet}<ol class="tasks">${lines}${more}</ol></section>`;
     };
     const empty = commits === 0 ? `<section class="card"><p class="empty">No commits synced for this day. Turn counting on under Settings, Activity.</p></section>` : "";
     const note = `<p class="empty-inline subtle"><a href="${esc(day.website)}/t/${esc(day.team.slug)}/day/${esc(day.day)}" target="_blank" rel="noopener">Open this day on the website</a></p>`;
@@ -325,7 +346,7 @@ extension DashboardPage {
     };
     const me = entries.find((e) => e.isYou);
     const ahead = me && me.rank > 1 ? entries[me.rank - 2] : null;
-    const gap = ahead ? value({ tokens: ahead.tokens - me.tokens, cost: ahead.cost - me.cost, requests: ahead.requests - me.requests, commits: (ahead.commits || 0) - (me.commits || 0), insertions: (ahead.insertions || 0) - (me.insertions || 0), deletions: (ahead.deletions || 0) - (me.deletions || 0) }) : null;
+    const gap = ahead ? value({ efficiency: ahead.efficiency != null && me.efficiency != null ? ahead.efficiency - me.efficiency : null, cacheHit: ahead.cacheHit != null && me.cacheHit != null ? ahead.cacheHit - me.cacheHit : null, tokens: ahead.tokens - me.tokens, cost: ahead.cost - me.cost, requests: ahead.requests - me.requests, commits: (ahead.commits || 0) - (me.commits || 0), insertions: (ahead.insertions || 0) - (me.insertions || 0), deletions: (ahead.deletions || 0) - (me.deletions || 0) }) : null;
     const onTeam = scope !== "the global board";
     const stats = `<div class="stats three">
       <div class="card stat"><div class="label">Your rank</div><div class="value">${me ? `#${me.rank}` : "Unranked"}</div>
@@ -337,7 +358,7 @@ extension DashboardPage {
     </div>`;
     const podium = entries.length ? `<div class="podium">${entries.slice(0, 3).map((e) => `<div class="card podium-card${e.isYou ? " you" : ""}">
         <span class="place mono">#${e.rank}</span>${person(e, 36)}<div class="podium-value">${esc(value(e))}</div>${mix(e)}</div>`).join("")}</div>` : "";
-    const heading = { tokens: "Tokens", cost: "API value", requests: "Requests", commits: "Commits", lines: "Lines" }[ui.boardMetric];
+    const heading = { efficiency: "Commits per M tokens", cache: "Cache hit", tokens: "Tokens", cost: "API value", requests: "Requests", commits: "Commits", lines: "Lines" }[ui.boardMetric];
     const table = entries.length
       ? `<section class="card"><table class="table"><thead><tr><th style="width:52px">#</th><th>Person</th><th>Tools</th><th class="right">Active days</th><th class="right">${heading}</th></tr></thead>
           <tbody>${entries.map((e) => `<tr class="${e.isYou ? "me" : ""}"><td class="mono subtle">${e.rank}</td><td>${person(e, 26)}</td><td class="bar-cell">${mix(e)}</td>
@@ -348,7 +369,8 @@ extension DashboardPage {
 
   function periodChoices() {
     return boardChoice("board-period", [["today", "Today"], ["week", "7 days"], ["month", "30 days"], ["all", "All time"]], ui.boardPeriod)
-      + boardChoice("board-metric", [["tokens", "Tokens"], ["cost", "API value"], ["requests", "Requests"], ["commits", "Commits"], ["lines", "Lines"]], ui.boardMetric);
+      + boardChoice("board-metric", [["efficiency", "Efficiency"], ["cache", "Cache hit"], ["tokens", "Tokens"], ["cost", "API value"], ["requests", "Requests"], ["commits", "Commits"], ["lines", "Lines"]], ui.boardMetric)
+      + boardChoice("board-division", [["", "Everyone"], ["free", "Free"], ["pro", "Pro"], ["max", "Max"]], ui.boardDivision);
   }
 
   function boardProblem() {

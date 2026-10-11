@@ -47,13 +47,18 @@ struct CloudLink: Codable, Equatable {
     /// against its limits, so a linked phone can count down to the next reset.
     var sharesLimits: Bool
     var lastLimitSync: Date?
+    /// Off until it is turned on. While it is on, Keyhop also sends today's per-tool totals every
+    /// minute or two, so a team's day and the leaderboard move with the work instead of an hour later.
+    var sharesLive: Bool
+    var lastLiveSync: Date?
 
     static var url: URL { Platform.dataDirectory.appendingPathComponent("cloud.json") }
 
     var profileURL: String { "\(server)/u/\(login)" }
 
     init(server: String, token: String, login: String, name: String?, isPublic: Bool, linkedAt: Date,
-         lastSync: Date? = nil, lastSyncError: String? = nil, sharesLimits: Bool = false, lastLimitSync: Date? = nil) {
+         lastSync: Date? = nil, lastSyncError: String? = nil, sharesLimits: Bool = false, lastLimitSync: Date? = nil,
+         sharesLive: Bool = false, lastLiveSync: Date? = nil) {
         self.server = server
         self.token = token
         self.login = login
@@ -64,10 +69,13 @@ struct CloudLink: Codable, Equatable {
         self.lastSyncError = lastSyncError
         self.sharesLimits = sharesLimits
         self.lastLimitSync = lastLimitSync
+        self.sharesLive = sharesLive
+        self.lastLiveSync = lastLiveSync
     }
 
     private enum CodingKeys: String, CodingKey {
         case server, token, login, name, isPublic, linkedAt, lastSync, lastSyncError, sharesLimits, lastLimitSync
+        case sharesLive, lastLiveSync
     }
 
     init(from decoder: Decoder) throws {
@@ -82,6 +90,8 @@ struct CloudLink: Codable, Equatable {
         lastSyncError = try values.decodeIfPresent(String.self, forKey: .lastSyncError)
         sharesLimits = try values.decodeIfPresent(Bool.self, forKey: .sharesLimits) ?? false
         lastLimitSync = try values.decodeIfPresent(Date.self, forKey: .lastLimitSync)
+        sharesLive = try values.decodeIfPresent(Bool.self, forKey: .sharesLive) ?? false
+        lastLiveSync = try values.decodeIfPresent(Date.self, forKey: .lastLiveSync)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -95,6 +105,8 @@ struct CloudLink: Codable, Equatable {
         try values.encodeIfPresent(lastSyncError, forKey: .lastSyncError)
         try values.encode(sharesLimits, forKey: .sharesLimits)
         try values.encodeIfPresent(lastLimitSync, forKey: .lastLimitSync)
+        try values.encode(sharesLive, forKey: .sharesLive)
+        try values.encodeIfPresent(lastLiveSync, forKey: .lastLiveSync)
     }
 
     static func load(store: (any SecretStore)? = nil) -> CloudLink? {
@@ -150,13 +162,14 @@ enum CloudSync {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = .current
         formatter.dateFormat = "yyyy-MM-dd"
-        var sums: [String: (tokens: Int, cost: Double, requests: Int)] = [:]
+        var sums: [String: (tokens: Int, cost: Double, requests: Int, cacheRead: Int)] = [:]
         for point in digest.points {
             let key = "\(formatter.string(from: point.start))|\(point.key.provider.rawValue)"
-            var sum = sums[key] ?? (0, 0, 0)
+            var sum = sums[key] ?? (0, 0, 0, 0)
             sum.tokens += point.totals.tokens.total
             sum.cost += point.totals.cost
             sum.requests += point.totals.requests
+            sum.cacheRead += point.totals.tokens.cacheRead
             sums[key] = sum
         }
         return sums
@@ -164,24 +177,116 @@ enum CloudSync {
             .map { key, sum in
                 let parts = key.split(separator: "|")
                 return CloudDay(day: String(parts[0]), tool: String(parts[1]), tokens: sum.tokens,
-                                cost: (sum.cost * 100).rounded() / 100, requests: sum.requests)
+                                cost: (sum.cost * 100).rounded() / 100, requests: sum.requests, cacheRead: sum.cacheRead)
             }
             .filter { cloudAcceptedTools.contains($0.tool) }
             .sorted { ($0.day, $0.tool) < ($1.day, $1.tool) }
     }
 
+    /// The plan-based group this computer competes in: the broadest paid plan among its logins. Nil
+    /// when no login names a plan, so the website keeps what it had.
+    static func division(accounts: [Account]) -> String? {
+        var best: Int? = nil
+        for account in accounts {
+            guard let plan = account.plan?.lowercased(), !plan.isEmpty else { continue }
+            let rank: Int
+            if ["max", "ultra", "team", "enterprise", "business", "20x", "5x"].contains(where: { plan.contains($0) }) { rank = 2 }
+            else if plan.contains("free") || plan.contains("trial") { rank = 0 }
+            else { rank = 1 }
+            best = max(best ?? 0, rank)
+        }
+        return best.map { ["free", "pro", "max"][$0] }
+    }
+
     /// Sends a year the first time, then the last eight days, since logs can arrive late.
     @discardableResult
-    static func run(_ link: inout CloudLink, tracker: TrackerEngine, now: Date = Date(),
+    static func run(_ link: inout CloudLink, tracker: TrackerEngine, accounts: [Account] = [], now: Date = Date(),
                     store: (any SecretStore)? = nil) async throws -> Int {
         let lookback = Double(link.lastSync == nil ? 370 : 8) * 86400
         let since = Calendar.current.startOfDay(for: now.addingTimeInterval(-lookback))
         let days = try await days(tracker: tracker, since: since, now: now)
-        let saved = try await CloudClient(server: link.server, token: link.token).upload(days)
+        let saved = try await CloudClient(server: link.server, token: link.token).upload(days, division: division(accounts: accounts))
         link.lastSync = now
         link.lastSyncError = nil
         try link.save(store: store)
         return saved
+    }
+
+    /// Today's totals per tool: what the live layer and `show-data` describe.
+    static func today(tracker: TrackerEngine, now: Date = Date()) async throws -> [CloudDay] {
+        try await days(tracker: tracker, since: Calendar.current.startOfDay(for: now), now: now)
+    }
+
+    /// While live sharing is on, today's totals go every ninety seconds at most. Never in the way of
+    /// the refresh, and never a reason to stop the hourly days.
+    static func liveIfDue(tracker: TrackerEngine, now: Date = Date(), store: (any SecretStore)? = nil) async {
+        guard var link = CloudLink.load(store: store), link.sharesLive else { return }
+        guard link.lastLiveSync.map({ now.timeIntervalSince($0) >= 90 }) ?? true else { return }
+        link.lastLiveSync = now
+        try? link.save(store: store)
+        do {
+            let readings = try await today(tracker: tracker, now: now)
+            guard !readings.isEmpty else { return }
+            _ = try await CloudClient(server: link.server, token: link.token).live(readings)
+        } catch let error as CloudError where error.kind == .unlinked {
+            CloudLink.remove(store: store)
+        } catch {
+            link.lastSyncError = "Sending the live reading failed: \(error.localizedDescription)"
+            try? link.save(store: store)
+        }
+    }
+
+    /// Turning live sharing off takes today's readings off the website too, right away.
+    static func stopSharingLive(_ link: inout CloudLink, store: (any SecretStore)? = nil) async throws {
+        link.sharesLive = false
+        link.lastLiveSync = nil
+        try link.save(store: store)
+        try await CloudClient(server: link.server, token: link.token).clearLive()
+    }
+
+    /// Exactly what this computer sends to keyhop.app, as it would go right now. Shown before anything
+    /// is sent, in `keyhop cloud show-data` and under Settings, Cloud.
+    struct Outbound: Encodable {
+        struct Section: Encodable {
+            let endpoint: String
+            let when: String
+            let on: Bool
+            let payload: AnyCodableValue
+        }
+        let server: String
+        let login: String
+        let sections: [Section]
+    }
+
+    static func outbound(link: CloudLink, tracker: TrackerEngine, accounts: [Account], usage: [UUID: UsageSnapshot],
+                         work: WorkSettings = WorkSettings.load(), now: Date = Date()) async throws -> Outbound {
+        let since = Calendar.current.startOfDay(for: now.addingTimeInterval(-8 * 86400))
+        let days = try await days(tracker: tracker, since: since, now: now)
+        let usageBody = CloudUsageUpload(days: days, division: division(accounts: accounts))
+        var sections = [
+            Outbound.Section(endpoint: "POST /api/usage", when: "Every hour: the last eight days per tool, a year the first time.",
+                             on: true, payload: AnyCodableValue(usageBody)),
+        ]
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        if work.enabled, GitWork.isAvailable {
+            let scan = GitWork.scan(roots: work.rootURLs, since: formatter.string(from: since), emails: work.emails,
+                                    login: link.login, shareSubjects: work.shareSubjects, index: WorkIndex.load(), progress: nil)
+            sections.append(Outbound.Section(endpoint: "POST /api/work", when: "Every hour: commits you authored per day and repository, with subjects only while subject sharing is on.",
+                                             on: true, payload: AnyCodableValue(["days": scan.days])))
+        } else {
+            sections.append(Outbound.Section(endpoint: "POST /api/work", when: "Off: commit counting is not turned on.", on: false,
+                                             payload: AnyCodableValue(["days": [CloudWorkDay]()])))
+        }
+        let limits = limits(accounts: accounts, usage: usage, now: now)
+        sections.append(Outbound.Section(endpoint: "POST /api/limits", when: link.sharesLimits ? "Every five minutes: how full each account is and when it resets." : "Off: limit sharing is not turned on.",
+                                         on: link.sharesLimits, payload: AnyCodableValue(["limits": limits])))
+        let live = try await today(tracker: tracker, now: now)
+        sections.append(Outbound.Section(endpoint: "POST /api/live", when: link.sharesLive ? "Every ninety seconds: today's totals per tool." : "Off: live sharing is not turned on.",
+                                         on: link.sharesLive, payload: AnyCodableValue(["days": live])))
+        return Outbound(server: link.server, login: link.login, sections: sections)
     }
 
     /// Where each account stands right now, as a phone would read it. A window is worth sending when
@@ -215,7 +320,7 @@ enum CloudSync {
 
         if link.lastSync.map({ now.timeIntervalSince($0) >= 3600 }) ?? true {
             do {
-                try await run(&link, tracker: tracker, now: now, store: store)
+                try await run(&link, tracker: tracker, accounts: accounts, now: now, store: store)
             } catch let error as CloudError where error.kind == .unlinked {
                 CloudLink.remove(store: store)
                 return

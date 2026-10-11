@@ -62,7 +62,7 @@ export const APP_SCREENS = [
   { name: "profile", section: "profile", mustSay: ["Keeps", "Quests", "Badges"] },
   // Settings opens one calm category at a time; the category rail names the rest.
   { name: "settings", section: "settings", mustSay: ["Appearance", "Activity", "App & Privacy"], mayFail: ["/api/update"] },
-  { name: "settings-cloud", section: "settings", mustSay: ["How you appear", "This computer"], arrive: ['[data-action="settings-pane"][data-value="cloud"]'], mayFail: ["/api/update"] },
+  { name: "settings-cloud", section: "settings", mustSay: ["How you appear", "This computer", "What this computer sends", "Live"], arrive: ['[data-action="settings-pane"][data-value="cloud"]'], mayFail: ["/api/update"] },
 ];
 
 /**

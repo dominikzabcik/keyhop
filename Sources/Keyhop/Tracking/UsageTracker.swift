@@ -160,6 +160,7 @@ final class UsageTracker: ObservableObject {
             lastUpdate = now
             problem = nil
             await CloudSync.syncIfDue(tracker: engine, accounts: accounts, usage: usage, now: now)
+            await CloudSync.liveIfDue(tracker: engine, now: now)
         } catch {
             problem = error.localizedDescription
         }

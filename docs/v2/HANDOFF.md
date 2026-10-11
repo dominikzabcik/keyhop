@@ -65,9 +65,23 @@ file are all committed here. The owner's previously uncommitted pet/dashboard wo
    rollups — verify Copilot's `session-store.db` `assistant_usage_events` on a real install);
    Codex `account/rateLimits/read` app-server surface; Claude's usage credits and Agent SDK
    pool lack vendor schemas.
-5. **M3–M5** per `docs/v2/PLAN.md`: efficiency + divisions + anti-cheat + transient live layer
-   (aggregates only, `show-data`), then optimizer/coaching/growth, then tray/iOS/CLI parity,
-   docs, GitHub Discussions, launch.
+5. **M3** (social layer + live cloud) — built 2026-10-10 evening:
+   - `main` (`da30a59`, `d66f312`): migration 0014 (`cache_read`, `users.division`,
+     `live_usage`), efficiency = commits per million tokens as the default metric, cache hit,
+     plan divisions (free/pro/max) with a division filter and a person's season place inside
+     their division, upload verification (requests fit tokens, list-price band, cache reads fit
+     tokens), `POST`/`DELETE /api/live` with a TTL sweep, live team day. 93 cloud tests, site e2e 32.
+   - `v2`: `cacheRead` and `division` ride the daily upload; opt-in live sharing
+     (`keyhop cloud live on|off`, Settings → Cloud → Live, every 90 s after a refresh);
+     `keyhop cloud show-data` and Settings → Cloud → "What this computer sends" print the exact
+     payloads; the window's leaderboard has Efficiency/Cache hit metrics and a division picker;
+     the team day shows a live dot; the season shows the division.
+   - Still open: iOS season screen could name the division (needs a Mac); the live leaderboard
+     "right now" view (the live rows feed only the team day today); divisions are reported by the
+     app from plan names (`CloudSync.division`), so a login whose plan Keyhop can't read ranks
+     among everyone.
+6. **M4–M5** per `docs/v2/PLAN.md`: optimizer/coaching/growth, then tray/iOS/CLI parity, docs,
+   GitHub Discussions, launch.
 
 ## Working agreements to respect
 

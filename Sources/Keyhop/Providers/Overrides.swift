@@ -6,8 +6,54 @@ import Foundation
 /// it names them in `doctor` and after a switch instead.
 enum Overrides {
     static func list(for provider: Provider) -> [String] {
-        list(for: provider, environment: ProcessInfo.processInfo.environment, home: Files.home)
+        list(for: provider, environment: environment, home: Files.home)
     }
+
+    /// The environment the tools run in. From a terminal that is this process's own. The Mac app
+    /// is started by launchd with almost none of it, so there the login shell is asked once for
+    /// what it exports, which is where ANTHROPIC_API_KEY and the like are set.
+    static var environment: [String: String] {
+        let own = ProcessInfo.processInfo.environment
+        #if os(macOS)
+        if own["TERM"] == nil, let shell = own["SHELL"], !shell.isEmpty {
+            return loginShellEnvironment(shell: shell).merging(own) { _, mine in mine }
+        }
+        #endif
+        return own
+    }
+
+    #if os(macOS)
+    private static let loginShellLock = NSLock()
+    nonisolated(unsafe) private static var loginShellCache: [String: String]?
+
+    /// Runs `$SHELL -ilc env` once per process, with a short leash so a shell that waits on a prompt
+    /// cannot hold a refresh. An empty answer is kept too, so the shell is asked only once.
+    private static func loginShellEnvironment(shell: String) -> [String: String] {
+        loginShellLock.lock()
+        defer { loginShellLock.unlock() }
+        if let cached = loginShellCache { return cached }
+        var found: [String: String] = [:]
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: shell)
+        process.arguments = ["-ilc", "/usr/bin/env"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        process.standardInput = FileHandle.nullDevice
+        let done = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in done.signal() }
+        if (try? process.run()) != nil {
+            let output = pipe.fileHandleForReading.readDataToEndOfFile()
+            if done.wait(timeout: .now() + 4) == .timedOut { process.terminate() }
+            for line in String(decoding: output, as: UTF8.self).split(separator: "\n") {
+                guard let equals = line.firstIndex(of: "=") else { continue }
+                found[String(line[..<equals])] = String(line[line.index(after: equals)...])
+            }
+        }
+        loginShellCache = found
+        return found
+    }
+    #endif
 
     static func list(for provider: Provider, environment: [String: String], home: URL) -> [String] {
         switch provider {

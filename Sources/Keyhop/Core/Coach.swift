@@ -149,10 +149,13 @@ struct CoachReport: Encodable {
     private static func compare(digest: UsageDigest) -> Compare {
         let hitNow = cacheHit(digest.total.tokens) ?? 0
         let hitBefore = cacheHit(digest.previous.tokens) ?? 0
-        let tools = digest.byProvider.map { delta($0.key.name, $0.value.cost, digest.previousByProvider[$0.key]?.cost ?? 0) }
-            .sorted { $0.now > $1.now }
-        let models = digest.byModel.map { delta($0.key.description, $0.value.cost, digest.previousByModel[$0.key]?.cost ?? 0) }
-            .sorted { $0.now > $1.now }.prefix(8)
+        // A tool or model that was used only before still gets a row, so a drop to nothing is seen.
+        let toolKeys = Set(digest.byProvider.keys).union(digest.previousByProvider.keys)
+        let tools = toolKeys.map { delta($0.name, digest.byProvider[$0]?.cost ?? 0, digest.previousByProvider[$0]?.cost ?? 0) }
+            .sorted { ($0.now, $0.before) > ($1.now, $1.before) }
+        let modelKeys = Set(digest.byModel.keys).union(digest.previousByModel.keys)
+        let models = modelKeys.map { delta($0.description, digest.byModel[$0]?.cost ?? 0, digest.previousByModel[$0]?.cost ?? 0) }
+            .sorted { ($0.now, $0.before) > ($1.now, $1.before) }.prefix(8)
         return Compare(tokens: delta("Tokens", Double(digest.total.tokens.total), Double(digest.previous.tokens.total)),
                        apiValue: delta("API value", digest.total.cost, digest.previous.cost),
                        requests: delta("Requests", Double(digest.total.requests), Double(digest.previous.requests)),
@@ -180,15 +183,20 @@ struct CoachReport: Encodable {
         repos.sort { ($0.commits, $0.tokens) > ($1.commits, $1.tokens) }
         let commits = repos.reduce(0) { $0 + $1.commits }
         let merges = repos.reduce(0) { $0 + $1.merges }
-        let tokens = digest.total.tokens.total
-        let cost = digest.total.cost
-        return Yield(enabled: true, commits: commits, merges: merges, tokens: tokens, apiValue: round2(cost),
-                     tokensPerCommit: commits > 0 ? tokens / commits : nil,
-                     valuePerCommit: commits > 0 ? round2(cost / Double(commits)) : nil,
-                     tokensPerMerge: merges > 0 ? tokens / merges : nil,
-                     valuePerMerge: merges > 0 ? round2(cost / Double(merges)) : nil,
+        // Per commit and per merge count only the usage a tool placed inside the counted repositories,
+        // the same figure each row shows, so work elsewhere never inflates what a commit cost.
+        let inside = repos.reduce(0) { $0 + $1.tokens }
+        let insideValue = repos.reduce(0.0) { $0 + $1.apiValue }
+        let note: String? = commits == 0 ? "No commits of yours in these repositories in the last thirty days."
+            : inside == 0 ? "No usage was placed inside the counted repositories, so nothing can be laid against the commits yet."
+            : nil
+        return Yield(enabled: true, commits: commits, merges: merges, tokens: digest.total.tokens.total, apiValue: round2(digest.total.cost),
+                     tokensPerCommit: commits > 0 && inside > 0 ? inside / commits : nil,
+                     valuePerCommit: commits > 0 && inside > 0 ? round2(insideValue / Double(commits)) : nil,
+                     tokensPerMerge: merges > 0 && inside > 0 ? inside / merges : nil,
+                     valuePerMerge: merges > 0 && inside > 0 ? round2(insideValue / Double(merges)) : nil,
                      repos: repos,
-                     note: commits == 0 ? "No commits of yours in these repositories in the last thirty days." : nil)
+                     note: note)
     }
 
     private static func round2(_ value: Double) -> Double { (value * 100).rounded() / 100 }
@@ -206,15 +214,15 @@ struct WorkYield {
     let enabled: Bool
     let repos: [Repo]
 
-    /// Reads every counted repository. Merges are first-parent merge commits on any branch: a pull
-    /// request landing, or a branch folded in by hand.
+    /// Reads every counted repository. Merges are the merge commits the person landed along the first
+    /// parent of the current branch: a pull request they merged, or a branch they folded in by hand.
     static func read(settings: WorkSettings, since day: String, login: String?) -> WorkYield {
         guard settings.enabled, GitWork.isAvailable else { return WorkYield(enabled: false, repos: []) }
         var repos: [Repo] = []
         for repo in GitWork.repositories(under: settings.rootURLs) {
             let mine = GitWork.identities(repo: repo, extra: settings.emails, login: login)
             let commits = GitWork.commits(in: repo, since: day, mine: mine).count
-            let merges = GitWork.merges(in: repo, since: day)
+            let merges = GitWork.merges(in: repo, since: day, mine: mine)
             if commits > 0 || merges > 0 {
                 repos.append(Repo(name: GitWork.name(of: repo), path: repo.path, commits: commits, merges: merges))
             }

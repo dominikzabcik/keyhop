@@ -80,4 +80,37 @@ final class GitWorkTests: XCTestCase {
         XCTAssertEqual(step.fraction ?? 0, 11.0 / 40, accuracy: 1e-9)
         XCTAssertEqual(TerminalProgress.line(step, width: 4), "Indexing repositories  [#---]  11 of 40  keyhop")
     }
+
+    /// Merges that landed are the person's own first-parent merge commits; a teammate's is not theirs.
+    func testMergesCountOnlyTheOnesThePersonLanded() throws {
+        guard let git = Shell.which("git") else { throw XCTSkip("git isn't installed here") }
+        let repo = FileManager.default.temporaryDirectory.appendingPathComponent("keyhop-merges-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: repo, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: repo) }
+        func run(_ args: [String], as who: (name: String, email: String) = ("Mira", "mira@example.com")) throws {
+            let result = try Shell.run(git, ["-C", repo.path, "-c", "user.name=\(who.name)", "-c", "user.email=\(who.email)",
+                                             "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main"] + args)
+            XCTAssertEqual(result.status, 0, result.stderr)
+        }
+        try run(["init", "-q"])
+        try "one\n".write(to: repo.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        try run(["add", "."])
+        try run(["commit", "-q", "-m", "start"])
+        try run(["checkout", "-q", "-b", "feature"])
+        try "two\n".write(to: repo.appendingPathComponent("b.txt"), atomically: true, encoding: .utf8)
+        try run(["add", "."])
+        try run(["commit", "-q", "-m", "feature work"])
+        try run(["checkout", "-q", "main"])
+        try run(["merge", "-q", "--no-ff", "-m", "Merge feature", "feature"])
+        try run(["checkout", "-q", "-b", "other"])
+        try "three\n".write(to: repo.appendingPathComponent("c.txt"), atomically: true, encoding: .utf8)
+        try run(["add", "."])
+        try run(["commit", "-q", "-m", "other work"], as: ("Jonas", "jonas@example.com"))
+        try run(["checkout", "-q", "main"])
+        try run(["merge", "-q", "--no-ff", "-m", "Merge other", "other"], as: ("Jonas", "jonas@example.com"))
+
+        XCTAssertEqual(GitWork.merges(in: repo, since: "2020-01-01", mine: ["mira@example.com"]), 1)
+        XCTAssertEqual(GitWork.merges(in: repo, since: "2020-01-01", mine: ["jonas@example.com"]), 1)
+        XCTAssertEqual(GitWork.merges(in: repo, since: "2020-01-01", mine: ["nobody@example.com"]), 0)
+    }
 }

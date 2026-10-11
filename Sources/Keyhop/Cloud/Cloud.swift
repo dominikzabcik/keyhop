@@ -51,6 +51,8 @@ struct CloudLink: Codable, Equatable {
     /// minute or two, so a team's day and the leaderboard move with the work instead of an hour later.
     var sharesLive: Bool
     var lastLiveSync: Date?
+    /// What the last live send said when it failed. Its own line, apart from the hourly sync's.
+    var lastLiveError: String?
 
     static var url: URL { Platform.dataDirectory.appendingPathComponent("cloud.json") }
 
@@ -75,7 +77,7 @@ struct CloudLink: Codable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case server, token, login, name, isPublic, linkedAt, lastSync, lastSyncError, sharesLimits, lastLimitSync
-        case sharesLive, lastLiveSync
+        case sharesLive, lastLiveSync, lastLiveError
     }
 
     init(from decoder: Decoder) throws {
@@ -92,6 +94,7 @@ struct CloudLink: Codable, Equatable {
         lastLimitSync = try values.decodeIfPresent(Date.self, forKey: .lastLimitSync)
         sharesLive = try values.decodeIfPresent(Bool.self, forKey: .sharesLive) ?? false
         lastLiveSync = try values.decodeIfPresent(Date.self, forKey: .lastLiveSync)
+        lastLiveError = try values.decodeIfPresent(String.self, forKey: .lastLiveError)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -107,6 +110,7 @@ struct CloudLink: Codable, Equatable {
         try values.encodeIfPresent(lastLimitSync, forKey: .lastLimitSync)
         try values.encode(sharesLive, forKey: .sharesLive)
         try values.encodeIfPresent(lastLiveSync, forKey: .lastLiveSync)
+        try values.encodeIfPresent(lastLiveError, forKey: .lastLiveError)
     }
 
     static func load(store: (any SecretStore)? = nil) -> CloudLink? {
@@ -183,19 +187,12 @@ enum CloudSync {
             .sorted { ($0.day, $0.tool) < ($1.day, $1.tool) }
     }
 
-    /// The plan-based group this computer competes in: the broadest paid plan among its logins. Nil
-    /// when no login names a plan, so the website keeps what it had.
+    /// The plan-based group this computer competes in: the dearest plan among its logins, read from
+    /// the same price table the Plans section uses. Nil when no login's plan can be priced, so the
+    /// website keeps what it had.
     static func division(accounts: [Account]) -> String? {
-        var best: Int? = nil
-        for account in accounts {
-            guard let plan = account.plan?.lowercased(), !plan.isEmpty else { continue }
-            let rank: Int
-            if ["max", "ultra", "team", "enterprise", "business", "20x", "5x"].contains(where: { plan.contains($0) }) { rank = 2 }
-            else if plan.contains("free") || plan.contains("trial") { rank = 0 }
-            else { rank = 1 }
-            best = max(best ?? 0, rank)
-        }
-        return best.map { ["free", "pro", "max"][$0] }
+        let priced = accounts.compactMap { PlanPrices.monthly(provider: $0.provider, plan: $0.plan) }
+        return priced.max().map(PlanPrices.division(monthly:))
     }
 
     /// Sends a year the first time, then the last eight days, since logs can arrive late.
@@ -228,10 +225,14 @@ enum CloudSync {
             let readings = try await today(tracker: tracker, now: now)
             guard !readings.isEmpty else { return }
             _ = try await CloudClient(server: link.server, token: link.token).live(readings)
+            if link.lastLiveError != nil {
+                link.lastLiveError = nil
+                try? link.save(store: store)
+            }
         } catch let error as CloudError where error.kind == .unlinked {
             CloudLink.remove(store: store)
         } catch {
-            link.lastSyncError = "Sending the live reading failed: \(error.localizedDescription)"
+            link.lastLiveError = error.localizedDescription
             try? link.save(store: store)
         }
     }

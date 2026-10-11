@@ -1009,7 +1009,7 @@ actor DashboardSession {
         if sample { return await rehearse() }
         guard !refreshing else { return }
         refreshing = true
-        progress.set(WorkProgress(step: .logins, done: 0, total: Provider.allCases.count))
+        progress.set(WorkProgress(step: .logins, done: 0, total: Provider.switchable.count))
         defer {
             refreshing = false
             progress.set(nil)

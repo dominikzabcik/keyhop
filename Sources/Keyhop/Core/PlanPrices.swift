@@ -7,9 +7,9 @@ enum PlanPrices {
     /// Each tool's plans, from the cheapest up. The name is matched against what the provider reports,
     /// case-insensitively, by the words it contains.
     static let ladders: [Provider: [(plan: String, monthly: Double)]] = [
-        .claude: [("Free", 0), ("Pro", 20), ("Max 5x", 100), ("Max 20x", 200), ("Team", 30), ("Enterprise", 60)],
+        .claude: [("Free", 0), ("Pro", 20), ("Max", 100), ("Max 5x", 100), ("Max 20x", 200), ("Team", 30), ("Enterprise", 60)],
         .codex: [("Free", 0), ("Go", 5), ("Plus", 20), ("Pro", 200), ("Team", 30), ("Business", 30), ("Enterprise", 60)],
-        .cursor: [("Hobby", 0), ("Free", 0), ("Pro", 20), ("Pro+", 60), ("Ultra", 200), ("Teams", 40), ("Enterprise", 60)],
+        .cursor: [("Hobby", 0), ("Free", 0), ("Pro", 20), ("Pro+", 60), ("Pro Plus", 60), ("Ultra", 200), ("Teams", 40), ("Enterprise", 60)],
         .gemini: [("Free", 0), ("Standard", 0), ("AI Pro", 20), ("Pro", 20), ("AI Ultra", 250), ("Ultra", 250)],
         .copilot: [("Free", 0), ("Pro", 10), ("Pro+", 39), ("Business", 19), ("Enterprise", 39)],
         .windsurf: [("Free", 0), ("Pro", 15), ("Teams", 30), ("Enterprise", 60)],
@@ -25,6 +25,12 @@ enum PlanPrices {
         // The longest name that fits wins, so "Max 20x" is not read as "Max".
         let fits = ladder.filter { lower.contains($0.plan.lowercased()) }
         return fits.max(by: { $0.plan.count < $1.plan.count })?.monthly
+    }
+
+    /// The plan-based division a price falls in: free at nothing, max from a hundred dollars a month,
+    /// pro in between. One table drives both the Plans section and the website's divisions.
+    static func division(monthly: Double) -> String {
+        monthly <= 0 ? "free" : monthly >= 100 ? "max" : "pro"
     }
 
     /// The plans of this tool that cost at least this much a month, cheapest first, with a person's

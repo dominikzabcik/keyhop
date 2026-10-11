@@ -9,8 +9,10 @@ enum MergeFolder {
         /// The shared folder, or nil when merging is off.
         var folder: String?
         var lastSync: Date?
+        /// What the last pass said when it failed, cleared by the next one that works.
+        var lastError: String?
 
-        static let empty = Settings(folder: nil, lastSync: nil)
+        static let empty = Settings(folder: nil, lastSync: nil, lastError: nil)
         static var url: URL { Platform.dataDirectory.appendingPathComponent("merge.json") }
 
         static func load() -> Settings {
@@ -61,7 +63,14 @@ enum MergeFolder {
         var settings = Settings.load()
         guard settings.folderURL != nil else { return nil }
         if let last = settings.lastSync, now.timeIntervalSince(last) < 15 * 60 { return nil }
-        let outcome = try? await sync(tracker: tracker, accounts: accounts)
+        var outcome: Outcome?
+        do {
+            outcome = try await sync(tracker: tracker, accounts: accounts)
+            settings.lastError = nil
+        } catch {
+            // Said in `keyhop merge status`, and tried again on the same beat.
+            settings.lastError = error.localizedDescription
+        }
         settings.lastSync = now
         try? settings.save()
         return outcome
@@ -119,7 +128,8 @@ enum MergeFolder {
 
     private static func importOthers(from folder: URL, tracker: TrackerEngine, accounts: [Account]) async throws -> (imported: Int, machines: Int) {
         let own = machineFile()
-        let byIdentity = Dictionary(uniqueKeysWithValues: accounts.map { ("\($0.provider.rawValue)|\($0.identity)", $0.id.uuidString) })
+        // Two saved rows with one identity keep the first; a merge must never trap on an odd accounts file.
+        let byIdentity = Dictionary(accounts.map { ("\($0.provider.rawValue)|\($0.identity)", $0.id.uuidString) }, uniquingKeysWith: { first, _ in first })
         var imported = 0
         var machines = 0
         let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.fileSizeKey])) ?? []
@@ -138,13 +148,15 @@ enum MergeFolder {
     private static func importFile(_ file: URL, origin: String, tracker: TrackerEngine, byIdentity: [String: String]) async throws -> Int {
         let size = Int64((try? file.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
         var offset: Int64 = 0
-        if let mark = try await tracker.sourceMark(file.path), mark.offset <= size {
-            offset = mark.offset
+        if let mark = try await tracker.sourceMark(file.path) {
+            if mark.offset <= size {
+                offset = mark.offset
+            } else {
+                // The file shrank: rewritten by its machine. Start over; the keys keep lines from counting twice.
+                try await tracker.setSourceMark(file.path, size: size, offset: 0)
+            }
         }
-        guard size > offset, let handle = try? FileHandle(forReadingFrom: file) else {
-            if size < offset { try await tracker.setSourceMark(file.path, size: size, offset: 0) }
-            return 0
-        }
+        guard size > offset, let handle = try? FileHandle(forReadingFrom: file) else { return 0 }
         defer { try? handle.close() }
         try handle.seek(toOffset: UInt64(offset))
         guard let data = try handle.read(upToCount: Int(size - offset)) else { return 0 }

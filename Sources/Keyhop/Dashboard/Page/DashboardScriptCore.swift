@@ -25,7 +25,7 @@ extension DashboardPage {
     section: SECTIONS.includes(wanted) ? wanted : (boot?.section || "overview"),
     menu: null, hidden: { account: [], tool: [], model: [] },
     range: "week", rangeOpen: false, metric: "tokens", tool: "all", group: "account", breakdown: "periods", allPeriods: false,
-    boardPeriod: "week", boardMetric: "tokens", boardTeam: "", boardView: "ranks", boardDate: "", boardSeason: "",
+    boardPeriod: "week", boardMetric: "efficiency", boardDivision: "", boardTeam: "", boardView: "ranks", boardDate: "", boardSeason: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
     settingsPane: "general", checkingUpdate: false,
     homeMenu: null, homeTool: "", homeAccount: "", homeQuery: "", treeOpen: {},
@@ -205,7 +205,7 @@ extension DashboardPage {
       if (ui.section === "budgets") await loadUsage("month");
       if (!isStatic && data.state?.cloud?.linked && CLOUD_SECTIONS.includes(ui.section)) {
         const petReady = ui.section === "profile" ? loadPet() : null;
-        const boardURL = (team) => `/api/cloud/leaderboard?period=${ui.boardPeriod}&metric=${ui.boardMetric}&team=${encodeURIComponent(team)}&season=${encodeURIComponent(ui.boardSeason)}`;
+        const boardURL = (team) => `/api/cloud/leaderboard?period=${ui.boardPeriod}&metric=${ui.boardMetric}&division=${ui.boardDivision}&team=${encodeURIComponent(team)}&season=${encodeURIComponent(ui.boardSeason)}`;
         try {
           if (ui.section === "teams" && ui.boardView === "day") {
             data.day = await api(`/api/cloud/day?team=${encodeURIComponent(ui.boardTeam)}&date=${encodeURIComponent(ui.boardDate)}`);

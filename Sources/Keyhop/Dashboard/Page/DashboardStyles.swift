@@ -505,6 +505,12 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .day-figures { display: flex; gap: 16px; }
 .day-figures div { text-align: right; }
 .day-figures b { display: block; font-variant-numeric: tabular-nums; font-weight: 600; }
+.live-dot { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--good); vertical-align: 1px; }
+.outbound { border-top: 1px solid var(--border); }
+.outbound summary { display: flex; gap: 12px; align-items: center; padding: 10px 0; cursor: pointer; list-style: none; }
+.outbound summary::-webkit-details-marker { display: none; }
+.outbound summary .subtle { font-size: 12.5px; }
+.outbound pre { margin: 0 0 12px; max-height: 320px; overflow: auto; padding: 10px 12px; border-radius: 8px; background: hsl(var(--on) / .04); font-size: 11.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 .day-figures small, .task-meta, .day-note { color: var(--subtle); font-size: 12px; }
 .task { padding: 12px 16px; border-top: 1px solid var(--border); }
 .task h3 { margin: 0; font-size: 14px; font-weight: 600; }

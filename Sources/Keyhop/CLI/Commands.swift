@@ -163,6 +163,7 @@ enum Commands {
         // The indexing pass draws on the same meter as the rest of a refresh, so a first index
         // shows up in the window and the menu instead of looking like the app has stalled.
         await CloudSync.syncIfDue(tracker: tracker, accounts: accounts, usage: usage, now: now, progress: progress)
+        await CloudSync.liveIfDue(tracker: tracker, now: now)
         return overview
     }
 

@@ -82,10 +82,15 @@ test('budgets is its own list', async ({ app, screen, browser }) => {
   await assertReadable(browser);
 });
 
-test('leaderboard is the ranks', async ({ app, screen, browser }) => {
+test('leaderboard is the ranks, by efficiency first', async ({ app, screen, browser }) => {
   await openWindow(app, 'leaderboard');
   await expect(screen.getByRole('heading', 'Leaderboard', { level: 1 })).toBeVisible();
   await expect(screen.getByText('Your rank')).toBeVisible();
+  await expect(screen.getByRole('button', { name: 'Efficiency', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(screen.getByText('Commits per M tokens')).toBeVisible();
+  await expect(screen.getByRole('button', { name: 'Everyone', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await screen.getByRole('button', { name: 'Tokens', exact: true }).tap();
+  await expect(screen.getByRole('button', { name: 'Tokens', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await assertReadable(browser);
 });
 
@@ -156,6 +161,12 @@ test('settings keeps the link, the profile and the phone together', async ({ app
   await screen.getByRole('button', 'Cloud').tap();
   await expect(screen.getByRole('heading', 'How you appear')).toBeVisible();
   await expect(screen.getByRole('heading', 'This computer')).toBeVisible();
+  await expect(screen.getByRole('heading', 'Live')).toBeVisible();
+  // The exact payloads are shown on request, section by section, before anything is sent.
+  await expect(screen.getByRole('heading', 'What this computer sends')).toBeVisible();
+  await screen.getByRole('button', 'Show the exact data').tap();
+  await expect(screen.getByText('POST /api/usage')).toBeVisible();
+  await expect(screen.getByText('POST /api/live')).toBeVisible();
   await screen.getByRole('button', 'App & Privacy').tap();
   await expect(screen.getByRole('heading', 'App & Privacy')).toBeVisible();
   await assertReadable(browser);

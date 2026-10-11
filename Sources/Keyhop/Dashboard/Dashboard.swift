@@ -278,6 +278,8 @@ struct DashboardCloud: Encodable {
     let lastSyncError: String?
     /// Whether a linked phone may see how full each account is and when it comes back.
     let sharesLimits: Bool
+    /// Whether today's totals go every ninety seconds, so a team's day moves with the work.
+    let sharesLive: Bool
     let linking: Linking?
 }
 
@@ -800,9 +802,14 @@ actor DashboardSession {
                 return .json(try await cloudLimitSharing(on: try Self.decode(CloudLimitsBody.self, request).on))
             case ("POST", "/api/cloud/unlink"):
                 return .json(try await cloudUnlink())
+            case ("POST", "/api/cloud/live"):
+                return .json(try await cloudLiveSharing(on: try Self.decode(CloudLimitsBody.self, request).on))
+            case ("GET", "/api/cloud/show-data"):
+                return .json(try await cloudShowData())
             case ("GET", "/api/cloud/leaderboard"):
                 return .json(try await cloudLeaderboard(period: request.query["period"], metric: request.query["metric"],
-                                                       team: request.query["team"], season: request.query["season"]))
+                                                       team: request.query["team"], season: request.query["season"],
+                                                       division: request.query["division"]))
             case ("GET", "/api/cloud/apps"):
                 return .json(try await cloudApps())
             case ("POST", "/api/cloud/apps"):
@@ -1230,13 +1237,14 @@ actor DashboardSession {
         if sample {
             return DashboardCloud(available: true, linked: true, server: "https://keyhop.example", login: "you",
                                   profile: "https://keyhop.example/u/you", isPublic: true, lastSync: Date().addingTimeInterval(-600),
-                                  lastSyncError: nil, sharesLimits: true, linking: nil)
+                                  lastSyncError: nil, sharesLimits: true, sharesLive: true, linking: nil)
         }
         let link = CloudLink.load()
         let linking = cloudLinking.flatMap { $0.expires > Date() ? DashboardCloud.Linking(userCode: $0.start.userCode, verifyUrl: $0.start.verifyUrl) : nil }
         return DashboardCloud(available: link != nil || Cloud.server != nil, linked: link != nil, server: link?.server ?? Cloud.server,
                               login: link?.login, profile: link?.profileURL, isPublic: link?.isPublic, lastSync: link?.lastSync,
-                              lastSyncError: link?.lastSyncError, sharesLimits: link?.sharesLimits ?? false, linking: linking)
+                              lastSyncError: link?.lastSyncError, sharesLimits: link?.sharesLimits ?? false,
+                              sharesLive: link?.sharesLive ?? false, linking: linking)
     }
 
     /// Starts linking in the browser and keeps asking the website until someone approves the code.
@@ -1283,7 +1291,7 @@ actor DashboardSession {
                 if let workspace = try? openWorkspace() {
                     _ = try? await workspace.tracker.ingestLocalLogs()
                     do {
-                        try await CloudSync.run(&link, tracker: workspace.tracker)
+                        try await CloudSync.run(&link, tracker: workspace.tracker, accounts: await workspace.service.accounts)
                     } catch {
                         link.lastSyncError = error.localizedDescription
                         try? link.save()
@@ -1301,7 +1309,7 @@ actor DashboardSession {
         let workspace = try openWorkspace()
         _ = try? await workspace.tracker.ingestLocalLogs()
         do {
-            let saved = try await CloudSync.run(&link, tracker: workspace.tracker)
+            let saved = try await CloudSync.run(&link, tracker: workspace.tracker, accounts: await workspace.service.accounts)
             return DashboardAction(message: "Sent \(saved) daily totals to @\(link.login).", note: nil)
         } catch let error as CloudError where error.kind == .unlinked {
             CloudLink.remove()
@@ -1373,6 +1381,51 @@ actor DashboardSession {
         }
         changed()
         return DashboardAction(message: "A linked phone can now see how full each account is.", note: nil)
+    }
+
+    /// Turns live sharing on or off. On sends today's totals at once; off takes them off the website.
+    private func cloudLiveSharing(on: Bool) async throws -> DashboardAction {
+        try refuseInSample()
+        guard var link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud first.") }
+        guard on else {
+            try await CloudSync.stopSharingLive(&link)
+            changed()
+            return DashboardAction(message: "Live sharing is off, and today's readings are off the website.", note: nil)
+        }
+        let workspace = try openWorkspace()
+        link.sharesLive = true
+        link.lastLiveSync = Date()
+        try link.save()
+        do {
+            let readings = try await CloudSync.today(tracker: workspace.tracker)
+            if !readings.isEmpty { _ = try await CloudClient(server: link.server, token: link.token).live(readings) }
+        } catch let error as CloudError where error.kind == .unlinked {
+            CloudLink.remove()
+            throw error
+        }
+        changed()
+        return DashboardAction(message: "Your team's day now moves with your work.", note: nil)
+    }
+
+    /// Exactly what this computer sends, section by section. The sample shows the sample's own day.
+    private func cloudShowData() async throws -> CloudSync.Outbound {
+        if sample {
+            let days = SampleData.cloudDays()
+            return CloudSync.Outbound(server: "https://keyhop.example", login: "you", sections: [
+                .init(endpoint: "POST /api/usage", when: "Every hour: the last eight days per tool, a year the first time.", on: true,
+                      payload: AnyCodableValue(CloudUsageUpload(days: days, division: "max"))),
+                .init(endpoint: "POST /api/work", when: "Every hour: commits you authored per day and repository, with subjects only while subject sharing is on.", on: true,
+                      payload: AnyCodableValue(["days": [CloudWorkDay]()])),
+                .init(endpoint: "POST /api/limits", when: "Every five minutes: how full each account is and when it resets.", on: true,
+                      payload: AnyCodableValue(["limits": [CloudLimit]()])),
+                .init(endpoint: "POST /api/live", when: "Every ninety seconds: today's totals per tool.", on: true,
+                      payload: AnyCodableValue(["days": days.filter { $0.day == days.last?.day }])),
+            ])
+        }
+        guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud first.") }
+        let workspace = try openWorkspace()
+        return try await CloudSync.outbound(link: link, tracker: workspace.tracker, accounts: await workspace.service.accounts,
+                                            usage: workspace.state.usageByID)
     }
 
     private func cloudQuests() async throws -> CloudQuests {
@@ -1529,16 +1582,18 @@ actor DashboardSession {
         return DashboardAction(message: "Opened a \(name).", note: claim.today?.note)
     }
 
-    private func cloudLeaderboard(period: String?, metric: String?, team: String?, season: String?) async throws -> DashboardLeaderboard {
+    private func cloudLeaderboard(period: String?, metric: String?, team: String?, season: String?,
+                                  division: String? = nil) async throws -> DashboardLeaderboard {
         let period = period.flatMap { ["today", "week", "month", "all"].contains($0) ? $0 : nil } ?? "week"
-        let metric = metric.flatMap { ["tokens", "cost", "requests", "commits", "lines"].contains($0) ? $0 : nil } ?? "tokens"
+        let metric = metric.flatMap { ["efficiency", "cache", "tokens", "cost", "requests", "commits", "lines"].contains($0) ? $0 : nil } ?? "efficiency"
         let team = team.flatMap { $0.isEmpty ? nil : $0 }
         let season = season.flatMap { $0.isEmpty ? nil : $0 }
+        let division = division.flatMap { ["free", "pro", "max"].contains($0) ? $0 : nil }
         if sample { return sampleLeaderboard(period: period, metric: metric, team: team, season: season) }
         guard let link = CloudLink.load() else { throw KeyhopError("Link Keyhop cloud to see leaderboards.") }
         let client = CloudClient(server: link.server, token: link.token)
         do {
-            async let board = client.leaderboard(period: period, metric: metric, team: team)
+            async let board = client.leaderboard(period: period, metric: metric, team: team, division: division)
             async let teams = client.teams()
             // A website without seasons still serves the board, so this one failure isn't fatal.
             async let season = try? await client.season(team: team, season: season)

@@ -21,7 +21,10 @@ extension SampleData {
             let split = Dictionary(uniqueKeysWithValues: tools.enumerated().map { ($1, Int(person.daily * days * 1_000_000 * person.mix[$0])) })
             let tokens = split.values.reduce(0, +)
             let cost = tools.enumerated().reduce(0.0) { $0 + Double(split[$1.element] ?? 0) / 1_000_000 * prices[$1.offset] }
-            return (person, tokens, (cost * 100).rounded() / 100, tokens / 42_000, Int(person.daily * days), split)
+            return (person, tokens, (cost * 100).rounded() / 100, tokens / 42_000, Int(person.daily * days * Double(person.login.count % 4 + 1) * 0.6), split)
+        }
+        let efficiency = { (row: (person: (login: String, name: String?, daily: Double, mix: [Double], you: Bool, onTeam: Bool), tokens: Int, cost: Double, requests: Int, commits: Int, split: [String: Int])) -> Double in
+            Double(row.commits) * 1_000_000 / Double(max(row.tokens, 1))
         }
         let sorted = rows.sorted {
             switch metric {
@@ -29,13 +32,18 @@ extension SampleData {
             case "requests": $0.requests > $1.requests
             case "commits": $0.commits > $1.commits
             case "lines": $0.commits > $1.commits
+            case "efficiency": efficiency($0) > efficiency($1)
+            case "cache": $0.person.mix[0] > $1.person.mix[0]
             default: $0.tokens > $1.tokens
             }
         }
+        let divisions = ["max", "pro", "max", "free", "pro", "max"]
         let entries = sorted.enumerated().map { index, row in
             CloudBoard.Entry(rank: index + 1, login: row.person.login, name: row.person.name, avatarUrl: nil, isPublic: true,
                              tokens: row.tokens, cost: row.cost, requests: row.requests, activeDays: min(Int(days), Int(days * 0.8) + 1),
-                             tools: row.split, isYou: row.person.you, commits: row.commits, insertions: row.commits * 40, deletions: row.commits * 6)
+                             tools: row.split, isYou: row.person.you, commits: row.commits, insertions: row.commits * 40, deletions: row.commits * 6,
+                             efficiency: (efficiency(row) * 10).rounded() / 10, cacheHit: (row.person.mix[0] * 90).rounded(),
+                             division: divisions[index % divisions.count])
         }
         let sampleQuests = CloudQuests(
             quests: [
@@ -69,7 +77,8 @@ extension SampleData {
             daysLeft: earlier ? 0 : 18, over: earlier, players: entries.count,
             you: CloudSeason.You(rank: 3, tokens: seasonTokens,
                                  tier: silver,
-                                 next: CloudSeason.Step(label: "Silver I", tokens: 94_000_000)),
+                                 next: CloudSeason.Step(label: "Silver I", tokens: 94_000_000),
+                                 players: 12, division: "max", efficiency: 2.4),
             entries: [
                 CloudSeason.Standing(rank: 1, login: "mira", name: "Mira K.", tokens: 240_000_000, isYou: false, tier: CloudSeason.Tier(key: "gold", name: "Gold", division: 3)),
                 CloudSeason.Standing(rank: 2, login: "jonas", name: nil, tokens: 180_000_000, isYou: false, tier: silver),
@@ -153,5 +162,24 @@ extension SampleData {
         formatter.dateFormat = "yyyy-MM-dd"
         guard let date = formatter.date(from: day) else { return day }
         return formatter.string(from: date.addingTimeInterval(Double(days) * 86_400))
+    }
+}
+
+extension SampleData {
+    /// The sample computer's last three days per tool, as the website would receive them.
+    static func cloudDays(now: Date = Date()) -> [CloudDay] {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        let tools: [(String, Int, Double, Int, Int)] = [("claude", 2_900_000, 7.4, 61, 2_100_000), ("cursor", 1_400_000, 2.1, 38, 600_000), ("codex", 620_000, 1.3, 19, 0)]
+        return (0..<3).reversed().flatMap { back -> [CloudDay] in
+            let day = formatter.string(from: now.addingTimeInterval(-Double(back) * 86400))
+            let scale = [1.0, 0.7, 0.4][back]
+            return tools.map { tool, tokens, cost, requests, cached in
+                CloudDay(day: day, tool: tool, tokens: Int(Double(tokens) * scale), cost: (cost * scale * 100).rounded() / 100,
+                         requests: Int(Double(requests) * scale), cacheRead: Int(Double(cached) * scale))
+            }
+        }
     }
 }

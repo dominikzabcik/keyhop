@@ -93,10 +93,10 @@ GNOME hides tray icons unless the **AppIndicator and KStatusNotifierItem Support
 | **Switch** | Click one of a tool's other accounts. Where the provider exposes limits, each shows how much of its tightest one is used. Smart Hop weighs available limits, forecasts, resets and budgets. |
 | **Read the limits** | For supported providers, macOS shows the account in use with a large bar per limit, where a tick marks an even pace. On Linux and Windows, the menu shows each account's tightest available limit and the icon shows the busiest account's two nearest limits. |
 | **Rename, remove and budgets** | On macOS, right-click an account in the menu, or use Keyhop's window, which also sets budgets. On Linux and Windows, use the tray's **Accounts** submenu to rename or remove an account, and **Set a budget** for a monthly budget across all accounts. |
-| **Dashboard** | Keyhop's window: Overview, Accounts, Usage (charts, activity, token mix, models), Budgets and Settings, over a live backdrop you can change in **Settings › Appearance**. On macOS, open Keyhop from Applications or choose **Open Keyhop** in the menu. Click the tray icon on Windows, choose **Open Keyhop** in the Linux tray, or run `keyhop dashboard` anywhere. |
+| **Dashboard** | Keyhop's window: Overview (the hop composer and your logins over the night or day field), Limits (every login by how close it is to a wall), Accounts, Usage (charts, activity, token mix, models), Budgets, Plans (what each plan costs against the month), Coach (cache hits, this month against last, cost per commit and merge), Leaderboard, Season, Teams, Profile and Settings, over a backdrop you can change in **Settings › Appearance**. On macOS, open Keyhop from Applications or choose **Open Keyhop** in the menu. Click the tray icon on Windows, choose **Open Keyhop** in the Linux tray, or run `keyhop dashboard` anywhere. |
 | **Alerts** | A notification when a limit or budget is nearly used, with a **Switch** button for Smart Hop's best available account. |
 
-Keyhop switches nine tools and tracks exact token usage for six. Claude Code, Cursor, Codex, Gemini CLI, OpenCode and Pi have account switching plus usage history. GitHub Copilot, Windsurf and Codebuff do not write complete model-token transcripts Keyhop can count, so they intentionally have no token history; Keyhop still reads Copilot's reported quotas, the active Windsurf profile's local limit cache, and Codebuff's credit and subscription limits instead of estimating any of them.
+Keyhop switches nine tools and tracks exact token usage for thirteen. Claude Code, Cursor, Codex, Gemini CLI, OpenCode and Pi have account switching plus usage history; Amp, Goose, Qwen Code, Kimi Code, Grok Build, Kilo and OpenClaw are counted from their local logs without logins to switch. GitHub Copilot, Windsurf and Codebuff do not write complete model-token transcripts Keyhop can count, so they intentionally have no token history; Keyhop still reads Copilot's reported quotas, the active Windsurf profile's local limit cache, and Codebuff's credit and subscription limits instead of estimating any of them.
 
 Codex logins made with an API key aren't supported, only ChatGPT sign-ins. Gemini CLI account switching supports Sign in with Google; API-key and Vertex AI configurations stay untouched. Gemini quota is not fetched because [Google does not permit third-party apps to call Gemini CLI backend services with its OAuth credentials](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/faq.md#why-cant-i-use-third-party-software-like-claude-code-openclaw-or-opencode-with-gemini-cli).
 
@@ -112,7 +112,12 @@ keyhop add cursor                      sign Cursor out here and save the next lo
 keyhop rename work@studio.dev Work     give an account a name
 keyhop usage --range 30d --tool claude tokens and API value by account, model, maker and project
 keyhop usage --range 2026-06-01..2026-08-31  any days; also 90d, 12m and all
-keyhop dashboard                       open Keyhop's window: accounts, usage, budgets, settings
+keyhop plans                           what each plan costs against this month's API value and the week's peaks
+keyhop coach optimize|compare|yield    cache hits and premium models, this month against last, cost per commit and merge
+keyhop merge ~/Sync/keyhop             fold in another computer's history through a synced folder
+keyhop cloud live on                   send today's totals every ninety seconds, so a team's day moves with the work
+keyhop cloud show-data                 print exactly what this computer sends, before it goes
+keyhop dashboard                       open Keyhop's window: limits, accounts, usage, plans, coach, cloud, settings
 keyhop insights --output usage.html    save the dashboard as one file you can share or keep
 keyhop budget set all 200 --period month
 keyhop update                          install the latest verified release
@@ -127,7 +132,7 @@ Add `--json` to any of them for scripts. `keyhop status --sample` and `keyhop da
 
 Smart Hop ranks saved accounts locally from remaining limits, reset timing, recent forecasts and budgets. It is deterministic, works offline with cached data and never reads prompts or source code. Run `keyhop recommend`, or use the recommendation shown in the app and tray.
 
-`keyhop mcp` exposes four read-only tools to local AI clients: `keyhop_status`, `keyhop_usage`, `keyhop_recommendation` and `keyhop_services`. They can inspect cached Keyhop data, but cannot switch accounts or read credentials. Add it to a client with one of these configurations:
+`keyhop mcp` exposes six read-only tools to local AI clients: `keyhop_status`, `keyhop_usage`, `keyhop_recommendation`, `keyhop_services`, `keyhop_plans` and `keyhop_coach`. They can inspect cached Keyhop data, but cannot switch accounts or read credentials. Add it to a client with one of these configurations:
 
 ```bash
 claude mcp add --scope user keyhop -- keyhop mcp
@@ -164,7 +169,11 @@ Keyhop keeps its own record of what every account uses.
 - **Per maker:** usage is also totalled by the company that made each model, read from its name, so OpenCode's or Pi's mix of Anthropic, OpenAI and Google models is split the same way as everything else.
 - **Budgets:** set one per account or across all accounts, per day, week or month, in the Budgets section of Keyhop's window or with `keyhop budget` anywhere. The Linux and Windows trays set a monthly budget across all accounts. Keyhop notifies you at 80% and at 100%.
 - **Forecasts:** Keyhop samples each limit and projects when it runs out at the recent rate. Once a limit is half used and on track to run out before it resets, the alert offers the switch.
-- **Smart Hop:** the recommendation combines remaining limit room, budget room, reset timing and projected runout, with stable tie-breaking so the same data always gives the same answer.
+- **Smart Hop:** the recommendation combines remaining limit room, budget room, reset timing and projected runout, with stable tie-breaking so the same data always gives the same answer. Turn on **Hop before a limit automatically** in the menu and the alert hops for you.
+- **Live, locally:** Keyhop watches the log folders and counts a response as it lands, with polling as the fallback.
+- **More than one computer:** `keyhop merge <folder>` folds another computer's history in through a synced folder (iCloud, Syncthing), deduplicated by event, so a laptop and a desktop add up once.
+- **Plans:** `keyhop plans`, or the window's Plans section, prices each login's plan at list against the month's API value and the week's limit peaks, and says which plan would cover the pace.
+- **Coach:** `keyhop coach`, or the window's Coach section, reads cache hit and premium-model share per tool, this month against last, and tokens and API value per commit and per merge from the repositories Keyhop counts.
 
 <p align="center">
   <img src="docs/dashboard-usage.png" width="860" alt="The dashboard's Usage section with sample data: the 7-day token total with its API value and what prompt caching saved, a tile per tool with its share and trend, the top models, and tokens by day">
@@ -176,10 +185,11 @@ Link Keyhop with your GitHub account to compare usage with friends and teams: in
 
 - **Global leaderboard:** ranked by efficiency (commits per million tokens, the default), cache hit, tokens, API value, requests, commits or lines, for today, 7 days, 30 days or all time, for everyone or one plan-based division (Free, Pro, Max). Only people who make their profile public appear.
 - **Teams:** create a team on the website and share its invite link. Members see each other's totals, even with private profiles.
-- **Ranked seasons:** every calendar month is a season, and the tokens you use in it place you on a ladder of six tiers from Bronze to Master, each with three divisions. Finished seasons stay readable, and quests and badges are counted the same way: from the daily totals themselves, so nothing can drift.
+- **Ranked seasons:** every calendar month is a season, ranked by efficiency among people on your plan; the tokens you use in it place you on a ladder of six tiers from Bronze to Master, each with three steps. Finished seasons stay readable, and quests and badges are counted the same way: from the daily totals themselves, so nothing can drift.
 - **Profiles:** a page at `/u/<login>` with a year of activity, streaks, quests, tools, badges and your weekly rank. The streak counts a day on its own. Claim that day to keep it: Spark, Glow, Ember, Flare, then Beacon. Set a display name, a bio and a link in Settings. Make the profile public to join the global leaderboard and to publish the README images below.
 - **The team's day:** `/t/<team>/day` reads one day back as the things people worked on. Commits are grouped into tasks by what they say and when they landed, so a day shows up as "Auth, 5 commits, 09:49 to 11:59" rather than as a list, and the commits stay underneath so the summary can be checked. Keyhop's window shows the same day under Teams.
-- **What's sent:** tokens, API value and requests per tool per day. Never prompts, emails, account names or models. `keyhop cloud logout` unlinks a computer, and deleting your account on the website removes everything it holds.
+- **Live sharing and digests:** `keyhop cloud live on`, or Settings › Cloud › Live, sends today's totals per tool every ninety seconds, kept for minutes and never as history, so a team's day moves with the work. A team's owner can post the day to a Slack or Discord incoming webhook once a day. `/u/<login>/wrapped` wraps a year.
+- **What's sent:** tokens, API value, requests and cache reads per tool per day, and the broadest paid plan among your logins as a division. Never prompts, emails, account names or models. `keyhop cloud show-data`, or Settings › Cloud › What this computer sends, prints every payload before it goes. `keyhop cloud logout` unlinks a computer, and deleting your account on the website removes everything it holds.
 
 ### README images
 

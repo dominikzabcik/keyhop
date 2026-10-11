@@ -24,7 +24,7 @@ and started on 2026-10-10. **M1 (tracker core) is essentially done**; M2 (UI reb
 Verification that passed before the handoff: `swift test` (211), `cd cloud && npm test` (86)
 plus typecheck, and a live two-machine `keyhop merge` smoke test via `KEYHOP_DATA_DIR`.
 On the Linux box the whole suite runs too (Swift 6.3.3 toolchain, Playwright Chromium): as of
-2026-10-10 evening, `swift test` 206, window e2e 28, cloud 88, app checks 14 screens clean.
+2026-10-11, `swift test` 209, window + CLI e2e 30, cloud 98, site e2e 32, app and CLI checks 16 screens clean.
 
 ## Everything travels in this branch
 
@@ -97,8 +97,21 @@ file are all committed here. The owner's previously uncommitted pet/dashboard wo
      the window's Teams section has no digest form yet (website only); Coach's premium
      threshold is $15/M output and the cache finding needs 1M context tokens, both in
      `Core/Coach.swift`.
-7. **M5** per `docs/v2/PLAN.md`: tray/iOS/CLI parity, MCP tools for plans and coach, docs and
-   onboarding, GitHub Discussions and issue templates, in-app help, launch.
+7. **M5** (parity, support, launch) — built 2026-10-11, as far as this Linux box allows:
+   - Done: MCP `keyhop_plans` and `keyhop_coach`; Settings → App & Privacy → Help card (docs,
+     Discussions, issues, doctor); keyhop.app `/docs` guide and footer links; landing copy for
+     2.0; `docs/ROADMAP.md` (both branches); issue chooser points to Discussions and the
+     roadmap; README rewritten for 2.0; CHANGELOG `2.0.0 — unreleased`; the tray says
+     "Hopping".
+   - Needs a Mac or the owner: the iOS redesign (no build here); the Mac menu bar work from
+     M2; enabling GitHub Discussions in the repository settings; the 2.0 release itself
+     (screenshots from `checks/report/screens`, the landing's download links); approving the
+     pending "Deploy cloud" runs on main (migrations 0013, 0014, 0015 are all unapplied in
+     production until then), and only after that lifting `CloudSync.cloudAcceptedTools`.
+   - Deferred, in the roadmap: `keyhop run <account>` with a folder-to-account mapping (needs
+     per-login config folders, log ingest from them and Keychain checks on a Mac); the Linux
+     and Windows tray in the 2.0 visual language (its menus are native; the window it opens
+     is the same 2.0 page).
 
 ## Working agreements to respect
 

@@ -133,7 +133,8 @@ button, input { font: inherit; color: inherit; }
 .menu-pop .pop-panel { left: auto; right: 0; }
 
 body { position: relative; }
-main { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 32px 24px 56px; display: grid; gap: 20px; }
+/* One column that can shrink: a grid's auto track would otherwise grow to a row of tabs' min-content on a phone. */
+main { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 32px 24px 56px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 /* A flex child's floor is its content; with rows of tabs that would widen the page on a phone. */
 .head > * { min-width: 0; max-width: 100%; }

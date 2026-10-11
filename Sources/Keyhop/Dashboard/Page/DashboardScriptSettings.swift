@@ -32,7 +32,7 @@ extension DashboardPage {
       general: `<div class="settings-intro"><h2>Window Appearance</h2><p>Choose how Keyhop sits alongside the rest of your Mac.</p></div>${isStatic ? "" : appearanceCard()}`,
       activity: `<div class="settings-intro"><h2>Activity</h2><p>Control what Keyhop reads locally and see where each tool is signed in.</p></div>${isStatic ? "" : workCard(state.work)}<section class="card"><div class="card-head"><h2>Tools on This Mac</h2></div>${tools}</section>`,
       cloud: `<div class="settings-intro"><h2>Keyhop Cloud</h2><p>The link, what this computer sends, and who else can read it.</p></div>${cloudCard(state.cloud)}`,
-      app: `<div class="settings-intro"><h2>App & Privacy</h2><p>Version ${esc(state.version)} on ${esc(state.platform)}. Updates and limit refreshes stay independent.</p></div><section class="card"><div class="card-head"><h2>Updates</h2></div><div class="card-body">${updateRow}</div></section>${privacy}`,
+      app: `<div class="settings-intro"><h2>App & Privacy</h2><p>Version ${esc(state.version)} on ${esc(state.platform)}. Updates and limit refreshes stay independent.</p></div>${helpCard()}<section class="card"><div class="card-head"><h2>Updates</h2></div><div class="card-body">${updateRow}</div></section>${privacy}`,
     };
     if (ui.settingsPane === "cloud" && (isStatic || !state.cloud?.available)) ui.settingsPane = "general";
     const choices = [["general", "settings", "Appearance"], ["activity", "usage", "Activity"]];
@@ -40,6 +40,16 @@ extension DashboardPage {
     choices.push(["app", "update", "App & Privacy"]);
     const nav = choices.map(([value, glyph, label]) => `<button type="button" data-action="settings-pane" data-value="${value}" aria-current="${value === ui.settingsPane ? "page" : "false"}">${icon(glyph)}<span>${label}</span></button>`).join("");
     return { body: `<div class="settings-shell"><nav class="card settings-nav" aria-label="Settings categories">${nav}</nav><div class="settings-pane">${panes[ui.settingsPane]}</div></div>` };
+  }
+
+  // Help: where the answers are, and what to run when something looks wrong.
+  function helpCard() {
+    return `<section class="card"><div class="card-head"><h2>Help</h2><span class="hint">Docs, questions and a check-up</span></div>
+      <div class="list">
+        <div class="row setting-row"><div><b>Read the guide</b><p>First run, every section of this window, the <span class="mono">keyhop</span> command, and what Keyhop cloud receives.</p></div><a class="btn sm secondary" href="https://keyhop.app/docs" target="_blank" rel="noopener">Open docs</a></div>
+        <div class="row setting-row"><div><b>Ask or report</b><p>Questions and ideas go to GitHub Discussions; a tool that stopped switching or counting is an issue.</p></div><div class="row-actions"><a class="btn sm ghost" href="https://github.com/dominikzabcik/keyhop/discussions" target="_blank" rel="noopener">Discussions</a><a class="btn sm ghost" href="https://github.com/dominikzabcik/keyhop/issues/new/choose" target="_blank" rel="noopener">New issue</a></div></div>
+        <div class="row setting-row"><div><b>Something looks wrong</b><p>Run <span class="mono">keyhop doctor</span> in a terminal: it names every path Keyhop reads, where logins are kept, and what it can't see. Paste its output into an issue.</p></div></div>
+      </div></section>`;
   }
 
   // MARK: Overlays

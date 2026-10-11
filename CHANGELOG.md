@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.0.0] — unreleased
+
+Keyhop 2.0 is the tracker, the hop and the social layer rebuilt as one product.
+
+- **Real time, locally.** The log folders are watched and a response counts as it lands; polling is the fallback.
+- **Thirteen tools counted.** Amp, Goose, Qwen Code, Kimi Code, Grok Build, Kilo and OpenClaw join Claude Code, Cursor, Codex, Gemini CLI, OpenCode and Pi in the token history, from their local logs. Credentials that override a login (environment tokens, keyring stores, helpers) are named by `keyhop doctor` and respected by a hop.
+- **More than one computer.** `keyhop merge <folder>` folds another computer's history in through a synced folder, deduplicated by event.
+- **Hop before the limit.** An opt-in in the menu: when a window is about to run out, the alert hops for you and says so.
+- **The window, rebuilt.** A 252-point sidebar with an account tree, the Limits board, a home with the hop composer over a night or day field (Settings › Appearance › Field, or the status bar), Plans and Coach sections, and the same shapes in every section.
+- **Plans.** `keyhop plans` prices each login's plan at list against the month's API value and the week's limit peaks, and says which plan would cover the pace.
+- **Coach.** `keyhop coach optimize|compare|yield`: cache hit and premium-model share per tool, this month against last, and tokens and API value per commit and per merge.
+- **Efficiency, not volume.** The leaderboard and the season rank commits per million tokens by default, inside plan-based divisions; tokens stay as one metric. Uploads are verified server-side.
+- **Live, and shown first.** Opt-in live sharing sends today's totals every ninety seconds so a team's day moves with the work; `keyhop cloud show-data` and Settings › Cloud show every payload before it goes.
+- **Teams and years.** A team can post its day to Slack or Discord once a day. `/u/<login>/wrapped` wraps a year. Widgets gain efficiency and cache-hit badges.
+- **The pet.** Its commit blocks stand in front of it; every measured tool colours its markings.
+- **MCP.** `keyhop_plans` and `keyhop_coach` join the read-only tools.
+
 ## [0.14.5]
 
 - A comparison past ninety-nine times no longer prints that multiple. Overview and `keyhop usage` name the earlier amount instead, so a nearly empty yesterday stays a small number.

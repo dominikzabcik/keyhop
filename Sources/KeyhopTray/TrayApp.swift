@@ -329,7 +329,7 @@ final class TrayApp {
         switch command {
         case .switchTo(let id):
             guard let (tool, account) = status?.account(id) else { return }
-            busy = "Switching \(tool.name) to \(account.name)…"
+            busy = "Hopping \(tool.name) to \(account.name)…"
             runCLI(["switch", id.uuidString, "--json"]) { [weak self] result in
                 guard let self else { return }
                 self.busy = nil

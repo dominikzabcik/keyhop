@@ -99,6 +99,18 @@ enum MCPServer {
             properties: ["tool": ["type": "string", "enum": Provider.switchable.map(\.rawValue)]]
         ),
         tool(
+            name: "keyhop_plans",
+            title: "Keyhop plans",
+            description: "Read what each login's plan costs a month at list price against this month's usage at API prices and the week's limit peaks, with a standing per login and advice. Counted locally.",
+            properties: [:]
+        ),
+        tool(
+            name: "keyhop_coach",
+            title: "Keyhop coach",
+            description: "Read efficiency coaching from local history for the last thirty days: cache hit and premium-model share per tool with findings, this period against the one before, and tokens and API value per commit and per merge from counted repositories.",
+            properties: [:]
+        ),
+        tool(
             name: "keyhop_services",
             title: "Provider service status",
             description: "Read whether Anthropic, OpenAI, Cursor, GitHub and Windsurf report an outage, degraded performance or maintenance for the services these tools depend on, from their public status pages. An outage affects every account, so switching accounts doesn't help during one.",
@@ -149,6 +161,10 @@ enum MCPServer {
         case "keyhop_recommendation":
             let overview = try await Commands.currentOverview(workspace)
             return try result(RecommendationListDocument(overview, provider: try provider(in: arguments)))
+        case "keyhop_plans":
+            return try result(try await Commands.plansReport(workspace: workspace, now: Date()))
+        case "keyhop_coach":
+            return try result(try await Commands.coachReport(workspace: workspace, now: Date()))
         default:
             throw UsageError("Unknown tool: \(name)")
         }

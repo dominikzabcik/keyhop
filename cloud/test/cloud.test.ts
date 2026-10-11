@@ -7,6 +7,8 @@ import { currentSeason, daysLeft, nextStep, seasonRange, tierFor } from "../src/
 import { parseUsage } from "../src/usage";
 import { LIVE_TTL_SECONDS, parseLive, sweepLive } from "../src/live";
 import { EFFICIENCY_FLOOR, efficiencyOf } from "../src/stats";
+import { digestHour, digestText, digestURL, sendDigests } from "../src/digest";
+import { wrapped } from "../src/wrapped";
 import { LIMIT_TTL_SECONDS, clean, parseLimits, sweepLimits } from "../src/limits";
 import { badgesFrom, questsFrom } from "../src/quests";
 import { webLink } from "../src/account";
@@ -1636,5 +1638,120 @@ describe("live layer", () => {
     expect(await sweepLive(env.DB, Math.floor(Date.now() / 1000) + LIVE_TTL_SECONDS + 1)).toBe(2);
     const after = (await (await call(`/api/teams/${slug}/day`, { headers: { authorization: `Bearer ${token}` } })).json()) as { people: { login: string; tokens: number; live: boolean }[] };
     expect(after.people.find((person) => person.login === "liv")).toMatchObject({ tokens: 1000, live: false });
+  });
+});
+
+describe("team digests", () => {
+  const day = today();
+
+  it("takes only Slack and Discord incoming webhooks, and an hour of the day", () => {
+    expect(digestURL("https://hooks.slack.com/services/T0/B0/xyz")).toBe("https://hooks.slack.com/services/T0/B0/xyz");
+    expect(digestURL("https://discord.com/api/webhooks/1/abc")).toBe("https://discord.com/api/webhooks/1/abc");
+    expect(digestURL("http://hooks.slack.com/services/T0/B0/xyz")).toBeNull();
+    expect(digestURL("https://example.com/hook")).toBeNull();
+    expect(digestURL("https://hooks.slack.com/other")).toBeNull();
+    expect(digestURL("not a url")).toBeNull();
+    expect(digestHour("17")).toBe(17);
+    expect(digestHour(0)).toBe(0);
+    expect(digestHour("24")).toBeNull();
+    expect(digestHour("soon")).toBeNull();
+  });
+
+  it("writes the day as one message", () => {
+    const text = digestText({ slug: "night-shift", name: "Night Shift" }, [
+      { userId: "a", login: "mira", name: "Mira K.", avatarUrl: null, public: true, tokens: 20_400_000, costMicros: 0, requests: 0, commits: 6, insertions: 0, deletions: 0, indexing: null, live: false,
+        repos: [{ repo: "acme/keyhop", commits: 4, insertions: 0, deletions: 0, subjects: [] }, { repo: "acme/atlas", commits: 2, insertions: 0, deletions: 0, subjects: [] }] },
+      { userId: "b", login: "jonas", name: null, avatarUrl: null, public: true, tokens: 0, costMicros: 0, requests: 0, commits: 0, insertions: 0, deletions: 0, indexing: null, live: false, repos: [] },
+    ], "2026-10-10");
+    expect(text).toContain("Keyhop · Night Shift · Saturday, October 10");
+    expect(text).toContain("1 of 2 working, 6 commits in 2 repositories, 20.4M tokens.");
+    expect(text).toContain("• Mira K.: 6 commits (keyhop, atlas), 20.4M tokens");
+    expect(text).not.toContain("jonas");
+    expect(text).toContain("https://keyhop.app/t/night-shift/day");
+  });
+
+  it("lets the owner set the digest, refuses other hosts, and posts at the hour", async () => {
+    const cookie = await signIn("digest-owner");
+    const created = await form("/teams", cookie, { name: "Digest Crew" });
+    const slug = new URL(created.headers.get("location")!, BASE).pathname.split("/").pop()!;
+    const token = await linkApp(cookie);
+
+    const refused = await form(`/t/${slug}/digest`, cookie, { url: "https://example.com/hook", hour: "9" });
+    expect(refused.headers.get("location")).toContain("digest=refused");
+    const saved = await form(`/t/${slug}/digest`, cookie, { url: "https://discord.com/api/webhooks/9/secret-token-value", hour: "9" });
+    expect(saved.headers.get("location")).toContain("digest=saved");
+    const page = await (await call(`/t/${slug}`, { headers: { cookie } })).text();
+    expect(page).toContain("discord.com/api/webhooks/9/…");
+    expect(page).not.toContain("secret-token-value");
+
+    await upload(token, [{ day, tool: "claude", tokens: 3_000_000, cost: 6, requests: 30 }]);
+    const posted: { url: string; body: string }[] = [];
+    const fakeFetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      posted.push({ url: String(url), body: String(init?.body) });
+      return new Response(null, { status: 204 });
+    }) as typeof fetch;
+    expect(await sendDigests(env.DB, fakeFetch, new Date(Date.UTC(2026, 9, 10, 8, 17)))).toBe(0);
+    expect(await sendDigests(env.DB, fakeFetch, new Date(Date.UTC(2026, 9, 10, 9, 17)))).toBe(1);
+    expect(posted).toHaveLength(1);
+    expect(posted[0].url).toBe("https://discord.com/api/webhooks/9/secret-token-value");
+    const body = JSON.parse(posted[0].body) as { content: string };
+    expect(body.content).toContain("Digest Crew");
+    expect(body.content).toContain("3.0M tokens");
+
+    // An empty field keeps the webhook and moves the hour; the off button drops it.
+    const moved = await form(`/t/${slug}/digest`, cookie, { url: "", hour: "10" });
+    expect(moved.headers.get("location")).toContain("digest=saved");
+    expect(await sendDigests(env.DB, fakeFetch, new Date(Date.UTC(2026, 9, 10, 10, 17)))).toBe(1);
+    const off = await form(`/t/${slug}/digest/off`, cookie);
+    expect(off.headers.get("location")).toContain("digest=off");
+    const api = await call(`/api/teams/${slug}/digest`, { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ url: "", hour: 9 }) });
+    expect(await api.json()).toEqual({ slug, digest: null });
+    expect(await sendDigests(env.DB, fakeFetch, new Date(Date.UTC(2026, 9, 10, 9, 17)))).toBe(0);
+  });
+});
+
+describe("wrapped", () => {
+  it("wraps a year from the daily totals and serves it on the profile's door", async () => {
+    const cookie = await signIn("wrapper");
+    const token = await linkApp(cookie);
+    const year = Number(today().slice(0, 4));
+    const first = `${year}-01-05`;
+    await upload(token, [
+      { day: first, tool: "claude", tokens: 4_000_000, cost: 8, requests: 40 },
+      { day: addDays(first, 1), tool: "cursor", tokens: 1_000_000, cost: 2, requests: 10 },
+      { day: addDays(first, 2), tool: "claude", tokens: 2_000_000, cost: 4, requests: 20 },
+    ]);
+    await call("/api/work", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ days: [{ day: first, repo: "me/atlas", commits: 3, insertions: 30, deletions: 3 }] }) });
+    const me = await env.DB.prepare("SELECT id FROM users WHERE login = ?").bind("wrapper").first<{ id: string }>();
+    const story = await wrapped(env.DB, me!.id, year);
+    expect(story).toMatchObject({ year, tokens: 7_000_000, requests: 70, activeDays: 3, longestStreak: 3, commits: 3, repos: 1 });
+    expect(story.topTool).toMatchObject({ tool: "claude", share: 86 });
+    expect(story.biggestDay).toEqual({ day: first, tokens: 4_000_000 });
+
+    expect((await call("/u/wrapper/wrapped")).status).toBe(404);
+    const own = await call("/u/wrapper/wrapped", { headers: { cookie } });
+    expect(own.status).toBe(200);
+    const page = await own.text();
+    expect(page).toContain(`${year}, wrapped`);
+    expect(page).toContain("Claude Code led, 86%");
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    expect((await call(`/u/wrapper/wrapped/${year}`)).status).toBe(200);
+    expect((await call("/u/wrapper/wrapped/1999")).status).toBe(404);
+    const profile = await (await call("/u/wrapper")).text();
+    expect(profile).toContain("/u/wrapper/wrapped");
+  });
+});
+
+describe("widget metrics", () => {
+  it("draws efficiency and cache hit badges", async () => {
+    const cookie = await signIn("badger");
+    const token = await linkApp(cookie);
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    const day = today();
+    await upload(token, [{ day, tool: "claude", tokens: 2_000_000, cost: 4, requests: 20, cacheRead: 500_000 }]);
+    await call("/api/work", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ days: [{ day, repo: "me/atlas", commits: 5, insertions: 5, deletions: 1 }] }) });
+    expect(await (await call("/u/badger/badge.svg?metric=efficiency")).text()).toContain("2.5 per M");
+    expect(await (await call("/u/badger/badge.svg?metric=cache")).text()).toContain("25%");
+    expect((await call("/u/badger/badge.svg?metric=nonsense")).status).toBe(404);
   });
 });

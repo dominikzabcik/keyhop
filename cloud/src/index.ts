@@ -7,6 +7,7 @@ import type { AppEnv } from "./env";
 import { publicError } from "./errors";
 import { limits, sweepLimits } from "./limits";
 import { live, sweepLive } from "./live";
+import { digests, sendDigests } from "./digest";
 import { notFound, pages } from "./pages";
 import { petRoutes } from "./pet";
 import { quests } from "./quests";
@@ -40,6 +41,7 @@ app.route("/", usage);
 app.route("/", work);
 app.route("/", limits);
 app.route("/", live);
+app.route("/", digests);
 app.route("/", card);
 app.route("/", petRoutes);
 app.route("/", widgets);
@@ -67,5 +69,6 @@ export default {
   async scheduled(_controller: ScheduledController, env: AppEnv["Bindings"], ctx: ExecutionContext) {
     ctx.waitUntil(sweepLimits(env.DB));
     ctx.waitUntil(sweepLive(env.DB));
+    ctx.waitUntil(sendDigests(env.DB));
   },
 } satisfies ExportedHandler<AppEnv["Bindings"]>;

@@ -15,6 +15,9 @@ export interface Team {
   created_at: number;
   /** 1 once the owner has published README images of the team's totals. */
   public: number;
+  /** A Slack or Discord incoming webhook the day is posted to, and the UTC hour it goes. */
+  digest_url: string | null;
+  digest_hour: number;
 }
 export type Role = "owner" | "member";
 
@@ -59,7 +62,7 @@ export async function publishedTeam(db: D1Database, slug: string) {
 export async function teamForMember(db: D1Database, slug: string, userId: string): Promise<{ team: Team; role: Role } | null> {
   const row = await db
     .prepare(
-      `SELECT t.id, t.slug, t.name, t.owner_id, t.created_at, t.public, m.role FROM teams t
+      `SELECT t.id, t.slug, t.name, t.owner_id, t.created_at, t.public, t.digest_url, t.digest_hour, m.role FROM teams t
        JOIN team_members m ON m.team_id = t.id AND m.user_id = ? WHERE t.slug = ?`,
     )
     .bind(userId, slug)

@@ -205,7 +205,7 @@ This is the maintainer's year, live:
 | `graph.svg` | A year of days, Monday at the top, shaded by how many tokens that day used. The line above the squares is the year's total. |
 | `pet.svg` | The pet. |
 
-Add `?metric=` and `?period=` to a badge. Metrics are `tokens`, `cost`, `requests`, `commits`, `lines`, `streak`, `rank` and `tier`. Periods are `today`, `week`, `month`, `all` and `season`. `streak` is the current run of days. `tier` is this season. `rank` is your place by tokens in that period. `tools.svg` takes the same periods. `?theme=light` draws the frame for a light page. With no theme the image stays dark, so a link you already published keeps its look. An unknown metric or period is not found.
+Add `?metric=` and `?period=` to a badge. Metrics are `tokens`, `cost`, `requests`, `commits`, `lines`, `efficiency` (commits per million tokens), `cache` (cache hit), `streak`, `rank` and `tier`. Periods are `today`, `week`, `month`, `all` and `season`. `streak` is the current run of days. `tier` is this season. `rank` is your place by tokens in that period. `tools.svg` takes the same periods. `?theme=light` draws the frame for a light page. With no theme the image stays dark, so a link you already published keeps its look. An unknown metric or period is not found.
 
 ```markdown
 [![Badge](https://keyhop.app/u/YOUR-LOGIN/badge.svg?metric=commits&period=month)](https://keyhop.app/u/YOUR-LOGIN)

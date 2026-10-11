@@ -361,6 +361,8 @@ export interface WindowTotals {
   insertions: number;
   deletions: number;
   tools: Record<MeasuredTool, number>;
+  /** Null when no synced day carried a cache count. */
+  cacheRead: number | null;
 }
 
 const MEASURED_SUMS = MEASURED_TOOLS.map((tool) => `SUM(CASE WHEN tool = '${tool}' THEN tokens ELSE 0 END) AS tool_${tool}`).join(", ");
@@ -387,11 +389,11 @@ export async function summed(db: D1Database, who: Subject, from: string, until: 
   const usage = await db
     .prepare(
       `SELECT COALESCE(SUM(tokens), 0) AS tokens, COALESCE(SUM(cost_micros), 0) AS cost_micros,
-         COALESCE(SUM(requests), 0) AS requests, ${MEASURED_SUMS}
+         COALESCE(SUM(requests), 0) AS requests, SUM(cache_read) AS cache_read, ${MEASURED_SUMS}
        FROM daily_usage WHERE ${clause} AND day >= ? AND day <= ?`,
     )
     .bind(id, from, until)
-    .first<{ tokens: number; cost_micros: number; requests: number } & Record<`tool_${MeasuredTool}`, number>>();
+    .first<{ tokens: number; cost_micros: number; requests: number; cache_read: number | null } & Record<`tool_${MeasuredTool}`, number>>();
   const work = await db
     .prepare(
       `SELECT COALESCE(SUM(commits), 0) AS commits, COALESCE(SUM(insertions), 0) AS insertions, COALESCE(SUM(deletions), 0) AS deletions
@@ -407,6 +409,7 @@ export async function summed(db: D1Database, who: Subject, from: string, until: 
     insertions: work?.insertions ?? 0,
     deletions: work?.deletions ?? 0,
     tools: Object.fromEntries(MEASURED_TOOLS.map((tool) => [tool, usage?.[`tool_${tool}`] ?? 0])) as WindowTotals["tools"],
+    cacheRead: usage?.cache_read ?? null,
   };
 }
 

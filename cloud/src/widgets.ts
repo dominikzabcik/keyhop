@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { type AppEnv, TOOL_NAMES, addDays, shownTools, today } from "./env";
 import { currentSeason, seasonBoard, seasonRange, tierFor, tierLabel } from "./seasons";
-import { type Period, type Subject, type WindowTotals, activity, dailyTokens, leaderboard, summed } from "./stats";
+import { type Period, type Subject, type WindowTotals, activity, dailyTokens, leaderboard, summed, cacheHitOf, efficiencyOf } from "./stats";
 import { dollars, esc, fit, frame, grouped, keyhopMark, MONO, SANS, shortTokens, svgHeaders, svgOpen, themeOf, type Theme } from "./svg";
 import { publishedTeam } from "./teams";
 import { yearSquares, yearStart } from "./ui";
@@ -15,10 +15,10 @@ import { yearSquares, yearStart } from "./ui";
 const BADGE_PERIODS = ["today", "week", "month", "all", "season"] as const;
 type BadgePeriod = (typeof BADGE_PERIODS)[number];
 
-const PERSON_METRICS = ["tokens", "cost", "requests", "commits", "lines", "streak", "rank", "tier"] as const;
+const PERSON_METRICS = ["tokens", "cost", "requests", "commits", "lines", "efficiency", "cache", "streak", "rank", "tier"] as const;
 type PersonMetric = (typeof PERSON_METRICS)[number];
 
-const TEAM_METRICS = ["tokens", "cost", "requests", "commits", "lines", "streak"] as const;
+const TEAM_METRICS = ["tokens", "cost", "requests", "commits", "lines", "efficiency", "cache", "streak"] as const;
 type TeamMetric = (typeof TEAM_METRICS)[number];
 
 const PERIOD_SHORT: Record<BadgePeriod, string> = {
@@ -107,7 +107,19 @@ async function figure(
   if (metric === "rank" && userId) {
     const rank = await rankOf(db, userId, period);
     const value = rank ? `#${rank}` : "unranked";
-    return { label: `rank · ${span}`, value, aria: `${value} by tokens, ${span}, on Keyhop` };
+    return { label: `rank · ${span}`, value, aria: `${value} by efficiency, ${span}, on Keyhop` };
+  }
+  if (metric === "efficiency") {
+    const totals = await summed(db, who, bounds(period).from, bounds(period).until);
+    const rate = efficiencyOf(totals.tokens, totals.commits);
+    const value = rate == null ? "unranked" : `${rate >= 10 ? Math.round(rate) : rate.toFixed(1)} per M`;
+    return { label: `efficiency · ${span}`, value, aria: `${value}: commits per million tokens, ${span}, on Keyhop` };
+  }
+  if (metric === "cache") {
+    const totals = await summed(db, who, bounds(period).from, bounds(period).until);
+    const hit = cacheHitOf(totals.tokens, totals.cacheRead);
+    const value = hit == null ? "unknown" : `${Math.round(hit)}%`;
+    return { label: `cache hit · ${span}`, value, aria: `${value} cache hit, ${span}, on Keyhop` };
   }
   const totals = await summed(db, who, bounds(period).from, bounds(period).until);
   const name = MEASURE_LABEL[metric as keyof typeof MEASURE_LABEL];
@@ -117,10 +129,10 @@ async function figure(
 
 async function rankOf(db: D1Database, userId: string, period: BadgePeriod): Promise<number | null> {
   if (period === "season") {
-    const board = await seasonBoard(db, { season: currentSeason(), metric: "tokens" });
+    const board = await seasonBoard(db, { season: currentSeason(), metric: "efficiency" });
     return board.find((entry) => entry.userId === userId)?.rank ?? null;
   }
-  const board = await leaderboard(db, { period: period as Period, metric: "tokens" });
+  const board = await leaderboard(db, { period: period as Period, metric: "efficiency" });
   return board.find((entry) => entry.userId === userId)?.rank ?? null;
 }
 

@@ -1,7 +1,7 @@
 import { type Context, Hono } from "hono";
 import { html, raw } from "hono/html";
 import { pageUser, safeNext } from "./auth";
-import { type AppEnv, type User, addDays, now, today } from "./env";
+import { type AppEnv, type Tool, type User, TOOLS, TOOL_NAMES, addDays, now, today } from "./env";
 import { LANDING_CSS, landingPage } from "./landing";
 import { downloadPage, privacyPage, securityPage, termsPage } from "./marketing";
 import { type ClaimState, claimState } from "./keeps";
@@ -11,6 +11,8 @@ import { TIERS, currentSeason, daysLeft, isSeason, nextStep, seasonBoard, season
 import { type Entry, type Metric, type Period, METRICS, PERIODS, isMetric, isPeriod, leaderboard, profile } from "./stats";
 import { type Division, DIVISIONS, DIVISION_NAMES, isDivision } from "./env";
 import { inviteInfo, members, myTeams, teamForMember } from "./teams";
+import { digestLabel } from "./digest";
+import { wrapped } from "./wrapped";
 import { parseSubject, span, tasksForDay } from "./tasks";
 import { PERSON_WIDGETS, TEAM_WIDGETS, widgetMarkdown } from "./widgets";
 import { type DayRepo, type PersonDay, teamDay } from "./work";
@@ -33,6 +35,7 @@ import {
   tokens,
   toolRows,
   usd,
+  mark,
 } from "./ui";
 
 type C = Context<AppEnv>;
@@ -418,12 +421,13 @@ pages.get("/u/:login", async (c) => {
         </div>
         ${person.public === 1 ? html`<label class="share">Share this profile<input class="field mono" readonly value="${url}"></label>` : ""}
       </section>
+      <section class="card wrapped-link"><div class="card-body setting-row"><div><b>${new Date().getUTCFullYear()}, wrapped</b><p class="muted" style="margin:4px 0 0;font-size:13px">The year so far: tokens, tools, streaks and commits, on one page.</p></div><a class="btn sm secondary" href="/u/${person.login}/wrapped">Open</a></div></section>
       ${person.public === 1
         ? html`<section class="card">
             <div class="card-head"><h2>Widgets</h2><span class="hint">README</span></div>
             <div class="card-body form">
               ${widgetFields(url, PERSON_WIDGETS)}
-              <p class="muted" style="margin:0;font-size:13px">The badge shows tokens for the last 7 days. The year is a day for each of the last 53 weeks, shaded by that day's tokens. Add <span class="mono">?metric=commits&amp;period=month</span> to a badge, and <span class="mono">?theme=light</span> on a light page. Metrics: tokens, cost, requests, commits, lines, streak, rank, tier. Periods: today, week, month, all, season.</p>
+              <p class="muted" style="margin:0;font-size:13px">The badge shows tokens for the last 7 days. The year is a day for each of the last 53 weeks, shaded by that day's tokens. Add <span class="mono">?metric=commits&amp;period=month</span> to a badge, and <span class="mono">?theme=light</span> on a light page. Metrics: tokens, cost, requests, commits, lines, efficiency, cache, streak, rank, tier. Periods: today, week, month, all, season.</p>
             </div>
           </section>`
         : ""}
@@ -568,6 +572,31 @@ pages.get("/t/:slug", pageUser, async (c) => {
           </div>
           ${owner
             ? html`<div class="card">
+                <div class="card-head"><h2>Daily digest</h2></div>
+                <div class="card-body form">
+                  ${c.req.query("digest") === "saved"
+                    ? html`<p class="muted" style="margin:0;font-size:13px">Saved. The day goes out at the hour you chose.</p>`
+                    : c.req.query("digest") === "sent"
+                      ? html`<p class="muted" style="margin:0;font-size:13px">Sent. Look at the channel.</p>`
+                      : c.req.query("digest") === "failed"
+                        ? html`<p class="muted" style="margin:0;font-size:13px">The channel refused it. Check the webhook.</p>`
+                        : c.req.query("digest") === "refused"
+                          ? html`<p class="muted" style="margin:0;font-size:13px">That isn't a Slack or Discord incoming webhook, or the hour is off.</p>`
+                          : c.req.query("digest") === "off"
+                            ? html`<p class="muted" style="margin:0;font-size:13px">The digest is off.</p>`
+                            : team.digest_url
+                              ? html`<p class="muted" style="margin:0;font-size:13px">Goes to ${digestLabel(team.digest_url)} at ${String(team.digest_hour).padStart(2, "0")}:00 UTC.</p>`
+                              : html`<p class="muted" style="margin:0;font-size:13px">Post the team's day to Slack or Discord once a day: who worked, their commits and tokens.</p>`}
+                  <form class="form" method="post" action="/t/${team.slug}/digest">
+                    <label>Incoming webhook<input class="field mono" name="url" placeholder="${team.digest_url ? "Kept as it is; paste a new one to change it" : "https://hooks.slack.com/services/…"}" autocomplete="off"></label>
+                    <label>Hour, UTC<input class="field" name="hour" type="number" min="0" max="23" value="${team.digest_hour}"></label>
+                    <button class="btn sm" type="submit">Save</button>
+                  </form>
+                  ${team.digest_url ? html`<form method="post" action="/t/${team.slug}/digest/send"><button class="btn ghost sm" type="submit" style="width:100%">Send today's now</button></form>
+                        <form method="post" action="/t/${team.slug}/digest/off"><button class="btn ghost sm" type="submit" style="width:100%">Turn the digest off</button></form>` : ""}
+                </div>
+              </div>
+              <div class="card">
                 <div class="card-head"><h2>Invite people</h2></div>
                 <div class="card-body form">
                   ${invite
@@ -742,6 +771,51 @@ function personDay(person: PersonDay, viewer: User | null): Html {
  * a person can see what everyone actually did rather than only how much of it there was.
  */
 pages.get("/t/:slug/day/:date", pageUser, (c) => teamDayPage(c, c.req.param("date")));
+/** One person's year, wrapped. The same door as the profile: public, or your own. */
+async function wrappedPage(c: C, login: string, asked: string | undefined) {
+  const viewer = c.get("user");
+  const person = await c.env.DB.prepare("SELECT * FROM users WHERE login = ? COLLATE NOCASE").bind(login).first<User>();
+  const isSelf = !!viewer && !!person && viewer.id === person.id;
+  if (!person || (person.public !== 1 && !isSelf)) return notFound(c, "This profile is private, or doesn't exist.");
+  const thisYear = new Date().getUTCFullYear();
+  const year = asked && /^\d{4}$/.test(asked) ? Number(asked) : thisYear;
+  if (year < 2025 || year > thisYear) return notFound(c, "Keyhop has no year like that.");
+  const story = await wrapped(c.env.DB, person.id, year);
+  const name = person.display_name ?? person.name ?? person.login;
+  const shown = (TOOLS as readonly Tool[]).filter((tool) => story.tools[tool] > 0).sort((a, b) => story.tools[b] - story.tools[a]);
+  const max = Math.max(1, ...shown.map((tool) => story.tools[tool]));
+  return render(
+    c,
+    `${year}, wrapped · ${name} · Keyhop`,
+    html`
+      <div class="head">
+        <div><h1>${year}, wrapped</h1><p class="lede">${name}'s year${story.running ? " so far" : ""}: ${story.from} to ${story.until}.</p></div>
+        <nav class="tabs" aria-label="Year">${[thisYear, thisYear - 1].filter((y) => y >= 2025).map((y) => html`<a href="/u/${person.login}/wrapped/${y}" ${y === year ? raw('aria-current="true"') : ""}>${y}</a>`)}</nav>
+      </div>
+      <section class="grid stats">
+        <div class="card stat"><div class="label">Tokens</div><div class="value">${tokens(story.tokens)}</div><div class="foot">${usd(story.costMicros)} at API prices</div></div>
+        <div class="card stat"><div class="label">Requests</div><div class="value">${count(story.requests)}</div><div class="foot">${story.activeDays} active ${story.activeDays === 1 ? "day" : "days"}</div></div>
+        <div class="card stat"><div class="label">Longest streak</div><div class="value">${story.longestStreak}</div><div class="foot">${story.longestStreak === 1 ? "day" : "days"} in a row</div></div>
+        <div class="card stat"><div class="label">Commits</div><div class="value">${count(story.commits)}</div><div class="foot">${story.repos} ${story.repos === 1 ? "repository" : "repositories"}, +${count(story.insertions)} −${count(story.deletions)}</div></div>
+      </section>
+      <section class="split">
+        <div class="card"><div class="card-head"><h2>Tools</h2><span class="hint">${story.topTool ? `${story.topTool.name} led, ${story.topTool.share}%` : "Nothing yet"}</span></div><div class="card-body">
+          ${shown.length ? shown.map((tool) => html`<div class="tool-row">${mark(tool)}<div><div>${TOOL_NAMES[tool]}</div><div class="bar"><span style="width:${((story.tools[tool] / max) * 100).toFixed(2)}%"></span></div></div><span class="mono" style="text-align:right">${tokens(story.tools[tool])}</span></div>`) : html`<p class="muted" style="margin:0">No usage synced in ${year}.</p>`}
+        </div></div>
+        <div class="card"><div class="card-head"><h2>Moments</h2></div><div class="card-body kv">
+          <span>Biggest day</span><span class="mono">${story.biggestDay ? `${story.biggestDay.day}, ${tokens(story.biggestDay.tokens)}` : "none yet"}</span>
+          <span>Best month</span><span class="mono">${story.bestMonth ? `${story.bestMonth.month}, ${tokens(story.bestMonth.tokens)}, ${story.bestMonth.tier}` : "none yet"}</span>
+          <span>Lines</span><span class="mono">+${count(story.insertions)} −${count(story.deletions)}</span>
+        </div></div>
+      </section>
+      <p class="muted" style="margin:0;font-size:13px">Counted from the daily totals this computer synced; nothing here is stored as a year.</p>`,
+    { index: false },
+  );
+}
+
+pages.get("/u/:login/wrapped", (c) => wrappedPage(c, c.req.param("login"), undefined));
+pages.get("/u/:login/wrapped/:year", (c) => wrappedPage(c, c.req.param("login"), c.req.param("year")));
+
 pages.get("/t/:slug/day", pageUser, (c) => teamDayPage(c, today()));
 
 async function teamDayPage(c: C, date: string) {

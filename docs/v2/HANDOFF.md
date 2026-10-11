@@ -80,8 +80,25 @@ file are all committed here. The owner's previously uncommitted pet/dashboard wo
      "right now" view (the live rows feed only the team day today); divisions are reported by the
      app from plan names (`CloudSync.division`), so a login whose plan Keyhop can't read ranks
      among everyone.
-6. **M4–M5** per `docs/v2/PLAN.md`: optimizer/coaching/growth, then tray/iOS/CLI parity, docs,
-   GitHub Discussions, launch.
+6. **M4** (optimizer, coaching, growth) — built 2026-10-11:
+   - `v2`: **Plans** (`keyhop plans`, window section after Budgets): each login's plan priced at
+     list (`Core/PlanPrices.swift`, October 2026 prices) against the month's API value and the
+     week's window peaks from the limit samples, with a standing and advice. **Coach**
+     (`keyhop coach [optimize|compare|yield]`, window section after Plans): cache hit and
+     premium-model share per tool with findings, this month against last per tool and model
+     (the digest now carries `previousByProvider`/`previousByModel`), tokens and API value per
+     commit and per merge from the counted repositories (`GitWork.merges`).
+   - `main`: team **digests** to Slack/Discord (migration 0015 `digest_url`/`digest_hour`, team
+     page form, `POST /api/teams/:slug/digest`, posted by the hourly cron at the chosen UTC
+     hour, only to hooks.slack.com/discord.com webhooks, the saved URL never shown back);
+     **Wrapped** (`/u/:login/wrapped[/:year]`, linked from the profile); widgets gain
+     `efficiency` and `cache` metrics.
+   - Still open: a share card for the pet/season beyond the existing `card.svg`/`pet.svg`;
+     the window's Teams section has no digest form yet (website only); Coach's premium
+     threshold is $15/M output and the cache finding needs 1M context tokens, both in
+     `Core/Coach.swift`.
+7. **M5** per `docs/v2/PLAN.md`: tray/iOS/CLI parity, MCP tools for plans and coach, docs and
+   onboarding, GitHub Discussions and issue templates, in-app help, launch.
 
 ## Working agreements to respect
 

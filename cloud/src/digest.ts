@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { apiUser, apiWriter, pageUser } from "./auth";
 import { type AppEnv, today } from "./env";
+import { shortTokens } from "./svg";
 import { type Team, teamForMember } from "./teams";
 import { type PersonDay, teamDay } from "./work";
 
@@ -16,7 +17,7 @@ const HOSTS = ["hooks.slack.com", "discord.com", "discordapp.com", "canary.disco
 /** A Slack or Discord incoming webhook, and nothing else: the only places a digest is posted. */
 export function digestURL(raw: string): string | null {
   const trimmed = raw.trim();
-  if (!trimmed) return null;
+  if (!trimmed || trimmed.length > 512) return null;
   let url: URL;
   try {
     url = new URL(trimmed);
@@ -47,23 +48,37 @@ export function digestLabel(url: string): string {
   }
 }
 
-const shortTokens = (value: number): string =>
-  value >= 1_000_000_000 ? `${(value / 1_000_000_000).toFixed(1)}B` : value >= 1_000_000 ? `${(value / 1_000_000).toFixed(1)}M` : value >= 1_000 ? `${Math.round(value / 1_000)}K` : `${value}`;
+/** Which channel a webhook feeds: Slack reads `text` with its own escapes, Discord reads `content` as markdown. */
+export function digestKind(url: string): "slack" | "discord" {
+  try {
+    return new URL(url).hostname === "hooks.slack.com" ? "slack" : "discord";
+  } catch {
+    return "discord";
+  }
+}
+
+/** A name as the channel will show it, not as it will read it. */
+export function escapeFor(kind: "slack" | "discord", text: string): string {
+  return kind === "slack"
+    ? text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    : text.replace(/([\\*_~`|>#@])/g, "\\$1");
+}
 
 /** The day as one message: a headline, then a line per person who did something. */
-export function digestText(team: Pick<Team, "slug" | "name">, people: PersonDay[], day: string): string {
+export function digestText(team: Pick<Team, "slug" | "name">, people: PersonDay[], day: string, kind: "slack" | "discord" = "slack"): string {
+  const safe = (text: string) => escapeFor(kind, text);
   const worked = people.filter((person) => person.commits > 0 || person.tokens > 0);
   const commits = people.reduce((sum, person) => sum + person.commits, 0);
   const tokens = people.reduce((sum, person) => sum + person.tokens, 0);
   const repos = new Set(people.flatMap((person) => person.repos.map((repo) => repo.repo)));
   const date = new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
   const lines = [
-    `Keyhop · ${team.name} · ${date}`,
+    `Keyhop · ${safe(team.name)} · ${date}`,
     `${worked.length} of ${people.length} working, ${commits} ${commits === 1 ? "commit" : "commits"} in ${repos.size} ${repos.size === 1 ? "repository" : "repositories"}, ${shortTokens(tokens)} tokens.`,
   ];
   for (const person of worked) {
-    const names = person.repos.filter((repo) => repo.commits > 0).map((repo) => repo.repo.split("/").pop());
-    lines.push(`• ${person.name || person.login}: ${person.commits} ${person.commits === 1 ? "commit" : "commits"}${names.length ? ` (${names.join(", ")})` : ""}, ${shortTokens(person.tokens)} tokens`);
+    const names = person.repos.filter((repo) => repo.commits > 0).map((repo) => safe(repo.repo.split("/").pop() ?? repo.repo));
+    lines.push(`• ${safe(person.name || person.login)}: ${person.commits} ${person.commits === 1 ? "commit" : "commits"}${names.length ? ` (${names.join(", ")})` : ""}, ${shortTokens(person.tokens)} tokens`);
   }
   if (worked.length === 0) lines.push("A quiet day.");
   lines.push(`${ORIGIN}/t/${team.slug}/day`);
@@ -72,11 +87,10 @@ export function digestText(team: Pick<Team, "slug" | "name">, people: PersonDay[
 
 /** Posts one message. Slack reads `text`, Discord reads `content`. */
 export async function postDigest(url: string, text: string, send: typeof fetch = fetch): Promise<boolean> {
-  const discord = !url.includes("hooks.slack.com");
   const response = await send(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(discord ? { content: text } : { text }),
+    body: JSON.stringify(digestKind(url) === "discord" ? { content: text } : { text }),
   });
   return response.ok;
 }
@@ -93,7 +107,7 @@ export async function sendDigests(db: D1Database, send: typeof fetch = fetch, at
   for (const team of results) {
     try {
       const people = await teamDay(db, team.id, day);
-      if (await postDigest(team.digest_url, digestText(team, people, day), send)) posted++;
+      if (await postDigest(team.digest_url, digestText(team, people, day, digestKind(team.digest_url)), send)) posted++;
     } catch (error) {
       // One channel's trouble is not another team's.
       console.warn(`Digest for ${team.slug} failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -136,7 +150,7 @@ digests.post("/t/:slug/digest/send", pageUser, async (c) => {
   const row = await c.env.DB.prepare("SELECT digest_url FROM teams WHERE id = ?").bind(membership.team.id).first<{ digest_url: string | null }>();
   if (!row?.digest_url) return c.redirect(`/t/${membership.team.slug}?digest=refused`);
   const people = await teamDay(c.env.DB, membership.team.id, today());
-  const ok = await postDigest(row.digest_url, digestText(membership.team, people, today())).catch(() => false);
+  const ok = await postDigest(row.digest_url, digestText(membership.team, people, today(), digestKind(row.digest_url))).catch(() => false);
   return c.redirect(`/t/${membership.team.slug}?digest=${ok ? "sent" : "failed"}`);
 });
 
@@ -145,9 +159,10 @@ digests.post("/api/teams/:slug/digest", apiUser, apiWriter, async (c) => {
   const membership = await teamForMember(c.env.DB, c.req.param("slug"), c.get("user")!.id);
   if (membership?.role !== "owner") return c.json({ error: "Only the owner can set a digest." }, 404);
   const body = (await c.req.json().catch(() => null)) as { url?: unknown; hour?: unknown } | null;
-  const raw = typeof body?.url === "string" ? body.url : "";
-  const url = raw.trim() ? digestURL(raw) : null;
-  if (raw.trim() && !url) return c.json({ error: "The digest needs a Slack or Discord incoming webhook URL." }, 400);
+  // A webhook that isn't mentioned stays; an empty string takes it down; anything else must be a webhook.
+  const raw = typeof body?.url === "string" ? body.url : null;
+  const url = raw === null ? membership.team.digest_url : raw.trim() ? digestURL(raw) : null;
+  if (raw !== null && raw.trim() && !url) return c.json({ error: "The digest needs a Slack or Discord incoming webhook URL." }, 400);
   const hour = body?.hour === undefined ? 17 : digestHour(body.hour);
   if (hour === null) return c.json({ error: "The hour must be 0 to 23, in UTC." }, 400);
   await saveDigest(c.env.DB, membership.team.id, url, hour);

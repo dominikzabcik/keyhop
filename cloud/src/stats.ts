@@ -21,7 +21,7 @@ export const METRICS = {
     label: "Efficiency",
     sort: `CASE WHEN COALESCE(u.tokens, 0) >= ${EFFICIENCY_FLOOR} AND COALESCE(w.commits, 0) > 0 THEN w.commits * 1000000.0 / u.tokens ELSE 0 END`,
   },
-  cache: { label: "Cache hit", sort: "CASE WHEN COALESCE(u.tokens, 0) > 0 AND u.cache_read IS NOT NULL THEN u.cache_read * 100.0 / u.tokens ELSE 0 END" },
+  cache: { label: "Cache hit", sort: "CASE WHEN COALESCE(u.cache_tokens, 0) > 0 THEN u.cache_read * 100.0 / u.cache_tokens ELSE 0 END" },
   tokens: { label: "Tokens", sort: "COALESCE(u.tokens, 0)" },
   cost: { label: "API value", sort: "COALESCE(u.cost_micros, 0)" },
   requests: { label: "Requests", sort: "COALESCE(u.requests, 0)" },
@@ -45,7 +45,10 @@ export function efficiencyOf(tokens: number, commits: number): number | null {
   return tokens >= EFFICIENCY_FLOOR && commits > 0 ? (commits * 1_000_000) / tokens : null;
 }
 
-/** The share of tokens read back from a cache, as a percentage, or null when the app never said. */
+/**
+ * The share of tokens read back from a cache, as a percentage, over the days whose app counted
+ * cache reads (`tokens` is those days' tokens). Null when no day did.
+ */
 export function cacheHitOf(tokens: number, cacheRead: number | null): number | null {
   return cacheRead === null || tokens <= 0 ? null : (cacheRead * 100) / tokens;
 }
@@ -70,6 +73,8 @@ export interface Entry extends Totals, Work {
   activeDays: number;
   /** Null when no synced day carried a cache count. */
   cacheRead: number | null;
+  /** The tokens of the days that carried a cache count: the denominator of the cache hit. */
+  cacheTokens: number;
   efficiency: number | null;
   cacheHit: number | null;
   division: Division | null;
@@ -97,6 +102,7 @@ type Row = {
   repos: number;
   active_days: number;
   cache_read: number | null;
+  cache_tokens: number;
   division: Division | null;
 } & Record<`tool_${Tool}`, number>;
 
@@ -147,7 +153,7 @@ export async function leaderboard(
     .prepare(
       `WITH u AS (
          SELECT user_id, SUM(tokens) AS tokens, SUM(cost_micros) AS cost_micros, SUM(requests) AS requests,
-           SUM(cache_read) AS cache_read, ${TOOL_SUMS}
+           SUM(cache_read) AS cache_read, COALESCE(SUM(CASE WHEN cache_read IS NOT NULL THEN tokens END), 0) AS cache_tokens, ${TOOL_SUMS}
          FROM daily_usage WHERE ${range} GROUP BY user_id
        ),
        w AS (
@@ -164,7 +170,7 @@ export async function leaderboard(
        ),
        p AS (SELECT user_id FROM u UNION SELECT user_id FROM w)
        SELECT p.user_id, people.login, COALESCE(people.display_name, people.name) AS name, people.avatar_url, people.public,
-         people.division, u.cache_read,
+         people.division, u.cache_read, COALESCE(u.cache_tokens, 0) AS cache_tokens,
          COALESCE(u.tokens, 0) AS tokens, COALESCE(u.cost_micros, 0) AS cost_micros, COALESCE(u.requests, 0) AS requests,
          COALESCE(w.commits, 0) AS commits, COALESCE(w.insertions, 0) AS insertions, COALESCE(w.deletions, 0) AS deletions,
          COALESCE(w.repos, 0) AS repos, COALESCE(a.days, 0) AS active_days,
@@ -196,8 +202,9 @@ export async function leaderboard(
     repos: row.repos,
     activeDays: row.active_days,
     cacheRead: row.cache_read,
+    cacheTokens: row.cache_tokens,
     efficiency: efficiencyOf(row.tokens, row.commits),
-    cacheHit: cacheHitOf(row.tokens, row.cache_read),
+    cacheHit: cacheHitOf(row.cache_tokens, row.cache_read),
     division: row.division,
     tools: Object.fromEntries(TOOLS.map((tool) => [tool, row[`tool_${tool}`]])) as Record<Tool, number>,
   }));
@@ -363,6 +370,8 @@ export interface WindowTotals {
   tools: Record<MeasuredTool, number>;
   /** Null when no synced day carried a cache count. */
   cacheRead: number | null;
+  /** The tokens of the days that carried one. */
+  cacheTokens: number;
 }
 
 const MEASURED_SUMS = MEASURED_TOOLS.map((tool) => `SUM(CASE WHEN tool = '${tool}' THEN tokens ELSE 0 END) AS tool_${tool}`).join(", ");
@@ -389,11 +398,12 @@ export async function summed(db: D1Database, who: Subject, from: string, until: 
   const usage = await db
     .prepare(
       `SELECT COALESCE(SUM(tokens), 0) AS tokens, COALESCE(SUM(cost_micros), 0) AS cost_micros,
-         COALESCE(SUM(requests), 0) AS requests, SUM(cache_read) AS cache_read, ${MEASURED_SUMS}
+         COALESCE(SUM(requests), 0) AS requests, SUM(cache_read) AS cache_read,
+         COALESCE(SUM(CASE WHEN cache_read IS NOT NULL THEN tokens END), 0) AS cache_tokens, ${MEASURED_SUMS}
        FROM daily_usage WHERE ${clause} AND day >= ? AND day <= ?`,
     )
     .bind(id, from, until)
-    .first<{ tokens: number; cost_micros: number; requests: number; cache_read: number | null } & Record<`tool_${MeasuredTool}`, number>>();
+    .first<{ tokens: number; cost_micros: number; requests: number; cache_read: number | null; cache_tokens: number } & Record<`tool_${MeasuredTool}`, number>>();
   const work = await db
     .prepare(
       `SELECT COALESCE(SUM(commits), 0) AS commits, COALESCE(SUM(insertions), 0) AS insertions, COALESCE(SUM(deletions), 0) AS deletions
@@ -410,6 +420,7 @@ export async function summed(db: D1Database, who: Subject, from: string, until: 
     deletions: work?.deletions ?? 0,
     tools: Object.fromEntries(MEASURED_TOOLS.map((tool) => [tool, usage?.[`tool_${tool}`] ?? 0])) as WindowTotals["tools"],
     cacheRead: usage?.cache_read ?? null,
+    cacheTokens: usage?.cache_tokens ?? 0,
   };
 }
 

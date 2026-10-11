@@ -117,7 +117,7 @@ async function figure(
   }
   if (metric === "cache") {
     const totals = await summed(db, who, bounds(period).from, bounds(period).until);
-    const hit = cacheHitOf(totals.tokens, totals.cacheRead);
+    const hit = cacheHitOf(totals.cacheTokens, totals.cacheRead);
     const value = hit == null ? "unknown" : `${Math.round(hit)}%`;
     return { label: `cache hit · ${span}`, value, aria: `${value} cache hit, ${span}, on Keyhop` };
   }

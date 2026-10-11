@@ -1527,9 +1527,11 @@ describe("verified uploads", () => {
   it("refuses a day whose numbers do not fit each other", () => {
     const refused = (body: unknown) => (parseUsage({ days: [body] }, day) as { error?: string }).error ?? "";
     expect(refused({ day, tool: "claude", tokens: 1000, cost: 5, requests: 2 })).toContain("list price");
-    expect(refused({ day, tool: "claude", tokens: 10_000_000, cost: 0.01, requests: 2 })).toContain("list price");
+    expect(refused({ day, tool: "claude", tokens: 100_000_000, cost: 0.01, requests: 2 })).toContain("list price");
     expect(refused({ day, tool: "claude", tokens: 10, cost: 0.001, requests: 11 })).toContain("Requests");
-    expect(refused({ day, tool: "claude", tokens: 10, cost: 0.001, requests: 0 })).toContain("Requests");
+    // A feed that counts no requests is allowed, and so is a cheap cached day.
+    expect(refused({ day, tool: "claude", tokens: 10, cost: 0.001, requests: 0 })).toBe("");
+    expect(refused({ day, tool: "codex", tokens: 3_000_000, cost: 0.02, requests: 30 })).toBe("");
     expect(refused({ day, tool: "claude", tokens: 0, cost: 0.5, requests: 0 })).toContain("tokens behind it");
     expect(refused({ day, tool: "claude", tokens: 100, cost: 0.001, requests: 1, cacheRead: 101 })).toContain("Cache reads");
     expect(refused({ day, tool: "claude", tokens: 100, cost: 0.001, requests: 1, cacheRead: 1.5 })).toContain("Cache reads");
@@ -1599,7 +1601,8 @@ describe("verified uploads", () => {
     expect(own.you.rank).toBeNull();
     expect(own.you.tier.key).toBe("silver");
     const profile = await (await call("/u/quiet-max")).text();
-    expect(profile).toContain("Not ranked this season yet.");
+    expect(profile).toContain("Not ranked this season yet, with 300M tokens.");
+    expect(profile).toContain("Silver");
   });
 });
 
@@ -1658,14 +1661,15 @@ describe("team digests", () => {
   });
 
   it("writes the day as one message", () => {
-    const text = digestText({ slug: "night-shift", name: "Night Shift" }, [
+    const text = digestText({ slug: "night-shift", name: "Night & Shift <core>" }, [
       { userId: "a", login: "mira", name: "Mira K.", avatarUrl: null, public: true, tokens: 20_400_000, costMicros: 0, requests: 0, commits: 6, insertions: 0, deletions: 0, indexing: null, live: false,
         repos: [{ repo: "acme/keyhop", commits: 4, insertions: 0, deletions: 0, subjects: [] }, { repo: "acme/atlas", commits: 2, insertions: 0, deletions: 0, subjects: [] }] },
       { userId: "b", login: "jonas", name: null, avatarUrl: null, public: true, tokens: 0, costMicros: 0, requests: 0, commits: 0, insertions: 0, deletions: 0, indexing: null, live: false, repos: [] },
     ], "2026-10-10");
-    expect(text).toContain("Keyhop · Night Shift · Saturday, October 10");
-    expect(text).toContain("1 of 2 working, 6 commits in 2 repositories, 20.4M tokens.");
-    expect(text).toContain("• Mira K.: 6 commits (keyhop, atlas), 20.4M tokens");
+    expect(text).toContain("Keyhop · Night &amp; Shift &lt;core&gt; · Saturday, October 10");
+    expect(digestText({ slug: "x", name: "R_D *team*" }, [], "2026-10-10", "discord")).toContain("Keyhop · R\\_D \\*team\\* ·");
+    expect(text).toContain("1 of 2 working, 6 commits in 2 repositories, 20M tokens.");
+    expect(text).toContain("• Mira K.: 6 commits (keyhop, atlas), 20M tokens");
     expect(text).not.toContain("jonas");
     expect(text).toContain("https://keyhop.app/t/night-shift/day");
   });
@@ -1696,11 +1700,15 @@ describe("team digests", () => {
     expect(posted[0].url).toBe("https://discord.com/api/webhooks/9/secret-token-value");
     const body = JSON.parse(posted[0].body) as { content: string };
     expect(body.content).toContain("Digest Crew");
+    // The API keeps a webhook it wasn't given, and moves the hour.
+    const moved = await call(`/api/teams/${slug}/digest`, { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ hour: 11 }) });
+    expect(((await moved.json()) as { digest: { hour: number } | null }).digest?.hour).toBe(11);
+    expect(await sendDigests(env.DB, fakeFetch, new Date(Date.UTC(2026, 9, 10, 11, 17)))).toBe(1);
     expect(body.content).toContain("3.0M tokens");
 
     // An empty field keeps the webhook and moves the hour; the off button drops it.
-    const moved = await form(`/t/${slug}/digest`, cookie, { url: "", hour: "10" });
-    expect(moved.headers.get("location")).toContain("digest=saved");
+    const movedForm = await form(`/t/${slug}/digest`, cookie, { url: "", hour: "10" });
+    expect(movedForm.headers.get("location")).toContain("digest=saved");
     expect(await sendDigests(env.DB, fakeFetch, new Date(Date.UTC(2026, 9, 10, 10, 17)))).toBe(1);
     const off = await form(`/t/${slug}/digest/off`, cookie);
     expect(off.headers.get("location")).toContain("digest=off");
@@ -1753,5 +1761,20 @@ describe("widget metrics", () => {
     expect(await (await call("/u/badger/badge.svg?metric=efficiency")).text()).toContain("2.5 per M");
     expect(await (await call("/u/badger/badge.svg?metric=cache")).text()).toContain("25%");
     expect((await call("/u/badger/badge.svg?metric=nonsense")).status).toBe(404);
+  });
+});
+
+describe("cache hit over counted days", () => {
+  it("never treats a day without a cache count as zero", async () => {
+    const token = await linkApp(await signIn("cachy"));
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    const day = today();
+    await upload(token, [
+      { day, tool: "claude", tokens: 10_000_000, cost: 20, requests: 100, cacheRead: 8_000_000 },
+      { day: addDays(day, -1), tool: "claude", tokens: 10_000_000, cost: 20, requests: 100 },
+    ]);
+    const board = (await (await call("/api/leaderboard?period=week&metric=cache")).json()) as { entries: { login: string; cacheHit: number; cacheTokens: number }[] };
+    expect(board.entries.find((entry) => entry.login === "cachy")).toMatchObject({ cacheHit: 80, cacheTokens: 10_000_000 });
+    expect(await (await call("/u/cachy/badge.svg?metric=cache&period=week")).text()).toContain("80%");
   });
 });

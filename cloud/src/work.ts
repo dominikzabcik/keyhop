@@ -334,12 +334,15 @@ export async function teamDay(db: D1Database, teamId: string, day: string): Prom
     person.requests = row.requests;
   }
   // Today's day is still being written. A live reading for it is newer than the last hourly sync,
-  // and a total can only grow within a day, so the larger figure is the current one.
+  // and a total can only grow within a day, so the larger figure is the current one. The app sends
+  // its own calendar's day, which can sit a day either side of UTC's; a fresh reading for any of
+  // those is this person's today.
   if (day === today()) {
     const readings = await liveFor(db, [...byPerson.keys()]);
+    const near = new Set([addDays(day, -1), day, addDays(day, 1)]);
     for (const [userId, reading] of readings) {
       const person = byPerson.get(userId);
-      if (!person || reading.day !== day) continue;
+      if (!person || !near.has(reading.day)) continue;
       person.live = true;
       if (reading.tokens > person.tokens) {
         person.tokens = reading.tokens;

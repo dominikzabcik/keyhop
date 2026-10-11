@@ -36,7 +36,10 @@ export function parseLive(body: unknown, reference = today()): ReturnType<typeof
   return parsed;
 }
 
-/** What each of these people sent in the last few minutes, by person. Nothing older counts. */
+/**
+ * What each of these people sent in the last few minutes, by person. Nothing older counts, and a
+ * reading is one day: a row still carrying yesterday's day after a local midnight is left out.
+ */
 export async function liveFor(db: D1Database, userIds: string[], reference = now()): Promise<Map<string, LiveReading>> {
   const readings = new Map<string, LiveReading>();
   if (userIds.length === 0) return readings;
@@ -48,7 +51,13 @@ export async function liveFor(db: D1Database, userIds: string[], reference = now
     )
     .bind(reference - LIVE_FRESH_SECONDS, ...userIds)
     .all<{ user_id: string; tool: Tool; day: string; tokens: number; cost_micros: number; requests: number; cache_read: number | null; updated_at: number }>();
+  const newest = new Map<string, string>();
   for (const row of results) {
+    const day = newest.get(row.user_id);
+    if (!day || row.day > day) newest.set(row.user_id, row.day);
+  }
+  for (const row of results) {
+    if (row.day !== newest.get(row.user_id)) continue;
     const reading = readings.get(row.user_id) ?? { day: row.day, tokens: 0, costMicros: 0, requests: 0, cacheRead: null, tools: {}, updatedAt: 0 };
     reading.tokens += row.tokens;
     reading.costMicros += row.cost_micros;
@@ -56,7 +65,6 @@ export async function liveFor(db: D1Database, userIds: string[], reference = now
     if (row.cache_read !== null) reading.cacheRead = (reading.cacheRead ?? 0) + row.cache_read;
     reading.tools[row.tool] = (reading.tools[row.tool] ?? 0) + row.tokens;
     reading.updatedAt = Math.max(reading.updatedAt, row.updated_at);
-    if (row.day > reading.day) reading.day = row.day;
     readings.set(row.user_id, reading);
   }
   return readings;

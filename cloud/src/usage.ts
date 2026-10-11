@@ -22,7 +22,7 @@ const MAX_DAYS = 400;
  * cheapest model at the floor, the dearest reasoning model's output at the ceiling. A day priced
  * outside this band was not counted by Keyhop's own price table.
  */
-const MIN_DOLLARS_PER_MILLION = 0.01;
+const MIN_DOLLARS_PER_MILLION = 0.001;
 const MAX_DOLLARS_PER_MILLION = 1000;
 
 /**
@@ -60,8 +60,8 @@ export function parseUsage(body: unknown, reference = today()): { days: UsageDay
     if (typeof cost !== "number" || !Number.isFinite(cost) || cost < 0 || cost > MAX_COST_PER_DAY) {
       return { error: `API value for ${day} must be between 0 and ${MAX_COST_PER_DAY} dollars.` };
     }
-    // Every token came in a request, and every request with tokens is at least one token.
-    if (tokens > 0 && (requests < 1 || requests > tokens)) return { error: `Requests for ${day} don't fit its tokens.` };
+    // A request with tokens is at least one token. A feed that counts no requests sends zero, and that is allowed.
+    if (tokens > 0 && requests > tokens) return { error: `Requests for ${day} don't fit its tokens.` };
     if (tokens === 0 && cost > 0) return { error: `API value for ${day} needs tokens behind it.` };
     if (tokens > 0 && cost > 0) {
       const perMillion = (cost / tokens) * 1_000_000;

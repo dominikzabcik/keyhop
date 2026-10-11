@@ -404,7 +404,8 @@ pages.get("/u/:login", async (c) => {
     isSelf ? questsFor(c.env.DB, person.id) : Promise.resolve(null),
   ]);
   const earned = badges.filter((entry) => entry.earned);
-  const place = season.rank ? season : null;
+  // Unranked still has tokens and a tier; only the place is missing.
+  const place = season;
   const url = `${new URL(c.req.url).origin}/u/${person.login}`;
   const display = person.display_name || person.name || person.login;
   const creature = petFrom({
@@ -453,7 +454,7 @@ pages.get("/u/:login", async (c) => {
         ${tierTag(tierFor(place?.tokens ?? 0), "lg")}
         <div class="grow">
           <b><a href="/season" style="text-decoration:none">${seasonLabel(currentSeason())} season</a></b>
-          <p class="next">${place ? `#${place.rank} of ${place.players}${place.division ? ` in ${DIVISION_NAMES[place.division]}` : ""}, with ${tokens(place.tokens)} tokens.` : "Not ranked this season yet."}</p>
+          <p class="next">${place.rank ? `#${place.rank} of ${place.players}${place.division ? ` in ${DIVISION_NAMES[place.division]}` : ""}, with ${tokens(place.tokens)} tokens.` : `Not ranked this season yet, with ${tokens(place.tokens)} tokens.`}</p>
         </div>
       </section>
       ${keepsCard(claim, "profile", isSelf ? c.req.query("claim") : undefined, isSelf)}
@@ -538,8 +539,8 @@ pages.get("/t/:slug", pageUser, async (c) => {
   const membership = await teamForMember(c.env.DB, c.req.param("slug"), user.id);
   if (!membership) return notFound(c, "This team doesn't exist, or you aren't in it.");
   const { team, role } = membership;
-  const { period, metric } = readChoice(c);
-  const [entries, people] = await Promise.all([leaderboard(c.env.DB, { period, metric, teamId: team.id }), members(c.env.DB, team.id)]);
+  const { period, metric, division } = readChoice(c);
+  const [entries, people] = await Promise.all([leaderboard(c.env.DB, { period, metric, teamId: team.id, division }), members(c.env.DB, team.id)]);
   const pets = await petsFor(c.env.DB, people.map((person) => person.id));
   const origin = new URL(c.req.url).origin;
   const invite = c.req.query("invite");
@@ -556,7 +557,7 @@ pages.get("/t/:slug", pageUser, async (c) => {
             <a class="text-link" href="/t/${team.slug}/day">See today</a>
           </p>
         </div>
-        ${controls(`/t/${team.slug}`, period, metric, undefined)}
+        ${controls(`/t/${team.slug}`, period, metric, division)}
       </div>
       <section class="aside-layout">
         <div class="stack">${board(entries, metric, user, "Nobody on this team has synced usage for this period yet.")}</div>
@@ -788,7 +789,7 @@ async function wrappedPage(c: C, login: string, asked: string | undefined) {
   const year = asked && /^\d{4}$/.test(asked) ? Number(asked) : thisYear;
   if (year < 2025 || year > thisYear) return notFound(c, "Keyhop has no year like that.");
   const story = await wrapped(c.env.DB, person.id, year);
-  const name = person.display_name ?? person.name ?? person.login;
+  const name = person.display_name || person.name || person.login;
   const shown = (TOOLS as readonly Tool[]).filter((tool) => story.tools[tool] > 0).sort((a, b) => story.tools[b] - story.tools[a]);
   const max = Math.max(1, ...shown.map((tool) => story.tools[tool]));
   return render(

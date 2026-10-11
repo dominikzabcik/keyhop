@@ -173,6 +173,9 @@ extension DashboardPage {
       case "cloud-unlink": data.board = null; act(el, () => api("/api/cloud/unlink", {}), "Unlinking"); break;
       case "cloud-limits-on": act(el, () => api("/api/cloud/limits", { on: true }), "Turning on"); break;
       case "cloud-limits-off": act(el, () => api("/api/cloud/limits", { on: false }), "Stopping"); break;
+      case "team-digest-off":
+        act(el, async () => { const result = await api("/api/cloud/team", { digestOff: ui.boardTeam }); data.board = null; data.day = null; return result; }, "Turning off");
+        break;
       case "cloud-live-on": act(el, () => api("/api/cloud/live", { on: true }), "Turning on"); break;
       case "cloud-live-off": act(el, () => api("/api/cloud/live", { on: false }), "Stopping"); break;
       case "cloud-show-data":
@@ -369,6 +372,17 @@ extension DashboardPage {
         if (result.slug) { ui.boardTeam = result.slug; ui.boardView = "day"; ui.boardDate = ""; data.day = null; data.board = null; }
         return result;
       }, "Joining");
+    }
+    if (form.dataset.form === "team-digest") {
+      const url = String(form.elements.url.value || "").trim();
+      const hour = Number(form.elements.hour.value);
+      if (!Number.isInteger(hour) || hour < 0 || hour > 23) { toast("The hour is 0 to 23, in UTC.", true); return; }
+      act(button, async () => {
+        const result = await api("/api/cloud/team", { slug: ui.boardTeam, digestUrl: url, digestHour: hour });
+        data.board = null;
+        data.day = null;
+        return result;
+      }, "Saving");
     }
     if (form.dataset.form === "team-delete") {
       const slug = ui.boardTeam;

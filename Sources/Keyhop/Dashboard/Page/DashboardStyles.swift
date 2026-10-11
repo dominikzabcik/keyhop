@@ -506,6 +506,8 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .day-figures div { text-align: right; }
 .day-figures b { display: block; font-variant-numeric: tabular-nums; font-weight: 600; }
 .live-dot { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--good); vertical-align: 1px; }
+.team-digest { margin: 14px 0; padding-top: 14px; border-top: 1px solid var(--border); display: grid; gap: 6px; }
+.team-digest b { font-weight: 600; }
 /* Coach: findings first, then the figures that back them. */
 .coach-finding { margin: 0 0 8px; padding: 10px 12px; border-radius: 8px; background: hsl(var(--on) / .04); font-size: 13px; }
 .coach-finding.fine, .coach-finding.quiet { color: var(--muted); }

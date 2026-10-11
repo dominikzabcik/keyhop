@@ -129,11 +129,13 @@ struct CloudBoard: Codable {
         let efficiency: Double?
         let cacheHit: Double?
         let division: String?
+        /// True on today's board when this person's app sent a reading in the last few minutes.
+        let live: Bool?
 
         enum CodingKeys: String, CodingKey {
             case rank, login, name, avatarUrl, tokens, cost, requests, activeDays, tools, isYou
             case isPublic = "public"
-            case commits, insertions, deletions, efficiency, cacheHit, division
+            case commits, insertions, deletions, efficiency, cacheHit, division, live
         }
     }
 
@@ -588,16 +590,25 @@ struct CloudTeam: Codable {
     let isPublic: Bool
 
     enum CodingKeys: String, CodingKey {
-        case slug, name, role, members
+        case slug, name, role, members, digest
         case isPublic = "public"
     }
 
-    init(slug: String, name: String, role: String, members: Int, isPublic: Bool = false) {
+    /// Where the owner's daily digest goes and when, as the website names it. Never the webhook itself.
+    struct Digest: Codable, Equatable {
+        let to: String
+        let hour: Int
+    }
+
+    let digest: Digest?
+
+    init(slug: String, name: String, role: String, members: Int, isPublic: Bool = false, digest: Digest? = nil) {
         self.slug = slug
         self.name = name
         self.role = role
         self.members = members
         self.isPublic = isPublic
+        self.digest = digest
     }
 
     init(from decoder: Decoder) throws {
@@ -607,6 +618,7 @@ struct CloudTeam: Codable {
         role = try container.decodeIfPresent(String.self, forKey: .role) ?? "member"
         members = try container.decodeIfPresent(Int.self, forKey: .members) ?? 0
         isPublic = try container.decodeIfPresent(Bool.self, forKey: .isPublic) ?? false
+        digest = try container.decodeIfPresent(Digest.self, forKey: .digest)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -799,6 +811,16 @@ struct CloudClient {
             enum CodingKeys: String, CodingKey { case isPublic = "public" }
         }
         let (data, status) = try await send("POST", "/api/teams/\(Self.path(slug))/public", body: Body(isPublic: isPublic))
+        guard status == 200 else { throw problem(data, status) }
+    }
+
+    /// Points a team's daily digest at a Slack or Discord webhook at an hour (UTC); an empty URL turns it off.
+    func setDigest(slug: String, url: String, hour: Int) async throws {
+        struct Body: Encodable {
+            let url: String
+            let hour: Int
+        }
+        let (data, status) = try await send("POST", "/api/teams/\(Self.path(slug))/digest", body: Body(url: url, hour: hour))
         guard status == 200 else { throw problem(data, status) }
     }
 

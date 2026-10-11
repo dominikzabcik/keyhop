@@ -4,8 +4,8 @@ import Foundation
 extension DashboardPage {
     static let scriptCore = ##"""
   "use strict";
-  const SECTIONS = ["overview", "limits", "accounts", "usage", "budgets", "leaderboard", "season", "teams", "profile", "settings"];
-  const TITLES = { overview: "Overview", limits: "Limits", accounts: "Accounts", usage: "Usage", budgets: "Budgets", leaderboard: "Leaderboard", season: "Season", teams: "Teams", profile: "Profile", settings: "Settings" };
+  const SECTIONS = ["overview", "limits", "accounts", "usage", "budgets", "plans", "leaderboard", "season", "teams", "profile", "settings"];
+  const TITLES = { overview: "Overview", limits: "Limits", accounts: "Accounts", usage: "Usage", budgets: "Budgets", plans: "Plans", leaderboard: "Leaderboard", season: "Season", teams: "Teams", profile: "Profile", settings: "Settings" };
   const CLOUD_SECTIONS = ["leaderboard", "season", "teams", "profile"];
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -203,6 +203,9 @@ extension DashboardPage {
       }
       if (ui.section === "usage") await loadUsage(ui.range, ui.tool);
       if (ui.section === "budgets") await loadUsage("month");
+      if (ui.section === "plans" && !isStatic) {
+        try { data.plans = await api("/api/plans"); data.plansError = null; } catch (error) { data.plansError = error.message; }
+      }
       if (!isStatic && data.state?.cloud?.linked && CLOUD_SECTIONS.includes(ui.section)) {
         const petReady = ui.section === "profile" ? loadPet() : null;
         const boardURL = (team) => `/api/cloud/leaderboard?period=${ui.boardPeriod}&metric=${ui.boardMetric}&division=${ui.boardDivision}&team=${encodeURIComponent(team)}&season=${encodeURIComponent(ui.boardSeason)}`;

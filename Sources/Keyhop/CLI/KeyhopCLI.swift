@@ -4,7 +4,7 @@ import Foundation
 /// for data; on macOS the app binary answers the same commands.
 enum KeyhopCLI {
     static let commands: Set<String> = [
-        "status", "refresh", "recommend", "switch", "add", "rename", "remove", "usage", "merge", "dashboard", "insights", "budget",
+        "status", "refresh", "recommend", "switch", "add", "rename", "remove", "usage", "plans", "merge", "dashboard", "insights", "budget",
         "cloud", "work", "mcp", "update", "doctor", "services", "reset", "version", "help", "--help", "-h", "--version",
     ]
 
@@ -42,6 +42,7 @@ enum KeyhopCLI {
             case "rename": try await Commands.rename(&args)
             case "remove": try await Commands.remove(&args)
             case "usage": try await Commands.usage(&args)
+            case "plans": try await Commands.plans(&args)
             case "merge": try await Commands.merge(&args)
             case "budget": try await Commands.budget(&args)
             case "cloud": try await Commands.cloud(&args)
@@ -81,6 +82,7 @@ enum KeyhopCLI {
 
     Usage and budgets
       usage [--range today|week|month|30d|90d|12m|all|<from>..<to>] [--tool <tool>] [--json]
+      plans [--json]                       What each plan costs against this month's API value and the week's peaks
       dashboard [--section <name>] [--sample] [--port <n>]  Open Keyhop's window: limits, accounts, usage, budgets, settings
       insights [--output <file>] [--sample]    Open Usage in the dashboard, or save the dashboard as one file
       budget list [--json]

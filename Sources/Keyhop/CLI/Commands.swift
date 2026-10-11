@@ -327,6 +327,34 @@ enum Commands {
 
     // MARK: Usage and budgets
 
+    /// What each paid plan is worth this month, from this computer's own store.
+    static func plans(_ args: inout Arguments) async throws {
+        let json = args.flag("--json")
+        let skipLogs = args.flag("--no-read")
+        try args.finish()
+        let workspace = try Workspace.open()
+        if !skipLogs {
+            let terminal = TerminalProgress()
+            defer { terminal.finish() }
+            await workspace.tracker.refreshPrices()
+            try await workspace.tracker.ingestLocalLogs(progress: terminal.handler)
+        }
+        let report = try await Self.plansReport(workspace: workspace, now: Date())
+        if json { try Output.json(report) } else { print(Reports.plans(report)) }
+    }
+
+    static func plansReport(workspace: Workspace, now: Date) async throws -> PlansReport {
+        let accounts = await workspace.service.accounts
+        let sole = await workspace.service.soleAccounts
+        let month = InsightsRange.month.resolved(firstUse: nil)
+        let digest = try await workspace.tracker.digest(interval: month.interval(now: now), previous: month.previous(now: now),
+                                                        bucket: .day, provider: nil, sole: sole)
+        var value: [UUID: Totals] = [:]
+        for (key, totals) in digest.byAccount { if let id = key.account { value[id] = totals } }
+        let peaks = try await workspace.tracker.windowPeaks(since: now.addingTimeInterval(-7 * 86400))
+        return PlansReport.build(accounts: accounts, usage: workspace.state.usageByID, apiValue: value, peaks: peaks, now: now)
+    }
+
     static func usage(_ args: inout Arguments) async throws {
         let json = args.flag("--json")
         let skipLogs = args.flag("--no-read")

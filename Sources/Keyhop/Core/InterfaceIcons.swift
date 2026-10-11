@@ -9,6 +9,8 @@ enum InterfaceIcons {
         ("accounts", #"<circle cx="6" cy="5.5" r="2.5"/><path d="M1.8 13.5c.5-2.3 2.2-3.5 4.2-3.5s3.7 1.2 4.2 3.5"/><path d="M10.5 3.2a2.4 2.4 0 0 1 0 4.6"/><path d="M12.2 10.3c1.1.5 1.8 1.6 2 3.2"/>"#),
         ("usage", #"<path d="M2 13.5h12"/><path d="M4 11V7"/><path d="M8 11V3.5"/><path d="M12 11V5.5"/>"#),
         ("budgets", #"<rect x="1.8" y="3.5" width="12.4" height="9" rx="1.8"/><path d="M1.8 6.5h12.4"/><path d="M10.5 9.8h1.5"/>"#),
+        // A price tag: what each plan costs against what it is used for.
+        ("plans", #"<path d="M2 8.6V3.2c0-.7.5-1.2 1.2-1.2h5.4l5.6 5.6c.5.5.5 1.2 0 1.7l-4.3 4.3c-.5.5-1.2.5-1.7 0z"/><circle cx="5.3" cy="5.3" r="1"/>"#),
         ("leaderboard", #"<rect x="1.8" y="8" width="4" height="5.5" rx="1"/><rect x="6" y="3.5" width="4" height="10" rx="1"/><rect x="10.2" y="10" width="4" height="3.5" rx="1"/>"#),
         ("season", #"<rect x="2.2" y="3" width="11.6" height="10.5" rx="1.6"/><path d="M2.2 6.4h11.6"/><path d="M5.2 2.2v1.8"/><path d="M10.8 2.2v1.8"/>"#),
         ("teams", #"<circle cx="4" cy="4.2" r="1.3"/><path d="M7.2 4.2h6"/><circle cx="4" cy="8" r="1.3"/><path d="M7.2 8h6"/><circle cx="4" cy="11.8" r="1.3"/><path d="M7.2 11.8h6"/>"#),

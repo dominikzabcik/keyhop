@@ -19,7 +19,7 @@ enum Dashboard {
         let token: String
     }
 
-    static let sections = ["overview", "limits", "accounts", "usage", "budgets", "leaderboard", "season", "teams", "profile", "settings"]
+    static let sections = ["overview", "limits", "accounts", "usage", "budgets", "plans", "leaderboard", "season", "teams", "profile", "settings"]
 
     private static var launchFile: URL { Platform.dataDirectory.appendingPathComponent("dashboard.json") }
 
@@ -832,6 +832,8 @@ actor DashboardSession {
                 return .json(try await cloudClaim())
             case ("POST", "/api/work"):
                 return .json(try await applyWork(try Self.decode(WorkBody.self, request)))
+            case ("GET", "/api/plans"):
+                return .json(try await plans())
             case ("GET", "/api/usage"):
                 guard let range = InsightsRange(argument: request.query["range"] ?? "week") else { throw UsageError("Unknown range.") }
                 let word = request.query["tool"] ?? "all"
@@ -887,6 +889,14 @@ actor DashboardSession {
                               adding: adding.keys.map(\.rawValue).sorted(),
                               addingSince: Dictionary(uniqueKeysWithValues: addingSince.map { ($0.key.rawValue, $0.value) }), refreshing: refreshing, activity: progress.value, messages: pending,
                               cloud: cloudStatus(), work: workStatus(), appearance: currentAppearance())
+    }
+
+    /// What each paid plan is worth this month. The sample prices the sample's own logins.
+    func plans() async throws -> PlansReport {
+        let now = Date()
+        if sample { return SampleData.plans(now: now) }
+        let workspace = try openWorkspace()
+        return try await Commands.plansReport(workspace: workspace, now: now)
     }
 
     func usage(range asked: InsightsRange, tool: Provider?, readLogs: Bool) async throws -> DashboardUsage {

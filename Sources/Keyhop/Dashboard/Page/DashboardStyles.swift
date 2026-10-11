@@ -506,6 +506,24 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .day-figures div { text-align: right; }
 .day-figures b { display: block; font-variant-numeric: tabular-nums; font-weight: 600; }
 .live-dot { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--good); vertical-align: 1px; }
+/* Plans: one card per login, the month's API value against the plan's price. */
+.plans-headline { margin: 0 0 6px; font-size: 17px; font-weight: 620; letter-spacing: -.015em; text-wrap: pretty; }
+.plans-head .subtle { margin: 0; font-size: 12.5px; max-width: 72ch; }
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; margin-top: 14px; }
+.plan-card .card-head h2 { gap: 8px; }
+.plan-top { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+.plan-top > div { display: grid; gap: 2px; }
+.plan-top b { font-size: 15px; font-weight: 620; }
+.plan-value { text-align: right; }
+.plan-value b { font-size: 20px; font-weight: 640; letter-spacing: -.02em; }
+.plan-verdict { margin: 12px 0 0; font-size: 13px; }
+.plan-advice { margin: 6px 0 0; font-size: 13px; color: var(--warn-ink); }
+.plan-windows { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.plan-window { display: grid; grid-template-columns: 64px minmax(0, 1fr) 78px; gap: 10px; align-items: center; font-size: 12px; }
+.plan-window .num { text-align: right; }
+.pill { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: hsl(var(--on) / .07); color: var(--muted); font-size: 11.5px; font-weight: 560; white-space: nowrap; }
+.pill.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 16%, transparent); }
+.pill.warn { color: var(--warn-ink); background: color-mix(in srgb, var(--warn) 16%, transparent); }
 .outbound { border-top: 1px solid var(--border); }
 .outbound summary { display: flex; gap: 12px; align-items: center; padding: 10px 0; cursor: pointer; list-style: none; }
 .outbound summary::-webkit-details-marker { display: none; }

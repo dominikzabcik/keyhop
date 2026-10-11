@@ -6,6 +6,7 @@ import { type Division } from "./env";
 import { type Metric, type Period, isMetric, isPeriod, leaderboard } from "./stats";
 import { presentDay } from "./tasks";
 import { teamDay } from "./work";
+import { digestLabel } from "./digest";
 
 export interface Team {
   id: string;
@@ -40,11 +41,11 @@ export function slugify(name: string): string {
 export async function myTeams(db: D1Database, userId: string) {
   const { results } = await db
     .prepare(
-      `SELECT t.slug, t.name, t.public, m.role, (SELECT COUNT(*) FROM team_members x WHERE x.team_id = t.id) AS members
+      `SELECT t.slug, t.name, t.public, t.digest_url, t.digest_hour, m.role, (SELECT COUNT(*) FROM team_members x WHERE x.team_id = t.id) AS members
        FROM team_members m JOIN teams t ON t.id = m.team_id WHERE m.user_id = ? ORDER BY t.name COLLATE NOCASE`,
     )
     .bind(userId)
-    .all<{ slug: string; name: string; public: number; role: Role; members: number }>();
+    .all<{ slug: string; name: string; public: number; digest_url: string | null; digest_hour: number; role: Role; members: number }>();
   return results;
 }
 
@@ -204,7 +205,14 @@ teams.post("/t/:slug/delete", pageUser, async (c) => {
 
 teams.get("/api/teams", apiUser, async (c) => {
   const list = await myTeams(c.env.DB, c.get("user")!.id);
-  return c.json({ teams: list.map((team) => ({ ...team, public: team.public === 1 })) });
+  // The digest is the owner's setting; the webhook itself is never sent back, only where it points.
+  return c.json({
+    teams: list.map(({ digest_url, digest_hour, ...team }) => ({
+      ...team,
+      public: team.public === 1,
+      digest: team.role === "owner" && digest_url ? { to: digestLabel(digest_url), hour: digest_hour } : null,
+    })),
+  });
 });
 
 teams.get("/api/leaderboard", async (c) => {

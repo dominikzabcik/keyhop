@@ -1,4 +1,5 @@
 import { type Division, type MeasuredTool, type Tool, MEASURED_TOOLS, TOOLS, addDays, today } from "./env";
+import { liveFor } from "./live";
 
 export const PERIODS = {
   today: { label: "Today", days: 1 },
@@ -78,6 +79,8 @@ export interface Entry extends Totals, Work {
   efficiency: number | null;
   cacheHit: number | null;
   division: Division | null;
+  /** True on today's board when this person's app sent a reading in the last few minutes. */
+  live: boolean;
 }
 
 function since(period: Period, reference: string): string {
@@ -186,7 +189,7 @@ export async function leaderboard(
     )
     .bind(...values)
     .all<Row>();
-  return results.map((row, index) => ({
+  const entries: Entry[] = results.map((row, index) => ({
     rank: index + 1,
     userId: row.user_id,
     login: row.login,
@@ -206,8 +209,51 @@ export async function leaderboard(
     efficiency: efficiencyOf(row.tokens, row.commits),
     cacheHit: cacheHitOf(row.cache_tokens, row.cache_read),
     division: row.division,
+    live: false,
     tools: Object.fromEntries(TOOLS.map((tool) => [tool, row[`tool_${tool}`]])) as Record<Tool, number>,
   }));
+  if (options.period === "today" && !options.from && !options.until) return withLive(db, entries, options.metric, options.reference ?? today());
+  return entries;
+}
+
+/**
+ * Today's board moves with the live layer: a fresh reading newer than the hourly day replaces the
+ * person's figures (a day's total only grows), the ranking is counted again, and the row says live.
+ */
+async function withLive(db: D1Database, entries: Entry[], metric: Metric, reference: string): Promise<Entry[]> {
+  if (entries.length === 0) return entries;
+  const readings = await liveFor(db, entries.map((entry) => entry.userId));
+  const near = new Set([addDays(reference, -1), reference, addDays(reference, 1)]);
+  let changed = false;
+  for (const entry of entries) {
+    const reading = readings.get(entry.userId);
+    if (!reading || !near.has(reading.day)) continue;
+    entry.live = true;
+    if (reading.tokens <= entry.tokens) continue;
+    changed = true;
+    entry.tokens = reading.tokens;
+    entry.costMicros = reading.costMicros;
+    entry.requests = reading.requests;
+    for (const tool of TOOLS) entry.tools[tool] = Math.max(entry.tools[tool], reading.tools[tool] ?? 0);
+    entry.efficiency = efficiencyOf(entry.tokens, entry.commits);
+    if (reading.cacheRead !== null) {
+      entry.cacheRead = reading.cacheRead;
+      entry.cacheTokens = reading.tokens;
+      entry.cacheHit = cacheHitOf(entry.cacheTokens, entry.cacheRead);
+    }
+  }
+  if (!changed) return entries;
+  const value = (entry: Entry): number =>
+    metric === "efficiency" ? (entry.efficiency ?? 0)
+      : metric === "cache" ? (entry.cacheHit ?? 0)
+        : metric === "cost" ? entry.costMicros
+          : metric === "requests" ? entry.requests
+            : metric === "commits" ? entry.commits
+              : metric === "lines" ? entry.insertions + entry.deletions
+                : entry.tokens;
+  entries.sort((a, b) => value(b) - value(a) || a.login.localeCompare(b.login, "en", { sensitivity: "base" }));
+  entries.forEach((entry, index) => { entry.rank = index + 1; });
+  return entries;
 }
 
 export interface Profile {

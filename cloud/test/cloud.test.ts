@@ -1627,6 +1627,15 @@ describe("live layer", () => {
     const page = await (await call(`/t/${slug}/day`, { headers: { cookie } })).text();
     expect(page).toContain("live-dot");
 
+    // Today's board moves with the reading too, and says so.
+    await call("/api/me", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ public: true }) });
+    const board = (await (await call("/api/leaderboard?period=today&metric=tokens")).json()) as { entries: { login: string; tokens: number; live: boolean }[] };
+    expect(board.entries.find((entry) => entry.login === "liv")).toMatchObject({ tokens: 4500, live: true });
+    const week = (await (await call("/api/leaderboard?period=week&metric=tokens")).json()) as { entries: { login: string; tokens: number; live: boolean }[] };
+    expect(week.entries.find((entry) => entry.login === "liv")).toMatchObject({ tokens: 1000, live: false });
+    const todayPage = await (await call("/leaderboard?period=today&metric=tokens")).text();
+    expect(todayPage).toContain("live-dot");
+
     // Yesterday is not live, whatever was sent today.
     const earlier = (await (await call(`/api/teams/${slug}/day?date=${addDays(day, -1)}`, { headers: { authorization: `Bearer ${token}` } })).json()) as { people: { login: string; live: boolean }[] };
     expect(earlier.people.find((person) => person.login === "liv")?.live).toBe(false);
@@ -1704,6 +1713,10 @@ describe("team digests", () => {
     const moved = await call(`/api/teams/${slug}/digest`, { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ hour: 11 }) });
     expect(((await moved.json()) as { digest: { hour: number } | null }).digest?.hour).toBe(11);
     expect(await sendDigests(env.DB, fakeFetch, new Date(Date.UTC(2026, 9, 10, 11, 17)))).toBe(1);
+    // The app's team list names where the digest goes, never the webhook itself.
+    const listed = (await (await call("/api/teams", { headers: { authorization: `Bearer ${token}` } })).json()) as { teams: { slug: string; digest: { to: string; hour: number } | null }[] };
+    expect(listed.teams.find((team) => team.slug === slug)?.digest).toEqual({ to: "discord.com/api/webhooks/9/…", hour: 11 });
+    expect(JSON.stringify(listed)).not.toContain("secret-token-value");
     expect(body.content).toContain("3.0M tokens");
 
     // An empty field keeps the webhook and moves the hour; the off button drops it.

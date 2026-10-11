@@ -144,7 +144,7 @@ function board(entries: Entry[], metric: Metric, viewer: User | null, emptyText:
       <tbody>${entries.map(
         (entry) => html`<tr class="${viewer?.id === entry.userId ? "me" : ""}">
           <td class="rank">${entry.rank}</td>
-          <td><div style="display:flex;align-items:center">${personCell(entry, viewer, 28)}${viewer?.id === entry.userId ? html`<span class="badge you">You</span>` : ""}</div></td>
+          <td><div style="display:flex;align-items:center">${personCell(entry, viewer, 28)}${viewer?.id === entry.userId ? html`<span class="badge you">You</span>` : ""}${entry.live ? html`<i class="live-dot" title="Sent in the last few minutes" style="margin-left:8px"></i>` : ""}</div></td>
           <td class="hide-sm">${mixBar(entry.tools)}</td>
           <td class="num hide-sm">${entry.activeDays}</td>
           <td class="num strong">${metricValue(entry, metric)}</td>
@@ -353,7 +353,7 @@ async function seasonPage(c: C, season: string) {
             <tbody>${board.map(
               (entry) => html`<tr class="${viewer?.id === entry.userId ? "me" : ""}">
                 <td class="rank">${entry.rank}</td>
-                <td><div style="display:flex;align-items:center">${personCell(entry, viewer, 28)}${viewer?.id === entry.userId ? html`<span class="badge you">You</span>` : ""}</div></td>
+                <td><div style="display:flex;align-items:center">${personCell(entry, viewer, 28)}${viewer?.id === entry.userId ? html`<span class="badge you">You</span>` : ""}${entry.live ? html`<i class="live-dot" title="Sent in the last few minutes" style="margin-left:8px"></i>` : ""}</div></td>
                 <td>${tierTag(entry.tier)}</td>
                 <td class="hide-sm">${mixBar(entry.tools)}</td>
                 <td class="num hide-sm">${entry.activeDays}</td>

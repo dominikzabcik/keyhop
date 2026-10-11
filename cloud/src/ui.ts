@@ -126,6 +126,9 @@ button, input { font: inherit; color: inherit; }
 .icon-button:hover { background: var(--hover); color: var(--text); }
 .field-switch { height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12.5px; font-weight: 540; cursor: pointer; }
 .field-switch:hover { background: var(--hover); color: var(--text); }
+/* On a phone the switch lives in the menu, so the header keeps to one line. */
+.pop-panel .field-switch.in-menu { display: none; width: 100%; justify-content: flex-start; border: 0; padding: 8px 10px; height: auto; font-size: 13px; }
+@media (max-width: 600px) { .pop-panel .field-switch.in-menu { display: flex; } }
 .icon-button svg { width: 16px; height: 16px; }
 .menu-pop .pop-panel { left: auto; right: 0; }
 
@@ -570,10 +573,10 @@ ${schema ? html`<script type="application/ld+json" nonce="${options.nonce}">${ra
   <a class="brand" href="/">${raw(PIXEL_MARK)}Keyhop</a>
   <nav class="nav" aria-label="Main">${navLinks}</nav>
   <div class="who">
-    <button class="field-switch" type="button" data-field-switch title="Switch between the night and day field">Night</button>
+    <button class="field-switch hide-sm" type="button" data-field-switch title="Switch between the night and day field">Night</button>
     <details class="pop menu-pop">
       <summary class="icon-button" aria-label="Menu">${raw(MENU_GLYPH)}</summary>
-      <div class="pop-panel" role="menu">${navLinks}${!user && publicSite ? html`<a class="show-xs" href="/login?next=${encodeURIComponent(options.path)}">Sign in</a>` : ""}</div>
+      <div class="pop-panel" role="menu"><button class="field-switch in-menu" type="button" data-field-switch title="Switch between the night and day field">Night</button>${navLinks}${!user && publicSite ? html`<a class="show-xs" href="/login?next=${encodeURIComponent(options.path)}">Sign in</a>` : ""}</div>
     </details>
     ${user
       ? html`<details class="pop account-pop">
@@ -645,16 +648,18 @@ document.addEventListener("click", function (event) {
   var scene = null;
   function sceneOptions() { return { scene: "${scene}", opacity: current() === "day" ? ${sceneOpacity} * 0.25 : ${sceneOpacity} }; }
   if (host && window.KeyhopBackdrop) scene = window.KeyhopBackdrop.mount(host, sceneOptions());
-  var button = document.querySelector("[data-field-switch]");
+  var buttons = Array.prototype.slice.call(document.querySelectorAll("[data-field-switch]"));
   function settle() {
-    if (button) button.textContent = current() === "day" ? "Day" : "Night";
+    buttons.forEach(function (button) { button.textContent = current() === "day" ? "Day field" : "Night field"; });
     if (scene && scene.update) scene.update(sceneOptions());
   }
-  if (button) button.addEventListener("click", function () {
-    var next = current() === "day" ? "night" : "day";
-    document.documentElement.setAttribute("data-theme", next);
-    try { localStorage.setItem("keyhop-field", next); } catch (error) {}
-    settle();
+  buttons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      var next = current() === "day" ? "night" : "day";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("keyhop-field", next); } catch (error) {}
+      settle();
+    });
   });
   daylight.addEventListener("change", settle);
   settle();

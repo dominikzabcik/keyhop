@@ -3,7 +3,7 @@ import type { AppEnv } from "./env";
 import { currentSeason, seasonList } from "./seasons";
 
 const ORIGIN = "https://keyhop.app";
-const PUBLIC_PATHS = ["/", "/download", "/privacy", "/terms", "/security", "/leaderboard", "/season"];
+const PUBLIC_PATHS = ["/", "/download", "/docs", "/privacy", "/terms", "/security", "/leaderboard", "/season"];
 
 export const site = new Hono<AppEnv>();
 

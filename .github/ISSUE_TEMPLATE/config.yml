@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Ask a question or share an idea
+    url: https://github.com/dominikzabcik/keyhop/discussions
+    about: Questions, ideas and feedback go to Discussions. Issues are for something that broke.
+  - name: Read the roadmap
+    url: https://github.com/dominikzabcik/keyhop/blob/main/docs/ROADMAP.md
+    about: What is being built next, in order.
   - name: Report a vulnerability privately
     url: https://github.com/dominikzabcik/keyhop/security/advisories/new
     about: Never put credentials or an undisclosed security issue in a public report.

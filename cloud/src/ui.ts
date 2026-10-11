@@ -600,7 +600,8 @@ ${schema ? html`<script type="application/ld+json" nonce="${options.nonce}">${ra
     <span>${publicSite ? "Free, open source and built for the tools you already use." : "The Keyhop app sends tokens, API value, requests and commit counts per day. Commit subjects and current limits go only if you turn them on."}</span>
   </div>
   <nav class="foot-links" aria-label="More">
-    <a href="/#roadmap">Roadmap</a>
+    <a href="/docs">Docs</a>
+    <a href="https://github.com/dominikzabcik/keyhop/blob/main/docs/ROADMAP.md">Roadmap</a>
     <a href="/privacy">Privacy</a>
     <a href="/terms">Terms</a>
     <a href="/security">Security</a>

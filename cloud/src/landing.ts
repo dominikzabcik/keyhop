@@ -214,7 +214,7 @@ export function landingPage(): Html {
     </section>
 
     <section class="band tools" id="tools">
-      <h2>Nine tools, each switched the way it already signs in.</h2>
+      <h2>Thirteen tools counted, nine switched the way they already sign in.</h2>
       <div class="table-scroll">
         <table class="tool-table">
           <thead><tr><th scope="col">Tool</th><th scope="col">Limits</th><th scope="col">Usage history</th><th scope="col">How Keyhop switches it</th></tr></thead>
@@ -258,7 +258,7 @@ export function landingPage(): Html {
     <section class="band social">
       <div class="social-copy">
         <h2>Compare the work, never the prompts.</h2>
-        <p>Link GitHub for a public profile, private team boards and a ranked season every month. Only daily totals per tool are shared.</p>
+        <p>Link GitHub for a public profile, private team boards and a ranked season every month, ranked by efficiency among people on your plan. Only daily totals per tool are shared, and <code>keyhop cloud show-data</code> prints every payload first.</p>
         <a class="text-link" href="/leaderboard">See this week's leaderboard</a>
       </div>
       <ol class="mini-board" aria-label="Example leaderboard">

@@ -3,7 +3,7 @@ import { html, raw } from "hono/html";
 import { pageUser, safeNext } from "./auth";
 import { type AppEnv, type Tool, type User, TOOLS, TOOL_NAMES, addDays, now, today } from "./env";
 import { LANDING_CSS, landingPage } from "./landing";
-import { downloadPage, privacyPage, securityPage, termsPage } from "./marketing";
+import { docsPage, downloadPage, privacyPage, securityPage, termsPage } from "./marketing";
 import { type ClaimState, claimState } from "./keeps";
 import { creatureMarkup, petFrom, petsFor } from "./pet";
 import { profileBadges, questsFor, type Quest } from "./quests";
@@ -169,6 +169,13 @@ pages.get("/download", (c) =>
     mode: "marketing",
     active: "download",
     softwareSchema: true,
+  }),
+);
+
+pages.get("/docs", (c) =>
+  render(c, "Docs · Keyhop", docsPage(), {
+    description: "How Keyhop works: the first run, the window, the keyhop command, and exactly what Keyhop cloud receives.",
+    mode: "marketing",
   }),
 );
 

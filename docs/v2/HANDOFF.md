@@ -24,7 +24,13 @@ and started on 2026-10-10. **M1 (tracker core) is essentially done**; M2 (UI reb
 Verification that passed before the handoff: `swift test` (211), `cd cloud && npm test` (86)
 plus typecheck, and a live two-machine `keyhop merge` smoke test via `KEYHOP_DATA_DIR`.
 On the Linux box the whole suite runs too (Swift 6.3.3 toolchain, Playwright Chromium): as of
-2026-10-11, `swift test` 209, window + CLI e2e 30, cloud 98, site e2e 32, app and CLI checks 16 screens clean.
+2026-10-11 evening, `swift test` 210, window + CLI e2e 30, cloud 99, site e2e 32, and
+`checks/run.mjs --site --app --cli` 33 screens clean. Two `/code-review high` passes (the app
+diff against main, and the cloud diff since 0.14.5) found 32 things; every one is fixed in the
+"Take the review's findings" commits on `v2` and `main`. GitHub Actions builds `v2` as the
+`ci/v2` branch (CI runs on `main`, `ci/**` and PRs): macOS, iOS, Windows and Linux all pass, so
+the Mac-only edits (AppWindow, MenuView, LogWatch, Overrides' login-shell environment) compile.
+Push `v2` to `ci/v2` again after any Mac-only change (`git push -f origin v2:ci/v2`).
 
 ## Everything travels in this branch
 

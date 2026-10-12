@@ -3,7 +3,7 @@
 Keyhop's window drawn natively with [GPUI](https://gpui.rs) through [GPUI Kit](https://gpui-kit.com),
 as a spike next to the HTML window. It is one more client of the local API the HTML window reads:
 it starts `keyhop dashboard --no-open --json` (or attaches to one with `--url`) and draws the
-sidebar, Overview, the Limits board and the status bar from `/api/state`, with the night and day
+sidebar (Home, Limits, the logins in use), Home, Limits pooled and projected from `/api/quota`, and the status bar from `/api/state`, with the night and day
 tokens of `design/keyhop-v2/index.html`. Hop, Refresh and the field switch call the same
 endpoints. The Swift core stays the only code that reads logins, limits and usage.
 

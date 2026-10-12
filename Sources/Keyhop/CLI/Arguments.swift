@@ -52,6 +52,14 @@ struct Arguments {
         return words.joined(separator: " ")
     }
 
+    /// Everything after `--`, taken out, for a command to run.
+    mutating func command() -> [String]? {
+        guard let index = items.firstIndex(of: "--") else { return nil }
+        let rest = Array(items[(index + 1)...])
+        items.removeSubrange(index...)
+        return rest
+    }
+
     func finish() throws {
         if let extra = items.first { throw UsageError("Unexpected argument \(extra).") }
     }

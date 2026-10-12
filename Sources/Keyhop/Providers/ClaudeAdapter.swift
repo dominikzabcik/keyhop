@@ -239,6 +239,30 @@ struct ClaudeAdapter: ProviderAdapter {
         (try? Data(contentsOf: credentialsFile)).flatMap { JSON.object($0) }
     }
 
+    /// Puts a saved login into a config folder of Keyhop's own, for `keyhop run`: the credentials
+    /// file (and on a Mac the Keychain item Claude Code looks for with a custom folder), the
+    /// account in `.claude.json`, and the person's settings seeded from the usual folder once.
+    static func place(_ secret: Secret, in folder: URL) throws {
+        guard let oauth = JSON.object(secret["oauth"]), oauth["accessToken"] is String else {
+            throw KeyhopError("Saved Claude login is damaged")
+        }
+        let credentials = folder.appendingPathComponent(".credentials.json")
+        var root = (try? Data(contentsOf: credentials)).flatMap { JSON.object($0) } ?? [:]
+        root["claudeAiOauth"] = oauth
+        try Files.writeAtomically(JSON.data(root), to: credentials)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: credentials.path)
+        #if os(macOS)
+        try Keychain.write(service: keychainService(environment: ["CLAUDE_CONFIG_DIR": folder.path]), account: keychainAccount, data: JSON.data(root))
+        #endif
+        let usual = configDirectory(environment: [:], home: Files.home)
+        RunDirectories.seed("settings.json", from: usual.appendingPathComponent("settings.json"), into: folder)
+        RunDirectories.seed(".claude.json", from: Files.home.appendingPathComponent(".claude.json"), into: folder)
+        let configFile = folder.appendingPathComponent(".claude.json")
+        var config = (try? Data(contentsOf: configFile)).flatMap { JSON.object($0) } ?? [:]
+        if let account = JSON.object(secret["account"]) { config["oauthAccount"] = account }
+        try Files.writeAtomically(JSON.data(config, pretty: true), to: configFile)
+    }
+
     private static func readConfig() -> [String: Any]? {
         (try? Data(contentsOf: configURL)).flatMap { JSON.object($0) }
     }

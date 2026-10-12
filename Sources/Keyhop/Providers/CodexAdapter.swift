@@ -40,6 +40,16 @@ struct CodexAdapter: ProviderAdapter {
         try Files.writeAtomically(Data(auth.utf8), to: authURL)
     }
 
+    /// Puts a saved login into a Codex home of Keyhop's own, for `keyhop run`, with the person's
+    /// config seeded from the usual home once.
+    static func place(_ secret: Secret, in folder: URL) throws {
+        guard let auth = secret["auth"], JSON.object(auth) != nil else { throw KeyhopError("Saved Codex login is damaged") }
+        let file = folder.appendingPathComponent("auth.json")
+        try Files.writeAtomically(Data(auth.utf8), to: file)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+        RunDirectories.seed("config.toml", from: homeDirectory(environment: [:], home: Files.home).appendingPathComponent("config.toml"), into: folder)
+    }
+
     func signOutLocally() async throws {
         let url = authURL.resolvingSymlinksInPath()
         if FileManager.default.fileExists(atPath: url.path) {

@@ -90,18 +90,20 @@ jobs:
 
   native:
     name: Native window (GPUI)
-    if: hashFiles('native/Cargo.toml') != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
 
+      # hashFiles only works inside steps, so a tree without native/ skips each step here.
       - name: Install GPUI's build dependencies
+        if: hashFiles('native/Cargo.toml') != ''
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libx11-xcb-dev libfontconfig-dev libfreetype-dev
 
       - uses: actions/cache@v4
+        if: hashFiles('native/Cargo.toml') != ''
         with:
           path: |
             ~/.cargo/registry
@@ -111,6 +113,7 @@ jobs:
           restore-keys: native-linux-
 
       - name: Test and build
+        if: hashFiles('native/Cargo.toml') != ''
         working-directory: native
         run: |
           cargo test

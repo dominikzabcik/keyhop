@@ -31,6 +31,11 @@ swift build -c release --arch arm64 --arch x86_64
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/apple/Products/Release/Keyhop "$APP/Contents/MacOS/Keyhop"
+# The native GPUI window, when one was built (KEYHOP_NATIVE_BIN, see native/README.md). It sits
+# beside Keyhop and finds it there, and is signed with the rest of the bundle.
+if [[ -n "${KEYHOP_NATIVE_BIN:-}" && -x "$KEYHOP_NATIVE_BIN" ]]; then
+  cp "$KEYHOP_NATIVE_BIN" "$APP/Contents/MacOS/keyhop-native"
+fi
 cp Assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 cat > "$APP/Contents/Info.plist" <<PLIST

@@ -32,6 +32,22 @@ diff against main, and the cloud diff since 0.14.5) found 32 things; every one i
 the Mac-only edits (AppWindow, MenuView, LogWatch, Overrides' login-shell environment) compile.
 Push `v2` to `ci/v2` again after any Mac-only change (`git push -f origin v2:ci/v2`).
 
+## Trying it, and the native window (2026-10-12)
+
+- **Nightly:** `.github/workflows/nightly.yml` (on main) builds the Mac app from `v2` on every push
+  to `v2`, every night at 02:17 UTC and on demand, as version `1.99.<run>`, and keeps it 14 days
+  as a workflow artifact (never a release, so the updater never offers it; a 0.14.x release never
+  replaces it, the real 2.0.0 will). Developer ID signed and notarized when the secrets exist,
+  ad-hoc otherwise (README.txt in the zip says how to open it).
+- **`keyhop run`** is done (it was deferred from M1): a config folder per login for Claude Code and
+  Codex (`CLAUDE_CONFIG_DIR`/`CODEX_HOME`), `keyhop run <login> -- claude`, `keyhop run map`.
+- **GPUI spike, `native/`:** the window drawn natively with GPUI Kit over the same local API
+  (`keyhop dashboard --json`): sidebar + account tree, Overview, Limits board, status bar, night/day,
+  Hop/Refresh. Shipped inside the nightly as `Keyhop.app/Contents/MacOS/keyhop-native` (Apple
+  silicon). CI builds and tests it on Linux. Decision still open: whether the native window
+  replaces the HTML one (see the recommendation in the conversation of 2026-10-12: keep the
+  Swift core and the local API, move the window to GPUI section by section, keep keyhop.app HTML).
+
 ## Everything travels in this branch
 
 `design/keyhop-v2/index.html` (the **binding** M2 design direction), `AGENTS.md`,

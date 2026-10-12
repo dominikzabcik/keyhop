@@ -4,6 +4,9 @@ on:
   workflow_run:
     workflows: [CI]
     types: [completed]
+    # Only main's CI. A run for any other branch would be skipped anyway, but it would still join
+    # the concurrency group below and cancel the deploy that is waiting for approval.
+    branches: [main]
   workflow_dispatch:
 
 permissions:

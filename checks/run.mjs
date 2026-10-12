@@ -271,10 +271,15 @@ async function checkApp(browser) {
           await route.continue();
         });
         await page.reload({ waitUntil: "domcontentloaded" });
+        // The walk pressed Refresh a moment ago, and the sample rehearses one for a few seconds. The
+        // bar may rightly be lit for that; only the update check must not light it.
+        await page.waitForFunction(() => !document.querySelector("#top-meter")?.classList.contains("on"), null, { timeout: 30_000 });
         await page.locator('[data-action="settings-pane"][data-value="app"]').click();
         await page.getByText("Checking for updates…", { exact: true }).waitFor({ state: "visible" });
         if (await page.locator("#top-meter").evaluate((meter) => meter.classList.contains("on"))) {
-          throw new Error("update check borrowed the limits progress bar");
+          // Say what the bar was carrying, so a slow machine's reason is in the report.
+          const carrying = await page.locator("#read").textContent().catch(() => "");
+          throw new Error(`update check borrowed the limits progress bar (it said "${(carrying || "").trim()}")`);
         }
       });
     } catch (error) {

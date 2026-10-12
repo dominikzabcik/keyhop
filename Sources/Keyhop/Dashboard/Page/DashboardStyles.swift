@@ -104,6 +104,7 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .brand svg { width: 17px; height: 17px; flex: none; }
 .brand b { font-weight: 650; font-size: 14px; letter-spacing: .01em; }
 .brand .badge { margin-left: auto; }
+.brand .channel-badge { margin-left: 0; color: var(--warn-ink); background: color-mix(in srgb, var(--warn) 16%, transparent); font-size: 10.5px; font-weight: 650; letter-spacing: .02em; }
 /* Keys drawn as keys: a cap with a lip along its bottom edge. */
 kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; background: hsl(var(--on) / .07); box-shadow: inset 0 -1.5px 0 hsl(var(--on) / .09); color: var(--muted); font: 600 11px var(--sans); letter-spacing: .02em; }
 .nav { position: relative; isolation: isolate; display: grid; align-content: start; gap: 2px; padding: 8px 10px 10px; flex: 0 1 auto; min-height: 0; overflow: auto; }

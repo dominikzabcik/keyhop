@@ -51,6 +51,34 @@ Push `v2` to `ci/v2` again after any Mac-only change (`git push -f origin v2:ci/
   replaces the HTML one (see the recommendation in the conversation of 2026-10-12: keep the
   Swift core and the local API, move the window to GPUI section by section, keep keyhop.app HTML).
 
+## The window redesign (2026-10-12, evening)
+
+The owner found the twelve-section window hard to find their way in ("nevyznám se v tom") and
+pointed at two references: a Mac app home (wallpaper hero, composer, stat tiles against last
+week, a contribution map, streak tiles, "Needs your attention") and a quota dashboard (provider
+tabs with counts, pooled remaining "293% / 600%" with a drain rate, a remaining-quota chart with
+a projected future and reset steps, "Next reset +200%", per-account window bars, "back in 2d 7h").
+What changed:
+
+- **Five places** (`GROUPS` in `DashboardScriptCore.swift`): Home, Limits, Usage, Insights
+  (Coach/Plans/Budgets as tabs in the title bar), Community (Leaderboard/Season/Teams/Profile).
+  A place opens on its last tab. Section ids and `#accounts` links still work. A tabbed place's
+  own controls lead the page instead of the title bar. The sidebar's account tree became "In use":
+  each tool's login in use with a ring; a press opens Limits on that tool.
+- **Home** (`DashboardScriptOverview.swift`): the field is painted into a wallpaper element
+  (`#hero-art`) that is parked and re-placed across renders, so it keeps animating; other scenes
+  mount there too. The scene shows behind other sections only when Show on is Everywhere
+  (`DashboardAppearance.scope` now defaults to `overview`; `scopeChosen` keeps a hand-picked one).
+- **Limits** (`DashboardScriptLimits.swift`, Accounts folded in) reads `GET /api/quota`:
+  `QuotaReport` (`Core/Quota.swift`) pools each counted login's remaining share (100 − its tightest
+  window), measures past half-hours from the limit samples (kept 8 days), and projects 7 days:
+  the current rate (3 h least squares, or the window's average) for 3 hours, the typical rate
+  after, resets lifting windows back to 0. `keyhop forecast` and MCP `keyhop_forecast` print it.
+  Sample mode synthesises a week of samples (`SampleData.quota`).
+- Verified on Linux: `swift test` 224, window e2e 31, `checks/run.mjs --app --cli` clean.
+  Not done: the native GPUI spike still draws the old Overview and board; the Mac menu has no
+  forecast line yet.
+
 ## Everything travels in this branch
 
 `design/keyhop-v2/index.html` (the **binding** M2 design direction), `AGENTS.md`,

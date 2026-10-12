@@ -303,13 +303,13 @@ extension DashboardPage {
     </section>`;
   }
 
-  function heatmap(days) {
+  function heatmap(days, size = "side") {
     if (!days.length) return "";
     const parse = (day) => new Date(day + "T00:00:00");
     const offset = (parse(days[0].day).getDay() + 6) % 7;
     const columns = Math.ceil((days.length + offset) / 7);
     const gap = 3, top = 18;
-    const size = Math.max(9, Math.min(16, Math.floor((chartWidth("side") - (columns - 1) * gap) / columns)));
+    const cell = Math.max(9, Math.min(size === "full" ? 22 : 16, Math.floor((chartWidth(size) - (columns - 1) * gap) / columns)));
     const active = days.map((d) => d.tokens).filter((v) => v > 0).sort((a, b) => a - b);
     const quartile = (q) => (active.length ? active[Math.min(active.length - 1, Math.floor(q * active.length))] : 0);
     const cuts = [quartile(0.25), quartile(0.5), quartile(0.75)];
@@ -323,13 +323,13 @@ extension DashboardPage {
         labels.push({ col, text: fmt.day(date, { month: "short" }) });
         lastMonth = date.getMonth();
       }
-      cells += `<rect class="l${level}" x="${col * (size + gap)}" y="${top + row * (size + gap)}" width="${size}" height="${size}" rx="2.5"${day.tokens && !isStatic && ui.section === "usage" ? ` data-action="day" data-value="${day.day}"` : ""}${tipAttr(fmt.day(date, { weekday: "short", month: "short", day: "numeric" }), day.tokens ? [["Tokens", fmt.tokens(day.tokens)], ["API value", fmt.usd(day.cost)], ["Requests", fmt.count(day.requests)]] : [["No usage", ""]])}/>`;
+      cells += `<rect class="l${level}" x="${col * (cell + gap)}" y="${top + row * (cell + gap)}" width="${cell}" height="${cell}" rx="2.5"${day.tokens && !isStatic ? ` data-action="day" data-value="${day.day}"` : ""}${tipAttr(fmt.day(date, { weekday: "short", month: "short", day: "numeric" }), day.tokens ? [["Tokens", fmt.tokens(day.tokens)], ["API value", fmt.usd(day.cost)], ["Requests", fmt.count(day.requests)]] : [["No usage", ""]])}/>`;
     });
     // A month that starts a column or two before the next one has no room for its name; the
     // next month's name wins rather than the two running into each other.
     const months = labels.filter((label, i) => !labels[i + 1] || labels[i + 1].col - label.col >= 3)
-      .map((label) => `<text x="${label.col * (size + gap)}" y="11">${esc(label.text)}</text>`).join("");
-    const width = columns * (size + gap) - gap, height = top + 7 * (size + gap) - gap;
+      .map((label) => `<text x="${label.col * (cell + gap)}" y="11">${esc(label.text)}</text>`).join("");
+    const width = columns * (cell + gap) - gap, height = top + 7 * (cell + gap) - gap;
     return `<svg class="heat" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Daily activity over 26 weeks">${months}${cells}</svg>`;
   }
 

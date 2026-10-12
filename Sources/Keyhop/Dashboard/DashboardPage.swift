@@ -24,7 +24,7 @@ enum DashboardPage {
         "<style>", styles, "</style>",
         shell,
         "(() => {",
-        scriptCore, scriptChrome, scriptOverview, scriptAccounts, scriptUsage, scriptBudgets,
+        scriptCore, scriptChrome, scriptOverview, scriptLimits, scriptUsage, scriptBudgets,
         scriptBackdrop, scriptPlans, scriptCoach, scriptCloud, scriptSettings, scriptActions,
         tail,
     ].joined(separator: "\n")

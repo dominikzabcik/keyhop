@@ -87,10 +87,28 @@ extension DashboardPage {
 
   // The sidebar's current section, on the same kind of thumb, running down the list.
   function labelNav() {
-    shownSections().forEach((section, i) => {
-      const link = $(`#nav a[data-section="${section}"]`) || $(`.side-foot a[data-section="${section}"]`);
-      if (link) link.title = i < 9 ? `${TITLES[section]} · press ${i + 1}` : TITLES[section];
+    [...document.querySelectorAll("#nav a, .side-foot a[data-section]")].filter((a) => !a.hidden).forEach((link, i) => {
+      const name = link.dataset.group ? GROUPS.find((item) => item.id === link.dataset.group).title : TITLES[link.dataset.section];
+      link.title = i < 9 ? `${name} · press ${i + 1}` : name;
     });
+  }
+
+  // Whether a section can open: the cloud's sections need the website, and all but the
+  // leaderboard a linked account.
+  function sectionShown(section) {
+    if (!CLOUD_SECTIONS.includes(section)) return true;
+    const cloud = data.state?.cloud;
+    const cloudOn = !isStatic && !!cloud?.available;
+    return section === "leaderboard" ? cloudOn : cloudOn && !!cloud.linked && !cloud.linking;
+  }
+
+  // A place with several sections shows them as tabs beside its title.
+  function subnavHTML() {
+    const group = groupOf(ui.section);
+    const shown = group.sections.filter(sectionShown);
+    if (shown.length < 2) return "";
+    return `<div class="tabs subnav" role="group" aria-label="${esc(group.title)}" data-tabs="subnav-${esc(group.id)}">${shown.map((section) =>
+      `<button type="button" data-action="goto" data-section="${section}" aria-pressed="${section === ui.section}">${esc(TITLES[section])}</button>`).join("")}</div>`;
   }
 
   function slideNav() {
@@ -153,10 +171,12 @@ extension DashboardPage {
   function paletteItems() {
     const items = [];
     const tools = data.state?.status.tools || [];
+    const icons = { overview: "home", limits: "limits" };
     for (const section of SECTIONS) {
+      if (section === "accounts" || !sectionShown(section)) continue;
       const place = shownSections().indexOf(section);
-      if (place < 0) continue;
-      items.push({ group: "Go to", label: TITLES[section], icon: section, key: place < 9 ? String(place + 1) : "", run: () => go(section) });
+      const group = groupOf(section);
+      items.push({ group: "Go to", label: TITLES[section], detail: group.sections.length > 1 ? group.title : "", icon: icons[section] || section, key: place >= 0 && place < 9 ? String(place + 1) : "", run: () => go(section) });
     }
     for (const [value, label] of RANGES) {
       if (isStatic && !data.usage[`${value}:all`]) continue;
@@ -250,13 +270,10 @@ extension DashboardPage {
     const cloud = data.state.cloud;
     const cloudOn = !isStatic && !!cloud?.available;
     const linked = cloudOn && !!cloud.linked && !cloud.linking;
-    const cloudLabel = $("#cloud-label");
-    if (cloudLabel) cloudLabel.hidden = !cloudOn;
-    for (const name of CLOUD_SECTIONS) {
-      const link = $(`#nav a[data-section="${name}"]`);
-      if (link) link.hidden = name === "leaderboard" ? !cloudOn : !linked;
-    }
-    if (CLOUD_SECTIONS.includes(ui.section) && $(`#nav a[data-section="${ui.section}"]`)?.hidden) ui.section = "overview";
+    const community = $('#nav a[data-group="community"]');
+    if (community) community.hidden = !cloudOn;
+    if (!sectionShown(ui.section)) ui.section = "overview";
+    void linked;
     // While a link waits for approval in the browser, check every few seconds instead of every 20.
     if (cloud?.linking && !linkPoll) {
       linkPoll = setTimeout(async () => {
@@ -265,15 +282,36 @@ extension DashboardPage {
         render();
       }, 3000);
     }
-    const page = { overview: overviewPage, limits: limitsPage, accounts: accountsPage, usage: usagePage, budgets: budgetsPage, plans: plansPage, coach: coachPage, leaderboard: leaderboardPage, season: seasonPage, teams: teamsPage, profile: profilePage, settings: settingsPage }[ui.section](tools);
-    $("#title").textContent = TITLES[ui.section];
-    $("#toolbar").innerHTML = page.toolbar || "";
+    const page = { overview: overviewPage, limits: limitsPage, accounts: limitsPage, usage: usagePage, budgets: budgetsPage, plans: plansPage, coach: coachPage, leaderboard: leaderboardPage, season: seasonPage, teams: teamsPage, profile: profilePage, settings: settingsPage }[ui.section](tools);
+    $("#title").textContent = groupOf(ui.section).title;
+    const subnav = $("#subnav");
+    if (subnav) subnav.innerHTML = subnavHTML();
+    const tabbed = !!subnav?.innerHTML;
+    $("#toolbar").innerHTML = tabbed ? "" : page.toolbar || "";
+    const pageTools = tabbed && page.toolbar ? `<div class="page-tools">${page.toolbar}</div>` : "";
     const offline = ui.offline ? `<div class="notice">${icon("alert")}<div><p>${esc(ui.offline)}</p></div></div>` : "";
-    $("#main").innerHTML = ui.section === "overview" ? `<div class="home-wrap">${offline}${page.body}</div>` : `<div class="page">${offline}${page.body}</div>`;
+    parkHero();
+    $("#main").innerHTML = ui.section === "overview" ? `<div class="home">${offline}${page.body}</div>` : `<div class="page">${offline}${pageTools}${page.body}</div>`;
+    placeHero();
     $("#main").setAttribute("aria-busy", (ui.loadingUsage || data.state.refreshing) ? "true" : "false");
     applyPending();
     renderActivity();
     animate();
+  }
+
+  // Home's wallpaper is one element that lives across renders, so the field and any scene keep
+  // painting instead of starting over every time the page is drawn again.
+  function parkHero() {
+    const art = $("#hero-art");
+    if (art && art.parentElement !== $("#content")) { art.hidden = true; $("#content").prepend(art); }
+  }
+
+  function placeHero() {
+    const art = $("#hero-art"), slot = $("[data-hero]");
+    if (!art || !slot) return;
+    slot.replaceWith(art);
+    art.hidden = false;
+    requestAnimationFrame(paintField);
   }
 
   // MARK: Progress
@@ -357,8 +395,18 @@ extension DashboardPage {
   }
 
   function renderSidebar() {
+    // A place remembers the section last open in it, so its link returns there.
+    const here = groupOf(ui.section);
+    ui.lastIn[here.id] = ui.section;
     for (const link of document.querySelectorAll("#nav a, .side-foot a[data-section]")) {
-      if (link.dataset.section === ui.section) link.setAttribute("aria-current", "page"); else link.removeAttribute("aria-current");
+      const group = link.dataset.group;
+      if (group) {
+        const place = GROUPS.find((item) => item.id === group);
+        const remembered = ui.lastIn[group];
+        link.dataset.section = remembered && sectionShown(remembered) ? remembered : place.sections.find(sectionShown) || place.sections[0];
+        link.href = "#" + link.dataset.section;
+      }
+      if ((group || link.dataset.section) === (group ? here.id : ui.section)) link.setAttribute("aria-current", "page"); else link.removeAttribute("aria-current");
     }
     const state = data.state;
     // A beta says so beside the name, the way a browser's Beta does.

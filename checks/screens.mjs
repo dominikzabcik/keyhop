@@ -48,9 +48,10 @@ export const ACCOUNT_SCREENS = [
 
 /** The Mac window, served by `keyhop dashboard --sample`. Its sections live behind the hash. */
 export const APP_SCREENS = [
-  { name: "overview", section: "overview", mustSay: ["In use"] },
-  { name: "limits", section: "limits", mustSay: ["Needs a hop", "In use"] },
-  { name: "accounts", section: "accounts", mustSay: ["Add account"] },
+  { name: "overview", section: "overview", mustSay: ["Needs your attention", "In use", "Overview", "Current streak"] },
+  { name: "limits", section: "limits", mustSay: ["Remaining, pooled", "Next reset", "In use", "Add account"] },
+  // An older link to Accounts lands on Limits.
+  { name: "accounts", section: "accounts", mustSay: ["Remaining, pooled", "Add account"] },
   { name: "usage", section: "usage", mustSay: ["Tokens", "Tools", "Sessions", "Cache read", "API value"] },
   { name: "budgets", section: "budgets", mustSay: ["Budget"] },
   { name: "plans", section: "plans", mustSay: ["API value this month"] },

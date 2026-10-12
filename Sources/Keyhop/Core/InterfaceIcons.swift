@@ -4,6 +4,7 @@ import Foundation
 /// draw them from these shapes, so every surface uses the same set.
 enum InterfaceIcons {
     static let shapes: [(name: String, body: String)] = [
+        ("home", #"<path d="M2.5 7 8 2.5 13.5 7v5.8a1 1 0 0 1-1 1H10V10.2a.7.7 0 0 0-.7-.7H6.7a.7.7 0 0 0-.7.7v3.6H3.5a1 1 0 0 1-1-1Z"/>"#),
         ("overview", #"<rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/>"#),
         ("limits", #"<rect x="1.5" y="2" width="3" height="12" rx="1"/><rect x="6.5" y="2" width="3" height="12" rx="1"/><rect x="11.5" y="2" width="3" height="12" rx="1"/>"#),
         ("accounts", #"<circle cx="6" cy="5.5" r="2.5"/><path d="M1.8 13.5c.5-2.3 2.2-3.5 4.2-3.5s3.7 1.2 4.2 3.5"/><path d="M10.5 3.2a2.4 2.4 0 0 1 0 4.6"/><path d="M12.2 10.3c1.1.5 1.8 1.6 2 3.2"/>"#),

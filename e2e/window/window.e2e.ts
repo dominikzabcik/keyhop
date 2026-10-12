@@ -2,11 +2,11 @@ import { test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 import { assertReadable, openWindow } from './sample-window.ts';
 
-test('the sidebar lists its sections from the top', async ({ app, browser }) => {
+test('the sidebar lists its five places from the top', async ({ app, browser }) => {
   await openWindow(app, 'overview');
   await expect.poll(() => browser.evaluate(() => {
-    const label = document.querySelector('#cloud-label');
-    return !!label && !(label as HTMLElement).hidden;
+    const community = document.querySelector('#nav a[data-group="community"]');
+    return !!community && !(community as HTMLElement).hidden;
   })).toBe(true);
 
   const layout = await browser.evaluate(() => {
@@ -33,37 +33,62 @@ test('the sidebar lists its sections from the top', async ({ app, browser }) => 
     };
   });
 
-  expect(layout?.names).toEqual([
-    'Overview', 'Limits', 'Accounts', 'Usage', 'Budgets', 'Plans', 'Coach', 'Cloud',
-    'Leaderboard', 'Season', 'Teams', 'Profile',
-  ]);
-  // The Cloud label's own margin is the widest intended gap. A stretched row is hundreds of pixels.
-  expect(layout?.maxGap ?? 999).toBeLessThan(40);
-  // The account tree takes the leftover height. Settings sits under it.
+  expect(layout?.names).toEqual(['Home', 'Limits', 'Usage', 'Insights', 'Community']);
+  expect(layout?.maxGap ?? 999).toBeLessThan(12);
+  // The logins in use take the leftover height. Settings sits under them.
   expect(layout?.treeHeight ?? 0).toBeGreaterThan(24);
   expect(layout?.settingsBelow).toBe(true);
 });
 
-test('overview is this computer today', async ({ app, screen, browser }) => {
+test('a place with several sections shows them as tabs and remembers the last one', async ({ app, screen, browser }) => {
+  await openWindow(app, 'plans');
+  await expect(screen.getByRole('heading', 'Insights', { level: 1 })).toBeVisible();
+  await expect(browser.locator('#subnav [data-section="plans"]')).toHaveAttribute('aria-pressed', 'true');
+  await browser.locator('#subnav [data-section="budgets"]').tap();
+  await expect(screen.getByRole('heading', 'Budgets', { level: 2 })).toBeVisible();
+  await browser.locator('#nav a[data-group="usage"]').tap();
+  await expect(screen.getByRole('heading', 'Usage', { level: 1 })).toBeVisible();
+  await browser.locator('#nav a[data-group="insights"]').tap();
+  await expect(browser.locator('#subnav [data-section="budgets"]')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('home is today: the wallpaper, what needs you and the week', async ({ app, screen, browser }) => {
   await openWindow(app, 'overview');
-  await expect(screen.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(screen.getByText('Your logins', { exact: true })).toBeVisible();
-  await expect(screen.getByText('In use', { exact: true })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Home', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Needs your attention')).toBeVisible();
+  await expect(screen.getByRole('heading', 'In use')).toBeVisible();
+  await expect(screen.getByRole('heading', 'Overview')).toBeVisible();
+  await expect(screen.getByText('Current streak')).toBeVisible();
+  // The wallpaper is one element, carried into Home's hero on every draw.
+  await expect.poll(() => browser.evaluate(() => {
+    const art = document.querySelector('.hero #hero-art') as HTMLElement | null;
+    return !!art && !art.hidden && art.getBoundingClientRect().height > 100;
+  })).toBe(true);
+  await screen.getByRole('button', { name: '30 days', exact: true }).tap();
+  await expect(screen.getByRole('button', { name: '30 days', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(screen.getByText('vs the 30 days before').first()).toBeVisible();
   await assertReadable(browser);
 });
 
-test('limits is the board of logins', async ({ app, screen, browser }) => {
+test('limits pools every login and projects it', async ({ app, screen, browser }) => {
   await openWindow(app, 'limits');
   await expect(screen.getByRole('heading', 'Limits', { level: 1 })).toBeVisible();
-  await expect(screen.getByRole('heading', 'Needs a hop', { level: 2 })).toBeVisible();
-  await expect(screen.getByRole('heading', 'In use', { level: 2 })).toBeVisible();
+  await expect(screen.getByText('Remaining, pooled', { exact: false })).toBeVisible();
+  await expect(screen.getByText('Next reset', { exact: false })).toBeVisible();
+  await expect(browser.locator('.qchart svg .qline.ahead')).toBeVisible();
+  await expect(screen.getByRole('heading', 'Claude Code', { level: 2 })).toBeVisible();
+  await browser.locator('[data-action="quota-tool"][data-value="codex"]').tap();
+  await expect(screen.getByText('Codex login', { exact: false }).first()).toBeVisible();
+  await screen.getByRole('button', { name: 'Drain rate', exact: true }).tap();
+  await expect(browser.locator('.qchart svg .qbar').first()).toBeVisible();
   await assertReadable(browser);
 });
 
-test('accounts offers another login', async ({ app, screen, browser }) => {
+test('an old link to accounts opens limits, which can add another login', async ({ app, screen, browser }) => {
   await openWindow(app, 'accounts');
-  await expect(screen.getByRole('heading', 'Accounts', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Limits', { level: 1 })).toBeVisible();
   await expect.poll(() => screen.getByRole('button', 'Add account').count()).toBeGreaterThan(0);
+  await expect(screen.getByRole('button', 'Switch and sign in').first()).toBeVisible();
   await assertReadable(browser);
 });
 
@@ -77,14 +102,15 @@ test('usage names the token columns', async ({ app, screen, browser }) => {
 
 test('budgets is its own list', async ({ app, screen, browser }) => {
   await openWindow(app, 'budgets');
-  await expect(screen.getByRole('heading', 'Budgets', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Insights', { level: 1 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Budgets', { level: 2 })).toBeVisible();
   await assertReadable(browser);
 });
 
 test('plans price each login against the month', async ({ app, screen, browser }) => {
   await openWindow(app, 'plans');
-  await expect(screen.getByRole('heading', 'Plans', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Insights', { level: 1 })).toBeVisible();
+  await expect(browser.locator('#subnav [data-section="plans"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByText('You pay', { exact: false })).toBeVisible();
   await expect(screen.getByText('API value this month', { exact: false }).first()).toBeVisible();
   await assertReadable(browser);
@@ -92,7 +118,7 @@ test('plans price each login against the month', async ({ app, screen, browser }
 
 test('coach reads optimize, compare and yield', async ({ app, screen, browser }) => {
   await openWindow(app, 'coach');
-  await expect(screen.getByRole('heading', 'Coach', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Insights', { level: 1 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Optimize', { level: 2 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Compare', { level: 2 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Yield', { level: 2 })).toBeVisible();
@@ -102,7 +128,8 @@ test('coach reads optimize, compare and yield', async ({ app, screen, browser })
 
 test('leaderboard is the ranks, by efficiency first', async ({ app, screen, browser }) => {
   await openWindow(app, 'leaderboard');
-  await expect(screen.getByRole('heading', 'Leaderboard', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
+  await expect(browser.locator('#subnav [data-section="leaderboard"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByText('Your rank')).toBeVisible();
   await expect(screen.getByRole('button', { name: 'Efficiency', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByText('Commits per M tokens')).toBeVisible();
@@ -114,21 +141,24 @@ test('leaderboard is the ranks, by efficiency first', async ({ app, screen, brow
 
 test('season is the standings', async ({ app, screen, browser }) => {
   await openWindow(app, 'season');
-  await expect(screen.getByRole('heading', 'Season', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
+  await expect(browser.locator('#subnav [data-section="season"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByRole('heading', 'Season standings')).toBeVisible();
   await assertReadable(browser);
 });
 
 test('teams opens on the list', async ({ app, screen, browser }) => {
   await openWindow(app, 'teams');
-  await expect(screen.getByRole('heading', 'Teams', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
+  await expect(browser.locator('#subnav [data-section="teams"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByRole('heading', 'Your teams')).toBeVisible();
   await assertReadable(browser);
 });
 
 test('profile holds the pet, keeps, quests and badges', async ({ app, screen, browser }) => {
   await openWindow(app, 'profile');
-  await expect(screen.getByRole('heading', 'Profile', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
+  await expect(browser.locator('#subnav [data-section="profile"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByRole('heading', 'Keeps')).toBeVisible();
   await expect(screen.getByRole('heading', 'Quests')).toBeVisible();
   await expect(screen.getByRole('heading', 'Badges')).toBeVisible();
@@ -151,22 +181,22 @@ test('the sidebar stays packed in the smallest window', async ({ app, browser })
   await openWindow(app, 'overview');
   await browser.setViewport({ width: 960, height: 620 });
   await expect.poll(() => browser.evaluate(() => {
-    const label = document.querySelector('#cloud-label');
-    if (!label || (label as HTMLElement).hidden) return 999;
+    const community = document.querySelector('#nav a[data-group="community"]');
+    if (!community || (community as HTMLElement).hidden) return 999;
     const nav = document.querySelector('#nav');
     if (!nav) return 999;
     const boxes = [...nav.children].filter((el) => !(el as HTMLElement).hidden).map((el) => el.getBoundingClientRect());
     let maxGap = 0;
     for (let i = 1; i < boxes.length; i++) maxGap = Math.max(maxGap, boxes[i].top - boxes[i - 1].bottom);
     return maxGap;
-  })).toBeLessThan(40);
+  })).toBeLessThan(12);
 });
 
 test('Hop lists the sections a linked account can open', async ({ app, screen }) => {
   await openWindow(app, 'overview');
   await screen.getByRole('button', 'Hop', { exact: true }).tap();
   await expect(screen.getByRole('dialog', 'Hop')).toBeVisible();
-  for (const name of ['Overview', 'Leaderboard', 'Season', 'Teams', 'Profile', 'Settings']) {
+  for (const name of ['Home', 'Coach', 'Plans', 'Leaderboard', 'Season', 'Teams', 'Profile', 'Settings']) {
     await expect(screen.getByRole('option', name, { exact: false })).toBeVisible();
   }
 });

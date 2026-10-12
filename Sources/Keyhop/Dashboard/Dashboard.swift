@@ -206,8 +206,11 @@ struct DashboardAppearance: Codable, Equatable {
 
     var scene = "leaves"
     var opacity = 0.8
-    /// "all" shows the scene behind every section, "overview" only behind Overview.
-    var scope = "all"
+    /// "overview" keeps the scene in Home's wallpaper, "all" also shows it behind every section.
+    var scope = "overview"
+    /// Whether `scope` was picked by hand. Before Home had a wallpaper every saved file said "all",
+    /// so a scope nobody chose follows the new default.
+    var scopeChosen = false
     /// Whether a picture for the image scene is saved.
     var image = false
     /// How solid Keyhop's Mac window is. Below 1 the whole app is glass over the desktop.
@@ -217,7 +220,7 @@ struct DashboardAppearance: Codable, Equatable {
     /// "night" or "day" for the window's field, or "auto" to follow the system.
     var theme = "night"
 
-    enum CodingKeys: String, CodingKey { case scene, opacity, scope, image, glass, blur, theme }
+    enum CodingKeys: String, CodingKey { case scene, opacity, scope, scopeChosen, image, glass, blur, theme }
 
     static var url: URL { Platform.dataDirectory.appendingPathComponent("appearance.json") }
     static var imageURL: URL { Platform.dataDirectory.appendingPathComponent("background.jpg") }
@@ -240,7 +243,8 @@ extension DashboardAppearance {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         scene = try values.decode(String.self, forKey: .scene)
         opacity = try values.decode(Double.self, forKey: .opacity)
-        scope = try values.decode(String.self, forKey: .scope)
+        scopeChosen = try values.decodeIfPresent(Bool.self, forKey: .scopeChosen) ?? false
+        scope = scopeChosen ? try values.decode(String.self, forKey: .scope) : DashboardAppearance().scope
         image = try values.decode(Bool.self, forKey: .image)
         // Saved before the window could be see-through.
         glass = try values.decodeIfPresent(Double.self, forKey: .glass) ?? DashboardAppearance().glass
@@ -836,6 +840,8 @@ actor DashboardSession {
                 return .json(try await plans())
             case ("GET", "/api/coach"):
                 return .json(try await coach())
+            case ("GET", "/api/quota"):
+                return .json(try await quota())
             case ("GET", "/api/usage"):
                 guard let range = InsightsRange(argument: request.query["range"] ?? "week") else { throw UsageError("Unknown range.") }
                 let word = request.query["tool"] ?? "all"
@@ -901,6 +907,14 @@ actor DashboardSession {
         if sample { return SampleData.plans(now: now) }
         let workspace = try openWorkspace()
         return try await Commands.plansReport(workspace: workspace, now: now)
+    }
+
+    /// Every login's limit pooled, past and projected. The sample projects the sample's own logins.
+    func quota() async throws -> QuotaReport {
+        let now = Date()
+        if sample { return SampleData.quota(now: now) }
+        let workspace = try openWorkspace()
+        return try await Commands.quotaReport(workspace: workspace, now: now)
     }
 
     /// Efficiency coaching from this computer's store. The sample coaches the sample.
@@ -1200,6 +1214,7 @@ actor DashboardSession {
         if let scope = body.scope {
             guard DashboardAppearance.scopes.contains(scope) else { throw UsageError("Unknown scope.") }
             appearance.scope = scope
+            appearance.scopeChosen = true
         }
         if let opacity = body.opacity {
             guard opacity.isFinite else { throw UsageError("Opacity must be a number.") }

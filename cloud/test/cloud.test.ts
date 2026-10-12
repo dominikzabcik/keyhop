@@ -1247,11 +1247,15 @@ describe("limit sharing", () => {
   it("limits how fast one account can upload, without slowing anyone else", async () => {
     const busy = await linkApp(await signIn("runaway"));
     const calm = await linkApp(await signIn("steady"));
+    // The limiter counts in fixed one-minute windows, so a run that straddles a window's edge gets
+    // up to two allowances before the first refusal. Either way at least sixty go through first.
     const statuses: number[] = [];
-    for (let attempt = 0; attempt < 65; attempt++) {
+    while (statuses.length < 130 && statuses.at(-1) !== 429) {
       statuses.push((await sendLimits(busy, [{ accountKey: "a", tool: "claude", windowLabel: "5h", usedPercent: 1 }])).status);
     }
-    expect(statuses.slice(0, 60).every((status) => status === 200)).toBe(true);
+    const first = statuses.indexOf(429);
+    expect(first).toBeGreaterThanOrEqual(60);
+    expect(statuses.slice(0, first).every((status) => status === 200)).toBe(true);
     const refused = await sendLimits(busy, []);
     expect(refused.status).toBe(429);
     expect(refused.headers.get("retry-after")).toBe("60");
@@ -1260,8 +1264,8 @@ describe("limit sharing", () => {
     expect((await sendLimits(calm, [])).status).toBe(200);
     // Reading is never throttled by writing.
     expect((await readLimits(busy)).status).toBe(200);
-    // Sixty-odd requests in a row take longer than the default five seconds on a busy runner.
-  }, 20_000);
+    // Up to a hundred and thirty requests in a row take longer than the default five seconds.
+  }, 40_000);
 });
 
 describe("site header", () => {

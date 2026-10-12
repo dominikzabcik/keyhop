@@ -225,6 +225,9 @@ extension DashboardPage {
             data.board = await api(boardURL(""));
             data.boardError = null;
           }
+          // A website older than the efficiency board answers with the measure it knows; the tabs follow it.
+          const answered = data.board?.board?.metric;
+          if (answered && answered !== ui.boardMetric) ui.boardMetric = answered;
         } catch (error) {
           if (ui.section === "teams" && ui.boardView === "day") data.dayError = error.message;
           else data.boardError = error.message;

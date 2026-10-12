@@ -211,4 +211,55 @@ mod tests {
         assert_eq!(tokens(120_000_000), "120M");
         assert_eq!(tokens(1_000_000), "1M");
     }
+
+    #[test]
+    fn columns_fold_measured_then_projected() {
+        let quota = crate::api::Quota { step: 1800, past_start: "2026-10-12T10:00:00Z".into(), forecast_start: "2026-10-12T12:00:00Z".into(), ..Default::default() };
+        let pool = crate::api::Pool { capacity: 200.0, past: vec![Some(150.0), None, Some(140.0), Some(130.0), Some(120.0)], forecast: vec![120.0, 110.0, 100.0, 190.0], ..Default::default() };
+        let from = epoch("2026-10-12T10:00:00Z").unwrap();
+        let cols = columns(&quota, &pool, from, from + 4 * 3600, 4);
+        assert_eq!(cols[0], Some((150.0, true)));
+        assert_eq!(cols[1], Some((130.0, true)));
+        assert_eq!(cols[2], Some((110.0, false)));
+        assert_eq!(cols[3], Some((190.0, false)));
+        assert_eq!(per_hour(3.25), "3.2% an hour");
+        assert_eq!(per_hour(44.0), "44% an hour");
+    }
+}
+
+/// How long until a moment, the way the window says it: "2d 7h", "3h 5m", "12m".
+pub fn until(iso: &str) -> String {
+    let Some(at) = epoch(iso) else { return String::new() };
+    let s = (at - now()).max(0);
+    let (d, h, m) = (s / 86_400, (s % 86_400) / 3_600, (s % 3_600) / 60);
+    if d > 0 {
+        format!("{d}d {h}h")
+    } else if h > 0 {
+        format!("{h}h {m}m")
+    } else {
+        format!("{}m", m.max(1))
+    }
+}
+
+/// A drain rate in percent an hour, to one decimal under ten.
+pub fn per_hour(rate: f64) -> String {
+    if rate >= 10.0 { format!("{rate:.0}% an hour") } else { format!("{rate:.1}% an hour") }
+}
+
+/// A pool's remaining share over time, folded into `count` columns from `from` to `to` (seconds):
+/// each column the last value known in it, and whether it was measured or projected.
+pub fn columns(quota: &crate::api::Quota, pool: &crate::api::Pool, from: i64, to: i64, count: usize) -> Vec<Option<(f64, bool)>> {
+    let step = quota.step.max(60);
+    let past0 = epoch(&quota.past_start).unwrap_or(0);
+    let ahead0 = epoch(&quota.forecast_start).unwrap_or(0);
+    let mut points: Vec<(i64, f64, bool)> = pool.past.iter().enumerate().filter_map(|(i, v)| v.map(|v| (past0 + i as i64 * step, v, true))).collect();
+    points.extend(pool.forecast.iter().enumerate().skip(1).map(|(i, v)| (ahead0 + i as i64 * step, *v, false)));
+    let width = ((to - from) as f64 / count as f64).max(1.0);
+    (0..count)
+        .map(|c| {
+            let start = from + (c as f64 * width) as i64;
+            let end = from + ((c + 1) as f64 * width) as i64;
+            points.iter().filter(|(t, _, _)| *t >= start && *t < end).last().map(|(_, v, measured)| (*v, *measured))
+        })
+        .collect()
 }

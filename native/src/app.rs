@@ -1,7 +1,7 @@
-//! Keyhop's window in GPUI: the sidebar, Overview, the Limits board and the status bar, drawn from
-//! the sketch's tokens over the same local API the HTML window reads.
+//! Keyhop's window in GPUI: the sidebar, Home, Limits (pooled and projected) and the status bar,
+//! drawn over the same local API the HTML window reads.
 
-use crate::api::{Account, Client, State, Tool};
+use crate::api::{Account, Client, Pool, Quota, State, Tool};
 use crate::model::{self, Lane};
 use crate::theme::Theme;
 use gpui_kit::*;
@@ -10,13 +10,16 @@ use std::time::Duration;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Section {
-    Overview,
+    Home,
     Limits,
 }
 
 pub struct KeyhopWindow {
     client: Client,
     state: Option<State>,
+    quota: Option<Quota>,
+    /// The tool Limits is narrowed to, or "all".
+    quota_tool: String,
     problem: Option<String>,
     toast: Option<String>,
     section: Section,
@@ -27,14 +30,17 @@ pub struct KeyhopWindow {
 impl KeyhopWindow {
     pub fn new(client: Client, section: Section, theme: Option<&str>, cx: &mut Context<Self>) -> Self {
         let pinned = theme.map(str::to_string);
-        let window = Self { client, state: None, problem: None, toast: None, section, theme: Theme::named(pinned.as_deref().unwrap_or("night")), busy: false };
+        let window = Self { client, state: None, quota: None, quota_tool: "all".into(), problem: None, toast: None, section, theme: Theme::named(pinned.as_deref().unwrap_or("night")), busy: false };
         // Read the state now and every twenty seconds, off the main thread.
         cx.spawn(async move |this, cx| {
             loop {
                 let Ok(client) = this.read_with(cx, |this, _| this.client.clone()) else { break };
-                let result = cx.background_executor().spawn(async move { client.state() }).await;
+                let (result, quota) = cx.background_executor().spawn(async move { (client.state(), client.quota().ok()) }).await;
                 if this
                     .update(cx, |this, cx| {
+                        if quota.is_some() {
+                            this.quota = quota;
+                        }
                         match result {
                             Ok(state) => {
                                 if pinned.is_none() {
@@ -61,8 +67,11 @@ impl KeyhopWindow {
     fn reload(&mut self, cx: &mut Context<Self>) {
         let client = self.client.clone();
         cx.spawn(async move |this, cx| {
-            let result = cx.background_executor().spawn(async move { client.state() }).await;
+            let (result, quota) = cx.background_executor().spawn(async move { (client.state(), client.quota().ok()) }).await;
             let _ = this.update(cx, |this, cx| {
+                if quota.is_some() {
+                    this.quota = quota;
+                }
                 if let Ok(state) = result {
                     this.theme = Theme::named(&state.appearance.theme);
                     this.state = Some(state);
@@ -176,28 +185,40 @@ impl KeyhopWindow {
     fn sidebar(&self, tools: &[Tool], needs: usize, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
         let target = model::best_hop(tools).map(|hop| hop.to.id.clone());
-        let tree = tools.iter().filter(|tool| !tool.accounts.is_empty()).map(|tool| {
+        // Each tool's login in use and how full its tightest window is; a press opens Limits on it.
+        let in_use: Vec<_> = tools.iter().filter(|tool| !tool.accounts.is_empty()).map(|tool| {
+            let account = tool.accounts.iter().find(|a| a.active);
+            let lane = account.map(model::lane).unwrap_or(Lane::Quiet);
+            let pct = account.and_then(model::tightest).map(|l| l.used_percent);
+            let id = tool.id.clone();
+            let on = self.section == Section::Limits && self.quota_tool == tool.id;
             div()
+                .id(SharedString::from(format!("side-{}", tool.id)))
                 .flex()
-                .flex_col()
-                .child(
-                    div().flex().items_center().h(px(26.)).px(px(10.)).text_size(px(12.5)).font_weight(FontWeight::SEMIBOLD).text_color(t.side).child(tool.name.clone()),
-                )
-                .children(tool.accounts.iter().map(|account| {
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap(px(8.))
-                        .h(px(26.))
-                        .pl(px(22.))
-                        .pr(px(10.))
-                        .text_size(px(12.5))
-                        .text_color(if model::lane(account) == Lane::Needs { t.warn_ink } else { t.muted })
-                        .child(self.dot(model::lane(account)))
-                        .child(div().flex_1().truncate().child(account.name.clone()))
-                        .child(div().text_color(t.subtle).text_size(px(11.5)).child(account.plan.clone().unwrap_or_default()))
+                .items_center()
+                .gap(px(9.))
+                .h(px(38.))
+                .px(px(10.))
+                .rounded(px(8.))
+                .when(on, |d| d.bg(t.accent2))
+                .hover(|s| s.bg(t.accent))
+                .cursor_pointer()
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.quota_tool = if this.section == Section::Limits && this.quota_tool == id { "all".into() } else { id.clone() };
+                    this.section = Section::Limits;
+                    cx.notify();
                 }))
-        });
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .flex()
+                        .flex_col()
+                        .child(div().truncate().text_size(px(12.5)).font_weight(FontWeight::SEMIBOLD).text_color(t.text).child(tool.name.clone()))
+                        .child(div().truncate().text_size(px(11.5)).text_color(if lane == Lane::Needs { t.warn_ink } else { t.subtle }).child(account.map(|a| a.name.clone()).unwrap_or_else(|| "None in use".into()))),
+                )
+                .children(pct.map(|p| div().text_size(px(11.5)).text_color(if lane == Lane::Needs { t.warn_ink } else { t.subtle }).child(format!("{p:.0}%"))))
+        }).collect();
         div()
             .flex()
             .flex_col()
@@ -246,200 +267,346 @@ impl KeyhopWindow {
                     .flex_col()
                     .gap(px(2.))
                     .px(px(8.))
-                    .child(self.nav_item("nav-overview", "Overview", Section::Overview, 0, cx))
+                    .child(self.nav_item("nav-home", "Home", Section::Home, 0, cx))
                     .child(self.nav_item("nav-limits", "Limits", Section::Limits, needs, cx)),
             )
-            .child(div().mt(px(14.)).px(px(16.)).pb(px(6.)).text_size(px(12.)).text_color(t.subtle).child("Accounts"))
-            .child(div().id("tree").flex_1().overflow_y_scroll().px(px(6.)).children(tree))
+            .child(div().mt(px(14.)).px(px(16.)).pb(px(6.)).text_size(px(12.)).text_color(t.subtle).child("In use"))
+            .child(div().id("tree").flex_1().overflow_y_scroll().px(px(6.)).children(in_use))
     }
 
-    fn login_row(&self, tool: &Tool, account: &Account, hop_target: Option<&str>, cx: &mut Context<Self>) -> impl IntoElement {
+    fn card(&self) -> Div {
         let t = self.theme;
-        let lane = model::lane(account);
-        let mut meta = tool.name.clone();
-        if let Some(plan) = &account.plan {
-            meta.push_str(&format!(" · {plan}"));
-        }
-        if account.error.is_some() {
-            meta.push_str(" · login expired");
-        } else if let Some(top) = model::tightest(account) {
-            meta.push_str(&format!(" · {} {:.0}%", model::window_name(&top.label), top.used_percent));
-        }
-        let id = account.id.clone();
-        let right: AnyElement = if account.error.is_some() {
-            div().px(px(8.)).h(px(20.)).rounded(px(6.)).bg(Theme::tint(t.bad, 0.16)).text_color(t.bad).text_size(px(11.5)).font_weight(FontWeight::SEMIBOLD).flex().items_center().child("Expired").into_any_element()
-        } else if lane == Lane::Needs {
-            div().px(px(8.)).h(px(20.)).rounded(px(6.)).bg(Theme::tint(t.warn, 0.16)).text_color(t.warn_ink).text_size(px(11.5)).font_weight(FontWeight::SEMIBOLD).flex().items_center().child("Needs a hop").into_any_element()
-        } else if hop_target == Some(account.id.as_str()) {
-            div()
-                .id(SharedString::from(format!("hop-{}", account.id)))
-                .px(px(10.))
-                .h(px(24.))
-                .rounded(px(7.))
-                .bg(t.ink)
-                .text_color(t.on_ink)
-                .text_size(px(12.))
-                .font_weight(FontWeight::BOLD)
-                .flex()
-                .items_center()
-                .cursor_pointer()
-                .on_click(cx.listener(move |this, _, _, cx| this.hop(id.clone(), cx)))
-                .child("Hop")
-                .into_any_element()
-        } else if let Some(top) = model::tightest(account) {
-            div().text_size(px(12.)).text_color(t.muted).child(format!("{:.0}%", top.used_percent)).into_any_element()
-        } else {
-            div().into_any_element()
-        };
+        div().flex().flex_col().rounded(px(12.)).bg(t.card).border_1().border_color(t.border)
+    }
+
+    fn card_head(&self, title: &str, hint: Option<String>) -> Div {
+        let t = self.theme;
         div()
             .flex()
             .items_center()
-            .gap(px(10.))
-            .h(px(32.))
-            .child(self.dot(lane))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .flex()
-                    .items_baseline()
-                    .gap(px(8.))
-                    .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).text_color(if lane == Lane::Needs { t.warn_ink } else { t.text }).child(account.name.clone()))
-                    .child(div().truncate().text_size(px(12.5)).text_color(t.muted).child(meta)),
-            )
-            .child(right)
+            .gap(px(8.))
+            .h(px(46.))
+            .px(px(16.))
+            .border_b_1()
+            .border_color(t.border)
+            .child(div().text_size(px(14.)).font_weight(FontWeight::SEMIBOLD).text_color(t.text).child(title.to_string()))
+            .children(hint.map(|h| div().text_size(px(12.5)).text_color(t.subtle).child(h)))
     }
 
-    fn login_group(&self, title: &'static str, lanes: &[Lane], rows: &[(&Tool, &Account)], target: Option<&str>, cx: &mut Context<Self>) -> Option<Div> {
+    fn button(&self, id: String, label: String, primary: bool, account: String, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
-        let mut members: Vec<&(&Tool, &Account)> = rows.iter().filter(|(_, a)| lanes.contains(&model::lane(a))).collect();
-        members.sort_by(|a, b| model::max_used(b.1).total_cmp(&model::max_used(a.1)));
-        if members.is_empty() {
-            return None;
-        }
-        let mut group = div().flex().flex_col().child(div().mt(px(10.)).mb(px(2.)).text_size(px(12.)).text_color(t.subtle).child(title));
-        for (tool, account) in members {
-            group = group.child(self.login_row(tool, account, target, cx));
-        }
-        Some(group)
+        div()
+            .id(SharedString::from(id))
+            .flex_none()
+            .px(px(10.))
+            .h(px(26.))
+            .rounded(px(7.))
+            .when(primary, |d| d.bg(t.ink).text_color(t.on_ink))
+            .when(!primary, |d| d.border_1().border_color(t.border).bg(t.accent).text_color(t.text))
+            .text_size(px(12.))
+            .font_weight(FontWeight::SEMIBOLD)
+            .flex()
+            .items_center()
+            .cursor_pointer()
+            .on_click(cx.listener(move |this, _, _, cx| this.hop(account.clone(), cx)))
+            .child(label)
     }
 
-    fn overview(&self, tools: &[Tool], cx: &mut Context<Self>) -> impl IntoElement {
+    // MARK: Home
+
+    fn home(&self, tools: &[Tool], cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
         let line = model::headline(tools);
-        let target = line.target.clone();
-        let rows: Vec<(&Tool, &Account)> = tools.iter().flat_map(|tool| tool.accounts.iter().map(move |a| (tool, a))).collect();
-        let mut groups: Vec<Div> = Vec::new();
-        for (title, lanes) in [("Needs a hop", &[Lane::Needs][..]), ("In use", &[Lane::Active][..]), ("Room", &[Lane::Room, Lane::Hot][..])] {
-            if let Some(group) = self.login_group(title, lanes, &rows, target.as_deref(), cx) {
-                groups.push(group);
+        // What wants a decision now: a login in use at its wall, or one signed out.
+        let mut attention: Vec<AnyElement> = Vec::new();
+        for tool in tools {
+            for account in &tool.accounts {
+                let alt = model::alternative(tool, Some(account));
+                let (title, text, action): (String, String, Option<(String, String, bool)>) = if let Some(error) = &account.error {
+                    (format!("{} is signed out", account.name), format!("{}. {error}", tool.name), (!account.active).then(|| ("Switch and sign in".to_string(), account.id.clone(), false)))
+                } else if account.active && model::lane(account) == Lane::Needs {
+                    let used = model::max_used(account);
+                    let more = match alt {
+                        Some(a) => format!("{} is at {:.0}%.", a.name, model::max_used(a)),
+                        None => "There is no other login to hop to.".to_string(),
+                    };
+                    (format!("{} is at {used:.0}% on {}", tool.name, account.name), more, alt.map(|a| (format!("Hop to {}", a.name), a.id.clone(), true)))
+                } else {
+                    continue;
+                };
+                let bad = account.error.is_some();
+                attention.push(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(12.))
+                        .px(px(16.))
+                        .py(px(12.))
+                        .border_t_1()
+                        .border_color(t.border)
+                        .child(div().size(px(8.)).rounded(px(4.)).flex_none().bg(if bad { t.bad } else { t.warn }))
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .flex()
+                                .flex_col()
+                                .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).text_color(t.text).child(title))
+                                .child(div().text_size(px(12.5)).text_color(t.muted).child(text)),
+                        )
+                        .children(action.map(|(label, id, primary)| self.button(format!("attn-{}", account.id), label, primary, id, cx)))
+                        .into_any_element(),
+                );
             }
         }
-        let quiet: Vec<String> = tools.iter().filter(|tool| !tool.accounts.is_empty() && tool.accounts.iter().all(|a| model::lane(a) == Lane::Quiet)).map(|tool| tool.name.clone()).collect();
+        let count = attention.len();
+        let attention_card = self
+            .card()
+            .flex_1()
+            .min_w_0()
+            .child(self.card_head("Needs your attention", (count > 0).then(|| count.to_string())))
+            .when(count == 0, |d| d.child(div().px(px(16.)).py(px(18.)).text_size(px(13.)).text_color(t.muted).child("Nothing needs you. Every login in use has room.")))
+            .children(attention);
+        let pooled = self.quota.as_ref().and_then(|q| q.pools.iter().find(|p| p.tool == "all")).map(|p| format!("{:.0}% of {:.0}% left in all", p.remaining, p.capacity));
+        let rows = tools.iter().filter_map(|tool| {
+            let account = tool.accounts.iter().find(|a| a.active)?;
+            let top = model::tightest(account);
+            Some(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(12.))
+                    .h(px(44.))
+                    .px(px(16.))
+                    .child(
+                        div()
+                            .w(px(150.))
+                            .flex_none()
+                            .flex()
+                            .flex_col()
+                            .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).text_color(t.text).child(tool.name.clone()))
+                            .child(div().truncate().text_size(px(12.)).text_color(t.subtle).child(account.name.clone())),
+                    )
+                    .child(div().flex_1().children(top.map(|l| self.bar(l.used_percent, l.pace))))
+                    .child(div().w(px(56.)).flex().justify_end().text_size(px(12.5)).text_color(if model::lane(account) == Lane::Needs { t.warn_ink } else { t.muted }).child(top.map(|l| format!("{:.0}%", l.used_percent)).unwrap_or_else(|| "No limit".into()))),
+            )
+        });
+        let in_use = self.card().w(px(380.)).flex_none().child(self.card_head("In use", pooled)).child(div().py(px(4.)).children(rows));
 
         div()
-            .id("overview")
+            .id("home")
             .size_full()
             .overflow_y_scroll()
             .flex()
             .flex_col()
-            .items_center()
-            .pt(px(48.))
-            .pb(px(40.))
-            .px(px(24.))
-            .child(div().text_size(px(28.)).font_weight(FontWeight::BOLD).text_color(t.text).child(line.title))
-            .child(div().mt(px(8.)).text_size(px(14.)).text_color(t.muted).child(line.sub))
-            .when(!line.note.is_empty(), |d| d.child(div().mt(px(6.)).text_size(px(13.)).text_color(t.warn_ink).child(line.note)))
+            .gap(px(16.))
+            .p(px(24.))
             .child(
                 div()
-                    .mt(px(24.))
-                    .w(px(620.))
                     .flex()
                     .flex_col()
-                    .p(px(14.))
-                    .rounded(px(12.))
-                    .bg(t.card)
+                    .gap(px(8.))
+                    .p(px(28.))
+                    .min_h(px(150.))
+                    .rounded(px(16.))
+                    .bg(if t.day { rgb(0xe7ecf2) } else { rgb(0x161a28) })
                     .border_1()
                     .border_color(t.border)
-                    .child(div().flex().justify_between().child(div().text_size(px(13.)).font_weight(FontWeight::BOLD).text_color(t.text).child("Your logins")).child(div().text_size(px(12.)).text_color(t.subtle).child(format!("{} saved", rows.len()))))
-                    .children(groups)
-                    .when(!quiet.is_empty(), |d| {
-                        d.child(div().mt(px(10.)).text_size(px(12.)).text_color(t.subtle).child("Quiet"))
-                            .child(div().text_size(px(12.5)).text_color(t.muted).child(format!("{} have no limit to read.", quiet.join(", "))))
-                    }),
+                    .child(div().text_size(px(30.)).font_weight(FontWeight::BOLD).text_color(t.text).child(line.title))
+                    .child(div().max_w(px(520.)).text_size(px(14.)).text_color(t.muted).child(line.sub))
+                    .when(!line.note.is_empty(), |d| d.child(div().max_w(px(520.)).text_size(px(13.)).text_color(t.warn_ink).child(line.note.clone())))
+                    .children(line.target.clone().map(|id| div().mt(px(6.)).flex().child(self.button("hero-hop".into(), "Hop".into(), true, id, cx)))),
             )
+            .child(div().flex().items_start().gap(px(16.)).child(attention_card).child(in_use))
     }
 
-    fn limits_column(&self, title: &'static str, lanes: &[Lane], lane_dot: Lane, rows: &[(&Tool, &Account)], cx: &mut Context<Self>) -> Div {
+    // MARK: Limits
+
+    fn chart(&self, quota: &Quota, pool: &Pool) -> impl IntoElement {
         let t = self.theme;
-            let mut members: Vec<&(&Tool, &Account)> = rows.iter().filter(|(_, a)| lanes.contains(&model::lane(a))).collect();
-        members.sort_by(|a, b| model::max_used(b.1).total_cmp(&model::max_used(a.1)));
-        let count = members.len();
+        let now = model::epoch(&quota.forecast_start).unwrap_or_else(model::now);
+        let (from, to) = (now - 72 * 3_600, now + 168 * 3_600);
+        let height = 150.0_f32;
+        let top = pool.capacity.max(100.0);
+        let columns = model::columns(quota, pool, from, to, 120);
         div()
-            .flex_1()
-            .min_w(px(170.))
             .flex()
-            .flex_col()
-            .gap(px(10.))
-            .child(div().flex().items_center().gap(px(8.)).text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).text_color(t.text).child(self.dot(lane_dot)).child(div().flex_1().child(title)).child(div().text_color(t.subtle).child(count.to_string())))
-            .children(members.into_iter().map(|(tool, account)| {
-                let lane = model::lane(account);
-                let top = model::tightest(account);
-                let summary = if let Some(error) = &account.error {
-                    error.clone()
-                } else if account.limits.is_empty() {
-                    "No limit to read.".to_string()
-                } else {
-                    account.limits.iter().map(|l| format!("{} {:.0}%", model::window_name(&l.label), l.used_percent)).collect::<Vec<_>>().join(" · ")
-                };
-                let alt = model::alternative(tool, Some(account)).filter(|_| account.active).map(|a| (a.id.clone(), a.name.clone()));
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap(px(6.))
-                    .p(px(12.))
-                    .rounded(px(10.))
-                    .bg(t.card)
-                    .border_1()
-                    .border_color(if lane == Lane::Needs { Theme::tint(t.warn, 0.5) } else { t.border })
-                    .child(div().flex().items_center().gap(px(8.)).child(self.dot(lane)).child(div().flex_1().truncate().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).text_color(t.text).child(account.name.clone())).child(div().text_size(px(12.)).text_color(t.muted).child(top.map(|l| format!("{:.0}%", l.used_percent)).unwrap_or_default())))
-                    .child(div().text_size(px(12.)).text_color(t.muted).child(format!("{}{}", tool.name, account.plan.as_ref().map(|p| format!(" · {p}")).unwrap_or_default())))
-                    .child(div().text_size(px(12.5)).text_color(t.text).child(summary))
-                    .children(top.map(|l| self.bar(l.used_percent, l.pace)))
-                    .children(alt.map(|(id, name)| {
-                        div()
-                            .id(SharedString::from(format!("board-hop-{}", account.id)))
-                            .text_size(px(12.))
-                            .font_weight(FontWeight::SEMIBOLD)
-                            .text_color(t.text)
-                            .cursor_pointer()
-                            .on_click(cx.listener(move |this, _, _, cx| this.hop(id.clone(), cx)))
-                            .child(format!("Hop to {name}"))
-                    }))
+            .items_end()
+            .gap(px(1.))
+            .h(px(height))
+            .px(px(20.))
+            .children(columns.into_iter().map(|column| {
+                let (value, measured) = column.unwrap_or((0.0, true));
+                let share = (value / top).clamp(0.0, 1.0) as f32;
+                div().flex_1().h(px((share * height).max(1.0))).rounded_t(px(2.)).bg(if measured { Theme::tint(t.ink, 0.55) } else { Theme::tint(t.info, 0.45) })
             }))
+    }
+
+    fn outlook(&self, account: &Account) -> (String, Rgba) {
+        let t = self.theme;
+        if account.error.is_some() {
+            return ("Sign in again".into(), t.bad);
+        }
+        let forecast = self.quota.as_ref().and_then(|q| q.accounts.iter().find(|a| a.id == account.id));
+        if let Some(back) = forecast.and_then(|f| f.back_at.as_deref()) {
+            return (format!("Back in {}", model::until(back)), t.bad);
+        }
+        if let Some(empty) = forecast.and_then(|f| f.empty_at.as_deref()) {
+            return (format!("Empty in {}", model::until(empty)), t.warn_ink);
+        }
+        match forecast {
+            Some(f) if f.drain_per_hour >= 0.05 => (format!("~{}", model::per_hour(f.drain_per_hour)), t.text),
+            _ if account.limits.is_empty() => (String::new(), t.subtle),
+            _ => ((if account.active { "Idle" } else { "Resting" }).into(), t.subtle),
+        }
+    }
+
+    fn login_line(&self, tool: &Tool, account: &Account, cx: &mut Context<Self>) -> impl IntoElement {
+        let t = self.theme;
+        let lane = model::lane(account);
+        let (outlook, tone) = self.outlook(account);
+        let meta = account.error.clone().unwrap_or_else(|| account.plan.clone().unwrap_or_default());
+        let windows = account.limits.iter().take(3).map(|limit| {
+            div()
+                .flex()
+                .items_center()
+                .gap(px(10.))
+                .text_size(px(12.))
+                .child(div().w(px(90.)).flex_none().truncate().text_color(t.muted).child(model::window_name(&limit.label)))
+                .child(div().flex_1().child(self.bar(limit.used_percent, limit.pace)))
+                .child(div().w(px(36.)).flex().justify_end().text_color(t.text).child(format!("{:.0}%", limit.used_percent)))
+                .child(div().w(px(56.)).text_color(t.subtle).child(limit.resets_at.as_deref().map(model::until).unwrap_or_default()))
+        });
+        div()
+            .flex()
+            .items_center()
+            .gap(px(18.))
+            .px(px(16.))
+            .py(px(12.))
+            .border_t_1()
+            .border_color(t.border)
+            .child(
+                div()
+                    .w(px(200.))
+                    .flex_none()
+                    .flex()
+                    .items_start()
+                    .gap(px(8.))
+                    .child(div().mt(px(5.)).child(self.dot(lane)))
+                    .child(
+                        div()
+                            .min_w_0()
+                            .flex()
+                            .flex_col()
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(6.))
+                                    .child(div().truncate().text_size(px(13.5)).font_weight(FontWeight::SEMIBOLD).text_color(if lane == Lane::Needs { t.warn_ink } else { t.text }).child(account.name.clone()))
+                                    .when(account.active, |d| d.child(div().px(px(6.)).h(px(18.)).rounded(px(5.)).bg(t.accent2).text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).flex().items_center().child("In use"))),
+                            )
+                            .child(div().truncate().text_size(px(12.)).text_color(t.muted).child(meta)),
+                    ),
+            )
+            .child(div().flex_1().min_w_0().flex().flex_col().gap(px(5.)).children(windows).when(account.limits.is_empty(), |d| d.child(div().text_size(px(12.5)).text_color(t.subtle).child(if tool.accounts.iter().all(|a| a.limits.is_empty()) { "No limit to read." } else { "" }))))
+            .child(div().w(px(120.)).flex_none().text_size(px(12.5)).font_weight(FontWeight::SEMIBOLD).text_color(tone).child(outlook))
+            .child(div().w(px(130.)).flex_none().flex().justify_end().when(!account.active, |d| d.child(self.button(format!("switch-{}", account.id), if account.error.is_some() { "Switch and sign in".into() } else { "Switch".into() }, false, account.id.clone(), cx))))
     }
 
     fn limits(&self, tools: &[Tool], cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
-        let rows: Vec<(&Tool, &Account)> = tools.iter().flat_map(|tool| tool.accounts.iter().map(move |a| (tool, a))).collect();
-        div()
-            .id("limits")
-            .size_full()
-            .overflow_y_scroll()
-            .flex()
-            .flex_col()
-            .p(px(20.))
-            .gap(px(16.))
-            .child(div().flex().items_baseline().gap(px(10.)).child(div().text_size(px(15.)).font_weight(FontWeight::BOLD).text_color(t.text).child("Limits")).child(div().text_size(px(13.)).text_color(t.muted).child("Every saved login, by how close it is to a wall.")))
-            .child(
-                div()
-                    .flex()
-                    .gap(px(14.))
-                    .child(self.limits_column("Needs a hop", &[Lane::Needs], Lane::Needs, &rows, cx))
-                    .child(self.limits_column("In use", &[Lane::Active], Lane::Active, &rows, cx))
-                    .child(self.limits_column("Room", &[Lane::Room, Lane::Hot], Lane::Room, &rows, cx))
-                    .child(self.limits_column("Quiet", &[Lane::Quiet], Lane::Quiet, &rows, cx)),
-            )
+        let kept: Vec<&Tool> = tools.iter().filter(|tool| !tool.accounts.is_empty()).collect();
+        let total: usize = kept.iter().map(|tool| tool.accounts.len()).sum();
+        let mut tabs: Vec<(String, String, usize)> = vec![("all".into(), "All".into(), total)];
+        tabs.extend(kept.iter().map(|tool| (tool.id.clone(), tool.name.clone(), tool.accounts.len())));
+        let tab_row = div().flex().flex_wrap().gap(px(6.)).children(tabs.into_iter().map(|(id, name, n)| {
+            let on = self.quota_tool == id;
+            let pick = id.clone();
+            div()
+                .id(SharedString::from(format!("tab-{id}")))
+                .flex()
+                .items_center()
+                .gap(px(6.))
+                .h(px(28.))
+                .px(px(10.))
+                .rounded(px(14.))
+                .border_1()
+                .border_color(if on { t.ink } else { t.border })
+                .when(on, |d| d.bg(t.ink).text_color(t.on_ink))
+                .when(!on, |d| d.text_color(t.muted))
+                .text_size(px(12.5))
+                .cursor_pointer()
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.quota_tool = pick.clone();
+                    cx.notify();
+                }))
+                .child(name)
+                .child(div().opacity(0.6).child(n.to_string()))
+        }));
+        let pool = self.quota.as_ref().and_then(|q| q.pools.iter().find(|p| p.tool == self.quota_tool));
+        let pooled: AnyElement = match (self.quota.as_ref(), pool) {
+            (Some(quota), Some(pool)) if pool.accounts > 0 => {
+                let reset = pool.next_reset.as_ref().map(|r| format!("Next reset +{:.0}% in {} · {}", r.gain, model::until(&r.at), r.account));
+                let dry = match pool.empty_at.as_deref() {
+                    Some(at) => format!("Runs dry in {}", model::until(at)),
+                    None => "Lasts the next 7 days at this pace".to_string(),
+                };
+                self.card()
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap(px(4.))
+                            .px(px(20.))
+                            .pt(px(18.))
+                            .pb(px(10.))
+                            .child(div().text_size(px(12.5)).text_color(t.muted).child(format!("Remaining, pooled · {} login{} with limits", pool.accounts, if pool.accounts == 1 { "" } else { "s" })))
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_baseline()
+                                    .gap(px(8.))
+                                    .child(div().text_size(px(38.)).font_weight(FontWeight::BOLD).text_color(t.text).child(format!("{:.0}%", pool.remaining)))
+                                    .child(div().text_size(px(18.)).text_color(t.subtle).child(format!("/ {:.0}%", pool.capacity)))
+                                    .child(div().ml(px(6.)).px(px(8.)).rounded(px(10.)).bg(t.accent2).text_size(px(12.5)).text_color(t.muted).child(if pool.drain_per_hour >= 0.05 { format!("~{}", model::per_hour(pool.drain_per_hour)) } else { "Not draining now".into() })),
+                            ),
+                    )
+                    .child(self.chart(quota, pool))
+                    .child(
+                        div()
+                            .flex()
+                            .gap(px(20.))
+                            .px(px(20.))
+                            .py(px(12.))
+                            .border_t_1()
+                            .border_color(t.border)
+                            .text_size(px(12.5))
+                            .text_color(t.muted)
+                            .children(reset)
+                            .child(dry)
+                            .child(div().flex_1())
+                            .child("3 days measured · 7 days projected"),
+                    )
+                    .into_any_element()
+            }
+            (Some(_), _) => self.card().child(div().p(px(20.)).text_color(t.muted).text_size(px(13.)).child("No login here has a limit to read.")).into_any_element(),
+            (None, _) => self.card().child(div().p(px(20.)).text_color(t.muted).text_size(px(13.)).child("Reading the limits' history…")).into_any_element(),
+        };
+        let shown: Vec<&Tool> = kept.iter().copied().filter(|tool| self.quota_tool == "all" || tool.id == self.quota_tool).collect();
+        let mut groups: Vec<Div> = Vec::new();
+        for tool in shown {
+            let pool = self.quota.as_ref().and_then(|q| q.pools.iter().find(|p| p.tool == tool.id));
+            let summary = pool.filter(|p| p.accounts > 0).map(|p| format!("{:.0}% of {:.0}% left", p.remaining, p.capacity));
+            let mut accounts: Vec<&Account> = tool.accounts.iter().collect();
+            accounts.sort_by(|a, b| b.active.cmp(&a.active).then(model::max_used(a).total_cmp(&model::max_used(b))));
+            let mut card = self.card().child(self.card_head(&tool.name, summary));
+            for account in accounts {
+                card = card.child(self.login_line(tool, account, cx));
+            }
+            groups.push(card);
+        }
+        div().id("limits").size_full().overflow_y_scroll().flex().flex_col().p(px(20.)).gap(px(16.)).child(tab_row).child(pooled).children(groups)
     }
 
     fn status_bar(&self, state: Option<&State>, needs: usize, cx: &mut Context<Self>) -> impl IntoElement {
@@ -485,7 +652,7 @@ impl Render for KeyhopWindow {
             (Some(problem), false) => div().p(px(24.)).text_color(t.bad).child(format!("Keyhop isn't answering: {problem}")).into_any_element(),
             (_, false) => div().p(px(24.)).text_color(t.muted).child("Reading your logins…").into_any_element(),
             _ => match self.section {
-                Section::Overview => self.overview(&tools, cx).into_any_element(),
+                Section::Home => self.home(&tools, cx).into_any_element(),
                 Section::Limits => self.limits(&tools, cx).into_any_element(),
             },
         };

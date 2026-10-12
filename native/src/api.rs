@@ -56,6 +56,11 @@ impl Client {
         Ok(value.get("message").and_then(|m| m.as_str()).unwrap_or("Hopped.").to_string())
     }
 
+    /// Every login's limit pooled, the last week measured and the next one projected.
+    pub fn quota(&self) -> Result<Quota> {
+        Ok(self.get("/api/quota")?.into_json()?)
+    }
+
     pub fn set_theme(&self, theme: &str) -> Result<()> {
         self.post("/api/appearance", serde_json::json!({ "theme": theme }))?;
         Ok(())
@@ -200,4 +205,48 @@ pub struct Limit {
     pub resets_at: Option<String>,
     pub runs_out_at: Option<String>,
     pub pace: Option<f64>,
+}
+
+/// `GET /api/quota`: what the Swift core's QuotaReport says.
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Quota {
+    pub step: i64,
+    pub past_start: String,
+    pub forecast_start: String,
+    pub pools: Vec<Pool>,
+    pub accounts: Vec<QuotaAccount>,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Pool {
+    pub tool: String,
+    pub name: String,
+    pub accounts: u32,
+    pub capacity: f64,
+    pub remaining: f64,
+    pub drain_per_hour: f64,
+    pub empty_at: Option<String>,
+    pub next_reset: Option<Reset>,
+    pub past: Vec<Option<f64>>,
+    pub forecast: Vec<f64>,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Reset {
+    pub at: String,
+    pub gain: f64,
+    pub account: String,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct QuotaAccount {
+    pub id: String,
+    pub remaining: f64,
+    pub drain_per_hour: f64,
+    pub empty_at: Option<String>,
+    pub back_at: Option<String>,
 }

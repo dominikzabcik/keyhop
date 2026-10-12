@@ -3,7 +3,7 @@
 //!   keyhop-native            your own logins, through `keyhop dashboard`
 //!   keyhop-native --sample   made-up logins, nothing of yours is read
 //!   keyhop-native --url URL  attach to a dashboard that is already running
-//!   --section overview|limits, --theme night|day  open on a section, in a field (for screenshots)
+//!   --section home|limits, --theme night|day  open on a section, in a field (for screenshots)
 
 mod api;
 mod app;
@@ -17,7 +17,7 @@ fn main() -> anyhow::Result<()> {
     let sample = args.iter().any(|a| a == "--sample");
     let value = |name: &str| args.iter().position(|a| a == name).and_then(|i| args.get(i + 1)).cloned();
     let url = value("--url");
-    let section = if value("--section").as_deref() == Some("limits") { app::Section::Limits } else { app::Section::Overview };
+    let section = if value("--section").as_deref() == Some("limits") { app::Section::Limits } else { app::Section::Home };
     let theme = value("--theme");
 
     let (server, client) = match url {

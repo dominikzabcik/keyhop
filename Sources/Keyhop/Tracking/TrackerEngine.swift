@@ -105,18 +105,30 @@ actor TrackerEngine {
 
     // MARK: Ingest
 
+    /// Where `keyhop run` keeps a config folder per login. Tests point it at a folder of their own.
+    private(set) var runFolders: URL = RunDirectories.base
+
+    func useRunFolders(_ url: URL) { runFolders = url }
+
     @discardableResult
     func ingestLocalLogs(progress: ProgressHandler? = nil) throws -> Int {
-        var files: [(url: URL, feed: LogFeed, size: Int64)] = []
-        for feed in LogFeed.all {
-            for root in feed.roots() where FileManager.default.fileExists(atPath: root.path) {
-                let found = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles])
-                while let url = found?.nextObject() as? URL {
-                    guard url.pathExtension == "jsonl" else { continue }
-                    let size = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
-                    files.append((url, feed, size))
-                }
+        var files: [(url: URL, feed: LogFeed, size: Int64, account: UUID?)] = []
+        func collect(_ root: URL, feed: LogFeed, account: UUID?) {
+            guard FileManager.default.fileExists(atPath: root.path) else { return }
+            let found = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles])
+            while let url = found?.nextObject() as? URL {
+                guard url.pathExtension == "jsonl" else { continue }
+                let size = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+                files.append((url, feed, size, account))
             }
+        }
+        for feed in LogFeed.all {
+            for root in feed.roots() { collect(root, feed: feed, account: nil) }
+        }
+        // A login's own folder, from keyhop run: every log inside it is that login's, whatever was in use.
+        for run in RunDirectories.all(base: runFolders) {
+            let feed = run.provider == .claude ? LogFeed.claudeCode : LogFeed.codex
+            for root in RunDirectories.logRoots(provider: run.provider, folder: run.folder) { collect(root, feed: feed, account: run.account) }
         }
 
         // What is left to read, so the first read of a long history can say how far it has got.
@@ -146,7 +158,7 @@ actor TrackerEngine {
 
         var added = 0
         for file in files {
-            added += try ingest(file.url, feed: file.feed, size: file.size) { report($0) }
+            added += try ingest(file.url, feed: file.feed, size: file.size, account: file.account) { report($0) }
         }
         added += try ingestMessageLedgers()
         added += try ingestGoose()
@@ -247,7 +259,7 @@ actor TrackerEngine {
     }
 
     /// Reads only what was appended since the last pass, and only whole lines.
-    private func ingest(_ url: URL, feed: LogFeed, size: Int64, read: (Int64) -> Void = { _ in }) throws -> Int {
+    private func ingest(_ url: URL, feed: LogFeed, size: Int64, account: UUID? = nil, read: (Int64) -> Void = { _ in }) throws -> Int {
         var offset: Int64 = 0
         var state: [String: String] = [:]
         try db.query("SELECT offset, state FROM sources WHERE path = ?", [.text(url.path)]) { row in
@@ -283,7 +295,10 @@ actor TrackerEngine {
                     lineStart = newline + 1
                     guard feed.markers.contains(where: { line.range(of: $0) != nil }),
                           let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any] else { continue }
-                    records.append(contentsOf: feed.parse(object, url, &state))
+                    for var record in feed.parse(object, url, &state) {
+                        if let account { record.account = account }
+                        records.append(record)
+                    }
                 }
                 consumed += Int64(lineStart - pending.startIndex)
                 pending = Data(pending[lineStart...])

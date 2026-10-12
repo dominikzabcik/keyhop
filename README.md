@@ -108,6 +108,8 @@ The same commands work on every system. On macOS, the installer and the Homebrew
 keyhop status [--refresh]              accounts, limits and today's usage
 keyhop recommend [--tool codex]        Smart Hop's best current runway
 keyhop switch work@studio.dev          move a tool to a saved account (email, name or ID)
+keyhop run work@studio.dev -- claude   run a tool under one login in this terminal, no hop needed
+keyhop run map ~/Code/work work@studio.dev  inside that folder, keyhop run -- claude picks the login
 keyhop add cursor                      sign Cursor out here and save the next login
 keyhop rename work@studio.dev Work     give an account a name
 keyhop usage --range 30d --tool claude tokens and API value by account, model, maker and project
@@ -172,6 +174,7 @@ Keyhop keeps its own record of what every account uses.
 - **Smart Hop:** the recommendation combines remaining limit room, budget room, reset timing and projected runout, with stable tie-breaking so the same data always gives the same answer. Turn on **Hop before a limit automatically** in the menu and the alert hops for you.
 - **Live, locally:** Keyhop watches the log folders and counts a response as it lands, with polling as the fallback.
 - **More than one computer:** `keyhop merge <folder>` folds another computer's history in through a synced folder (iCloud, Syncthing), deduplicated by event, so a laptop and a desktop add up once.
+- **One login per terminal:** `keyhop run <login> -- claude` (or `codex`) runs the tool under that login without hopping, through a config folder Keyhop keeps per login (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`), seeded once with your settings; what the tool writes there is counted against that login. `keyhop run map <folder> <login>` lets `keyhop run -- claude` pick the login from the folder you are in.
 - **Plans:** `keyhop plans`, or the window's Plans section, prices each login's plan at list against the month's API value and the week's limit peaks, and says which plan would cover the pace.
 - **Coach:** `keyhop coach`, or the window's Coach section, reads cache hit and premium-model share per tool, this month against last, and tokens and API value per commit and per merge from the repositories Keyhop counts.
 

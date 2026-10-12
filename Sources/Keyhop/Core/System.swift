@@ -48,10 +48,11 @@ enum Shell {
     }
 
     /// Runs a program attached to this terminal, so tools like `sudo` can prompt.
-    static func runInteractive(_ path: String, _ args: [String]) throws -> Int32 {
+    static func runInteractive(_ path: String, _ args: [String], environment: [String: String]? = nil) throws -> Int32 {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = args
+        if let environment { process.environment = environment }
         process.standardInput = FileHandle.standardInput
         process.standardOutput = FileHandle.standardOutput
         process.standardError = FileHandle.standardError

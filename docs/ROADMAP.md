@@ -6,14 +6,13 @@ something broken is an [issue](https://github.com/dominikzabcik/keyhop/issues/ne
 
 ## Now: Keyhop 2.0
 
-- Real-time local tracking, thirteen tools counted, multi-computer merge, hop before a limit.
+- Real-time local tracking, thirteen tools counted, multi-computer merge, hop before a limit, one login per terminal (`keyhop run`) with folder-to-login mapping.
 - The window rebuilt: Limits board, home over a night or day field, Plans and Coach.
 - Efficiency-first leaderboards and seasons inside plan divisions, verified uploads, opt-in live sharing, `show-data`.
 - Team digests to Slack and Discord, a year wrapped, efficiency badges.
 
 ## Next
 
-- `keyhop run <account>`: run one tool under one login per terminal, with a folder-to-account mapping.
 - The Linux and Windows trays and the iOS companion in the 2.0 language.
 - Feeds that need more evidence: Antigravity, Droid and Hermes session totals, Copilot's session rollups.
 - A live "right now" leaderboard on the live layer.

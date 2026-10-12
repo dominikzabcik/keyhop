@@ -169,6 +169,8 @@ struct UpdateDocument: Encodable {
     let latest: String
     let available: Bool
     let page: URL
+    /// The channel this computer follows: stable or beta.
+    var channel: String = UpdateChannel.current.rawValue
 }
 
 struct UsageDocument: Encodable {

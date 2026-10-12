@@ -564,18 +564,40 @@ enum Commands {
     static func update(_ args: inout Arguments) async throws {
         let json = args.flag("--json")
         let checkOnly = args.flag("--check")
+        let once = try args.option("--channel").map { word -> UpdateChannel in
+            guard let channel = UpdateChannel.parse(word) else { throw UsageError("Channel must be stable or beta.") }
+            return channel
+        }
+        if args.nextPositional() == "channel" {
+            let word = args.nextPositional()
+            try args.finish()
+            if let word {
+                guard let channel = UpdateChannel.parse(word) else { throw UsageError("Channel must be stable or beta.") }
+                try UpdateChannel.save(channel)
+                print("Keyhop now follows \(channel.title). \(channel.note)")
+                if channel == .stable, AppVersion.isPrerelease {
+                    print("This beta stays until a Stable release newer than \(AppVersion.current) comes out.")
+                }
+            } else {
+                print("Keyhop follows \(UpdateChannel.current.title)\(UpdateChannel.saved == nil ? " (the default for \(AppVersion.current))" : ""). \(UpdateChannel.current.note)")
+                print("Change it with: keyhop update channel stable|beta")
+            }
+            return
+        }
         try args.finish()
-        let release = try await Releases.latest()
+        let channel = once ?? UpdateChannel.current
+        let release = try await Releases.latest(channel: channel)
         let current = AppVersion.current
         let available = Releases.isNewer(release.version, than: current)
 
         if checkOnly || !available {
             if json {
-                try Output.json(UpdateDocument(current: current, latest: release.version, available: available, page: release.page))
+                try Output.json(UpdateDocument(current: current, latest: release.version, available: available, page: release.page,
+                                               channel: channel.rawValue))
             } else {
                 print(available
-                    ? "Keyhop \(release.version) is available (you have \(current)). Run `keyhop update` to install it."
-                    : "Keyhop \(current) is the latest version.")
+                    ? "Keyhop \(release.version) is available on \(channel.title) (you have \(current)). Run `keyhop update` to install it."
+                    : "Keyhop \(current) is the latest \(channel.title) version.")
             }
             return
         }
@@ -591,7 +613,8 @@ enum Commands {
         let how = try await LinuxInstaller.install(release, quiet: json)
         #endif
         if json {
-            try Output.json(UpdateDocument(current: release.version, latest: release.version, available: false, page: release.page))
+            try Output.json(UpdateDocument(current: release.version, latest: release.version, available: false, page: release.page,
+                                           channel: channel.rawValue))
         } else {
             print("Installed Keyhop \(release.version) \(how).")
         }

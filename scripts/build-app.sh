@@ -11,6 +11,10 @@ cd "$(dirname "$0")/.."
 
 VERSION="${KEYHOP_VERSION:-$(cat VERSION)}"
 VERSION="${VERSION#v}"
+# macOS wants only numbers in the bundle's versions; a beta's full version (2.0.0-beta.4) is KeyhopVersion.
+SHORT_VERSION="${VERSION%%-*}"
+BUILD_NUMBER="$SHORT_VERSION"
+if [[ $VERSION == *-* ]]; then BUILD_NUMBER="$SHORT_VERSION.${VERSION##*.}"; fi
 APP="build/Keyhop.app"
 SIGN_IDENTITY="${KEYHOP_CODESIGN_IDENTITY:--}"
 NOTARY_PROFILE="${KEYHOP_NOTARY_PROFILE:-}"
@@ -49,8 +53,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>Keyhop</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>${VERSION}</string>
-  <key>CFBundleVersion</key><string>${VERSION}</string>
+  <key>CFBundleShortVersionString</key><string>${SHORT_VERSION}</string>
+  <key>CFBundleVersion</key><string>${BUILD_NUMBER}</string>
+  <key>KeyhopVersion</key><string>${VERSION}</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <!-- Lives in the menu bar; takes a Dock icon only while its window is open. -->

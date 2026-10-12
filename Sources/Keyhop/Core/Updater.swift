@@ -22,6 +22,16 @@ final class Updater: ObservableObject {
 
     @Published private(set) var available: Release?
     @Published private(set) var phase: Phase = .idle
+    @Published private(set) var channel: UpdateChannel = .current
+
+    /// Moves to another channel and looks at once, so a switch to Beta brings the newest build now.
+    func choose(_ next: UpdateChannel) {
+        guard next != channel else { return }
+        try? UpdateChannel.save(next)
+        channel = next
+        available = nil
+        Task { await check(userInitiated: true) }
+    }
 
     nonisolated static var currentVersion: String { AppVersion.current }
 
@@ -42,7 +52,8 @@ final class Updater: ObservableObject {
         phase = .checking
         UserDefaults.standard.set(Date(), forKey: "lastUpdateCheck")
         do {
-            let info = try await Releases.latest()
+            channel = UpdateChannel.current
+            let info = try await Releases.latest(channel: channel)
             if Releases.isNewer(info.version, than: Self.currentVersion) {
                 guard let archive = info.assets["Keyhop.zip"] else { throw KeyhopError("The latest release has no Keyhop.zip.") }
                 available = Release(version: info.version, archive: archive, checksums: info.assets["SHA256SUMS"], page: info.page)
@@ -51,7 +62,7 @@ final class Updater: ObservableObject {
             }
             phase = .idle
             if userInitiated, available == nil {
-                AccountStore.shared.notice = "Keyhop \(Self.currentVersion) is the latest version."
+                AccountStore.shared.notice = "Keyhop \(Self.currentVersion) is the latest \(channel.title) version."
             }
             if allowAutoInstall, !userInitiated, available != nil, UserDefaults.standard.bool(forKey: "autoInstallUpdates") {
                 await installWhenIdle()
@@ -106,7 +117,7 @@ final class Updater: ObservableObject {
             let fresh = unpacked.appendingPathComponent("Keyhop.app")
             guard result.status == 0,
                   let info = NSDictionary(contentsOf: fresh.appendingPathComponent("Contents/Info.plist")),
-                  info["CFBundleShortVersionString"] as? String == release.version else {
+                  (info["KeyhopVersion"] as? String ?? info["CFBundleShortVersionString"] as? String) == release.version else {
                 throw KeyhopError("The downloaded app isn't Keyhop \(release.version).")
             }
             _ = try? Shell.run("/usr/bin/xattr", ["-dr", "com.apple.quarantine", fresh.path])

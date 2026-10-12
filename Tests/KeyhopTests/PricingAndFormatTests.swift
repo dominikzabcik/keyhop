@@ -107,6 +107,33 @@ final class UpdaterTests: XCTestCase {
         XCTAssertTrue(Releases.isNewer("0.6", than: "0.5.9"))
         XCTAssertFalse(Releases.isNewer("0.6.0", than: "0.6.0"))
         XCTAssertFalse(Releases.isNewer("1.0.0", than: "1.0.1"))
+        // A beta comes before its release and after everything older; betas count up.
+        XCTAssertTrue(Releases.isNewer("2.0.0-beta.1", than: "0.14.5"))
+        XCTAssertTrue(Releases.isNewer("2.0.0", than: "2.0.0-beta.30"))
+        XCTAssertTrue(Releases.isNewer("2.0.0-beta.10", than: "2.0.0-beta.9"))
+        XCTAssertFalse(Releases.isNewer("0.14.6", than: "2.0.0-beta.1"))
+        XCTAssertFalse(Releases.isNewer("2.0.0-beta.2", than: "2.0.0-beta.2"))
+        XCTAssertTrue(Releases.isNewer("v2.0.0-rc.1", than: "2.0.0-beta.9"))
+        XCTAssertTrue(Releases.isNewer("2.0.1-beta.1", than: "2.0.0"))
+        XCTAssertFalse(Releases.isNewer("2.0.0+build.7", than: "2.0.0"))
+    }
+
+    func testTheBetaChannelTakesTheNewestOfEveryRelease() throws {
+        func release(_ tag: String, prerelease: Bool, draft: Bool = false) -> [String: Any] {
+            ["tag_name": tag, "html_url": "https://github.com/dominikzabcik/keyhop/releases/tag/\(tag)", "prerelease": prerelease, "draft": draft,
+             "assets": [["name": "Keyhop.zip", "browser_download_url": "https://example.com/\(tag)/Keyhop.zip"]]]
+        }
+        let list = [release("v0.14.5", prerelease: false), release("v2.0.0-beta.3", prerelease: true),
+                    release("v2.0.0-beta.12", prerelease: true), release("v2.0.0-beta.13", prerelease: true, draft: true)]
+        let newest = try XCTUnwrap(Releases.newest(in: list))
+        XCTAssertEqual(newest.version, "2.0.0-beta.12")
+        XCTAssertTrue(newest.prerelease)
+        XCTAssertNotNil(newest.assets["Keyhop.zip"])
+        // Once the release is out, Beta takes it too.
+        XCTAssertEqual(Releases.newest(in: list + [release("v2.0.0", prerelease: false)])?.version, "2.0.0")
+        XCTAssertEqual(UpdateChannel.parse("Nightly"), .beta)
+        XCTAssertEqual(UpdateChannel.parse("prod"), .stable)
+        XCTAssertNil(UpdateChannel.parse("canary-ish"))
     }
 
     func testChecksumListing() {

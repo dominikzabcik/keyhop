@@ -173,6 +173,15 @@ extension DashboardPage {
       case "cloud-unlink": data.board = null; act(el, () => api("/api/cloud/unlink", {}), "Unlinking"); break;
       case "cloud-limits-on": act(el, () => api("/api/cloud/limits", { on: true }), "Turning on"); break;
       case "cloud-limits-off": act(el, () => api("/api/cloud/limits", { on: false }), "Stopping"); break;
+      case "update-channel":
+        if (data.update?.channel === el.dataset.value) break;
+        ui.checkingUpdate = true;
+        render();
+        try { data.update = await api("/api/update/channel", { channel: el.dataset.value }); data.updateError = null; }
+        catch (error) { data.updateError = error.message; }
+        ui.checkingUpdate = false;
+        render();
+        break;
       case "team-digest-off":
         act(el, async () => { const result = await api("/api/cloud/team", { digestOff: ui.boardTeam }); data.board = null; data.day = null; return result; }, "Turning off");
         break;

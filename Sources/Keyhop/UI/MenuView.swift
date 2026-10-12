@@ -742,9 +742,14 @@ private struct MenuFooter: View {
 
     private var moreMenu: some View {
             Menu {
-                Text("Keyhop \(Updater.currentVersion)")
+                Text("Keyhop \(Updater.currentVersion)\(AppVersion.isPrerelease ? " · Beta" : "")")
                 Button("Open Keyhop") { AppWindow.show() }
                 Button("Check for Updates…") { Task { await updater.check(userInitiated: true) } }
+                Picker("Update Channel", selection: Binding(get: { updater.channel }, set: { updater.choose($0) })) {
+                    ForEach(UpdateChannel.allCases, id: \.self) { channel in
+                        Text(channel.title).tag(channel)
+                    }
+                }
                 Divider()
                 Toggle("Check usage every 5 minutes", isOn: $autoRefresh)
                 Toggle("Hop before a limit automatically", isOn: $autoHop)

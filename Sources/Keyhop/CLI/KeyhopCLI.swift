@@ -54,7 +54,7 @@ enum KeyhopCLI {
             case "doctor": try await Commands.doctor(&args)
             case "services": try await Commands.services(&args)
             case "reset": try await Commands.reset(&args)
-            case "version", "--version": print("keyhop \(AppVersion.current)")
+            case "version", "--version": print("keyhop \(AppVersion.current)\(UpdateChannel.current == .beta ? " (beta channel)" : "")")
             case "help", "--help", "-h": print(helpText)
             default: throw UsageError("Unknown command '\(command)'.")
             }
@@ -118,7 +118,8 @@ enum KeyhopCLI {
       mcp                                  Serve read-only status, usage and Smart Hop tools over stdio
 
     App
-      update [--check] [--json]            Check for and install a new release
+      update [--check] [--channel stable|beta] [--json]  Check for and install a new release
+      update channel [stable|beta]         Which releases this computer follows: tested ones, or the nightly beta
       doctor [--json]                      Show paths, storage and what Keyhop can see
       services [--json]                    Whether Claude, OpenAI, Cursor, GitHub and Windsurf report trouble
       reset [--yes]                        Remove saved logins, usage history and settings

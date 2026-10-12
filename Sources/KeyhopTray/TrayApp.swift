@@ -420,6 +420,10 @@ final class TrayApp {
         case .checkForUpdates:
             checkForUpdates(announce: true)
 
+        case .toggleBetaChannel:
+            let next = update?.channel == "beta" ? "stable" : "beta"
+            runCLI(["update", "channel", next]) { [weak self] _ in self?.checkForUpdates(announce: true) }
+
         case .installUpdate:
             installUpdate()
 

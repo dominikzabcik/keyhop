@@ -17,6 +17,7 @@ Keyhop 2.0 is the tracker, the hop and the social layer rebuilt as one product.
 - **Teams and years.** A team can post its day to Slack or Discord once a day. `/u/<login>/wrapped` wraps a year. Widgets gain efficiency and cache-hit badges.
 - **The pet.** Its commit blocks stand in front of it; every measured tool colours its markings.
 - **MCP.** `keyhop_plans` and `keyhop_coach` join the read-only tools.
+- **Stable and Beta.** Two update channels: tested releases, or a nightly build of the next version. Choose in the menu, in Settings, in the tray or with `keyhop update channel`; `install.sh --beta` installs the Beta. Versions order the way people expect: a beta comes before its release.
 
 ## [0.14.5]
 

@@ -1,0 +1,29 @@
+[package]
+name = "keyhop-native"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Keyhop's window drawn natively with GPUI, over the same local API the HTML window reads."
+license = "MIT"
+
+[[bin]]
+name = "keyhop-native"
+path = "src/main.rs"
+
+[dependencies]
+gpui-kit = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = { version = "2", default-features = false, features = ["json"] }
+anyhow = "1"
+
+# Metal shaders compile when the window opens rather than at build time, so building needs no
+# Metal toolchain on the machine (Xcode 26 ships it as a separate download).
+[target.'cfg(target_os = "macos")'.dependencies]
+gpui-pre-macos = { version = "=0.3.9", features = ["runtime_shaders"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4
+strip = true

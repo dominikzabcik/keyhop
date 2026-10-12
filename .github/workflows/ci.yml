@@ -220,6 +220,23 @@ jobs:
         working-directory: checks
         run: node run.mjs --site --app --cli --review
 
+      # What the walk found, where anyone can read it without the log: each problem as an
+      # annotation on the run, and the report as the job's summary.
+      - name: Say what the walk found
+        if: always()
+        working-directory: checks
+        run: |
+          if [ -f report/report.json ]; then
+            node -e '
+              const report = require("./report/report.json");
+              for (const f of report.found) console.log(`::error title=Screens ${f.screen} (${f.width})::${f.kind}: ${f.detail}`);
+              for (const j of report.judgements.filter((j) => !j.passed)) console.log(`::warning title=Jev ${j.screen}::${j.question}: ${j.answer}`);
+            '
+            { echo "## Screens"; cat report/report.md; } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error title=Screens::The walk left no report."
+          fi
+
       - uses: actions/upload-artifact@v7
         if: always()
         with:

@@ -198,6 +198,17 @@ private struct MenuBoard: View {
                     .font(.system(size: 12.5))
                     .foregroundStyle(Brand.muted)
                     .fixedSize(horizontal: false, vertical: true)
+                if let pooled = facts.pooled {
+                    Button {
+                        AppWindow.show(section: "limits")
+                    } label: {
+                        Text("\(pooled.remaining)% of \(pooled.capacity)% left across your logins")
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(Brand.muted)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Open Limits: what is left, how fast it goes, and when it comes back")
+                }
             }
         }
         .padding(.horizontal, 16)
@@ -434,6 +445,10 @@ private struct MenuFacts {
     let tokens: Int
     let cost: Double
     let shares: [MenuShare]
+    /// Every login with a limit, pooled: what is left across them and what a full set would be,
+    /// the window's Limits rule (100 less each login's tightest window; a signed-out login is
+    /// not counted). Nil when no login has a limit to read.
+    let pooled: (remaining: Int, capacity: Int)?
 
     static func make(store: AccountStore, tracker: UsageTracker, now: Date = Date()) -> MenuFacts {
         let rows = store.accounts.map { account -> MenuRow in
@@ -456,9 +471,16 @@ private struct MenuFacts {
         let sentence = headline(rows: rows, hop: hop, empty: store.accounts.isEmpty)
         // The engine's total, so measured-only tools without accounts count too.
         let total = tracker.todayTotal
+        let counted = rows.filter { row in
+            row.used != nil && store.usage[row.account.id]?.error == nil
+        }
+        let pooled: (remaining: Int, capacity: Int)? = counted.isEmpty ? nil : (
+            remaining: Int(counted.reduce(0.0) { $0 + max(0, 100 - min(100, $1.used ?? 0)) }.rounded()),
+            capacity: counted.count * 100
+        )
         return MenuFacts(
             rows: rows, unset: unset, hopID: hop?.to.id, title: sentence.0, sub: sentence.1,
-            tokens: total.tokens.total, cost: total.cost, shares: shares(store: store, tracker: tracker)
+            tokens: total.tokens.total, cost: total.cost, shares: shares(store: store, tracker: tracker), pooled: pooled
         )
     }
 

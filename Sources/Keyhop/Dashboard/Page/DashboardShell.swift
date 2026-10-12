@@ -16,6 +16,7 @@ extension DashboardPage {
     <div class="brand">
       <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><rect x="2.5" y="2.5" width="6" height="19.5" rx="1.5"/><rect x="9.6" y="9.2" width="6" height="6" rx="1.5"/><rect x="16" y="1" width="6" height="6" rx="1.5"/><rect x="16" y="17" width="6" height="6" rx="1.5"/></g></svg>
       <b>Keyhop</b>
+      <span class="badge channel-badge" id="channel-badge" hidden>Beta</span>
     </div>
     <button class="hop hop-side" type="button" data-action="palette" aria-keyshortcuts="Meta+K Control+K" aria-haspopup="dialog" aria-controls="palette"><svg class="icon" aria-hidden="true"><use href="#i-hop"/></svg><span>Hop</span><kbd id="hop-key" aria-hidden="true">⌘K</kbd></button>
     <nav class="nav" id="nav" aria-label="Sections">

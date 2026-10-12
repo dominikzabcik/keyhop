@@ -361,6 +361,9 @@ extension DashboardPage {
       if (link.dataset.section === ui.section) link.setAttribute("aria-current", "page"); else link.removeAttribute("aria-current");
     }
     const state = data.state;
+    // A beta says so beside the name, the way a browser's Beta does.
+    const channelBadge = $("#channel-badge");
+    if (channelBadge) channelBadge.hidden = !String(state?.version || "").includes("-");
     const mode = $("#mode");
     if (mode) {
       mode.innerHTML = isStatic ? `<span class="badge">Saved</span>` : state?.mode === "sample" ? `<span class="badge sample">Sample</span>` : "";

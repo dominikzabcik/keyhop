@@ -57,8 +57,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Alerts.shared.configure()
             let welcomed = WelcomeWindow.showIfNeeded(AccountStore.shared)
             if !welcomed, !quiet { AppWindow.show() }
+            Self.announceUpdate()
             Updater.shared.checkIfDue()
         }
+    }
+
+    /// After an update, once: the version it came to, and on which channel.
+    @MainActor
+    private static func announceUpdate() {
+        let defaults = UserDefaults.standard
+        let current = AppVersion.current
+        let last = defaults.string(forKey: "lastRunVersion")
+        defaults.set(current, forKey: "lastRunVersion")
+        guard let last, last != current else { return }
+        let channel = UpdateChannel.current == .beta ? " Beta" : ""
+        AccountStore.shared.notice = "Updated to Keyhop \(current)\(channel). What's new is on the release page: github.com/\(Releases.repository)/releases/tag/v\(current)"
     }
 
     /// Opening Keyhop again while it runs brings up its window.

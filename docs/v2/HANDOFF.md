@@ -75,7 +75,11 @@ What changed:
   the current rate (3 h least squares, or the window's average) for 3 hours, the typical rate
   after, resets lifting windows back to 0. `keyhop forecast` and MCP `keyhop_forecast` print it.
   Sample mode synthesises a week of samples (`SampleData.quota`).
-- Verified on Linux: `swift test` 224, window e2e 31, `checks/run.mjs --app --cli` clean.
+- Verified on Linux: `swift test` 224, window e2e 31, `checks/run.mjs --site --app --cli` clean
+  (33 screens). CI on `ci/v2` green for `50e1f0d`; `v2.0.0-beta.3` was cut from it on 2026-10-12
+  (23:40 UTC) and checked from the download: KeyhopVersion 2.0.0-beta.3, keyhop-native inside,
+  the Linux CLI's `forecast` and Beta channel. The Screens job now writes every finding of the
+  walk as an annotation on the run, readable without a token.
   The native GPUI spike draws the same Home and Limits (bars for the chart). The Mac menu's header
   says what is left across the logins (the pool rule without the samples) and opens Limits.
   Not done: keyhop.app has no pooled view (its profile shows shared limits one by one).

@@ -12,7 +12,7 @@ extension DashboardPage {
     else if (ui.checkingUpdate) updateRow = `<div class="setting-row"><div><b>Checking for updates…</b><p class="update-status" role="status"><span class="ring" aria-hidden="true"></span>Asking GitHub for the latest release</p></div></div>`;
     else if (data.updateError) updateRow = `<div class="setting-row"><div><b>Couldn’t check for updates</b><p>${esc(data.updateError)} Try again when you’re connected.</p></div><button class="btn sm secondary" data-action="check-update">Try Again</button></div>`;
     else if (update?.available) updateRow = `<div class="setting-row"><div><b>Keyhop ${esc(update.latest)} is available</b><p>You have ${esc(update.current)}. The download is checked against its SHA-256 before it installs.</p></div><button class="btn sm" data-action="install-update">Install Update</button></div>`;
-    else if (update) updateRow = `<div class="setting-row"><div><b>Keyhop is up to date</b><p>Version ${esc(update.current)} is the latest release.</p></div><button class="btn sm secondary" data-action="check-update">Check Again</button></div>`;
+    else if (update) updateRow = `<div class="setting-row"><div><b>Keyhop is up to date</b><p>Version ${esc(update.current)} is the latest ${update.channel === "beta" ? "Beta" : "Stable"} release.</p></div><button class="btn sm secondary" data-action="check-update">Check Again</button></div>`;
     else updateRow = `<div class="setting-row"><div><b>Keyhop ${esc(state.version)}</b><p>Update checks run separately from limit and usage refreshes.</p></div><button class="btn sm secondary" data-action="check-update">Check for Updates</button></div>`;
 
     const tools = doctor ? `<div class="list">${doctor.tools.map((t) => `<div class="row">
@@ -32,7 +32,7 @@ extension DashboardPage {
       general: `<div class="settings-intro"><h2>Window Appearance</h2><p>Choose how Keyhop sits alongside the rest of your Mac.</p></div>${isStatic ? "" : appearanceCard()}`,
       activity: `<div class="settings-intro"><h2>Activity</h2><p>Control what Keyhop reads locally and see where each tool is signed in.</p></div>${isStatic ? "" : workCard(state.work)}<section class="card"><div class="card-head"><h2>Tools on This Mac</h2></div>${tools}</section>`,
       cloud: `<div class="settings-intro"><h2>Keyhop Cloud</h2><p>The link, what this computer sends, and who else can read it.</p></div>${cloudCard(state.cloud)}`,
-      app: `<div class="settings-intro"><h2>App & Privacy</h2><p>Version ${esc(state.version)} on ${esc(state.platform)}. Updates and limit refreshes stay independent.</p></div>${helpCard()}<section class="card"><div class="card-head"><h2>Updates</h2></div><div class="card-body">${updateRow}</div></section>${privacy}`,
+      app: `<div class="settings-intro"><h2>App & Privacy</h2><p>Version ${esc(state.version)} on ${esc(state.platform)}. Updates and limit refreshes stay independent.</p></div>${helpCard()}<section class="card"><div class="card-head"><h2>Updates</h2>${isPrerelease(state.version) ? `<span class="pill warn">Beta build</span>` : ""}</div><div class="card-body">${updateRow}</div>${isStatic ? "" : channelRow(update)}</section>${privacy}`,
     };
     if (ui.settingsPane === "cloud" && (isStatic || !state.cloud?.available)) ui.settingsPane = "general";
     const choices = [["general", "settings", "Appearance"], ["activity", "usage", "Activity"]];
@@ -40,6 +40,18 @@ extension DashboardPage {
     choices.push(["app", "update", "App & Privacy"]);
     const nav = choices.map(([value, glyph, label]) => `<button type="button" data-action="settings-pane" data-value="${value}" aria-current="${value === ui.settingsPane ? "page" : "false"}">${icon(glyph)}<span>${label}</span></button>`).join("");
     return { body: `<div class="settings-shell"><nav class="card settings-nav" aria-label="Settings categories">${nav}</nav><div class="settings-pane">${panes[ui.settingsPane]}</div></div>` };
+  }
+
+  const isPrerelease = (version) => String(version || "").includes("-");
+
+  // Stable or Beta. Beta takes the newest of both, so leaving it never strands anyone on an old build.
+  function channelRow(update) {
+    const channel = update?.channel || (isPrerelease(data.state?.version) ? "beta" : "stable");
+    const note = channel === "beta"
+      ? "Nightly builds of the next version: new features first, and sometimes a rough edge. Switch back any time; this build stays until a Stable release is newer."
+      : "Tested releases, the default. Beta gets new features a day or a week earlier.";
+    const tabs = [["stable", "Stable"], ["beta", "Beta"]].map(([value, label]) => `<button type="button" data-action="update-channel" data-value="${value}" aria-pressed="${value === channel}">${label}</button>`).join("");
+    return `<div class="card-body setting-row"><div><b>Update channel</b><p>${note}</p></div><div class="tabs">${tabs}</div></div>`;
   }
 
   // Help: where the answers are, and what to run when something looks wrong.

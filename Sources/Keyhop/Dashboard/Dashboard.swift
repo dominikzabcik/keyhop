@@ -847,6 +847,8 @@ actor DashboardSession {
                 return .json(await Commands.doctorDocument(sample: sample))
             case ("GET", "/api/update"):
                 return .json(try await checkUpdate())
+            case ("POST", "/api/update/channel"):
+                return .json(try await chooseChannel(try Self.decode(ChannelBody.self, request).channel))
             case ("POST", "/api/update"):
                 return .json(try await installUpdate())
             case ("POST", "/api/close"):
@@ -1680,6 +1682,21 @@ actor DashboardSession {
         let release = try await Releases.latest()
         return UpdateDocument(current: AppVersion.current, latest: release.version,
                               available: Releases.isNewer(release.version, than: AppVersion.current), page: release.page)
+    }
+
+    private struct ChannelBody: Decodable {
+        let channel: String
+    }
+
+    /// Saves the channel and looks at once. In the Mac app the updater also moves, so the menu agrees.
+    private func chooseChannel(_ word: String) async throws -> UpdateDocument {
+        guard let channel = UpdateChannel.parse(word) else { throw UsageError("Channel must be stable or beta.") }
+        if sample { return UpdateDocument(current: AppVersion.current, latest: AppVersion.current, available: false, page: URL(string: "https://github.com/\(Releases.repository)/releases")!, channel: channel.rawValue) }
+        try UpdateChannel.save(channel)
+        #if os(macOS)
+        await MainActor.run { Updater.shared.choose(channel) }
+        #endif
+        return try await checkUpdate()
     }
 
     private func installUpdate() async throws -> DashboardAction {

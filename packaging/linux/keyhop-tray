@@ -189,6 +189,8 @@ def build_menu(status, busy=None, update=None, settings=None):
         # Only the ~/.local build installs updates without a password prompt.
         items.append({"title": "Install updates automatically", "command": ("auto-install",), "checked": settings["autoInstallUpdates"], "toggle": True})
     items.append({"title": "Open at login", "command": ("autostart",), "checked": settings["autostart"], "toggle": True})
+    # Beta follows the nightly builds of the next version; the CLI keeps the choice for every surface.
+    items.append({"title": "Beta updates", "command": ("beta-channel",), "checked": (update or {}).get("channel") == "beta", "toggle": True})
     if update and update.get("available"):
         items.append({"title": f"Update to {update['latest']}", "command": ("install-update",), "enabled": idle})
     else:
@@ -770,6 +772,10 @@ def run_tray(argv):
                 self.render()
                 if self.settings["autoInstallUpdates"] and self.can_self_update:
                     self.install_update()
+
+            elif kind == "beta-channel":
+                channel = "stable" if (self.update or {}).get("channel") == "beta" else "beta"
+                self.run(["update", "channel", channel], lambda code, stdout, stderr: self.check_update(announce=True))
 
             elif kind == "autostart":
                 if os.path.exists(autostart_file):

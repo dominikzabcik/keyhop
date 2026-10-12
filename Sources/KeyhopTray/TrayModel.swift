@@ -96,6 +96,8 @@ struct TrayUpdate: Decodable {
     let current: String
     let latest: String
     let available: Bool
+    /// stable or beta; absent from a keyhop older than channels.
+    var channel: String? = nil
 }
 
 enum TrayJSON {
@@ -117,6 +119,7 @@ enum TrayCommand: Equatable, Hashable {
     case toggleAutoRefresh
     case toggleAutoInstall
     case toggleStartAtSignIn
+    case toggleBetaChannel
     case installUpdate
     case checkForUpdates
     case quit
@@ -200,6 +203,7 @@ enum TrayMenu {
             items.append(TrayMenuItem(title: "Install updates automatically", command: .toggleAutoInstall, checked: settings.autoInstallUpdates))
         }
         items.append(TrayMenuItem(title: "Open at sign-in", command: .toggleStartAtSignIn, checked: settings.startsAtSignIn))
+        items.append(TrayMenuItem(title: "Beta updates", command: .toggleBetaChannel, checked: update?.channel == "beta"))
         if let update, update.available {
             if settings.canSelfUpdate {
                 items.append(TrayMenuItem(title: "Update to \(update.latest)", command: .installUpdate, enabled: idle))

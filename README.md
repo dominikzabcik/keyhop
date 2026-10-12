@@ -298,6 +298,12 @@ The Linux tray keeps its settings in `~/.config/keyhop/tray.json`, the Windows t
 
 Keyhop updates from this repository's releases. A release without a checksum, or with one that doesn't match, is never installed.
 
+**Two channels.** **Stable** is the tested releases, and the default. **Beta** is a nightly build of the next version, published when the work has changed: new features first, now and then a rough edge. Choose in the menu's **…** › **Update Channel**, in the window under **Settings › App & Privacy**, in the Linux and Windows tray (**Beta updates**), or with `keyhop update channel beta`. Beta always runs the newest build there is, Stable releases included, so leaving it never strands you on an old build: switch back to Stable and the beta stays until a Stable release is newer.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.sh | bash -s -- --beta
+```
+
 - **macOS:** the app downloads `Keyhop.zip`, checks it against `SHA256SUMS`, confirms the bundle inside is the expected version, swaps it in place and reopens. Click the version number in the menu's footer to check right away.
 - **Linux:** `keyhop update`, or **Update** in the tray, downloads the package for the way you installed Keyhop and installs it with `dnf`, `apt` or `pacman` (asking for your password through `sudo` or your desktop's dialog). The tray tells you once when a new version is out. The portable build updates in `~/.local` without root, automatically when that setting is on.
 - **Windows:** the tray installs a new release when nothing is in progress, replaces the files in place and restarts itself. `keyhop update` does the same from a terminal. With Scoop, use `scoop update keyhop`; the tray tells you when one is out.

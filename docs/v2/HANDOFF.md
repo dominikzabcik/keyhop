@@ -34,11 +34,14 @@ Push `v2` to `ci/v2` again after any Mac-only change (`git push -f origin v2:ci/
 
 ## Trying it, and the native window (2026-10-12)
 
-- **Nightly:** `.github/workflows/nightly.yml` (on main) builds the Mac app from `v2` on every push
-  to `v2`, every night at 02:17 UTC and on demand, as version `1.99.<run>`, and keeps it 14 days
-  as a workflow artifact (never a release, so the updater never offers it; a 0.14.x release never
-  replaces it, the real 2.0.0 will). Developer ID signed and notarized when the secrets exist,
-  ad-hoc otherwise (README.txt in the zip says how to open it).
+- **Channels:** Stable (tagged releases from main) and Beta (`2.0.0-beta.N` GitHub prereleases
+  for macOS, Linux and Windows, built from `v2`). `.github/workflows/nightly.yml` (named "Beta")
+  publishes the next beta at 02:17 UTC when `v2` changed; pushing a tag like `v2.0.0-beta.7`
+  publishes one at once. The app follows `UpdateChannel` (saved in `update.json`, default from
+  the running version), chosen in the menu, Settings, the trays or `keyhop update channel`.
+  `install.sh --beta` / `install.ps1 -Beta` install the newest beta. Builds are ad-hoc signed
+  until the signing secrets exist (the owner chose to sign later); install.sh's curl download
+  carries no quarantine flag, and the updater clears it, so neither needs the user's help.
 - **`keyhop run`** is done (it was deferred from M1): a config folder per login for Claude Code and
   Codex (`CLAUDE_CONFIG_DIR`/`CODEX_HOME`), `keyhop run <login> -- claude`, `keyhop run map`.
 - **GPUI spike, `native/`:** the window drawn natively with GPUI Kit over the same local API

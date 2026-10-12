@@ -88,6 +88,34 @@ jobs:
           path: ios/build/Logs/Test/*.xcresult
           if-no-files-found: warn
 
+  native:
+    name: Native window (GPUI)
+    if: hashFiles('native/Cargo.toml') != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install GPUI's build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libx11-xcb-dev libfontconfig-dev libfreetype-dev
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            native/target
+          key: native-linux-${{ hashFiles('native/Cargo.lock') }}
+          restore-keys: native-linux-
+
+      - name: Test and build
+        working-directory: native
+        run: |
+          cargo test
+          cargo build --release
+
   macos:
     name: macOS
     runs-on: macos-15

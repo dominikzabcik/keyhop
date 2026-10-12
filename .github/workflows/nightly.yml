@@ -73,6 +73,23 @@ jobs:
             echo "KEYHOP_NOTARY_KEYCHAIN=$keychain"
           } >> "$GITHUB_ENV"
 
+      - uses: actions/cache@v4
+        if: hashFiles('native/Cargo.lock') != ''
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            native/target
+          key: native-macos-${{ hashFiles('native/Cargo.lock') }}
+          restore-keys: native-macos-
+
+      # The GPUI window (native/), Apple silicon only while it is a spike. Bundled beside Keyhop.
+      - name: Build the native window
+        if: hashFiles('native/Cargo.toml') != ''
+        run: |
+          cargo build --release --manifest-path native/Cargo.toml
+          echo "KEYHOP_NATIVE_BIN=$PWD/native/target/release/keyhop-native" >> "$GITHUB_ENV"
+
       - name: Build the app
         env:
           KEYHOP_VERSION: ${{ steps.version.outputs.version }}
@@ -93,6 +110,10 @@ jobs:
           3. The command is inside the app:
                 /Applications/Keyhop.app/Contents/MacOS/Keyhop dashboard --sample
              shows the 2.0 window with made-up accounts, without touching yours.
+          4. The native window (GPUI, a spike; Apple silicon):
+                /Applications/Keyhop.app/Contents/MacOS/keyhop-native --sample
+             draws Overview and Limits natively from the same data. Without --sample it
+             shows your own logins.  --section limits  and  --theme day  open it there.
 
           The updater won't replace this build with a 0.14.x release; the real 2.0.0 will.
           TEXT

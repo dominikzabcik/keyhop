@@ -1,133 +1,73 @@
-name: Nightly
+name: Beta
 
-# A build of the v2 branch to try before 2.0 ships: every push to v2, every night, or on demand.
-# It is a workflow artifact, never a release, so the app's updater (which reads releases/latest)
-# never offers it to anyone. The version is 1.99.<run>, so a 0.14.x release never replaces it and
-# the real 2.0.0 does.
+# The Beta channel: every night, when the v2 branch has changed since the last Beta, publish the
+# next 2.0.0-beta.N for macOS, Linux and Windows as a GitHub prerelease, through the Release
+# workflow. A Beta can also go out any time by pushing a tag like v2.0.0-beta.7, or from here.
 
 on:
-  push:
-    branches: [v2]
   schedule:
     - cron: "17 2 * * *"
   workflow_dispatch:
+    inputs:
+      force:
+        description: Publish even if v2 hasn't changed since the last Beta
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: keyhop-nightly
-  cancel-in-progress: true
+  group: keyhop-beta
+  cancel-in-progress: false
+
+env:
+  BRANCH: v2
+  NEXT: "2.0.0"
 
 jobs:
-  macos:
-    name: macOS app
-    runs-on: macos-15
-    timeout-minutes: 45
+  plan:
+    name: Next Beta
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+      ref: ${{ steps.next.outputs.ref }}
+      publish: ${{ steps.next.outputs.publish }}
     steps:
-      - uses: actions/checkout@v7
-        with:
-          # A push builds what was pushed; the schedule and a manual run build the tip of v2.
-          ref: ${{ github.event_name == 'push' && github.sha || 'v2' }}
-
-      - name: Name this build
-        id: version
-        run: |
-          version="1.99.${GITHUB_RUN_NUMBER}"
-          echo "$version" > VERSION
-          sed -i '' "s/static let number = \".*\"/static let number = \"$version\"/" Sources/Keyhop/Core/Version.swift
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Prepare Developer ID signing
+      - id: next
         env:
-          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
-          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          FORCE: ${{ inputs.force }}
         run: |
-          for name in MACOS_CERTIFICATE_P12 MACOS_CERTIFICATE_PASSWORD APPLE_ID APPLE_TEAM_ID APPLE_APP_PASSWORD; do
-            if [[ -z "${!name}" ]]; then
-              echo "::notice::$name isn't set, so this nightly is ad-hoc signed. Clear the quarantine flag before opening it."
+          repo="https://github.com/${GITHUB_REPOSITORY}.git"
+          ref="$(git ls-remote "$repo" "refs/heads/$BRANCH" | cut -f1)"
+          [[ -n "$ref" ]] || { echo "No $BRANCH branch" >&2; exit 1; }
+          last="$(git ls-remote --tags "$repo" "refs/tags/v$NEXT-beta.*" | grep -v '\^{}$' | sed 's|.*refs/tags/||' | sort -V | tail -n 1 || true)"
+          number=1
+          if [[ -n "$last" ]]; then
+            number=$(( ${last##*.} + 1 ))
+            built="$(git ls-remote --tags "$repo" "refs/tags/$last^{}" | cut -f1)"
+            [[ -n "$built" ]] || built="$(git ls-remote --tags "$repo" "refs/tags/$last" | cut -f1)"
+            if [[ "$built" == "$ref" && "$FORCE" != "true" ]]; then
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::$BRANCH hasn't changed since $last, so there is no new Beta tonight."
               exit 0
             fi
-          done
-          certificate="$RUNNER_TEMP/keyhop-developer-id.p12"
-          keychain="$RUNNER_TEMP/keyhop-signing.keychain-db"
-          keychain_password="$(openssl rand -hex 32)"
-          printf '%s' "$MACOS_CERTIFICATE_P12" | base64 --decode > "$certificate"
-          security create-keychain -p "$keychain_password" "$keychain"
-          security set-keychain-settings -lut 21600 "$keychain"
-          security unlock-keychain -p "$keychain_password" "$keychain"
-          security import "$certificate" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain"
-          security list-keychains -d user -s "$keychain"
-          security default-keychain -d user -s "$keychain"
-          identity="$(security find-identity -v -p codesigning "$keychain" | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -1)"
-          if [[ -z "$identity" ]]; then echo "The certificate is not a Developer ID Application identity." >&2; exit 1; fi
-          xcrun notarytool store-credentials keyhop-notary --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --keychain "$keychain"
+          fi
           {
-            echo "KEYHOP_CODESIGN_IDENTITY=$identity"
-            echo "KEYHOP_NOTARY_PROFILE=keyhop-notary"
-            echo "KEYHOP_NOTARY_KEYCHAIN=$keychain"
-          } >> "$GITHUB_ENV"
+            echo "version=$NEXT-beta.$number"
+            echo "ref=$ref"
+            echo "publish=true"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::Publishing Keyhop $NEXT-beta.$number from $BRANCH @ ${ref:0:7}"
 
-      - uses: actions/cache@v4
-        if: hashFiles('native/Cargo.lock') != ''
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            native/target
-          key: native-macos-${{ hashFiles('native/Cargo.lock') }}
-          restore-keys: native-macos-
-
-      # The GPUI window (native/), Apple silicon only while it is a spike. Bundled beside Keyhop.
-      - name: Build the native window
-        if: hashFiles('native/Cargo.toml') != ''
-        run: |
-          cargo build --release --manifest-path native/Cargo.toml
-          echo "KEYHOP_NATIVE_BIN=$PWD/native/target/release/keyhop-native" >> "$GITHUB_ENV"
-
-      - name: Build the app
-        env:
-          KEYHOP_VERSION: ${{ steps.version.outputs.version }}
-        run: ./scripts/build-app.sh --zip
-
-      - name: Name the download
-        run: |
-          mkdir -p nightly
-          mv build/Keyhop.zip "nightly/Keyhop-${{ steps.version.outputs.version }}-${{ steps.version.outputs.commit }}.zip"
-          cat > nightly/README.txt <<'TEXT'
-          Keyhop nightly, built from the v2 branch.
-
-          1. Unzip and move Keyhop.app to /Applications (quit the installed Keyhop first).
-             It uses the same data folder and logins as your installed Keyhop; going back is
-             installing the release again.
-          2. If macOS says the app can't be opened, it was ad-hoc signed. Run once:
-                xattr -dr com.apple.quarantine /Applications/Keyhop.app
-          3. The command is inside the app:
-                /Applications/Keyhop.app/Contents/MacOS/Keyhop dashboard --sample
-             shows the 2.0 window with made-up accounts, without touching yours.
-          4. The native window (GPUI, a spike; Apple silicon):
-                /Applications/Keyhop.app/Contents/MacOS/keyhop-native --sample
-             draws Overview and Limits natively from the same data. Without --sample it
-             shows your own logins.  --section limits  and  --theme day  open it there.
-
-          The updater won't replace this build with a 0.14.x release; the real 2.0.0 will.
-          TEXT
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: keyhop-nightly-macos-${{ steps.version.outputs.version }}
-          path: nightly/
-          retention-days: 14
-
-      - name: Say where it is
-        run: |
-          {
-            echo "### Keyhop ${{ steps.version.outputs.version }} (v2 @ ${{ steps.version.outputs.commit }})"
-            echo
-            echo "Download **keyhop-nightly-macos-${{ steps.version.outputs.version }}** under Artifacts on this page, then read README.txt inside."
-          } >> "$GITHUB_STEP_SUMMARY"
+  release:
+    name: Release
+    needs: plan
+    if: needs.plan.outputs.publish == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ needs.plan.outputs.version }}
+      ref: ${{ needs.plan.outputs.ref }}
+    secrets: inherit

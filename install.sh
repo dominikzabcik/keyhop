@@ -2,6 +2,10 @@
 # Installs the latest Keyhop release and opens it.
 #
 #   curl -fsSL https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.sh | bash -s -- --beta
+#
+# --beta installs the newest Beta (the nightly build of the next version) instead of the latest
+# Stable release; Keyhop then follows the Beta channel and updates itself there.
 #
 # macOS: into Applications. Files downloaded by curl or the GitHub CLI carry no quarantine
 # flag, so macOS opens Keyhop without the unidentified-developer prompt.
@@ -10,6 +14,23 @@
 set -euo pipefail
 
 REPO="dominikzabcik/keyhop"
+
+CHANNEL=stable
+for arg in "$@"; do
+  case "$arg" in
+    --beta) CHANNEL=beta ;;
+    --stable) CHANNEL=stable ;;
+    -h | --help)
+      echo "Usage: install.sh [--beta]"
+      echo "  --beta   install the newest Beta, the nightly build of the next version"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $arg (use --beta, or nothing for the Stable release)" >&2
+      exit 2
+      ;;
+  esac
+done
 
 if [[ -t 1 ]]; then
   BONE=$'\033[38;2;237;231;217m'
@@ -259,6 +280,22 @@ if [[ -n ${KEYHOP_INSTALL_FROM:-} ]]; then
   done
   TAG="v${KEYHOP_VERSION:-$version}"
   [[ $TAG != v ]] || fail "Set KEYHOP_VERSION to the version of the files in $KEYHOP_INSTALL_FROM."
+elif [[ $CHANNEL == beta ]]; then
+  # The newest Beta, unless a Stable release has caught up with it (2.0.0 is newer than 2.0.0-beta.9).
+  SOURCE=curl
+  curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=30" -o "$TMP/releases.json" 2>"$LOG" \
+    || fail "Couldn't reach GitHub to find the newest Keyhop Beta. Check your connection and try again."
+  BETA=$(tr ',' '\n' <"$TMP/releases.json" | sed -n 's/.*"tag_name": *"\(v[^"]*-[^"]*\)".*/\1/p' | sort -V | tail -n 1)
+  STABLE=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n 1)
+  TAG=$BETA
+  if [[ -z $TAG ]]; then
+    TAG=$STABLE
+  elif [[ -n $STABLE ]]; then
+    stable_core=${STABLE#v}
+    beta_core=${BETA#v}
+    beta_core=${beta_core%%-*}
+    if [[ $(printf '%s\n%s\n' "$stable_core" "$beta_core" | sort -V | tail -n 1) == "$stable_core" ]]; then TAG=$STABLE; fi
+  fi
 elif command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
   SOURCE=gh
   TAG=$(gh release view --repo "$REPO" --json tagName -q .tagName 2>"$LOG") || fail "Couldn't read the latest Keyhop release."
@@ -269,7 +306,7 @@ else
   fail "Couldn't reach GitHub to find the latest Keyhop release. Check your connection and try again."
 fi
 [[ -n $TAG ]] || fail "Couldn't find a Keyhop release."
-done_line "Found Keyhop ${TAG#v}"
+if [[ $CHANNEL == beta ]]; then done_line "Found Keyhop ${TAG#v} (Beta channel)"; else done_line "Found Keyhop ${TAG#v}"; fi
 
 if [[ $OS == Linux ]]; then
   linux_main
@@ -290,6 +327,9 @@ if [[ -d /Applications/Cursor.app || -d $HOME/Applications/Cursor.app ]]; then f
 if command -v codex >/dev/null 2>&1 || [[ -f $HOME/.codex/auth.json ]]; then found+=("Codex"); fi
 
 printf '\n  %sKeyhop is in your menu bar%s %s↗%s\n' "$BOLD" "$RESET" "$AMBER" "$RESET"
+if [[ $CHANNEL == beta ]]; then
+  printf '  %sIt follows the Beta channel and updates itself. Back to Stable: the … menu, Update Channel.%s\n' "$DIM" "$RESET"
+fi
 if ((${#found[@]} > 0)); then
   list="${found[0]}"
   for ((i = 1; i < ${#found[@]}; i++)); do list+=", ${found[i]}"; done

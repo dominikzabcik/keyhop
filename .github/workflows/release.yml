@@ -1,5 +1,8 @@
 name: Release
 
+# Two channels. A tag like v0.14.6 is a Stable release; a tag with a prerelease, like
+# v2.0.0-beta.4, is a Beta, published as a GitHub prerelease that only the Beta channel offers.
+# The nightly Beta workflow calls this one with a version and a commit.
 on:
   push:
     tags: ["v*"]
@@ -9,6 +12,16 @@ on:
         description: Build everything and write the notes and manifests, but publish nothing
         type: boolean
         default: true
+  workflow_call:
+    inputs:
+      version:
+        description: The Beta's version, like 2.0.0-beta.4
+        type: string
+        required: true
+      ref:
+        description: The commit to build
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -25,10 +38,40 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       publish: ${{ steps.version.outputs.publish }}
+      channel: ${{ steps.version.outputs.channel }}
+      ref: ${{ steps.version.outputs.ref }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
       - id: version
+        env:
+          CALLED_VERSION: ${{ inputs.version }}
+          CALLED_REF: ${{ inputs.ref }}
         run: |
+          # A Beta's version comes from the tag or the caller, never from the files.
+          beta=""
+          if [[ -n "$CALLED_VERSION" ]]; then
+            beta="${CALLED_VERSION#v}"
+            echo "ref=$CALLED_REF" >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == *-* ]]; then
+            beta="${GITHUB_REF_NAME#v}"
+            echo "ref=$GITHUB_REF" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ -n "$beta" ]]; then
+            if ! [[ "$beta" =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9A-Za-z.]+$ ]]; then
+              echo "$beta isn't a prerelease version like 2.0.0-beta.4" >&2
+              exit 1
+            fi
+            {
+              echo "version=$beta"
+              echo "channel=beta"
+              echo "publish=true"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "channel=stable" >> "$GITHUB_OUTPUT"
+          echo "ref=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
           version="$(cat VERSION)"
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then
             if [[ "$version" != "${GITHUB_REF_NAME#v}" ]]; then
@@ -57,9 +100,15 @@ jobs:
     name: macOS
     needs: check
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.check.outputs.ref }}
+
+      - name: Stamp the Beta's version
+        if: needs.check.outputs.channel == 'beta'
+        run: python3 scripts/stamp-version.py "${{ needs.check.outputs.version }}"
 
       - uses: actions/setup-python@v7
         with:
@@ -106,6 +155,14 @@ jobs:
       - name: Install dmgbuild
         run: pip install dmgbuild
 
+      # The GPUI window, where the tree has one (native/). Apple silicon only while it is new.
+      - name: Build the native window
+        run: |
+          if [[ -f native/Cargo.toml ]]; then
+            cargo build --release --manifest-path native/Cargo.toml
+            echo "KEYHOP_NATIVE_BIN=$PWD/native/target/release/keyhop-native" >> "$GITHUB_ENV"
+          fi
+
       - name: Build app, zip and disk image
         env:
           KEYHOP_VERSION: ${{ needs.check.outputs.version }}
@@ -143,6 +200,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.check.outputs.ref }}
 
       - name: Install the static Linux SDK and nfpm
         run: |
@@ -156,6 +215,10 @@ jobs:
           command -v curl >/dev/null
           swift sdk install "$STATIC_SDK_URL" --checksum "$STATIC_SDK_CHECKSUM"
           curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_${{ matrix.nfpm }}.tar.gz" | tar -xz -C /usr/local/bin nfpm
+
+      - name: Stamp the Beta's version
+        if: needs.check.outputs.channel == 'beta'
+        run: python3 scripts/stamp-version.py "${{ needs.check.outputs.version }}"
 
       - name: Run tests
         run: swift test
@@ -184,6 +247,12 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.check.outputs.ref }}
+
+      - name: Stamp the Beta's version
+        if: needs.check.outputs.channel == 'beta'
+        run: python scripts/stamp-version.py "${{ needs.check.outputs.version }}"
 
       - uses: compnerd/gha-setup-swift@v0.4.1
         with:
@@ -231,7 +300,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ needs.check.outputs.channel == 'beta' && needs.check.outputs.ref || 'main' }}
+          fetch-depth: 0
 
       - uses: actions/download-artifact@v8
         with:
@@ -240,6 +310,7 @@ jobs:
           path: dist
 
       - name: Add stable download names
+        if: needs.check.outputs.channel == 'stable'
         run: |
           cp "dist/keyhop-$VERSION-windows-x86_64.zip" dist/Keyhop-Windows-x86_64.zip
           cp "dist/keyhop-$VERSION-linux-x86_64.tar.gz" dist/Keyhop-Linux-x86_64.tar.gz
@@ -251,7 +322,41 @@ jobs:
           sha256sum -- * > SHA256SUMS
           cat SHA256SUMS
 
+      - name: Write the Beta's notes
+        if: needs.check.outputs.channel == 'beta'
+        run: |
+          previous="$(git tag --list 'v*-*' --sort=-v:refname | grep -vx "v$VERSION" | head -n 1 || true)"
+          if [[ -n "$previous" ]]; then range="$previous..HEAD"; since="since $previous"; else range="origin/main..HEAD"; since="since the last Stable release"; fi
+          {
+            echo "**Keyhop $VERSION is a Beta**: a nightly build of the next version. It might have rough edges; Stable stays on the tested releases."
+            echo
+            echo "### What changed $since"
+            echo
+            git log --no-merges --pretty='- %s' $range | head -n 60
+            cat <<'NOTES'
+
+          ### Try it
+
+          **macOS and Linux**
+
+          ```bash
+          curl -fsSL https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.sh | bash -s -- --beta
+          ```
+
+          **Windows** (PowerShell)
+
+          ```powershell
+          & ([scriptblock]::Create((irm https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.ps1))) -Beta
+          ```
+
+          Keyhop then follows the Beta channel and updates itself every night there is something new.
+          Go back to tested releases under Settings, App & Privacy, Update channel, or with `keyhop update channel stable`.
+          NOTES
+          } | sed 's/^          //' > dist-notes.md
+          cat dist-notes.md
+
       - name: Write release notes
+        if: needs.check.outputs.channel == 'stable'
         run: |
           {
             awk -v v="$VERSION" '/^## /{p = index($0, "[" v "]") > 0; next} p' CHANGELOG.md
@@ -288,10 +393,11 @@ jobs:
           cat dist-notes.md
 
       - name: Render the package manifests
+        if: needs.check.outputs.channel == 'stable'
         run: python3 scripts/render-manifests.py --version "$VERSION" --sums dist/SHA256SUMS
 
       - name: Keep the dry run's output
-        if: needs.check.outputs.publish != 'true'
+        if: needs.check.outputs.publish != 'true' && needs.check.outputs.channel == 'stable'
         uses: actions/upload-artifact@v7
         with:
           name: dry-run
@@ -302,8 +408,26 @@ jobs:
             packaging/arch/PKGBUILD
             packaging/winget/
 
+      - name: Publish the Beta
+        if: needs.check.outputs.publish == 'true' && needs.check.outputs.channel == 'beta'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ needs.check.outputs.ref }}
+        run: |
+          target="$(git rev-parse HEAD)"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null; then
+            gh release create "v$VERSION" dist/* --title "Keyhop $VERSION" --notes-file dist-notes.md --prerelease --verify-tag
+          else
+            gh release create "v$VERSION" dist/* --title "Keyhop $VERSION" --notes-file dist-notes.md --prerelease --target "$target"
+          fi
+          # Keep the fifteen newest Betas; older ones are history, and Stable is never touched.
+          gh release list --limit 200 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease) | .tagName' \
+            | sort -V -r | tail -n +16 | while read -r old; do
+              gh release delete "$old" --cleanup-tag --yes
+            done
+
       - name: Publish release
-        if: needs.check.outputs.publish == 'true'
+        if: needs.check.outputs.publish == 'true' && needs.check.outputs.channel == 'stable'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -313,7 +437,7 @@ jobs:
             --verify-tag
 
       - name: Commit the manifests for this release
-        if: needs.check.outputs.publish == 'true'
+        if: needs.check.outputs.publish == 'true' && needs.check.outputs.channel == 'stable'
         run: |
           git add bucket/keyhop.json packaging/arch/PKGBUILD packaging/winget
           if git diff --cached --quiet; then exit 0; fi

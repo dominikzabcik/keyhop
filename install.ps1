@@ -8,8 +8,19 @@
 #
 # No administrator rights: Keyhop goes in %LOCALAPPDATA%\Programs\Keyhop, on your PATH,
 # in the Start menu, and opens at sign-in. -From installs from a folder holding a release zip and
-# its SHA256SUMS instead of GitHub, for testing unpublished builds.
-param([switch]$Uninstall, [string]$From, [switch]$NoStart)
+# its SHA256SUMS instead of GitHub, for testing unpublished builds. -Beta installs the newest Beta
+# (the nightly build of the next version) instead of the latest Stable release.
+param([switch]$Uninstall, [string]$From, [switch]$NoStart, [switch]$Beta)
+
+# Semantic order, where a beta comes before its release: 2.0.0-beta.3 < 2.0.0.
+function Version-Key([string]$tag) {
+  $text = $tag.TrimStart('v')
+  $core, $pre = $text.Split('-', 2)
+  $numbers = ($core.Split('.') | ForEach-Object { '{0:D6}' -f [int]$_ }) -join '.'
+  if (-not $pre) { return "$numbers.~" }
+  $parts = $pre.Split('.') | ForEach-Object { if ($_ -match '^\d+$') { '{0:D6}' -f [int]$_ } else { $_ } }
+  return "$numbers.!" + ($parts -join '.')
+}
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -103,7 +114,13 @@ try {
     }
   } else {
     Step 'Finding the latest release' {
-      $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -Headers @{ 'User-Agent' = 'keyhop-installer' }
+      if ($Beta) {
+        $all = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases?per_page=30" -Headers @{ 'User-Agent' = 'keyhop-installer' }
+        $release = $all | Where-Object { -not $_.draft } | Sort-Object { Version-Key $_.tag_name } -Descending | Select-Object -First 1
+        if (-not $release) { throw 'No Keyhop release found.' }
+      } else {
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -Headers @{ 'User-Agent' = 'keyhop-installer' }
+      }
       $script:zipName = Select-Zip $release.assets.name
       if (-not $script:zipName) { throw "Release $($release.tag_name) has no Windows download." }
       $script:assets = $release.assets

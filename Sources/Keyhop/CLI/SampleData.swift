@@ -238,3 +238,72 @@ extension SampleData {
         return CoachReport.build(digest: digest, sessions: digest.sessions, work: work)
     }
 }
+
+
+extension SampleData {
+    /// The sample's limits forecast, from a week of readings every half hour that end on the sample's
+    /// own snapshot. The spare Cursor login expired two days ago, so only its old readings remain.
+    static func quota(now: Date = Date(), tool: Provider? = nil) -> QuotaReport {
+        let overview = overview(now: now)
+        var samples: [LimitSample] = []
+        for (index, account) in overview.accounts.enumerated() {
+            guard let snapshot = overview.usage[account.id] else { continue }
+            if snapshot.error != nil, account.provider == .cursor {
+                let auto = UsageWindow(label: "Auto", usedPercent: 74, resetsAt: now.addingTimeInterval(1_140_000), windowSeconds: 2_592_000)
+                samples += limitHistory(account: account.id, window: auto, seed: index, until: now.addingTimeInterval(-2 * 86400))
+            }
+            for window in snapshot.windows {
+                samples += limitHistory(account: account.id, window: window, seed: index, until: now)
+            }
+        }
+        let accounts = overview.accounts.filter { tool == nil || $0.provider == tool }
+        return QuotaReport.build(accounts: QuotaInput.list(accounts: accounts, usage: overview.usage, active: overview.active),
+                                 samples: samples, now: now)
+    }
+
+    /// Readings every half hour for a week up to `until`. Use follows the working day, 9 to 19 local
+    /// time: short windows climb in it and reset, long ones climb steadily across cycles of their own
+    /// length, and the cycle in progress ends exactly on the window's current fill.
+    private static func limitHistory(account: UUID, window: UsageWindow, seed: Int, until: Date) -> [LimitSample] {
+        let calendar = Calendar.current
+        let period = window.windowSeconds ?? QuotaReport.period(label: window.label) ?? 2_592_000
+        let short = period <= 86400
+        let quiet = short ? 0.04 : 0.15
+        let perDay = 10 + 14 * quiet
+        /// Weighted hours of use since the start of the era, so any span is a subtraction.
+        func worked(_ time: Date) -> Double {
+            let day = Double(calendar.ordinality(of: .day, in: .era, for: time) ?? 0)
+            let hours = time.timeIntervalSince(calendar.startOfDay(for: time)) / 3600
+            let busy = min(max(hours - 9, 0), 10)
+            return day * perDay + busy + (hours - busy) * quiet
+        }
+        func noise(_ cycle: Int) -> Double {
+            let x = sin(Double(seed) * 12.9898 + Double(cycle) * 78.233) * 43758.5453
+            return x - x.rounded(.down)
+        }
+        let base = period <= 5 * 3600 ? 45.0 : short ? 55 : period <= 7 * 86400 ? 70 : 60
+        var samples: [LimitSample] = []
+        for k in 0...(7 * 48) {
+            let ts = until.addingTimeInterval(-Double(k) * 1800)
+            guard let resetsAt = window.resetsAt else {
+                samples.append(LimitSample(account: account, label: window.label, used: window.usedPercent, resets: nil, ts: ts))
+                continue
+            }
+            var cycle = Int((resetsAt.timeIntervalSince(ts) / period).rounded(.down))
+            if resetsAt.addingTimeInterval(-Double(cycle) * period) <= ts { cycle -= 1 }
+            let end = resetsAt.addingTimeInterval(-Double(max(cycle, 0)) * period)
+            let start = end.addingTimeInterval(-period)
+            let used: Double
+            if cycle <= 0 {
+                let so = worked(until) - worked(start)
+                used = so > 0 ? window.usedPercent * (worked(ts) - worked(start)) / so : window.usedPercent
+            } else {
+                let whole = worked(end) - worked(start)
+                let peak = min(100, base * (0.6 + 0.7 * noise(cycle)) * whole / (period / 3600 * perDay / 24))
+                used = min(100, peak * (worked(ts) - worked(start)) / max(whole, 0.001))
+            }
+            samples.append(LimitSample(account: account, label: window.label, used: (used * 10).rounded() / 10, resets: end, ts: ts))
+        }
+        return samples.reversed()
+    }
+}

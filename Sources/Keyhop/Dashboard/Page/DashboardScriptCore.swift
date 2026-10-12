@@ -5,8 +5,18 @@ extension DashboardPage {
     static let scriptCore = ##"""
   "use strict";
   const SECTIONS = ["overview", "limits", "accounts", "usage", "budgets", "plans", "coach", "leaderboard", "season", "teams", "profile", "settings"];
-  const TITLES = { overview: "Overview", limits: "Limits", accounts: "Accounts", usage: "Usage", budgets: "Budgets", plans: "Plans", coach: "Coach", leaderboard: "Leaderboard", season: "Season", teams: "Teams", profile: "Profile", settings: "Settings" };
+  const TITLES = { overview: "Home", limits: "Limits", accounts: "Limits", usage: "Usage", budgets: "Budgets", plans: "Plans", coach: "Coach", leaderboard: "Leaderboard", season: "Season", teams: "Teams", profile: "Profile", settings: "Settings" };
   const CLOUD_SECTIONS = ["leaderboard", "season", "teams", "profile"];
+  // The sidebar's five places. A place with more than one section shows them as tabs under its
+  // title, and opens on the one last seen there.
+  const GROUPS = [
+    { id: "home", title: "Home", sections: ["overview"] },
+    { id: "limits", title: "Limits", sections: ["limits"] },
+    { id: "usage", title: "Usage", sections: ["usage"] },
+    { id: "insights", title: "Insights", sections: ["coach", "plans", "budgets"] },
+    { id: "community", title: "Community", sections: ["leaderboard", "season", "teams", "profile"] },
+  ];
+  const groupOf = (section) => GROUPS.find((group) => group.sections.includes(section)) || { id: section, title: TITLES[section], sections: [section] };
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const store = {
@@ -20,15 +30,18 @@ extension DashboardPage {
   if (params.get("w") === "mac") document.documentElement.classList.add("mac-window");
   let token = params.get("k") || store.get("keyhop-token");
   if (params.get("k")) store.set("keyhop-token", token);
-  const wanted = params.get("s") || location.hash.slice(1);
+  // Accounts and Limits were two sections; an old link to Accounts opens Limits.
+  const asked = params.get("s") || location.hash.slice(1);
+  const wanted = asked === "accounts" ? "limits" : asked;
   const ui = {
-    section: SECTIONS.includes(wanted) ? wanted : (boot?.section || "overview"),
+    section: SECTIONS.includes(wanted) ? wanted : (boot?.section === "accounts" ? "limits" : boot?.section || "overview"),
     menu: null, hidden: { account: [], tool: [], model: [] },
     range: "week", rangeOpen: false, metric: "tokens", tool: "all", group: "account", breakdown: "periods", allPeriods: false,
     boardPeriod: "week", boardMetric: "efficiency", boardDivision: "", boardTeam: "", boardView: "ranks", boardDate: "", boardSeason: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
     settingsPane: "general", checkingUpdate: false,
-    homeMenu: null, homeTool: "", homeAccount: "", homeQuery: "", treeOpen: {},
+    homeMenu: null, homeTool: "", homeAccount: "", homeQuery: "", homeRange: "week", treeOpen: {},
+    quotaTool: "all", quotaHours: 168, quotaView: "remaining", lastIn: {},
     pending: new Map(), loadingUsage: 0,
     // The field in force: "night" or "day". Empty until the saved choice has been applied.
     theme: "",
@@ -193,11 +206,20 @@ extension DashboardPage {
     catch { data.quests = null; }
   }
 
+  // The pooled limits: what is left across every login, how fast it goes, and where it is headed.
+  async function loadQuota() {
+    if (isStatic) { data.quota = boot?.quota || null; return; }
+    try { data.quota = await api("/api/quota"); data.quotaError = null; }
+    catch (error) { data.quotaError = error.message; }
+  }
+
   async function loadSection() {
     try {
       if (ui.section === "overview" || ui.section === "limits") loadServices();
+      if (ui.section === "limits") await loadQuota();
       if (ui.section === "overview") {
         const jobs = [loadUsage("today"), loadUsage("week")];
+        if (!["today", "week"].includes(ui.homeRange)) jobs.push(loadUsage(ui.homeRange));
         if (!isStatic && data.state?.cloud?.linked) jobs.push(loadPet(), loadQuests());
         await Promise.all(jobs);
       }

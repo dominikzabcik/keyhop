@@ -105,6 +105,12 @@ enum MCPServer {
             properties: [:]
         ),
         tool(
+            name: "keyhop_forecast",
+            title: "Keyhop limits forecast",
+            description: "Read every login's remaining limit pooled per tool and overall: what is left, how fast it drains, when it runs out, the next reset and what it gives back, with the past week and the week ahead per login. Counted locally.",
+            properties: ["tool": ["type": "string", "enum": Provider.switchable.map(\.rawValue)]]
+        ),
+        tool(
             name: "keyhop_coach",
             title: "Keyhop coach",
             description: "Read efficiency coaching from local history for the last thirty days: cache hit and premium-model share per tool with findings, this period against the one before, and tokens and API value per commit and per merge from counted repositories.",
@@ -132,7 +138,7 @@ enum MCPServer {
     }
 
     private static func call(name: String, arguments: [String: Any]) async throws -> [String: Any] {
-        let allowed = Set(name == "keyhop_usage" ? ["range", "tool"] : name == "keyhop_recommendation" ? ["tool"] : [])
+        let allowed = Set(name == "keyhop_usage" ? ["range", "tool"] : ["keyhop_recommendation", "keyhop_forecast"].contains(name) ? ["tool"] : [])
         guard Set(arguments.keys).isSubset(of: allowed) else { throw UsageError("This tool received an unknown argument.") }
         let workspace = try Workspace.open()
         switch name {
@@ -163,6 +169,8 @@ enum MCPServer {
             return try result(RecommendationListDocument(overview, provider: try provider(in: arguments)))
         case "keyhop_plans":
             return try result(try await Commands.plansReport(workspace: workspace, now: Date()))
+        case "keyhop_forecast":
+            return try result(try await Commands.quotaReport(workspace: workspace, tool: try provider(in: arguments), now: Date()))
         case "keyhop_coach":
             return try result(try await Commands.coachReport(workspace: workspace, now: Date()))
         default:

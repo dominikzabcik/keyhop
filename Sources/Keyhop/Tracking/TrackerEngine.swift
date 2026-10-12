@@ -477,6 +477,19 @@ actor TrackerEngine {
         return peaks
     }
 
+    /// Every kept reading since a date, oldest first, for the limits forecast.
+    func limitSamples(since: Date) throws -> [LimitSample] {
+        var samples: [LimitSample] = []
+        try db.query("SELECT account, label, used, resets, ts FROM samples WHERE ts >= ? ORDER BY ts",
+                     [.real(since.timeIntervalSince1970)]) { row in
+            guard let id = row.text(0).flatMap(UUID.init(uuidString:)), let label = row.text(1) else { return }
+            samples.append(LimitSample(account: id, label: label, used: row.double(2),
+                                       resets: row.isNull(3) ? nil : Date(timeIntervalSince1970: row.double(3)),
+                                       ts: Date(timeIntervalSince1970: row.double(4))))
+        }
+        return samples
+    }
+
     /// When the window reaches 100% at its rate over the last 90 minutes, if that's before it resets.
     func forecast(account: UUID, window: UsageWindow, now: Date) throws -> Date? {
         guard window.usedPercent < 100 else { return nil }

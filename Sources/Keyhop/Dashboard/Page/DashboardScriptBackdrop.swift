@@ -177,8 +177,8 @@ extension DashboardPage {
 
   function paintField() {
     const canvas = $("#field");
-    const stage = $("#content");
-    if (!canvas || !stage || !fieldWanted()) return;
+    const stage = $("#hero-art");
+    if (!canvas || !stage || stage.hidden || !fieldWanted()) return;
     const rect = stage.getBoundingClientRect();
     if (rect.width < 2 || rect.height < 2) return;
     const w = Math.max(2, Math.round(rect.width / 2));
@@ -209,7 +209,7 @@ extension DashboardPage {
     const along = still.matches || mood.gait === "sit" ? 0.45
       : mood.gait === "run" ? (runnerPhase % 24) / 24
       : (runnerPhase % 48) / 48;
-    // The logins card covers the middle. The runner stays on the open dune under the moon.
+    // The words take the wallpaper's left. The runner stays on the open dune under the moon.
     const nx = 0.78 + along * 0.14;
     const cells = frames[(still.matches ? 0 : fieldBeat) % 2];
     const scale = 4;
@@ -227,10 +227,9 @@ extension DashboardPage {
   function paintDunePet(ctx, w, h, stageW) {
     const pet = data.pet;
     if (!pet?.shapes?.length || !stageW) return;
-    const card = Math.min(620, Math.max(0, stageW - 48));
-    const gutter = (stageW - card) / 2;
-    if (gutter < 96) return;
-    const cssW = Math.min(pet.width, gutter - 28);
+    // In Home's wallpaper the words take the left; the pet stands on the dune past them.
+    if (stageW < 640) return;
+    const cssW = Math.min(pet.width, 120, stageW * 0.13);
     const dw = Math.max(8, Math.round(cssW / 4) * 2);
     const dh = Math.max(8, Math.round(dw * pet.height / pet.width / 2) * 2);
     const blink = still.matches || fieldBeat % 6 !== 0;
@@ -252,7 +251,7 @@ extension DashboardPage {
       petStampKey = key;
     }
     const span = (dw * 2) / stageW;
-    const left = Math.max(0.015, Math.min(0.06, (gutter - 16) / stageW - span));
+    const left = 0.7;
     const foot = left + span / 2;
     const x = Math.round(left * w / 2) * 2;
     const y = Math.round((horizon(Math.max(0, Math.min(0.99, foot))) * h - dh) / 2) * 2;
@@ -264,14 +263,9 @@ extension DashboardPage {
     const on = fieldWanted();
     $("#content")?.classList.toggle("is-field", on);
     const canvas = $("#field");
-    const veil = $("#veil");
     if (canvas) canvas.hidden = !on;
-    if (veil) veil.hidden = !on;
     const host = $("#backdrop");
-    if (host && data.state) {
-      const scope = data.state.appearance?.scope;
-      host.classList.toggle("scoped-out", on || (scope === "overview" && ui.section !== "overview"));
-    }
+    if (host && data.state) host.classList.toggle("scoped-out", backdropScopedOut());
     if (!on) {
       if (fieldLoop) { clearInterval(fieldLoop); fieldLoop = null; }
       return;
@@ -294,6 +288,7 @@ extension DashboardPage {
 
 
   let backdrop = null;
+  let heroBackdrop = null;
   let backdropImage = null;
   let backdropImageLoading = false;
 
@@ -310,14 +305,27 @@ extension DashboardPage {
         try { backdropImage = (await api("/api/appearance/image")).dataUrl; } catch { scene = "leaves"; } finally { backdropImageLoading = false; }
       }
     }
-    document.documentElement.classList.toggle("has-backdrop", scene !== "off");
-    host.classList.toggle("scoped-out", fieldWanted() || (look.scope === "overview" && ui.section !== "overview"));
+    document.documentElement.classList.toggle("has-backdrop", scene !== "off" && !backdropScopedOut());
+    host.classList.toggle("scoped-out", backdropScopedOut());
     // The scenes are painted for the night. By day they show at under half their strength.
     const opacity = ui.theme === "day" && scene !== "image" ? look.opacity * 0.4 : look.opacity;
     const options = { scene, opacity, image: scene === "image" ? backdropImage : null };
     if (backdrop) backdrop.update(options);
     else backdrop = window.KeyhopBackdrop.mount(host, options);
+    // Home carries the scene in its wallpaper; the field paints itself, any other scene is mounted there.
+    const heroScene = $("#hero-scene");
+    if (heroScene) {
+      const sceneThere = ui.section === "overview" && scene !== "leaves" ? options : { ...options, scene: "off" };
+      if (heroBackdrop) heroBackdrop.update(sceneThere);
+      else heroBackdrop = window.KeyhopBackdrop.mount(heroScene, sceneThere);
+    }
     syncField();
+  }
+
+  // Behind the other sections the scene shows only when it is set to show everywhere. Home has its own.
+  function backdropScopedOut() {
+    if (ui.section === "overview") return true;
+    return (data.state?.appearance?.scope || "overview") !== "all";
   }
 
   // Below full window opacity, the Mac app's whole window is glass over the blurred desktop.
@@ -379,7 +387,7 @@ extension DashboardPage {
       return `<button data-action="appearance" data-key="${key}" data-value="${value}" aria-pressed="${value === current}"${locked ? ` disabled title="Choose a picture first"` : ""}>${label}</button>`;
     }).join("")}</div>`;
     const about = {
-      leaves: "On Overview, a dithered field. The moon, or by day the sun, drops as a login nears its limit. A runner keeps that pace, and its head wears the tool. Behind the other sections, leaves sway on their stems.",
+      leaves: "On Home, a dithered field. The moon, or by day the sun, drops as a login nears its limit. A runner keeps that pace, and its head wears the tool. Behind the other sections, leaves sway on their stems.",
       dunes: "A desert world's horizon, turning slowly under the stars.",
       orbit: "A ringed planet floating in the dark.",
       arcade: "Pixel runners racing along a ridge of pixel hills.",
@@ -391,7 +399,7 @@ extension DashboardPage {
       <div class="list">
         <div class="row setting-row"><div><b>Field</b><p>${themeNote}</p></div>${pick("theme", [["night", "Night"], ["day", "Day"], ["auto", "Auto"]], look.theme || "night")}</div>
         <div class="row setting-row"><div><b>Scene</b><p>${about}</p></div>${pick("scene", [["leaves", "Leaves"], ["dunes", "Dunes"], ["orbit", "Orbit"], ["arcade", "Arcade"], ["image", "Picture"], ["off", "Off"]], look.scene)}</div>
-        <div class="row setting-row"><div><b>Show on</b><p>${look.scope === "overview" ? "Only behind Overview." : "Behind every section."}</p></div>${pick("scope", [["all", "Everywhere"], ["overview", "Overview only"]], look.scope)}</div>
+        <div class="row setting-row"><div><b>Show on</b><p>${look.scope === "overview" ? "Only in Home's wallpaper. Every other section stays plain." : "In Home's wallpaper and behind every section."}</p></div>${pick("scope", [["overview", "Home only"], ["all", "Everywhere"]], look.scope)}</div>
         <div class="row setting-row"><div><b>Opacity</b><p>How strongly the scene shows through.</p></div>
           <input class="range" type="range" min="10" max="100" step="5" value="${Math.round(look.opacity * 100)}" data-appearance="opacity" aria-label="Opacity"${look.scene === "off" ? " disabled" : ""}></div>
         ${document.documentElement.classList.contains("mac-window") ? `<div class="row setting-row"><div><b>Window opacity</b><p>${look.glass >= 1 ? "A solid window." : "The whole window is glass over your desktop."}</p></div>

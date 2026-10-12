@@ -20,20 +20,13 @@ extension DashboardPage {
     </div>
     <button class="hop hop-side" type="button" data-action="palette" aria-keyshortcuts="Meta+K Control+K" aria-haspopup="dialog" aria-controls="palette"><svg class="icon" aria-hidden="true"><use href="#i-hop"/></svg><span>Hop</span><kbd id="hop-key" aria-hidden="true">⌘K</kbd></button>
     <nav class="nav" id="nav" aria-label="Sections">
-      <a href="#overview" data-section="overview"><svg><use href="#i-overview"/></svg>Overview</a>
-      <a href="#limits" data-section="limits"><svg><use href="#i-limits"/></svg>Limits<span class="nav-count" id="limits-count" hidden></span></a>
-      <a href="#accounts" data-section="accounts"><svg><use href="#i-accounts"/></svg>Accounts</a>
-      <a href="#usage" data-section="usage"><svg><use href="#i-usage"/></svg>Usage</a>
-      <a href="#budgets" data-section="budgets"><svg><use href="#i-budgets"/></svg>Budgets</a>
-      <a href="#plans" data-section="plans"><svg><use href="#i-plans"/></svg>Plans</a>
-      <a href="#coach" data-section="coach"><svg><use href="#i-coach"/></svg>Coach</a>
-      <span class="nav-label" id="cloud-label" hidden>Cloud</span>
-      <a href="#leaderboard" data-section="leaderboard" hidden><svg><use href="#i-leaderboard"/></svg>Leaderboard</a>
-      <a href="#season" data-section="season" hidden><svg><use href="#i-season"/></svg>Season</a>
-      <a href="#teams" data-section="teams" hidden><svg><use href="#i-teams"/></svg>Teams</a>
-      <a href="#profile" data-section="profile" hidden><svg><use href="#i-profile"/></svg>Profile</a>
+      <a href="#overview" data-section="overview" data-group="home"><svg><use href="#i-home"/></svg>Home</a>
+      <a href="#limits" data-section="limits" data-group="limits"><svg><use href="#i-limits"/></svg>Limits<span class="nav-count" id="limits-count" hidden></span></a>
+      <a href="#usage" data-section="usage" data-group="usage"><svg><use href="#i-usage"/></svg>Usage</a>
+      <a href="#coach" data-section="coach" data-group="insights"><svg><use href="#i-coach"/></svg>Insights</a>
+      <a href="#leaderboard" data-section="leaderboard" data-group="community" hidden><svg><use href="#i-teams"/></svg>Community</a>
     </nav>
-    <div class="side-label">Accounts</div>
+    <div class="side-label" id="tree-label">In use</div>
     <div class="acct-tree" id="tree"></div>
     <div class="side-foot">
       <div class="pet-foot" id="pet-foot" hidden></div>
@@ -42,9 +35,8 @@ extension DashboardPage {
   </aside>
   <div class="content" id="content">
     <div class="backdrop" id="backdrop" aria-hidden="true"></div>
-    <canvas id="field" hidden aria-hidden="true"></canvas>
-    <div id="veil" hidden aria-hidden="true"></div>
-    <header class="topbar"><h1 id="title">Overview</h1><div class="top-actions"><div class="toolbar" id="toolbar"></div></div><div class="meter" id="top-meter" role="progressbar" aria-label="Keyhop is reading" aria-hidden="true"><span></span></div></header>
+    <div class="hero-art" id="hero-art" hidden aria-hidden="true"><canvas id="field"></canvas><div class="hero-scene" id="hero-scene"></div></div>
+    <header class="topbar"><div class="top-title"><h1 id="title">Home</h1><div id="subnav"></div></div><div class="top-actions"><div class="toolbar" id="toolbar"></div></div><div class="meter" id="top-meter" role="progressbar" aria-label="Keyhop is reading" aria-hidden="true"><span></span></div></header>
     <main class="main" id="main" tabindex="-1" aria-busy="true"><div class="page"><p class="lede busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span>Reading your accounts…</p></div></main>
   </div>
   <footer class="statusbar">

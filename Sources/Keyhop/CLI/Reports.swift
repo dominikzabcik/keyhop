@@ -485,6 +485,65 @@ enum Reports {
         return lines.joined(separator: "\n")
     }
 
+    static func forecast(_ report: QuotaReport, tool: Provider?) -> String {
+        guard !report.accounts.isEmpty else {
+            return "No limits read yet. Run keyhop refresh, or save a login with keyhop add <tool>."
+        }
+        let now = report.generatedAt
+        func percent(_ value: Double) -> String { "\(Int(value.rounded()))%" }
+        func rate(_ value: Double) -> String { value >= 0.05 ? String(format: "~%.1f%% an hour", value) : "idle" }
+        func when(_ date: Date) -> String {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = Calendar.current.isDate(date, inSameDayAs: now) ? "HH:mm" : "EEE HH:mm"
+            return formatter.string(from: date)
+        }
+        func span(_ date: Date) -> String {
+            let s = max(0, Int(date.timeIntervalSince(now)))
+            let d = s / 86400, h = (s % 86400) / 3600, m = (s % 3600) / 60
+            if d > 0 { return h > 0 ? "\(d)d \(h)h" : "\(d)d" }
+            return h > 0 ? "\(h)h \(m)m" : "\(max(m, 1))m"
+        }
+        func summary(_ pool: QuotaReport.Pool) -> String {
+            var parts = ["\(percent(pool.remaining)) of \(percent(pool.capacity)) left", rate(pool.drainPerHour)]
+            if let empty = pool.emptyAt { parts.append("empty ~\(when(empty))") }
+            if let reset = pool.nextReset { parts.append("next reset +\(percent(reset.gain)) \(when(reset.at)) (\(reset.account))") }
+            return parts.joined(separator: " · ")
+        }
+
+        var lines: [String] = []
+        if tool == nil, let all = report.pools.first(where: { $0.tool == "all" }) {
+            lines.append("All logins  \(summary(all))")
+        }
+        for provider in Provider.allCases {
+            let logins = report.accounts.filter { $0.tool == provider }
+            guard !logins.isEmpty else { continue }
+            if !lines.isEmpty { lines.append("") }
+            let pool = report.pools.first { $0.tool == provider.rawValue }
+            lines.append("\(provider.name)  \(pool.map(summary) ?? "not counted")")
+            let width = (logins.map(\.name.count).max() ?? 0) + 2
+            for login in logins {
+                var parts: [String]
+                if !login.counted {
+                    parts = ["not counted", login.error ?? "no limits read"]
+                } else {
+                    parts = ["\(percent(login.remaining)) left"]
+                    if !login.windows.isEmpty {
+                        parts.append(login.windows.map { "\(QuotaReport.windowName($0.label)) \(percent($0.usedPercent))" }.joined(separator: ", "))
+                    }
+                    if login.remaining <= 0.5 {
+                        parts.append(login.backAt.map { "back in \(span($0))" } ?? "empty")
+                    } else {
+                        parts.append(rate(login.drainPerHour))
+                        if let empty = login.emptyAt { parts.append("empty ~\(when(empty))") }
+                    }
+                }
+                lines.append("  \(login.name.padding(toLength: width, withPad: " ", startingAt: 0))\(parts.joined(separator: " · "))")
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+
     static func coach(_ report: CoachReport, part: String?) -> String {
         var lines: [String] = []
         let change = { (delta: CoachReport.Delta) -> String in

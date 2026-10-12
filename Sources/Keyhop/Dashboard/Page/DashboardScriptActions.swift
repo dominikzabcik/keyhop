@@ -40,7 +40,8 @@ extension DashboardPage {
   }
 
   async function go(section) {
-    ui.section = section;
+    ui.section = section === "accounts" ? "limits" : section;
+    section = ui.section;
     data.boardError = null;
     data.dayError = null;
     history.replaceState(null, "", "#" + section);
@@ -82,12 +83,24 @@ extension DashboardPage {
     switch (el.dataset.action) {
       case "palette": openPalette(); break;
       case "goto": go(el.dataset.section); break;
-      case "fold": {
-        const tool = (data.state?.status.tools || []).find((t) => t.id === el.dataset.tool);
-        if (tool) ui.treeOpen[tool.id] = !treeIsOpen(tool);
-        renderChrome();
+      case "quota-tool": ui.quotaTool = el.dataset.value; transition(render); break;
+      // A tool in the sidebar opens Limits on that tool; pressed again, on every tool.
+      case "side-tool": {
+        const again = ui.section === "limits" && ui.quotaTool === el.dataset.value;
+        ui.quotaTool = again ? "all" : el.dataset.value;
+        if (ui.section === "limits") transition(render); else go("limits");
         break;
       }
+      case "quota-hours": ui.quotaHours = +el.dataset.value; render(); break;
+      case "quota-view": ui.quotaView = el.dataset.value; render(); break;
+      case "home-range": {
+        ui.homeRange = el.dataset.value;
+        render();
+        try { await loadUsage(ui.homeRange); } catch (error) { toast(error.message, true); }
+        render();
+        break;
+      }
+      case "wallpaper": ui.settingsPane = "general"; go("settings"); break;
       case "home-menu":
         ui.homeMenu = ui.homeMenu === el.dataset.menu ? null : el.dataset.menu;
         render();

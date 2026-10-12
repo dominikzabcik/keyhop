@@ -475,6 +475,36 @@ enum Commands {
         return PlansReport.build(accounts: accounts, usage: workspace.state.usageByID, apiValue: value, peaks: peaks, now: now)
     }
 
+    /// Every login's remaining limit pooled, where it was this week and where it is heading.
+    static func forecast(_ args: inout Arguments) async throws {
+        let json = args.flag("--json")
+        let refresh = args.flag("--refresh")
+        let sample = args.flag("--sample")
+        let tool = try toolOption(&args)
+        try args.finish()
+        let report: QuotaReport
+        if sample {
+            report = SampleData.quota(tool: tool)
+        } else {
+            var workspace = try Workspace.open()
+            if refresh || workspace.state.refreshedAt == nil {
+                let terminal = TerminalProgress()
+                _ = try await performRefresh(&workspace, claimAlerts: false, progress: terminal.handler)
+                terminal.finish()
+            }
+            report = try await quotaReport(workspace: workspace, tool: tool, now: Date())
+        }
+        if json { try Output.json(report) } else { print(Reports.forecast(report, tool: tool)) }
+    }
+
+    static func quotaReport(workspace: Workspace, tool: Provider? = nil, now: Date) async throws -> QuotaReport {
+        let accounts = await workspace.service.accounts.filter { tool == nil || $0.provider == tool }
+        let samples = try await workspace.tracker.limitSamples(since: now.addingTimeInterval(-8 * 86400))
+        return QuotaReport.build(accounts: QuotaInput.list(accounts: accounts, usage: workspace.state.usageByID,
+                                                           active: workspace.state.activeByTool),
+                                 samples: samples, now: now)
+    }
+
     static func usage(_ args: inout Arguments) async throws {
         let json = args.flag("--json")
         let skipLogs = args.flag("--no-read")

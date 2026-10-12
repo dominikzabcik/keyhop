@@ -4,7 +4,7 @@ import Foundation
 /// for data; on macOS the app binary answers the same commands.
 enum KeyhopCLI {
     static let commands: Set<String> = [
-        "status", "refresh", "recommend", "switch", "add", "rename", "remove", "usage", "plans", "coach", "merge", "dashboard", "insights", "budget",
+        "status", "refresh", "recommend", "switch", "run", "add", "rename", "remove", "usage", "plans", "coach", "merge", "dashboard", "insights", "budget",
         "cloud", "work", "mcp", "update", "doctor", "services", "reset", "version", "help", "--help", "-h", "--version",
     ]
 
@@ -38,6 +38,7 @@ enum KeyhopCLI {
             case "refresh": try await Commands.refresh(&args)
             case "recommend": try await Commands.recommend(&args)
             case "switch": try await Commands.switchAccount(&args)
+            case "run": try await Commands.run(&args)
             case "add": try await Commands.add(&args)
             case "rename": try await Commands.rename(&args)
             case "remove": try await Commands.remove(&args)
@@ -77,6 +78,8 @@ enum KeyhopCLI {
       refresh [--json]                     Read logins, limits and usage logs now
       recommend [--tool <tool>] [--json]   Smart Hop's best current runway
       switch <account> [--tool <tool>]     Move a tool to a saved account
+      run <account> -- <command...>        Run Claude Code or Codex under one login in this terminal, without a hop
+      run map <folder> <account>           Inside that folder, keyhop run -- claude picks the login itself
       add <tool> [--no-wait]               Sign a tool out here so you can save another account
       rename <account> <name>              Give an account a name
       remove <account>                     Forget a saved account that isn't in use

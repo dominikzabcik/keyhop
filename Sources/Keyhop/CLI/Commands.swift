@@ -226,6 +226,91 @@ enum Commands {
 
     // MARK: Accounts
 
+    /// Runs a tool under one saved login in this terminal: Keyhop keeps a config folder per login,
+    /// points the tool at it through its environment, and counts what it writes there against that
+    /// login. Nothing in use changes, so another terminal can run under another login at once.
+    static func run(_ args: inout Arguments) async throws {
+        let command = args.command()
+        let tool = try toolOption(&args)
+        let first = args.nextPositional()
+        if first == "map" { return try await runMap(&args, tool: tool) }
+        guard let command, let executable = command.first, !executable.isEmpty else {
+            throw UsageError("Say what to run after --, like: keyhop run work@studio.dev -- claude")
+        }
+        try args.finish()
+        let workspace = try Workspace.open()
+        let accounts = await workspace.service.accounts
+        let account: Account
+        if let first {
+            account = try resolve(first, tool: tool, in: accounts)
+        } else {
+            let here = FileManager.default.currentDirectoryPath
+            guard let id = RunMap.load().account(for: here), let mapped = accounts.first(where: { $0.id == id }) else {
+                throw UsageError("Name a login, or map this folder first: keyhop run map . work@studio.dev")
+            }
+            account = mapped
+        }
+        guard RunDirectories.supports(account.provider), let key = RunDirectories.environmentKey(account.provider) else {
+            throw UsageError("keyhop run works for Claude Code and Codex, the tools that take their config folder from the environment. \(account.provider.name) doesn't.")
+        }
+        guard let secret = await workspace.service.secret(for: account.id) else {
+            throw KeyhopError("The saved login for \(account.displayName) is missing from the secret store.")
+        }
+        let folder = try RunDirectories.prepare(account: account, secret: secret)
+        guard let path = Shell.which(executable) ?? (FileManager.default.isExecutableFile(atPath: executable) ? executable : nil) else {
+            throw UsageError("\(executable) isn't on your PATH.")
+        }
+        var environment = ProcessInfo.processInfo.environment
+        environment[key] = folder.path
+        FileHandle.standardError.write(Data("keyhop: \(executable) runs as \(account.displayName) (\(key)=\(folder.path))\n".utf8))
+        let status = try Shell.runInteractive(path, Array(command.dropFirst()), environment: environment)
+        exit(status)
+    }
+
+    private static func runMap(_ args: inout Arguments, tool: Provider?) async throws {
+        let json = args.flag("--json")
+        let word = args.nextPositional()
+        var map = RunMap.load()
+        switch word {
+        case nil:
+            try args.finish()
+            let accounts = await (try Workspace.open()).service.accounts
+            let rows = map.folders.sorted { $0.key < $1.key }.map { path, id -> (folder: String, account: String) in
+                (path, accounts.first(where: { $0.id.uuidString == id }).map { "\($0.provider.name) · \($0.displayName)" } ?? "a removed login")
+            }
+            if json {
+                struct Row: Encodable { let folder: String; let account: String }
+                try Output.json(rows.map { Row(folder: $0.folder, account: $0.account) })
+            } else if rows.isEmpty {
+                print("No folders mapped. Map one with keyhop run map <folder> <login>.")
+            } else {
+                for row in rows { print("\(row.folder)  ->  \(row.account)") }
+            }
+        case "off":
+            let folder = try args.positional("the folder to unmap")
+            try args.finish()
+            guard map.remove(folder) else { throw UsageError("\(folder) isn't mapped.") }
+            try map.save()
+            print("\(RunMap.normalise(folder)) no longer picks a login.")
+        case let folder?:
+            let reference = try args.positional("the login the folder runs under")
+            try args.finish()
+            var isDirectory: ObjCBool = false
+            let path = RunMap.normalise(folder)
+            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else {
+                throw UsageError("\(folder) isn't a folder.")
+            }
+            let workspace = try Workspace.open()
+            let account = try resolve(reference, tool: tool, in: await workspace.service.accounts)
+            guard RunDirectories.supports(account.provider) else {
+                throw UsageError("keyhop run works for Claude Code and Codex. \(account.provider.name) doesn't take its config folder from the environment.")
+            }
+            map.set(path, account: account.id)
+            try map.save()
+            print("Inside \(path), keyhop run -- \(account.provider == .claude ? "claude" : "codex") runs as \(account.displayName).")
+        }
+    }
+
     static func switchAccount(_ args: inout Arguments) async throws {
         let json = args.flag("--json")
         let tool = try toolOption(&args)

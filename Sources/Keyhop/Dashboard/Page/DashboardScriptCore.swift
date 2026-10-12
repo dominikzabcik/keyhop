@@ -220,6 +220,7 @@ extension DashboardPage {
       if (ui.section === "overview") {
         const jobs = [loadUsage("today"), loadUsage("week")];
         if (!["today", "week"].includes(ui.homeRange)) jobs.push(loadUsage(ui.homeRange));
+        if (!isStatic) jobs.push(loadQuota());
         if (!isStatic && data.state?.cloud?.linked) jobs.push(loadPet(), loadQuests());
         await Promise.all(jobs);
       }

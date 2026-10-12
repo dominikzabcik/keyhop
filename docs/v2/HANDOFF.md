@@ -76,8 +76,9 @@ What changed:
   after, resets lifting windows back to 0. `keyhop forecast` and MCP `keyhop_forecast` print it.
   Sample mode synthesises a week of samples (`SampleData.quota`).
 - Verified on Linux: `swift test` 224, window e2e 31, `checks/run.mjs --app --cli` clean.
-  Not done: the native GPUI spike still draws the old Overview and board; the Mac menu has no
-  forecast line yet.
+  The native GPUI spike draws the same Home and Limits (bars for the chart). The Mac menu's header
+  says what is left across the logins (the pool rule without the samples) and opens Limits.
+  Not done: keyhop.app has no pooled view (its profile shows shared limits one by one).
 
 ## Everything travels in this branch
 

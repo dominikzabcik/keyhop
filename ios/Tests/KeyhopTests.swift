@@ -64,6 +64,10 @@ final class KeyhopTests: XCTestCase {
         // Within an account the tightest window leads, so the one that stops work reads first.
         XCTAssertEqual(accounts.first?.windows.map(\.windowLabel), ["5h", "Week"])
         XCTAssertEqual(accounts.first?.tightest?.usedPercent, 96)
+        // Pooled the Mac's way: 4 left on the tight one, 59 on the roomy one, of 200.
+        XCTAssertEqual(LimitAccount.pooled(accounts)?.remaining, 63)
+        XCTAssertEqual(LimitAccount.pooled(accounts)?.capacity, 200)
+        XCTAssertNil(LimitAccount.pooled([]))
     }
 
     func testOnlyANearlySpentLimitIsWorthAnnouncing() {

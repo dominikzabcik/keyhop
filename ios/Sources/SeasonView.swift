@@ -167,6 +167,19 @@ struct SeasonView: View {
                         }
                         .padding(.bottom, 14)
 
+                        if let pooled = LimitAccount.pooled(accounts) {
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text("\(pooled.remaining)%")
+                                    .font(.ui(26, .semibold, .title2).monospacedDigit())
+                                    .foregroundStyle(Brand.text)
+                                Text("of \(pooled.capacity)% left across your logins")
+                                    .font(.ui(12.5, .regular, .footnote))
+                                    .foregroundStyle(Brand.muted)
+                            }
+                            .accessibilityElement(children: .combine)
+                            .padding(.bottom, 14)
+                        }
+
                         ForEach(Array(accounts.enumerated()), id: \.element.id) { index, account in
                             if index > 0 { Divider().overlay(Brand.border).padding(.vertical, 12) }
                             LimitRows(account: account, now: context.date)

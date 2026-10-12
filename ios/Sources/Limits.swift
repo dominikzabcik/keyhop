@@ -36,6 +36,15 @@ struct LimitAccount: Identifiable, Equatable {
     /// The window with least room left: the one that decides whether this account can be used.
     var tightest: CloudLimit? { windows.max { $0.usedPercent < $1.usedPercent } }
 
+    /// Every account pooled, the Mac's Limits rule: each account has 100 less its tightest window
+    /// left, and a full set would be 100 per account. Nil when nothing was shared.
+    static func pooled(_ accounts: [LimitAccount]) -> (remaining: Int, capacity: Int)? {
+        let counted = accounts.filter { $0.tightest != nil }
+        guard !counted.isEmpty else { return nil }
+        let remaining = counted.reduce(0.0) { $0 + max(0, 100 - min(100, $1.tightest?.usedPercent ?? 0)) }
+        return (Int(remaining.rounded()), counted.count * 100)
+    }
+
     /// Groups a reading into accounts, fullest account first, so what is nearly spent reads first.
     static func group(_ limits: [CloudLimit]) -> [LimitAccount] {
         var order: [String] = []

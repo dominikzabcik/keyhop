@@ -561,7 +561,7 @@ impl KeyhopWindow {
                             .px(px(20.))
                             .pt(px(18.))
                             .pb(px(10.))
-                            .child(div().text_size(px(12.5)).text_color(t.muted).child(format!("Remaining, pooled · {} login{} with limits", pool.accounts, if pool.accounts == 1 { "" } else { "s" })))
+                            .child(div().text_size(px(12.5)).text_color(t.muted).child(format!("Left across your own logins · {} with limits", pool.accounts)))
                             .child(
                                 div()
                                     .flex()

@@ -797,6 +797,7 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .qnum.bad b { color: var(--bad); }
 .qnum > span { color: var(--subtle); font-size: 18px; font-weight: 520; font-variant-numeric: tabular-nums; }
 .qnum .qrate { margin-left: 6px; padding: 2px 8px; border-radius: 99px; background: hsl(var(--on) / .07); color: var(--muted); font-size: 12.5px; font-weight: 560; }
+.qnote { margin: 0; padding: 0 20px 4px; color: var(--subtle); font-size: 12.5px; }
 .qchart { padding: 6px 20px 0; }
 .qchart .qline { fill: none; stroke: var(--text); stroke-width: 1.8; stroke-linejoin: round; }
 .qchart .qline.ahead { stroke: var(--info); stroke-dasharray: 5 4; }

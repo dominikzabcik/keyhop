@@ -65,12 +65,13 @@ extension DashboardPage {
     return `<section class="card qcard">
       <div class="qhead">
         <div class="qbig">
-          <span class="eyebrow">Remaining, pooled · ${scope}</span>
+          <span class="eyebrow">Left across your own logins · ${scope}</span>
           <div class="qnum ${tone}"><b data-count="${pool.remaining}" data-count-key="quota:${esc(pool.tool)}" data-format="pct">${Math.round(pool.remaining)}%</b><span>/ ${Math.round(pool.capacity)}%</span>
             <span class="qrate">${rate >= 0.05 ? `~${perHour(rate)}` : "Not draining now"}</span></div>
         </div>
         ${tabs("quota-view", [["remaining", "Remaining"], ["drain", "Drain rate"]], ui.quotaView)}
       </div>
+      <p class="qnote">Each login keeps its own limits. This adds up what each one has left, so you can see where there is room before you hop.</p>
       <div class="qchart chart">${ui.quotaView === "drain" ? drainChart(pool, span) : quotaChart(pool, span)}</div>
       <div class="qfoot">${reset}${runsDry}<span class="qlegend"><i class="solid"></i>Measured<i class="dash"></i>Projected</span></div>
     </section>`;

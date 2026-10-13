@@ -84,7 +84,8 @@ What changed:
   says what is left across the logins (the pool rule without the samples) and opens Limits.
   Home's figures include commits and commits per million tokens when work is counted
   (`GET /api/work/days`, every repository's log rolled per day, cached ten minutes).
-  Not done: keyhop.app has no pooled view (its profile shows shared limits one by one).
+  keyhop.app has `/limits` (main, `3fca563`): signed in only, your own shared limits pooled the
+  same way, each login's windows and resets; it goes live with the next approved deploy.
 
 ## Everything travels in this branch
 

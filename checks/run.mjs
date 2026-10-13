@@ -266,14 +266,15 @@ async function checkApp(browser) {
         if (new Set(rightEdges).size !== 1) throw new Error(`Hop moved between sections: ${rightEdges.join(", ")}`);
 
         // An update check gets a local wait and must not light the limits progress bar.
+        // The walk pressed Refresh a moment ago, and the sample rehearses one for a few seconds. The
+        // bar is rightly lit for that, so it has to finish before the page reloads into Settings,
+        // which starts the update check at once.
+        await page.waitForFunction(() => !document.querySelector("#top-meter")?.classList.contains("on"), null, { timeout: 30_000 });
         await page.route("**/api/update", async (route) => {
           await new Promise((resolve) => setTimeout(resolve, 700));
           await route.continue();
         });
         await page.reload({ waitUntil: "domcontentloaded" });
-        // The walk pressed Refresh a moment ago, and the sample rehearses one for a few seconds. The
-        // bar may rightly be lit for that; only the update check must not light it.
-        await page.waitForFunction(() => !document.querySelector("#top-meter")?.classList.contains("on"), null, { timeout: 30_000 });
         await page.locator('[data-action="settings-pane"][data-value="app"]').click();
         await page.getByText("Checking for updates…", { exact: true }).waitFor({ state: "visible" });
         if (await page.locator("#top-meter").evaluate((meter) => meter.classList.contains("on"))) {

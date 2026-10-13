@@ -213,6 +213,16 @@ extension DashboardPage {
     catch (error) { data.quotaError = error.message; }
   }
 
+  let workDaysLoading = false;
+  function loadWorkDays() {
+    if (workDaysLoading) return;
+    workDaysLoading = true;
+    api("/api/work/days")
+      .then((days) => { data.workDays = days; if (ui.section === "overview" && !editing()) render(); })
+      .catch(() => {})
+      .finally(() => { workDaysLoading = false; });
+  }
+
   async function loadSection() {
     try {
       if (ui.section === "overview" || ui.section === "limits") loadServices();
@@ -221,6 +231,9 @@ extension DashboardPage {
         const jobs = [loadUsage("today"), loadUsage("week")];
         if (!["today", "week"].includes(ui.homeRange)) jobs.push(loadUsage(ui.homeRange));
         if (!isStatic) jobs.push(loadQuota());
+        // Commits come from every repository's log, which can take a while the first time, so
+        // Home draws without them and fills them in when they arrive.
+        if (!isStatic) loadWorkDays();
         if (!isStatic && data.state?.cloud?.linked) jobs.push(loadPet(), loadQuests());
         await Promise.all(jobs);
       }

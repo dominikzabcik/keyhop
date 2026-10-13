@@ -59,6 +59,8 @@ test('home is today: the wallpaper, what needs you and the week', async ({ app, 
   await expect(screen.getByRole('heading', 'In use')).toBeVisible();
   await expect(screen.getByRole('heading', 'Overview')).toBeVisible();
   await expect(screen.getByText('Current streak')).toBeVisible();
+  // Work is counted in the sample, so the figures carry commits and the leaderboard's measure.
+  await expect(screen.getByText('per M tokens', { exact: false }).first()).toBeVisible();
   // The wallpaper is one element, carried into Home's hero on every draw.
   await expect.poll(() => browser.evaluate(() => {
     const art = document.querySelector('.hero #hero-art') as HTMLElement | null;

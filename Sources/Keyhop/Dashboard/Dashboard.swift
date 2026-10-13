@@ -288,6 +288,35 @@ struct DashboardCloud: Encodable {
 }
 
 /// What Keyhop is allowed to read from this computer's git repositories.
+/// Commits this person authored on this computer, day by day, across the repositories Keyhop counts.
+struct DashboardWorkDays: Encodable, Equatable {
+    struct Day: Encodable, Equatable {
+        let day: String
+        let commits: Int
+        let insertions: Int
+        let deletions: Int
+    }
+
+    /// Whether work is counted here at all. Off, `days` is empty and Home leaves commits out.
+    let enabled: Bool
+    let days: [Day]
+
+    static let off = DashboardWorkDays(enabled: false, days: [])
+
+    /// Every repository's days rolled into one row per day, oldest first.
+    static func rolled(_ found: [CloudWorkDay]) -> [Day] {
+        var byDay: [String: (Int, Int, Int)] = [:]
+        for entry in found {
+            let sum = byDay[entry.day] ?? (0, 0, 0)
+            byDay[entry.day] = (sum.0 + entry.commits, sum.1 + entry.insertions, sum.2 + entry.deletions)
+        }
+        return byDay.keys.sorted().map { day in
+            let sum = byDay[day]!
+            return Day(day: day, commits: sum.0, insertions: sum.1, deletions: sum.2)
+        }
+    }
+}
+
 struct DashboardWork: Encodable {
     struct Index: Encodable {
         let done: Int
@@ -723,6 +752,9 @@ actor DashboardSession {
     private var stoppedAdding: Set<Provider> = []
     private var messages: [String] = []
     private var lastIngest: Date?
+    /// The last read of commits per day, kept ten minutes: reading every repository's log is the
+    /// expensive part, and Home asks each time it opens.
+    private var workDaysRead: (at: Date, days: DashboardWorkDays)?
     private let progress = ProgressBox()
     private let openWorkspace: @Sendable () throws -> Workspace
     private let changed: @Sendable () -> Void
@@ -842,6 +874,8 @@ actor DashboardSession {
                 return .json(try await coach())
             case ("GET", "/api/quota"):
                 return .json(try await quota())
+            case ("GET", "/api/work/days"):
+                return .json(await workDays())
             case ("GET", "/api/usage"):
                 guard let range = InsightsRange(argument: request.query["range"] ?? "week") else { throw UsageError("Unknown range.") }
                 let word = request.query["tool"] ?? "all"
@@ -907,6 +941,26 @@ actor DashboardSession {
         if sample { return SampleData.plans(now: now) }
         let workspace = try openWorkspace()
         return try await Commands.plansReport(workspace: workspace, now: now)
+    }
+
+    /// Commits per day over the last 61 days, enough for a 30-day range and the 30 days before it.
+    func workDays(now: Date = Date()) async -> DashboardWorkDays {
+        if sample { return SampleData.workDays(now: now) }
+        if let read = workDaysRead, now.timeIntervalSince(read.at) < 600 { return read.days }
+        let settings = WorkSettings.load()
+        guard settings.enabled, GitWork.isAvailable, !settings.roots.isEmpty else { return .off }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        let since = formatter.string(from: now.addingTimeInterval(-61 * 86400))
+        let login = CloudLink.load()?.login
+        let found = await Task.detached(priority: .utility) {
+            GitWork.days(roots: settings.rootURLs, since: since, emails: settings.emails, login: login, shareSubjects: false)
+        }.value
+        let days = DashboardWorkDays(enabled: true, days: DashboardWorkDays.rolled(found))
+        workDaysRead = (now, days)
+        return days
     }
 
     /// Every login's limit pooled, past and projected. The sample projects the sample's own logins.

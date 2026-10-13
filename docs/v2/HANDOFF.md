@@ -82,6 +82,8 @@ What changed:
   walk as an annotation on the run, readable without a token.
   The native GPUI spike draws the same Home and Limits (bars for the chart). The Mac menu's header
   says what is left across the logins (the pool rule without the samples) and opens Limits.
+  Home's figures include commits and commits per million tokens when work is counted
+  (`GET /api/work/days`, every repository's log rolled per day, cached ten minutes).
   Not done: keyhop.app has no pooled view (its profile shows shared limits one by one).
 
 ## Everything travels in this branch
@@ -152,7 +154,7 @@ file are all committed here. The owner's previously uncommitted pet/dashboard wo
      **Wrapped** (`/u/:login/wrapped[/:year]`, linked from the profile); widgets gain
      `efficiency` and `cache` metrics.
    - Still open: a share card for the pet/season beyond the existing `card.svg`/`pet.svg`;
-     the window's Teams section has no digest form yet (website only); Coach's premium
+     Coach's premium
      threshold is $15/M output and the cache finding needs 1M context tokens, both in
      `Core/Coach.swift`.
 7. **M5** (parity, support, launch) — built 2026-10-11, as far as this Linux box allows:

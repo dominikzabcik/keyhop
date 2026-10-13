@@ -241,6 +241,27 @@ extension SampleData {
 
 
 extension SampleData {
+    /// Two months of commits for the sample person: most weekdays, a few weekends, none today
+    /// before nine.
+    static func workDays(now: Date = Date()) -> DashboardWorkDays {
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        var days: [DashboardWorkDays.Day] = []
+        for back in stride(from: 60, through: 0, by: -1) {
+            guard let date = calendar.date(byAdding: .day, value: -back, to: now) else { continue }
+            let weekday = calendar.component(.weekday, from: date)
+            let weekend = weekday == 1 || weekday == 7
+            // A fixed pattern rather than randomness, so screenshots and tests read the same each run.
+            let commits = weekend ? (back % 5 == 0 ? 3 : 0) : 4 + (back * 7) % 9
+            if commits == 0 || (back == 0 && calendar.component(.hour, from: now) < 9) { continue }
+            days.append(.init(day: formatter.string(from: date), commits: commits, insertions: commits * 46, deletions: commits * 17))
+        }
+        return DashboardWorkDays(enabled: true, days: days)
+    }
+
     /// The sample's limits forecast, from a week of readings every half hour that end on the sample's
     /// own snapshot. The spare Cursor login expired two days ago, so only its old readings remain.
     static func quota(now: Date = Date(), tool: Provider? = nil) -> QuotaReport {

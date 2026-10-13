@@ -113,4 +113,20 @@ final class GitWorkTests: XCTestCase {
         XCTAssertEqual(GitWork.merges(in: repo, since: "2020-01-01", mine: ["jonas@example.com"]), 1)
         XCTAssertEqual(GitWork.merges(in: repo, since: "2020-01-01", mine: ["nobody@example.com"]), 0)
     }
+
+    func testHomeRollsEveryRepositoryIntoOneRowPerDay() {
+        let found = [
+            CloudWorkDay(day: "2026-10-12", repo: "a", commits: 3, insertions: 30, deletions: 3, subjects: nil),
+            CloudWorkDay(day: "2026-10-11", repo: "a", commits: 1, insertions: 10, deletions: 1, subjects: nil),
+            CloudWorkDay(day: "2026-10-12", repo: "b", commits: 2, insertions: 20, deletions: 2, subjects: nil),
+        ]
+        XCTAssertEqual(DashboardWorkDays.rolled(found), [
+            .init(day: "2026-10-11", commits: 1, insertions: 10, deletions: 1),
+            .init(day: "2026-10-12", commits: 5, insertions: 50, deletions: 5),
+        ])
+        let sample = SampleData.workDays()
+        XCTAssertTrue(sample.enabled)
+        XCTAssertEqual(sample.days.map(\.day), sample.days.map(\.day).sorted())
+        XCTAssertGreaterThan(sample.days.count, 30)
+    }
 }

@@ -323,10 +323,23 @@ extension DashboardPage {
         <span class="hstat-foot">${change || ""}${note ? `<span>${note}</span>` : ""}</span>
       </div>`;
     const vs = compared ? `vs ${span}` : "";
+    // Commits in the same span and the span before, from this computer's repositories.
+    const work = data.workDays?.enabled ? data.workDays.days : null;
+    const dayOf = (date) => localDay(new Date(date));
+    // The range's last day is the one its end falls in, whether the end is now or midnight after.
+    const from = dayOf(usage.start), last = dayOf(new Date(usage.end).getTime() - 1);
+    const spanDays = Math.max(1, Math.round((new Date(usage.end) - new Date(usage.start)) / 86400_000));
+    const before = localDay(new Date(new Date(usage.start).getTime() - spanDays * 86400_000));
+    const commitsIn = (a, b, inclusive) => (work || []).filter((d) => d.day >= a && (inclusive ? d.day <= b : d.day < b)).reduce((sum, d) => sum + d.commits, 0);
+    const commits = commitsIn(from, last, true), commitsBefore = commitsIn(before, from, false);
+    // The leaderboard's measure: commits per million tokens, once there is a million to divide by.
+    const efficiency = t.tokens >= 1e6 ? commits / (t.tokens / 1e6) : null;
+    const commitNote = efficiency != null ? `${efficiency >= 10 ? Math.round(efficiency) : efficiency.toFixed(1)} per M tokens` : vs;
     const tiles = `<div class="hstats">
       ${tile("Tokens", fmt.tokens(t.tokens), t.tokens, "tokens", compared ? fmt.change(t.tokens, p.tokens, fmt.tokens(p.tokens)) : "", vs)}
       ${tile("API value", fmt.usd(t.cost), t.cost, "usd", compared ? fmt.change(t.cost, p.cost, fmt.usd(p.cost)) : "", vs)}
-      ${tile("Requests", fmt.count(t.requests), t.requests, "count", compared ? fmt.change(t.requests, p.requests, fmt.count(p.requests)) : "", vs)}
+      ${work ? tile("Commits", fmt.count(commits), commits, "count", compared ? fmt.change(commits, commitsBefore, fmt.count(commitsBefore)) : "", commitNote)
+        : tile("Requests", fmt.count(t.requests), t.requests, "count", compared ? fmt.change(t.requests, p.requests, fmt.count(p.requests)) : "", vs)}
       ${tile("Cache hit", hit != null ? `${Math.round(hit * 100)}%` : "None", hit != null ? hit * 100 : null, "pct", points != null ? `<span class="mono ${points > 0 ? "up" : points < 0 ? "down" : "subtle"}">${points > 0 ? "+" : ""}${points} pts</span>` : "", usage.cacheSavings > 0 ? `${fmt.usd(usage.cacheSavings)} saved` : vs)}
     </div>`;
     return `${head}${tiles}${activityCard(usage)}`;

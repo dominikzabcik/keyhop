@@ -1196,6 +1196,28 @@ describe("limit sharing", () => {
     expect(body.updatedAt).toBeGreaterThan(0);
   });
 
+  it("shows a person their own shared limits, pooled, and nobody else's", async () => {
+    const cookie = await signIn("yara");
+    const mac = await linkApp(cookie);
+    const soon = Math.floor(Date.now() / 1000) + 1500;
+    // Before anything is shared the page says how to share.
+    expect(await (await call("/limits", { headers: { cookie } })).text()).toContain("Nothing shared yet");
+    await sendLimits(mac, [
+      { accountKey: "work", tool: "codex", label: "Work", windowLabel: "5h", usedPercent: 96, resetsAt: soon },
+      { accountKey: "work", tool: "codex", label: "Work", windowLabel: "Week", usedPercent: 62, resetsAt: soon + 90_000 },
+      { accountKey: "spare", tool: "claude", label: null, windowLabel: "Week", usedPercent: 41, resetsAt: soon + 9_000 },
+    ]);
+    const page = await (await call("/limits", { headers: { cookie } })).text();
+    // 4 left on Work (its 5-hour window is the tightest) and 59 on the spare, of 200.
+    expect(page).toContain("63%");
+    expect(page).toContain("/ 200%");
+    expect(page).toContain("Codex · Work");
+    expect(page).toContain("5-hour");
+    // Signed out, the page asks to sign in rather than showing anyone's limits.
+    const signedOut = await call("/limits", { redirect: "manual" });
+    expect(signedOut.status).not.toBe(200);
+  });
+
   it("replaces the last reading rather than piling readings up", async () => {
     const cookie = await signIn("tariq");
     const mac = await linkApp(cookie);

@@ -12,6 +12,7 @@ import { type Entry, type Metric, type Period, METRICS, PERIODS, isMetric, isPer
 import { type Division, DIVISIONS, DIVISION_NAMES, isDivision } from "./env";
 import { inviteInfo, members, myTeams, teamForMember } from "./teams";
 import { digestLabel } from "./digest";
+import { currentLimits, pooled, windowName } from "./limits";
 import { wrapped } from "./wrapped";
 import { parseSubject, span, tasksForDay } from "./tasks";
 import { PERSON_WIDGETS, TEAM_WIDGETS, widgetMarkdown } from "./widgets";
@@ -52,7 +53,7 @@ function render(
   body: Html,
   options: {
     description?: string;
-    active?: "leaderboard" | "teams" | "season" | "download";
+    active?: "leaderboard" | "teams" | "season" | "download" | "limits";
     mode?: "app" | "landing" | "marketing";
     index?: boolean;
     softwareSchema?: boolean;
@@ -492,6 +493,60 @@ pages.get("/u/:login", async (c) => {
       index: person.public === 1,
       canonicalPath: `/u/${person.login}`,
     },
+  );
+});
+
+// Your own limits, as the computer last shared them: only you see this page, and it stays empty
+// until limit sharing is on in Keyhop.
+pages.get("/limits", pageUser, async (c) => {
+  const user = c.get("user")!;
+  const { limits, updatedAt } = await currentLimits(c.env.DB, user.id);
+  const reference = now();
+  const until = (at: number) => {
+    const s = Math.max(0, at - reference);
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+    return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${Math.max(1, m)}m`;
+  };
+  const accounts = new Map<string, typeof limits>();
+  for (const limit of limits) accounts.set(limit.accountKey, [...(accounts.get(limit.accountKey) ?? []), limit]);
+  const rows = [...accounts.values()]
+    .map((windows) => windows.slice().sort((a, b) => b.usedPercent - a.usedPercent))
+    .sort((a, b) => b[0].usedPercent - a[0].usedPercent);
+  const pool = pooled(limits);
+  const tone = (used: number) => (used >= 90 ? "var(--bad)" : used >= 75 ? "var(--warn)" : "var(--text)");
+  return render(
+    c,
+    "Limits · Keyhop",
+    html`
+      <div class="head"><div><h1>Limits</h1><p class="lede">Where your logins stand, as Keyhop on your computer last shared it. Only you see this page.</p></div></div>
+      ${pool
+        ? html`<section class="card">
+            <div class="card-body">
+              <p class="hint" style="margin:0">Remaining, pooled across ${accounts.size} ${accounts.size === 1 ? "login" : "logins"}</p>
+              <p style="margin:4px 0 0;display:flex;align-items:baseline;gap:8px"><b style="font-size:40px;letter-spacing:-.03em;line-height:1.1">${pool.remaining}%</b><span class="hint" style="font-size:18px">/ ${pool.capacity}%</span></p>
+              ${updatedAt ? html`<p class="hint" style="margin:6px 0 0">Shared ${ago(updatedAt, reference)}. The forecast, with how fast it drains and when it comes back, is in Keyhop's Limits.</p>` : ""}
+            </div>
+          </section>
+          <section class="card">
+            <div class="card-head"><h2>Your logins</h2><span class="hint">${accounts.size}</span></div>
+            ${rows.map(
+              (windows) => html`<div class="list-row" style="align-items:flex-start">
+                <span style="min-width:0"><b>${TOOL_NAMES[windows[0].tool as Tool] ?? windows[0].tool}${windows[0].label ? html` · ${windows[0].label}` : ""}</b><small class="hint" style="display:block">${Math.max(0, 100 - Math.round(windows[0].usedPercent))}% left</small></span>
+                <span style="flex:1;max-width:420px;display:grid;gap:8px">
+                  ${windows.map(
+                    (w) => html`<span style="display:grid;grid-template-columns:96px 1fr 44px 64px;gap:10px;align-items:center;font-size:13px">
+                      <span class="hint">${windowName(w.windowLabel)}</span>
+                      <span class="bar" style="margin:0"><span style="width:${Math.min(100, w.usedPercent)}%;background:${tone(w.usedPercent)}"></span></span>
+                      <b style="text-align:right">${Math.round(w.usedPercent)}%</b>
+                      <span class="hint">${w.resetsAt ? until(w.resetsAt) : ""}</span>
+                    </span>`,
+                  )}
+                </span>
+              </div>`,
+            )}
+          </section>`
+        : html`<section class="card"><p class="empty">Nothing shared yet. In Keyhop on your computer, open Settings, then Cloud, and turn on Share limits. This page and a linked phone then show where your logins stand.</p></section>`}`,
+    { active: "limits", index: false },
   );
 });
 

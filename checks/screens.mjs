@@ -41,6 +41,7 @@ export const ACCOUNT_SCREENS = [
   { name: "link", path: "/link", mustSay: [] },
   { name: "welcome", path: "/welcome", mustSay: [] },
   { name: "leaderboard-signed-in", path: "/leaderboard", mustSay: ["Leaderboard"] },
+  { name: "limits-signed-in", path: "/limits", mustSay: ["Limits", "Only you see this page"] },
   { name: "season-signed-in", path: "/season", mustSay: ["Season"] },
   { name: "team-day", path: "/t/checks/day", mustSay: ["Today", "Importer"] },
 ];

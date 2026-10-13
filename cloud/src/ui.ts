@@ -493,7 +493,7 @@ export function layout(options: {
   description?: string;
   path: string;
   user: User | null;
-  active?: "leaderboard" | "teams" | "season" | "download";
+  active?: "leaderboard" | "teams" | "season" | "download" | "limits";
   mode?: "app" | "landing" | "marketing";
   index?: boolean;
   softwareSchema?: boolean;
@@ -587,6 +587,7 @@ ${schema ? html`<script type="application/ld+json" nonce="${options.nonce}">${ra
           <div class="pop-panel pop-right" role="menu">
             <div class="pop-who"><b>${user.display_name ?? user.name ?? user.login}</b><span>@${user.login}</span></div>
             <a role="menuitem" href="/u/${user.login}">Your profile</a>
+            <a role="menuitem" href="/limits">Limits</a>
             <a role="menuitem" href="/teams">Teams</a>
             <a role="menuitem" href="/settings">Settings</a>
             <form method="post" action="/auth/logout" class="pop-form">

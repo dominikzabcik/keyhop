@@ -115,6 +115,23 @@ interface StoredRow {
   updated_at: number;
 }
 
+/** The window names the Mac app uses, so a reading reads the same on every surface. */
+const WINDOW_NAMES: Record<string, string> = { "5h": "5-hour", Week: "Weekly", Opus: "Opus weekly", Sonnet: "Sonnet weekly" };
+export const windowName = (label: string) => WINDOW_NAMES[label] ?? label;
+
+/**
+ * Every account pooled the way the Mac's Limits pools them: each has 100 less its tightest window
+ * left, and a full set would be 100 per account. Null when nothing is shared.
+ */
+export function pooled(limits: Pick<LimitRow, "accountKey" | "usedPercent">[]): { remaining: number; capacity: number } | null {
+  const tightest = new Map<string, number>();
+  for (const limit of limits) tightest.set(limit.accountKey, Math.max(tightest.get(limit.accountKey) ?? 0, limit.usedPercent));
+  if (!tightest.size) return null;
+  let remaining = 0;
+  for (const used of tightest.values()) remaining += Math.max(0, 100 - Math.min(100, used));
+  return { remaining: Math.round(remaining), capacity: tightest.size * 100 };
+}
+
 /** What the phone reads: the readings still current, soonest reset first. */
 export async function currentLimits(db: D1Database, userId: string, reference = now()) {
   const { results } = await db

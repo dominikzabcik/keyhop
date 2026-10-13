@@ -522,9 +522,9 @@ pages.get("/limits", pageUser, async (c) => {
       ${pool
         ? html`<section class="card">
             <div class="card-body">
-              <p class="hint" style="margin:0">Remaining, pooled across ${accounts.size} ${accounts.size === 1 ? "login" : "logins"}</p>
+              <p class="hint" style="margin:0">Left across your own ${accounts.size} ${accounts.size === 1 ? "login" : "logins"}</p>
               <p style="margin:4px 0 0;display:flex;align-items:baseline;gap:8px"><b style="font-size:40px;letter-spacing:-.03em;line-height:1.1">${pool.remaining}%</b><span class="hint" style="font-size:18px">/ ${pool.capacity}%</span></p>
-              ${updatedAt ? html`<p class="hint" style="margin:6px 0 0">Shared ${ago(updatedAt, reference)}. The forecast, with how fast it drains and when it comes back, is in Keyhop's Limits.</p>` : ""}
+              ${updatedAt ? html`<p class="hint" style="margin:6px 0 0">Each login keeps its own limits; this adds up what each has left. Shared ${ago(updatedAt, reference)}. The forecast, with how fast it drains and when it comes back, is in Keyhop's Limits.</p>` : ""}
             </div>
           </section>
           <section class="card">

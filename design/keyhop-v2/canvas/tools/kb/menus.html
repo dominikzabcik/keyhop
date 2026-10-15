@@ -1,0 +1,139 @@
+<div style="position: relative; width: 1440px; height: 740px; overflow: hidden; background: radial-gradient(60% 50% at 50% 100%, rgba(96,165,250,0.14), transparent 70%), linear-gradient(180deg, #1B1D22, #0E0F12); font-family: 'Geist', system-ui, sans-serif; font-size: 13px; line-height: 18px; color: {{c.label}}; font-variant-numeric: tabular-nums">
+  <div style="display: flex; align-items: center; justify-content: flex-end; gap: 18px; height: 26px; padding: 0 14px; background: rgba(20,20,22,0.72); box-shadow: inset 0 -1px 0 rgba(255,255,255,0.06); font-size: 12.5px; font-weight: 500; color: #E5E5E5">
+    <span style="display: flex; align-items: center; gap: 6px; height: 20px; padding: 0 7px; border-radius: 5px; background: rgba(255,255,255,0.12)"><svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg><span style="color: #FF8A82">7%</span></span>
+    <span>Tue 13 Oct</span><span>10:52</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, 360px); justify-content: center; gap: 72px; padding-top: 44px">
+
+    <!-- A · Polished -->
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span class="lab" style="padding-left: 4px">A · Polished</span>
+      <div role="dialog" aria-label="Keyhop, polished" style="display: flex; flex-direction: column; border-radius: 12px; background: #1A1A1A; box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 24px 60px rgba(0,0,0,0.55); overflow: hidden">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 16px 16px 12px">
+          <span style="flex: none; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; background: radial-gradient(90% 70% at 50% 100%, rgba(96,165,250,0.30), transparent 70%), #13151A; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08)">{{PET:30:still}}</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+            <span style="display: flex; align-items: baseline; gap: 8px"><span class="sans" style="font-size: 20px; line-height: 24px; font-weight: 500; letter-spacing: -0.02em">415%</span><span style="color: {{c.secondary}}">left across 8 logins</span></span>
+            <span style="font-size: 12px; color: {{c.tertiary}}">Next reset +35% at 12:41</span>
+          </span>
+          <span style="display: flex; gap: 4px"><span style="width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: {{c.secondary}}; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"></path></svg></span></span>
+        </div>
+        <div role="img" aria-label="What each tool has left" style="display: flex; gap: 2px; height: 6px; margin: 0 16px 14px; border-radius: 3px; overflow: hidden">
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="6"><span class="grow" style="--i: {{$index}}; flex: {{r.flex}}; background: {{r.seg}}"></span></sc-for>
+        </div>
+
+        <div style="margin: 0 10px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(251,65,74,0.08); box-shadow: inset 0 0 0 1px rgba(251,65,74,0.20)">
+          <span style="color: #FF8A82">{{ICON:codexIc:16}}</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 16px"><span style="font-weight: 600">Codex runs out at 11:19</span><span style="font-size: 12px; color: {{c.secondary}}">No other Codex login has room</span></span>
+          <span style="height: 26px; padding: 0 10px; display: flex; align-items: center; border-radius: 7px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12); font-size: 12px; font-weight: 600">Add login</span>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 6px"><span class="lab">In use</span><span style="font-size: 11px; color: {{c.tertiary}}">read 2 min ago</span></div>
+        <div style="display: flex; flex-direction: column; padding: 0 6px 6px">
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+            <div style="display: flex; flex-direction: column; border-radius: 8px; background: {{r.rowBg}}">
+              <div style="display: grid; grid-template-columns: 18px minmax(0, 1fr) 64px 36px; gap: 10px; align-items: center; height: 40px; padding: 0 10px">
+                <span style="color: #E5E5E5">{{ICON:r.ic:16}}</span>
+                <span style="min-width: 0; display: flex; flex-direction: column; line-height: 15px"><span style="font-weight: 600">{{r.tool}}</span><span style="font-size: 11.5px; color: {{c.tertiary}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.login}}</span></span>
+                <span style="height: 4px; border-radius: 2px; background: {{c.track}}; overflow: hidden"><span class="grow" style="--i: {{$index}}; display: block; height: 4px; width: {{r.w}}; border-radius: 2px; background: {{r.bar}}"></span></span>
+                <span style="text-align: right; font-weight: 600; color: {{r.ink}}">{{r.pct}}</span>
+              </div>
+              <sc-if value="{{r.hasHop}}">
+                <div style="display: flex; align-items: center; gap: 8px; margin: -2px 10px 8px 38px; padding: 7px 8px 7px 10px; border-radius: 8px; background: rgba(96,165,250,0.08); box-shadow: inset 0 0 0 1px rgba(96,165,250,0.22)">
+                  <span style="flex: 1; min-width: 0; font-size: 12px; color: #BFDBFE">work@studio.dev has 88% left</span>
+                  <span style="height: 24px; padding: 0 10px; display: flex; align-items: center; border-radius: 6px; background: {{c.accent}}; color: {{c.accentInk}}; font-size: 12px; font-weight: 600">Hop</span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); box-shadow: inset 0 1px 0 rgba(255,255,255,0.07)">
+          <sc-for list="{{menu}}" as="m" hint-placeholder-count="3"><span style="height: 40px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: #E5E5E5; box-shadow: {{m.line}}">{{m.short}}<kbd style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10.5px; color: {{c.tertiary}}">{{m.key}}</kbd></span></sc-for>
+        </div>
+      </div>
+      <ul style="margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: {{c.secondary}}">
+        <li>A segmented bar under the figure shows every tool at once.</li>
+        <li>The hop offer sits under the tool it is about, not at the bottom.</li>
+        <li>Open, Refresh and Quit share one footer row.</li>
+      </ul>
+    </div>
+
+    <!-- B · Rings -->
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span class="lab" style="padding-left: 4px">B · Rings</span>
+      <div role="dialog" aria-label="Keyhop, rings" style="display: flex; flex-direction: column; border-radius: 12px; background: #1A1A1A; box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 24px 60px rgba(0,0,0,0.55); overflow: hidden">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 4px">
+          <span class="lab">Keyhop · 8 logins</span>
+          <span style="font-size: 12px; color: {{c.secondary}}"><b class="sans" style="font-weight: 600; color: {{c.label}}">415%</b> left</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px 12px 12px">
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 6px 12px; border-radius: 10px; background: {{r.tileBg}}; box-shadow: {{r.tileRing}}">
+              <span style="position: relative; width: 52px; height: 52px">
+                <svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true" style="position: absolute; inset: 0; transform: rotate(-90deg)"><circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"></circle><circle cx="26" cy="26" r="22" fill="none" stroke="{{r.ringInk}}" stroke-width="4" stroke-linecap="round" stroke-dasharray="{{r.dash}}"></circle></svg>
+                <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #E5E5E5">{{ICON:r.ic:18}}</span>
+              </span>
+              <span style="display: flex; flex-direction: column; align-items: center; line-height: 15px"><span class="sans" style="font-size: 15px; line-height: 18px; font-weight: 600; color: {{r.ink}}">{{r.pct}}</span><span style="font-size: 11.5px; color: {{c.secondary}}">{{r.tool}}</span></span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin: 0 12px 12px; display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 10px; background: radial-gradient(80% 120% at 100% 100%, rgba(96,165,250,0.20), transparent 70%), #13151A; box-shadow: inset 0 0 0 1px rgba(96,165,250,0.25)">
+          <span style="display: flex; align-items: center; gap: 10px"><span style="color: #E5E5E5">{{ICON:claudeIc:16}}</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 16px"><b style="font-weight: 600">Claude Code is at 81%</b><span style="font-size: 12px; color: {{c.secondary}}">work@studio.dev has 88% left</span></span></span>
+          <span style="height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: {{c.accent}}; color: {{c.accentInk}}; font-weight: 600">Hop to work@studio.dev</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 16px 12px; font-size: 12px; color: #FF8A82"><span style="width: 6px; height: 6px; border-radius: 3px; background: {{c.red}}"></span>Codex runs out at 11:19 · no other login<span style="flex: 1"></span><span style="color: #E5E5E5; font-weight: 600">Add</span></div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); box-shadow: inset 0 1px 0 rgba(255,255,255,0.07)">
+          <sc-for list="{{menu}}" as="m" hint-placeholder-count="3"><span style="height: 40px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: #E5E5E5; box-shadow: {{m.line}}">{{m.short}}<kbd style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10.5px; color: {{c.tertiary}}">{{m.key}}</kbd></span></sc-for>
+        </div>
+      </div>
+      <ul style="margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: {{c.secondary}}">
+        <li>Six rings read at a glance, with the tight one ringed in red.</li>
+        <li>One clear action: the best hop, as a full-width button.</li>
+        <li>Best when you only need to see “who is low”.</li>
+      </ul>
+    </div>
+
+    <!-- C · Night field -->
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span class="lab" style="padding-left: 4px">C · Night field</span>
+      <div role="dialog" aria-label="Keyhop, night field" style="display: flex; flex-direction: column; border-radius: 12px; background: #1A1A1A; box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 24px 60px rgba(0,0,0,0.55); overflow: hidden">
+        <div style="position: relative; height: 168px; overflow: hidden; background: radial-gradient(80% 70% at 75% 100%, rgba(96,165,250,0.32), transparent 72%), #13151A">
+          <svg viewBox="0 0 360 168" preserveAspectRatio="xMidYMax slice" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%">
+            <sc-for list="{{stars}}" as="s" hint-placeholder-count="24"><rect class="star" style="--i: {{$index}}" x="{{s.x}}" y="{{s.y}}" width="{{s.r}}" height="{{s.r}}" fill="#FFFFFF"></rect></sc-for>
+            <path d="M0 140 C 60 128 130 132 190 136 C 250 140 310 126 360 130 L360 168 L0 168 Z" fill="#1C1F26"></path>
+            <path d="M0 156 C 90 148 190 150 270 154 C 320 156 345 155 360 154 L360 168 L0 168 Z" fill="#171A20"></path>
+          </svg>
+          <div style="position: absolute; top: 16px; left: 16px; display: flex; flex-direction: column; gap: 2px">
+            <span class="lab">Bulk · 8 logins</span>
+            <span class="sans" style="font-size: 30px; line-height: 34px; font-weight: 500; letter-spacing: -0.03em">415% left</span>
+            <span style="font-size: 12px; color: {{c.secondary}}">Next reset +35% at 12:41</span>
+          </div>
+          <div style="position: absolute; right: 22px; bottom: 14px; display: flex; flex-direction: column; align-items: center">{{PET:56}}<span class="shadow" style="width: 36px; height: 6px; margin-top: 1px; border-radius: 50%; background: #000000; opacity: .45"></span></div>
+        </div>
+        <div class="bubble" style="position: relative; margin: -10px 64px 0 12px; padding: 10px 12px; border-radius: 10px 10px 10px 2px; background: #F5F5F5; color: #1D1D1F; line-height: 17px; box-shadow: 0 10px 28px rgba(0,0,10,0.45)">
+          <span style="display: block; font-weight: 600">Claude Code is at 81%.</span>
+          <span style="display: block; color: #48484A">Hop it to work@studio.dev? It has 88% left.</span>
+          <span style="display: flex; gap: 6px; margin-top: 8px"><span style="height: 26px; padding: 0 12px; display: flex; align-items: center; border-radius: 7px; background: {{c.accent}}; color: {{c.accentInk}}; font-size: 12px; font-weight: 600">Hop</span><span style="height: 26px; padding: 0 10px; display: flex; align-items: center; border-radius: 7px; background: rgba(0,0,0,0.06); color: #3A3A3C; font-size: 12px; font-weight: 500">Later</span></span>
+        </div>
+        <div style="display: flex; flex-direction: column; padding: 12px 6px 6px">
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+            <div style="display: grid; grid-template-columns: 18px minmax(0, 1fr) 72px 36px; gap: 10px; align-items: center; height: 34px; padding: 0 10px">
+              <span style="color: #E5E5E5">{{ICON:r.ic:15}}</span>
+              <span style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><b style="font-weight: 600">{{r.tool}}</b> <span style="font-size: 12px; color: {{c.tertiary}}">{{r.login}}</span></span>
+              <span style="height: 4px; border-radius: 2px; background: {{c.track}}; overflow: hidden"><span class="grow" style="--i: {{$index}}; display: block; height: 4px; width: {{r.w}}; border-radius: 2px; background: {{r.bar}}"></span></span>
+              <span style="text-align: right; font-weight: 600; color: {{r.ink}}">{{r.pct}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); box-shadow: inset 0 1px 0 rgba(255,255,255,0.07)">
+          <sc-for list="{{menu}}" as="m" hint-placeholder-count="3"><span style="height: 40px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: #E5E5E5; box-shadow: {{m.line}}">{{m.short}}<kbd style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10.5px; color: {{c.tertiary}}">{{m.key}}</kbd></span></sc-for>
+        </div>
+      </div>
+      <ul style="margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: {{c.secondary}}">
+        <li>The pet's night field from Home, carried into the menu.</li>
+        <li>The pet speaks the one suggestion; the list stays plain.</li>
+        <li>The most Keyhop of the three, and the tallest.</li>
+      </ul>
+    </div>
+  </div>
+</div>

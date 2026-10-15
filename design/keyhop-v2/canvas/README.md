@@ -38,6 +38,11 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
   - **Window notices.** One quiet card with a severity stripe and a pill, one action and Dismiss on each, and an Undo toast after a hop.
   - **Status bar.** Problem chips sit on the left and mono figures on the right.
 - The comparison page moved to https://claude.ai/artifact/GvDoPxEhtAWE5W9kDD3sWF after the account switch.
+- **Menu directions** (2026-10-15). The owner liked everything except the menu and wanted to try something with it. `KB-Menus` shows three directions:
+  - **A Polished.** A segmented bar of every tool, the hop offer under its tool, and one footer row.
+  - **B Rings.** Six rings and one full-width hop.
+  - **C Night field.** The pet's scene as the header, with the pet speaking the suggestion.
+  Awaiting a pick.
 - **Next:** owner feedback on the KB boards, then rewrite `design/keyhop-v2/index.html` and the real window and site tokens to Coss Blue.
 - **Was next once a colour is picked:** apply it to System, Limits, the menu bar popover and keyhop.app (Mac and web in parity), then rewrite `design/keyhop-v2/index.html` and the window and site tokens.
 

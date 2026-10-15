@@ -1,0 +1,163 @@
+<div style="width: 1440px; background: #111111; font-family: 'Geist', system-ui, sans-serif; font-size: 15px; line-height: 24px; color: {{c.label}}; font-variant-numeric: tabular-nums">
+
+  <header style="position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 28px; height: 64px; padding: 0 64px; background: rgba(17,17,17,0.82); box-shadow: inset 0 -1px 0 rgba(255,255,255,0.07)">
+    <a href="#" style="display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px"><span style="width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; background: {{c.accent}}; color: {{c.accentInk}}"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg></span>Keyhop</a>
+    <nav aria-label="Site" style="display: flex; gap: 6px; font-size: 14px; color: {{c.secondary}}">
+      <a href="#tools" style="padding: 6px 10px; border-radius: 8px">Tools</a><a href="#leaderboard" style="padding: 6px 10px; border-radius: 8px">Leaderboard</a><a href="#faq" style="padding: 6px 10px; border-radius: 8px">Questions</a><a href="#" style="padding: 6px 10px; border-radius: 8px">GitHub</a>
+    </nav>
+    <span style="flex: 1"></span>
+    <a href="#" style="height: 34px; padding: 0 14px; display: flex; align-items: center; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10); font-size: 14px; font-weight: 500">Sign in with GitHub</a>
+    <a href="#download" style="height: 34px; padding: 0 16px; display: flex; align-items: center; border-radius: 8px; background: {{c.accent}}; color: {{c.accentInk}}; font-size: 14px; font-weight: 600">Download</a>
+  </header>
+
+  <section aria-labelledby="hero-h" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 56px; align-items: center; padding: 96px 64px 88px">
+    <div style="display: flex; flex-direction: column; gap: 24px">
+      <span class="lab">Free and open source · macOS, Linux, Windows</span>
+      <h1 id="hero-h" class="sans" style="margin: 0; font-size: 72px; line-height: 72px; font-weight: 500; letter-spacing: -0.045em; text-wrap: balance">Every login, one hop away.</h1>
+      <p style="margin: 0; max-width: 44ch; font-size: 17px; line-height: 27px; color: {{c.secondary}}">Keyhop watches the limits on every AI coding account you own and moves your tools to the login with room, before a limit stops you.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px">
+        <a href="#download" style="height: 42px; padding: 0 20px; display: flex; align-items: center; gap: 8px; border-radius: 10px; background: {{c.accent}}; color: {{c.accentInk}}; font-weight: 600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M6 10l6 6 6-6M5 20h14"></path></svg>Download for Mac</a>
+        <span style="height: 42px; padding: 0 8px 0 16px; display: flex; align-items: center; gap: 12px; border-radius: 10px; background: rgba(255,255,255,0.03); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; color: #E5E5E5"><span style="color: {{c.tertiary}}">$</span><span title="curl -fsSL https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.sh | bash">curl -fsSL …/install.sh | bash</span><button type="button" aria-label="Copy the install command" style="height: 28px; padding: 0 10px; border: 0; border-radius: 6px; background: rgba(255,255,255,0.06); color: {{c.secondary}}; font-family: 'Geist', system-ui, sans-serif; font-size: 12px; font-weight: 500">Copy</button></span>
+      </div>
+      <span style="font-size: 13px; color: {{c.tertiary}}">MIT licence. The installer checks the release's SHA-256 before it installs anything.</span>
+    </div>
+
+    <div class="glass" style="position: relative; height: 520px; overflow: hidden; border-radius: 16px; background: radial-gradient(80% 55% at 70% 100%, rgba(96,165,250,0.30), transparent 72%), #13151A">
+      <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%">
+        <sc-for list="{{stars}}" as="s" hint-placeholder-count="40"><rect class="star" style="--i: {{$index}}" x="{{s.x}}" y="{{s.y}}" width="{{s.r}}" height="{{s.r}}" fill="#FFFFFF"></rect></sc-for>
+        <path d="M0 236 C 70 214 140 220 210 228 C 280 236 340 216 400 222 L400 300 L0 300 Z" fill="#1C1F26"></path>
+        <path d="M0 266 C 100 252 210 256 300 262 C 350 265 380 264 400 262 L400 300 L0 300 Z" fill="#171A20"></path>
+      </svg>
+      <div style="position: absolute; top: 22px; left: 22px; right: 22px; display: flex; flex-direction: column; gap: 8px">
+        <sc-for list="{{heroRows}}" as="r" hint-placeholder-count="3">
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) 140px 64px; gap: 16px; align-items: center; padding: 12px 14px; border-radius: 10px; background: rgba(26,26,26,0.86); box-shadow: inset 0 0 0 1px {{r.ring}}">
+            <span style="min-width: 0; display: flex; flex-direction: column; line-height: 18px"><span style="font-size: 13px; font-weight: 600">{{r.who}}</span><span style="font-size: 12px; color: {{c.tertiary}}">{{r.sub}}</span></span>
+            <span style="height: 4px; border-radius: 2px; background: {{c.track}}; overflow: hidden"><span class="grow" style="--i: {{$index}}; display: block; height: 4px; width: {{r.w}}; border-radius: 2px; background: {{r.bar}}"></span></span>
+            <span style="text-align: right; font-size: 13px; font-weight: 600; color: {{r.ink}}">{{r.left}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="position: absolute; left: 28px; right: 28px; bottom: 36px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px">
+        <div class="bubble" style="max-width: 290px; margin-bottom: 72px; padding: 12px 14px; border-radius: 10px 10px 2px 10px; background: #F5F5F5; color: #1D1D1F; font-size: 13px; line-height: 18px; box-shadow: 0 10px 28px rgba(0,0,10,0.45)">
+          <span style="display: block; font-weight: 600">Claude Code is running low.</span>
+          <span style="display: block; color: #48484A">Personal empties around 12:43 PM. Hop it to work@studio.dev, 12% into its window?</span>
+          <span style="display: flex; gap: 6px; margin-top: 10px"><button type="button" style="height: 28px; padding: 0 14px; border: 0; border-radius: 7px; background: {{c.accent}}; color: {{c.accentInk}}; font-size: 12px; font-weight: 600">Hop</button><button type="button" style="height: 28px; padding: 0 12px; border: 0; border-radius: 7px; background: rgba(0,0,0,0.06); color: #3A3A3C; font-size: 12px; font-weight: 500">Later</button></span>
+        </div>
+        <div style="flex: none; display: flex; flex-direction: column; align-items: center">{{PET:104}}<span class="shadow" style="width: 64px; height: 9px; margin-top: 2px; border-radius: 50%; background: #000000; opacity: .45"></span></div>
+      </div>
+      <span style="position: absolute; left: 22px; bottom: 12px; font-size: 11px; color: {{c.tertiary}}">Sample accounts</span>
+    </div>
+  </section>
+
+  <section aria-label="Keyhop in figures" style="margin: 0 64px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(255,255,255,0.08)">
+    <sc-for list="{{figures}}" as="f" hint-placeholder-count="4">
+      <div style="display: flex; flex-direction: column; gap: 6px; padding: 28px 24px; box-shadow: {{f.line}}">
+        <span class="sans" style="font-size: 36px; line-height: 40px; font-weight: 500; letter-spacing: -0.03em">{{f.value}}</span>
+        <span style="font-size: 14px; color: {{c.secondary}}">{{f.label}}</span>
+      </div>
+    </sc-for>
+  </section>
+
+  <section aria-labelledby="how-h" style="display: flex; flex-direction: column; gap: 36px; padding: 112px 64px 0">
+    <div style="display: flex; flex-direction: column; gap: 12px; max-width: 640px">
+      <span class="lab">How a hop works</span>
+      <h2 id="how-title" class="sans" style="margin: 0; font-size: 44px; line-height: 48px; font-weight: 500; letter-spacing: -0.035em">A switch never signs you out anywhere.</h2>
+      <p style="margin: 0; color: {{c.secondary}}">Logins stay in the system's own vault: Keychain on macOS, Secret Service on Linux, DPAPI on Windows.</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+      <sc-for list="{{steps}}" as="s" hint-placeholder-count="4">
+        <div class="card glass" style="display: flex; flex-direction: column; gap: 14px; padding: 24px">
+          <span style="display: flex; align-items: center; justify-content: space-between"><span style="width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: {{s.chip}}; color: {{s.chipInk}}; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; font-weight: 600">{{s.n}}</span><span class="lab">{{s.verb}}</span></span>
+          <span class="sans" style="font-size: 18px; line-height: 24px; font-weight: 500; letter-spacing: -0.01em">{{s.title}}</span>
+          <span style="font-size: 14px; line-height: 22px; color: {{c.secondary}}">{{s.say}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="tools" aria-labelledby="tools-title" style="display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr); gap: 56px; padding: 112px 64px 0">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span class="lab">Tools</span>
+      <h2 id="tools-title" class="sans" style="margin: 0; font-size: 44px; line-height: 48px; font-weight: 500; letter-spacing: -0.035em">Nine tools, each switched its own way.</h2>
+      <p style="margin: 0; color: {{c.secondary}}">The first six keep a token history, counted on your computer by account, model and project. The last three keep none, so Keyhop shows their limits and invents no totals.</p>
+    </div>
+    <div role="table" aria-label="What Keyhop reads from each tool and how it switches it" class="glass" style="overflow: hidden">
+      <div role="row" style="display: grid; grid-template-columns: 1fr 1.2fr 1.4fr 90px; gap: 16px; padding: 12px 22px; box-shadow: inset 0 -1px 0 rgba(255,255,255,0.08); font-size: 12px; color: {{c.tertiary}}"><span role="columnheader">Tool</span><span role="columnheader">Limits read</span><span role="columnheader">Login it switches</span><span role="columnheader" style="text-align: right">Tokens</span></div>
+      <sc-for list="{{tools}}" as="t" hint-placeholder-count="9">
+        <div role="row" style="display: grid; grid-template-columns: 1fr 1.2fr 1.4fr 90px; gap: 16px; align-items: center; min-height: 48px; padding: 0 22px; box-shadow: {{t.line}}; font-size: 14px">
+          <span role="cell" style="font-weight: 600">{{t.name}}</span>
+          <span role="cell" style="color: {{c.secondary}}">{{t.limits}}</span>
+          <span role="cell" style="font-family: {{t.font}}; font-size: {{t.size}}; color: {{c.secondary}}">{{t.login}}</span>
+          <span role="cell" style="text-align: right"><span style="display: inline-flex; height: 22px; padding: 0 8px; align-items: center; border-radius: 6px; background: {{t.tagBg}}; color: {{t.tagInk}}; font-size: 12px; font-weight: 600">{{t.tag}}</span></span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section aria-labelledby="set-title" style="display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr); gap: 56px; padding: 112px 64px 0">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span class="lab">Settings you will touch</span>
+      <h2 id="set-title" class="sans" style="margin: 0; font-size: 44px; line-height: 48px; font-weight: 500; letter-spacing: -0.035em">Hop before the wall.</h2>
+      <p style="margin: 0; color: {{c.secondary}}">Smart Hop ranks your logins offline by room, resets, forecast and budget. Everything shared is opt-in.</p>
+    </div>
+    <div class="glass" style="display: flex; flex-direction: column; overflow: hidden">
+      <sc-for list="{{toggles}}" as="t" hint-placeholder-count="5">
+        <div style="display: flex; align-items: center; gap: 24px; padding: 20px 24px; box-shadow: {{t.line}}">
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600">{{t.name}}</span><span style="font-size: 14px; line-height: 22px; color: {{c.secondary}}">{{t.desc}}</span></span>
+          <span role="switch" aria-checked="{{t.on}}" aria-label="{{t.name}}" style="position: relative; flex: none; width: 40px; height: 22px; border-radius: 7px; background: {{t.track}}"><span style="position: absolute; top: 3px; left: {{t.x}}; width: 16px; height: 16px; border-radius: 5px; background: #F5F5F5"></span></span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="leaderboard" aria-labelledby="lb-title" style="display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr); gap: 56px; padding: 112px 64px 0">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span class="lab">Season · Max division · sample</span>
+      <h2 id="lb-title" class="sans" style="margin: 0; font-size: 44px; line-height: 48px; font-weight: 500; letter-spacing: -0.035em">Ranked by what you ship.</h2>
+      <p style="margin: 0; color: {{c.secondary}}">The leaderboard compares people on your plan by commits per million tokens, past a floor of one million tokens. Only commits you wrote count, merges are left out.</p>
+      <a href="#" style="margin-top: 8px; align-self: flex-start; height: 34px; padding: 0 14px; display: flex; align-items: center; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10); font-size: 14px; font-weight: 500">Open the leaderboard</a>
+    </div>
+    <div class="glass" style="display: flex; flex-direction: column; overflow: hidden">
+      <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr) 120px 110px 90px; gap: 16px; padding: 12px 22px; box-shadow: inset 0 -1px 0 rgba(255,255,255,0.08); font-size: 12px; color: {{c.tertiary}}"><span>#</span><span>Person</span><span style="text-align: right">Commits / 1M</span><span style="text-align: right">Tokens</span><span style="text-align: right">Commits</span></div>
+      <sc-for list="{{board}}" as="b" hint-placeholder-count="5">
+        <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr) 120px 110px 90px; gap: 16px; align-items: center; min-height: 56px; padding: 0 22px; background: {{b.bg}}; box-shadow: {{b.line}}; font-size: 14px">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; color: {{c.tertiary}}">{{b.n}}</span>
+          <span style="display: flex; align-items: center; gap: 12px; min-width: 0"><span style="flex: none; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: {{b.av}}; font-size: 11px; font-weight: 600">{{b.ini}}</span><span style="display: flex; flex-direction: column; line-height: 18px; min-width: 0"><span style="font-weight: 600">{{b.who}}</span><span style="font-size: 12px; color: {{c.tertiary}}">{{b.pet}}</span></span></span>
+          <span class="sans" style="text-align: right; font-size: 16px; font-weight: 500; color: {{b.ink}}">{{b.eff}}</span>
+          <span style="text-align: right; color: {{c.secondary}}">{{b.tokens}}</span>
+          <span style="text-align: right; color: {{c.secondary}}">{{b.commits}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="faq" aria-labelledby="faq-title" style="display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr); gap: 56px; padding: 112px 64px 0">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span class="lab">Questions</span>
+      <h2 id="faq-title" class="sans" style="margin: 0; font-size: 44px; line-height: 48px; font-weight: 500; letter-spacing: -0.035em">Fair questions.</h2>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 40px">
+      <sc-for list="{{faq}}" as="q" hint-placeholder-count="6">
+        <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08)">
+          <span class="sans" style="font-size: 17px; line-height: 24px; font-weight: 500">{{q.q}}</span>
+          <span style="font-size: 14px; line-height: 22px; color: {{c.secondary}}">{{q.a}}</span>
+          <sc-if value="{{q.hasCode}}"><code style="align-self: flex-start; max-width: 100%; box-sizing: border-box; overflow-wrap: anywhere; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12.5px; color: #E5E5E5">{{q.code}}</code></sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="download" aria-labelledby="cta-title" style="margin: 112px 64px 0; display: flex; align-items: center; gap: 40px; padding: 48px 56px; border-radius: 16px; background: radial-gradient(60% 120% at 85% 100%, rgba(96,165,250,0.22), transparent 70%), #161616; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10)">
+    <span style="flex: 1; display: flex; flex-direction: column; gap: 10px">
+      <h2 id="cta-title" class="sans" style="margin: 0; font-size: 44px; line-height: 48px; font-weight: 500; letter-spacing: -0.035em">Bring every login.</h2>
+      <span style="color: {{c.secondary}}">For macOS, Linux and Windows. Your logins never leave your computer.</span>
+    </span>
+    <a href="#" style="height: 44px; padding: 0 22px; display: flex; align-items: center; border-radius: 10px; background: {{c.accent}}; color: {{c.accentInk}}; font-weight: 600">Download Keyhop</a>
+    <a href="#" style="height: 44px; padding: 0 18px; display: flex; align-items: center; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12); font-weight: 500">View on GitHub</a>
+  </section>
+
+  <footer style="display: flex; align-items: center; gap: 24px; margin-top: 80px; padding: 28px 64px 36px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.07); font-size: 13px; color: {{c.tertiary}}">
+    <span>© 2026 Keyhop · MIT licence</span><span style="flex: 1"></span>
+    <a href="#">GitHub</a><a href="#">Leaderboard</a><a href="#">Privacy</a><a href="#">Terms</a>
+  </footer>
+</div>

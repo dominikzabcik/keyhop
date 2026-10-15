@@ -1,0 +1,114 @@
+    <header style="flex: none; display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 16px 0 28px; box-shadow: inset 0 -1px 0 rgba(255,255,255,0.07)">
+      <h1 style="margin: 0; font-size: 15px; font-weight: 600">Limits</h1>
+      <div role="group" aria-label="Tool" class="glass" style="display: flex; padding: 3px; margin-left: 8px; border-radius: 8px">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><button type="button" aria-pressed="{{t.on}}" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: {{t.bg}}; color: {{t.ink}}; font-size: 12px; font-weight: {{t.weight}}">{{t.name}}<span style="color: #737373; font-weight: 500">{{t.n}}</span></button></sc-for>
+      </div>
+      <span style="flex: 1"></span>
+      <span style="font-size: 12px; color: {{c.secondary}}">read 2 min ago</span>
+      <button type="button" aria-label="Refresh limits" class="glass" style="width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; color: {{c.secondary}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"></path></svg></button>
+    </header>
+
+    <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 32px; padding: 24px 28px 32px">
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 18px">
+        <section class="card glass" aria-labelledby="total-h" style="display: flex; flex-direction: column; gap: 20px; padding: 24px 26px 26px">
+          <span style="display: flex; flex-direction: column; gap: 6px"><span class="lab">8 logins with limits · out of 800%</span>
+          <h2 id="total-h" class="sans" style="margin: 0; font-weight: 500; font-size: 26px; line-height: 30px; letter-spacing: -0.02em">What your logins have left</h2></span>
+          <div style="display: flex; align-items: baseline; gap: 12px">
+            <span class="sans" style="font-size: 60px; line-height: 56px; font-weight: 500; letter-spacing: -0.04em">415%</span>
+            <span style="color: {{c.secondary}}">left across them all</span>
+          </div>
+          <p style="margin: 0; max-width: 46ch; color: {{c.secondary}}; line-height: 20px">Each login keeps its own limits. This adds up what each one has left, so 100% is one full login.</p>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{stats}}" as="s" hint-placeholder-count="3">
+              <div class="well" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px">
+                <span style="font-size: 12px; font-weight: 500; color: {{c.secondary}}">{{s.name}}</span>
+                <span class="sans" style="font-size: 20px; line-height: 24px; font-weight: 500; color: {{s.ink}}">{{s.value}}</span>
+                <span style="font-size: 11px; color: {{c.tertiary}}">{{s.sub}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <section class="card glass" aria-labelledby="fore-h" style="display: flex; flex-direction: column; gap: 18px; padding: 24px 26px 22px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 id="fore-h" style="margin: 0; font-size: 13px; font-weight: 600">This week and next</h2>
+            <span style="display: flex; align-items: center; gap: 14px; font-size: 12px; color: {{c.secondary}}">
+              <span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 2px; background: #F5F5F5"></span>Measured</span>
+              <span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 0; border-top: 2px dashed {{c.accent}}"></span>Projected</span>
+              <span style="display: flex; align-items: center; gap: 6px"><span style="width: 2px; height: 10px; background: {{c.green}}"></span>Reset</span>
+            </span>
+          </div>
+          <div style="flex: 1; min-height: 0; display: flex; gap: 10px">
+            <div style="display: flex; flex-direction: column; justify-content: space-between; padding-bottom: 24px; font-size: 11px; color: {{c.tertiary}}; text-align: right"><span>800%</span><span>400%</span><span>0</span></div>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+              <svg viewBox="0 0 1000 400" preserveAspectRatio="none" role="img" aria-label="Measured left falls from 640% to 415% by today; projected, it climbs back with each reset" style="flex: 1; width: 100%; height: 100%; min-height: 0; overflow: visible">
+                <line x1="0" y1="0.5" x2="1000" y2="0.5" stroke="rgba(255,255,255,0.05)" vector-effect="non-scaling-stroke"></line>
+                <line x1="0" y1="200" x2="1000" y2="200" stroke="rgba(255,255,255,0.05)" vector-effect="non-scaling-stroke"></line>
+                <line x1="0" y1="399.5" x2="1000" y2="399.5" stroke="rgba(255,255,255,0.08)" vector-effect="non-scaling-stroke"></line>
+                <rect x="300" y="0" width="700" height="400" fill="rgba(255,255,255,0.015)"></rect>
+                <line x1="300" y1="0" x2="300" y2="400" stroke="rgba(255,255,255,0.18)" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"></line>
+                <path d="{{area}}" fill="rgba(245,245,245,0.05)"></path>
+                <polyline points="{{measured}}" fill="none" stroke="#F5F5F5" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
+                <polyline points="{{projected}}" fill="none" stroke="{{c.accent}}" stroke-width="2" stroke-dasharray="5 5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
+                <sc-for list="{{resets}}" as="r" hint-placeholder-count="5"><line x1="{{r.x}}" y1="{{r.y1}}" x2="{{r.x}}" y2="{{r.y2}}" stroke="{{c.green}}" stroke-width="2" vector-effect="non-scaling-stroke"></line></sc-for>
+              </svg>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: {{c.tertiary}}"><sc-for list="{{ticks}}" as="t" hint-placeholder-count="10"><span style="color: {{t.ink}}">{{t.label}}</span></sc-for></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+        <section aria-label="{{g.name}}" style="display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 0 2px">
+            <h2 class="sans" style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 500; letter-spacing: -0.01em">{{g.name}}</h2>
+            <span style="font-size: 12px; color: {{g.leftInk}}">{{g.left}}</span>
+            <span style="flex: 1"></span>
+            <button type="button" style="height: 28px; padding: 0 12px; border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 12px; font-weight: 500">Add a login</button>
+          </div>
+          <div class="glass" style="display: flex; flex-direction: column; overflow: hidden">
+            <sc-for list="{{g.logins}}" as="l" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: 250px minmax(0, 1fr) 230px; gap: 24px; align-items: center; min-height: 76px; padding: 16px 22px; box-sizing: border-box; background: {{l.bg}}; box-shadow: {{l.line}}">
+                <span style="min-width: 0; display: flex; flex-direction: column; gap: 4px">
+                  <span style="display: flex; align-items: center; gap: 8px"><span style="flex: none; width: 6px; height: 6px; border-radius: 3px; background: {{l.dot}}"></span><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{l.name}}</span><sc-if value="{{l.hasBadge}}"><span style="flex: none; height: 20px; padding: 0 7px; display: flex; align-items: center; border-radius: 6px; background: {{l.badgeBg}}; color: {{l.badgeInk}}; font-size: 11px; font-weight: 600">{{l.badge}}</span></sc-if></span>
+                  <span style="padding-left: 14px; font-size: 12px; color: {{c.tertiary}}">{{l.sub}}</span>
+                </span>
+                <span style="min-width: 0; display: flex; flex-direction: column; gap: 10px">
+                  <sc-for list="{{l.windows}}" as="w" hint-placeholder-count="2">
+                    <span style="display: grid; grid-template-columns: 64px minmax(0, 1fr) 44px 120px; gap: 14px; align-items: center">
+                      <span style="font-size: 12px; color: {{c.secondary}}">{{w.name}}</span>
+                      <span style="height: 4px; border-radius: 2px; background: {{c.track}}; overflow: hidden"><span class="grow" style="display: block; height: 4px; width: {{w.used}}; border-radius: 2px; background: {{w.bar}}"></span></span>
+                      <span style="text-align: right; font-weight: {{w.weight}}; color: {{w.ink}}">{{w.used}}</span>
+                      <span style="font-size: 12px; color: {{c.tertiary}}">{{w.reset}}</span>
+                    </span>
+                  </sc-for>
+                  <sc-if value="{{l.hasNote}}"><span style="color: {{c.secondary}}">{{l.note}}</span></sc-if>
+                </span>
+                <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px; text-align: right">
+                  <span style="font-size: 12px; color: {{l.foreInk}}">{{l.forecast}}</span>
+                  <sc-if value="{{l.hasAction}}"><button type="button" style="height: 30px; padding: 0 14px; border: {{l.btnLine}}; border-radius: 8px; background: {{l.btnBg}}; color: {{l.btnInk}}; font-size: 12px; font-weight: 600">{{l.action}}</button></sc-if>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </sc-for>
+
+      <section aria-labelledby="one-title" style="display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: baseline; gap: 12px; padding: 0 2px">
+          <h2 id="one-title" class="sans" style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 500; letter-spacing: -0.01em">One login each</h2>
+          <span style="font-size: 12px; color: {{c.secondary}}">nothing to hop to yet</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+          <sc-for list="{{singles}}" as="s" hint-placeholder-count="4">
+            <div class="card glass" style="display: flex; flex-direction: column; gap: 12px; padding: 18px 20px">
+              <span style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-weight: 600">{{s.tool}}</span><span style="font-size: 12px; color: {{c.secondary}}">{{s.left}}</span></span>
+              <span style="height: 4px; border-radius: 2px; background: {{c.track}}; overflow: hidden"><span class="grow" style="display: block; height: 4px; width: {{s.used}}; border-radius: 2px; background: rgba(255,255,255,0.78)"></span></span>
+              <span style="font-size: 12px; color: {{c.tertiary}}">{{s.sub}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin: 4px 2px 0; font-size: 12px; color: {{c.tertiary}}">OpenCode and Pi measure tokens only, so there is no limit to read. They are counted in Usage.</p>
+      </section>
+    </div>

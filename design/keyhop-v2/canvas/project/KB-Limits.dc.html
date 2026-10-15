@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyhop Limits — Coss Blue</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:#111111}
+a{color:inherit;text-decoration:none}
+input::placeholder{color:inherit;opacity:.6}
+button{font:inherit;cursor:default}
+a,button{transition:background-color .15s ease,filter .15s ease,transform .15s ease}
+.side a:hover,.side button:hover{background-color:rgba(255,255,255,.05)}
+.side a[aria-current="page"]:hover{background-color:rgba(255,255,255,.09)}
+button:hover{filter:brightness(1.12)}
+button:active{filter:brightness(.92);transform:scale(.98)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #60A5FA;outline-offset:2px}
+.glass{background:#1A1A1A;box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);border-radius:8px}
+.well{background:#1F1F1F;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);border-radius:6px}
+.card{transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s ease}
+.card:hover{box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
+@media (prefers-reduced-motion: no-preference){
+  .pet{animation:hop 2.4s cubic-bezier(.3,.7,.3,1) infinite;transform-origin:50% 100%}
+  @keyframes hop{0%,55%,100%{transform:translateY(0) scale(1,1)}62%{transform:translateY(0) scale(1.08,.9)}75%{transform:translateY(-16px) scale(.96,1.05)}88%{transform:translateY(0) scale(1.05,.94)}}
+  .shadow{animation:shade 2.4s cubic-bezier(.3,.7,.3,1) infinite}
+  @keyframes shade{0%,55%,100%{transform:scaleX(1);opacity:.45}75%{transform:scaleX(.6);opacity:.2}}
+  .star{animation:twinkle 3.2s ease-in-out infinite;animation-delay:calc(var(--i) * -0.37s)}
+  @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:.55}}
+  .grow{animation:grow 1s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i, 0) * 70ms + 200ms);transform-origin:0 50%}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .rise{animation:rise .9s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i, 0) * 45ms + 300ms);transform-origin:50% 100%}
+  @keyframes rise{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  .pop{animation:pop .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i, 0) * 6ms + 400ms)}
+  @keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+  .live{animation:live 1.6s ease-out infinite}
+  @keyframes live{0%{box-shadow:0 0 0 0 rgba(52,211,153,.6)}100%{box-shadow:0 0 0 8px rgba(52,211,153,0)}}
+  .bubble{animation:bubble .6s cubic-bezier(.2,.8,.2,1) .9s both}
+  @keyframes bubble{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
+  .today{animation:today 1.8s ease-in-out infinite}
+  @keyframes today{0%,100%{filter:brightness(1)}50%{filter:brightness(1.35)}}
+}
+
+.glass{background:#1A1A1A;box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);border-radius:12px}
+.well{background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);border-radius:10px}
+.card:hover{box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+h2[id$="-h"]:not(#total-h){font-family:'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace!important;text-transform:uppercase;letter-spacing:.16em;font-size:11px!important;font-weight:500!important;color:#A3A3A3!important}
+.lab{font-family:'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace!important;text-transform:uppercase;letter-spacing:.16em;font-size:11px!important;font-weight:500!important;color:#A3A3A3!important}
+.sans{font-family:'Geist', system-ui, sans-serif!important}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 1330px; overflow: hidden; display: flex; background: #111111; font-family: 'Geist', system-ui, sans-serif; font-size: 13px; line-height: 18px; color: {{c.label}}; font-variant-numeric: tabular-nums">
+
+  <aside class="side" style="flex: 0 0 256px; display: flex; flex-direction: column; padding: 12px 12px 14px; box-sizing: border-box; background: #111111; box-shadow: inset -1px 0 0 rgba(255,255,255,0.08)">
+      <div style="display: flex; gap: 7px; height: 14px; padding: 0 8px; margin: 2px 0 10px">
+        <span style="width: 10px; height: 10px; border-radius: 5px; background: rgba(255,95,87,0.75)"></span>
+        <span style="width: 10px; height: 10px; border-radius: 5px; background: rgba(254,188,46,0.75)"></span>
+        <span style="width: 10px; height: 10px; border-radius: 5px; background: rgba(40,200,64,0.75)"></span>
+      </div>
+      <button type="button" aria-label="Switch workspace" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; padding: 0 8px; box-sizing: border-box; border: 0; border-radius: 6px; background: transparent; color: #F5F5F5; text-align: left">
+        <span style="flex: none; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #60A5FA; color: #0A1628"><svg width="16" height="16" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 16px"><span style="font-size: 13px; font-weight: 600">Keyhop</span><span style="font-size: 12px; color: #A3A3A3">Personal · 11 logins</span></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg>
+      </button>
+      <button type="button" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; margin: 12px 0 4px; padding: 0 10px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(255,255,255,0.03); color: #A3A3A3; font-size: 13px; text-align: left"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3a8 8 0 1 0 0 16a8 8 0 0 0 0-16zM21 21l-4.3-4.3"></path></svg><span style="flex: 1">Hop to a login…</span><kbd style="font-family: inherit; font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.04); color: #A3A3A3">⌘K</kbd></button>
+
+      <div style="height: 28px; display: flex; align-items: center; padding: 0 8px; margin-top: 22px; font-size: 12px; font-weight: 500; color: #737373" class="lab">Platform</div>
+      <nav aria-label="Places" style="display: flex; flex-direction: column; gap: 3px">
+        <a href="#home" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 13px; text-align: left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span style="flex: 1">Home</span></a>
+        <a href="#limits" aria-current="page" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 13px; text-align: left; background: rgba(255,255,255,0.07); color: #FFFFFF; font-weight: 500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14l4-4M3.34 19a10 10 0 1 1 17.32 0"></path></svg><span style="flex: 1">Limits</span><span style="height: 20px; min-width: 20px; padding: 0 6px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(251,65,74,0.16); color: #FF8A82; font-size: 11px; font-weight: 600">2</span></a>
+        <a href="#usage" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 13px; text-align: left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16M18 17V9M13 17V5M8 17v-3"></path></svg><span style="flex: 1">Usage</span></a>
+        <button type="button" aria-expanded="true" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 13px; text-align: left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4"></path></svg><span style="flex: 1">Insights</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+        <div style="display: flex; flex-direction: column; gap: 1px; margin: 2px 0 4px 18px; padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.08)">
+          <a href="#coach" style="display: flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 8px; color: #A3A3A3; font-size: 13px">Coach</a>
+          <a href="#plans" style="display: flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 8px; color: #A3A3A3; font-size: 13px">Plans</a>
+          <a href="#budgets" style="display: flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 8px; color: #A3A3A3; font-size: 13px">Budgets</a>
+        </div>
+        <button type="button" aria-expanded="false" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 13px; text-align: left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span style="flex: 1">Community</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg></button>
+      </nav>
+
+      <div style="height: 28px; display: flex; align-items: center; padding: 0 8px; margin-top: 22px; font-size: 12px; font-weight: 500; color: #737373; justify-content: space-between" class="lab"><span>Limits</span><span style="display: flex; align-items: center; gap: 6px; color: {{c.green}}; text-transform: none; letter-spacing: 0; font-family: 'Geist', system-ui, sans-serif; font-size: 12px"><span class="live" style="width: 6px; height: 6px; border-radius: 3px; background: {{c.green}}"></span>Live</span></div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <sc-for list="{{limits}}" as="l" hint-placeholder-count="5">
+          <a href="#limits" style="display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 8px">
+            <span style="display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 16px"><span style="flex: none; width: 6px; height: 6px; border-radius: 3px; background: {{l.tool}}"></span><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #F5F5F5">{{l.name}}</span><span style="color: #737373">{{l.reset}}</span><span style="width: 30px; text-align: right; font-weight: 600; color: {{l.ink}}">{{l.left}}</span></span>
+            <span style="height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden"><span class="grow" style="--i: {{$index}}; display: block; height: 4px; width: {{l.left}}; border-radius: 2px; background: {{l.bar}}"></span></span>
+          </a>
+        </sc-for>
+      </div>
+
+      <div style="flex: 1"></div>
+      <button type="button" aria-label="Account" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; padding: 0 8px; box-sizing: border-box; border: 0; border-radius: 6px; background: transparent; color: #F5F5F5; text-align: left">
+        <span style="flex: none; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: rgba(96,165,250,0.25); font-size: 12px; font-weight: 600">DZ</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 16px"><span style="font-size: 13px; font-weight: 600">Personal</span><span style="font-size: 12px; color: #A3A3A3">@you</span></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg>
+      </button>
+  </aside>
+
+  <div style="position: relative; flex: 1; min-width: 0; margin: 10px 10px 10px 2px; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; background: #161616; box-shadow: 0 0 0 1px rgba(255,255,255,0.09)">
+        <header style="flex: none; display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 16px 0 28px; box-shadow: inset 0 -1px 0 rgba(255,255,255,0.07)">
+      <h1 style="margin: 0; font-size: 15px; font-weight: 600">Limits</h1>
+      <div role="group" aria-label="Tool" class="glass" style="display: flex; padding: 3px; margin-left: 8px; border-radius: 8px">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><button type="button" aria-pressed="{{t.on}}" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: {{t.bg}}; color: {{t.ink}}; font-size: 12px; font-weight: {{t.weight}}">{{t.name}}<span style="color: #737373; font-weight: 500">{{t.n}}</span></button></sc-for>
+      </div>
+      <span style="flex: 1"></span>
+      <span style="font-size: 12px; color: {{c.secondary}}">read 2 min ago</span>
+      <button type="button" aria-label="Refresh limits" class="glass" style="width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; color: {{c.secondary}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"></path></svg></button>
+    </header>
+
+    <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 32px; padding: 24px 28px 32px">
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 18px">
+        <section class="card glass" aria-labelledby="total-h" style="display: flex; flex-direction: column; gap: 20px; padding: 24px 26px 26px">
+          <span style="display: flex; flex-direction: column; gap: 6px"><span class="lab">8 logins with limits · out of 800%</span>
+          <h2 id="total-h" class="sans" style="margin: 0; font-weight: 500; font-size: 26px; line-height: 30px; letter-spacing: -0.02em">What your logins have left</h2></span>
+          <div style="display: flex; align-items: baseline; gap: 12px">
+            <span class="sans" style="font-size: 60px; line-height: 56px; font-weight: 500; letter-spacing: -0.04em">415%</span>
+            <span style="color: {{c.secondary}}">left across them all</span>
+          </div>
+          <p style="margin: 0; max-width: 46ch; color: {{c.secondary}}; line-height: 20px">Each login keeps its own limits. This adds up what each one has left, so 100% is one full login.</p>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{stats}}" as="s" hint-placeholder-count="3">
+              <div class="well" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px">
+                <span style="font-size: 12px; font-weight: 500; color: {{c.secondary}}">{{s.name}}</span>
+                <span class="sans" style="font-size: 20px; line-height: 24px; font-weight: 500; color: {{s.ink}}">{{s.value}}</span>
+                <span style="font-size: 11px; color: {{c.tertiary}}">{{s.sub}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <section class="card glass" aria-labelledby="fore-h" style="display: flex; flex-direction: column; gap: 18px; padding: 24px 26px 22px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 id="fore-h" style="margin: 0; font-size: 13px; font-weight: 600">This week and next</h2>
+            <span style="display: flex; align-items: center; gap: 14px; font-size: 12px; color: {{c.secondary}}">
+              <span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 2px; background: #F5F5F5"></span>Measured</span>
+              <span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 0; border-top: 2px dashed {{c.accent}}"></span>Projected</span>
+              <span style="display: flex; align-items: center; gap: 6px"><span style="width: 2px; height: 10px; background: {{c.green}}"></span>Reset</span>
+            </span>
+          </div>
+          <div style="flex: 1; min-height: 0; display: flex; gap: 10px">
+            <div style="display: flex; flex-direction: column; justify-content: space-between; padding-bottom: 24px; font-size: 11px; color: {{c.tertiary}}; text-align: right"><span>800%</span><span>400%</span><span>0</span></div>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+              <svg viewBox="0 0 1000 400" preserveAspectRatio="none" role="img" aria-label="Measured left falls from 640% to 415% by today; projected, it climbs back with each reset" style="flex: 1; width: 100%; height: 100%; min-height: 0; overflow: visible">
+                <line x1="0" y1="0.5" x2="1000" y2="0.5" stroke="rgba(255,255,255,0.05)" vector-effect="non-scaling-stroke"></line>
+                <line x1="0" y1="200" x2="1000" y2="200" stroke="rgba(255,255,255,0.05)" vector-effect="non-scaling-stroke"></line>
+                <line x1="0" y1="399.5" x2="1000" y2="399.5" stroke="rgba(255,255,255,0.08)" vector-effect="non-scaling-stroke"></line>
+                <rect x="300" y="0" width="700" height="400" fill="rgba(255,255,255,0.015)"></rect>
+                <line x1="300" y1="0" x2="300" y2="400" stroke="rgba(255,255,255,0.18)" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"></line>
+                <path d="{{area}}" fill="rgba(245,245,245,0.05)"></path>
+                <polyline points="{{measured}}" fill="none" stroke="#F5F5F5" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
+                <polyline points="{{projected}}" fill="none" stroke="{{c.accent}}" stroke-width="2" stroke-dasharray="5 5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
+                <sc-for list="{{resets}}" as="r" hint-placeholder-count="5"><line x1="{{r.x}}" y1="{{r.y1}}" x2="{{r.x}}" y2="{{r.y2}}" stroke="{{c.green}}" stroke-width="2" vector-effect="non-scaling-stroke"></line></sc-for>
+              </svg>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: {{c.tertiary}}"><sc-for list="{{ticks}}" as="t" hint-placeholder-count="10"><span style="color: {{t.ink}}">{{t.label}}</span></sc-for></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+        <section aria-label="{{g.name}}" style="display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 0 2px">
+            <h2 class="sans" style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 500; letter-spacing: -0.01em">{{g.name}}</h2>
+            <span style="font-size: 12px; color: {{g.leftInk}}">{{g.left}}</span>
+            <span style="flex: 1"></span>
+            <button type="button" style="height: 28px; padding: 0 12px; border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 12px; font-weight: 500">Add a login</button>
+          </div>
+          <div class="glass" style="display: flex; flex-direction: column; overflow: hidden">
+            <sc-for list="{{g.logins}}" as="l" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: 250px minmax(0, 1fr) 230px; gap: 24px; align-items: center; min-height: 76px; padding: 16px 22px; box-sizing: border-box; background: {{l.bg}}; box-shadow: {{l.line}}">
+                <span style="min-width: 0; display: flex; flex-direction: column; gap: 4px">
+                  <span style="display: flex; align-items: center; gap: 8px"><span style="flex: none; width: 6px; height: 6px; border-radius: 3px; background: {{l.dot}}"></span><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{l.name}}</span><sc-if value="{{l.hasBadge}}"><span style="flex: none; height: 20px; padding: 0 7px; display: flex; align-items: center; border-radius: 6px; background: {{l.badgeBg}}; color: {{l.badgeInk}}; font-size: 11px; font-weight: 600">{{l.badge}}</span></sc-if></span>
+                  <span style="padding-left: 14px; font-size: 12px; color: {{c.tertiary}}">{{l.sub}}</span>
+                </span>
+                <span style="min-width: 0; display: flex; flex-direction: column; gap: 10px">
+                  <sc-for list="{{l.windows}}" as="w" hint-placeholder-count="2">
+                    <span style="display: grid; grid-template-columns: 64px minmax(0, 1fr) 44px 120px; gap: 14px; align-items: center">
+                      <span style="font-size: 12px; color: {{c.secondary}}">{{w.name}}</span>
+                      <span style="height: 4px; border-radius: 2px; background: {{c.track}}; overflow: hidden"><span class="grow" style="display: block; height: 4px; width: {{w.used}}; border-radius: 2px; background: {{w.bar}}"></span></span>
+                      <span style="text-align: right; font-weight: {{w.weight}}; color: {{w.ink}}">{{w.used}}</span>
+                      <span style="font-size: 12px; color: {{c.tertiary}}">{{w.reset}}</span>
+                    </span>
+                  </sc-for>
+                  <sc-if value="{{l.hasNote}}"><span style="color: {{c.secondary}}">{{l.note}}</span></sc-if>
+                </span>
+                <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px; text-align: right">
+                  <span style="font-size: 12px; color: {{l.foreInk}}">{{l.forecast}}</span>
+                  <sc-if value="{{l.hasAction}}"><button type="button" style="height: 30px; padding: 0 14px; border: {{l.btnLine}}; border-radius: 8px; background: {{l.btnBg}}; color: {{l.btnInk}}; font-size: 12px; font-weight: 600">{{l.action}}</button></sc-if>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </sc-for>
+
+      <section aria-labelledby="one-title" style="display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: baseline; gap: 12px; padding: 0 2px">
+          <h2 id="one-title" class="sans" style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 500; letter-spacing: -0.01em">One login each</h2>
+          <span style="font-size: 12px; color: {{c.secondary}}">nothing to hop to yet</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+          <sc-for list="{{singles}}" as="s" hint-placeholder-count="4">
+            <div class="card glass" style="display: flex; flex-direction: column; gap: 12px; padding: 18px 20px">
+              <span style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-weight: 600">{{s.tool}}</span><span style="font-size: 12px; color: {{c.secondary}}">{{s.left}}</span></span>
+              <span style="height: 4px; border-radius: 2px; background: {{c.track}}; overflow: hidden"><span class="grow" style="display: block; height: 4px; width: {{s.used}}; border-radius: 2px; background: rgba(255,255,255,0.78)"></span></span>
+              <span style="font-size: 12px; color: {{c.tertiary}}">{{s.sub}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin: 4px 2px 0; font-size: 12px; color: {{c.tertiary}}">OpenCode and Pi measure tokens only, so there is no limit to read. They are counted in Usage.</p>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"appearance":{"editor":"enum","options":["night"],"default":"night"},"glow":{"editor":"boolean","default":true},"$preview":{"width":1440,"height":1330}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const glow = this.props.glow ?? true;
+    const mode = 'calm';
+    const vivid = mode === 'vivid';
+    const mono = mode === 'mono';
+    const accent = '#60A5FA';
+    const rgba = (h, a) => { const n = parseInt(String(h).replace('#', '').slice(0, 6), 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+    const sys = { blue: '#0A84FF', green: '#34D399', orange: '#F59E0B', red: '#FB414A', purple: '#BF5AF2', pink: '#FF375F', teal: '#40C8E0', gray: '#8E8E93' };
+    const c = Object.assign({
+      sky: glow ? 'radial-gradient(80% 55% at 70% 100%, ' + rgba(accent, 0.30) + ', transparent 72%), #13151A' : '#13151A',
+      hill1: '#1C1F26', hill2: '#171A20',
+      label: '#F5F5F5', secondary: '#A3A3A3', tertiary: '#737373',
+      selected: 'rgba(255,255,255,0.08)', track: 'rgba(255,255,255,0.08)', cell0: '#1F1F1F'
+    }, sys, { accent: accent });
+    if (!vivid) c.green = mono ? '#F5F5F5' : '#34D399';
+    const icons = {
+      home: 'M2.5 7.5L8 3l5.5 4.5V13.5H10V10H6v3.5H2.5z',
+      limits: 'M8 13.5a5.5 5.5 0 1 1 5.5-5.5M8 8l3-2.5',
+      usage: 'M3 13V9M8 13V4M13 13V7',
+      insights: 'M8 2.5a4 4 0 0 1 2.2 7.3V11.5H5.8V9.8A4 4 0 0 1 8 2.5zM6.5 13.5h3',
+      community: 'M6 7a2.2 2.2 0 1 0 0-4.4A2.2 2.2 0 0 0 6 7zM2 13c.4-2.2 2-3.5 4-3.5s3.6 1.3 4 3.5M11 3a2 2 0 0 1 0 4M12 9.6c1.1.5 1.8 1.7 2 3.4',
+      plus: 'M8 3.5v9M3.5 8h9',
+      key: 'M6 10a3.5 3.5 0 1 1 2.8-1.4L14 13.8M11.5 11.3l1.2-1.2'
+    };
+    const places = [['Home', 'home', sys.blue, '#home'], ['Limits', 'limits', sys.orange, '#limits'], ['Usage', 'usage', sys.green, '#usage'], ['Insights', 'insights', sys.purple, '#insights'], ['Community', 'community', sys.pink, '#community']]
+      .map((p, i) => ({ name: p[0], icon: icons[p[1]], color: vivid ? p[2] : (i === 0 ? (mono ? 'rgba(255,255,255,0.22)' : rgba(accent, 0.55)) : 'rgba(255,255,255,0.10)'), href: p[3], current: i === 0 ? 'page' : 'false', bg: i === 0 ? c.selected : 'transparent', weight: i === 0 ? 600 : 400, hasBadge: i === 1 }));
+    const toolColor = vivid ? { codex: '#10A37F', claude: '#D97757', cursor: '#C7C7CC', copilot: '#8E5CF7', gemini: '#4285F4', windsurf: '#09B6A2', opencode: '#F59E0B', pi: '#FF5E8A' }
+      : mono ? { claude: 'rgba(255,255,255,0.92)', opencode: 'rgba(255,255,255,0.72)', cursor: 'rgba(255,255,255,0.56)', codex: 'rgba(255,255,255,0.42)', gemini: 'rgba(255,255,255,0.30)', pi: 'rgba(255,255,255,0.20)', copilot: 'rgba(255,255,255,0.42)', windsurf: 'rgba(255,255,255,0.30)' }
+      : { claude: '#A8CEFC', opencode: '#80B7FB', cursor: '#60A5FA', codex: '#4D84C8', gemini: '#3D6AA0', pi: '#2E4F78', copilot: '#80B7FB', windsurf: '#4D84C8' };
+    const limits = [['Codex · 5h', 'codex', 7, '~11:19'], ['Claude Code · 5h', 'claude', 49, 'in 3h 05m'], ['Cursor · auto', 'cursor', 38, 'in 13d'], ['Copilot', 'copilot', 53, 'in 13d'], ['Windsurf · day', 'windsurf', 67, 'in 14h']]
+      .map((l) => ({ name: l[0], tool: toolColor[l[1]], left: l[2] + '%', reset: l[3], dash: (l[2] / 100 * 56.55).toFixed(1) + ' 60', bar: l[2] <= 15 ? sys.red : vivid ? (l[2] <= 40 ? sys.orange : sys.green) : (!mono && l[2] <= 40 ? sys.orange : 'rgba(255,255,255,0.78)'), ink: l[2] <= 15 ? sys.red : c.label }));
+    const ranges = ['Day', 'Week', 'Month', 'All'].map((r, i) => ({ name: r, on: i === 1 ? 'true' : 'false', bg: i === 1 ? '#2A2A2A' : 'transparent', ink: i === 1 ? '#F5F5F5' : '#A3A3A3', weight: i === 1 ? 600 : 500 }));
+    const mix = [['Claude Code', 'claude', 25, '11.2M'], ['OpenCode', 'opencode', 20, '9.0M'], ['Cursor', 'cursor', 19, '8.5M'], ['Codex', 'codex', 14, '6.3M'], ['Gemini CLI', 'gemini', 14, '6.3M'], ['Pi', 'pi', 8, '3.6M']]
+      .map((m) => ({ name: m[0], color: toolColor[m[1]], pct: m[2] + '%', w: m[2] + '%', tokens: m[3] + ' tokens' }));
+    const days = [5.6, 6.2, 6.8, 3.0, 2.7, 7.1, 7.3, 7.7, 8.1, 2.9, 3.4, 7.9, 7.4, 7.6];
+    const bars = days.map((d, i) => ({ h: Math.round(d / 8.4 * 100) + '%', bg: i === days.length - 1 ? accent : vivid ? (i >= 7 ? rgba(sys.blue, 0.75) : rgba(sys.blue, 0.32)) : (i >= 7 ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.16)') }));
+    const green = vivid ? ['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.45)', 'rgba(52,211,153,0.7)', '#34D399']
+      : mono ? ['rgba(255,255,255,0.16)', 'rgba(255,255,255,0.32)', 'rgba(255,255,255,0.55)', 'rgba(255,255,255,0.9)']
+      : [rgba(accent, 0.28), rgba(accent, 0.5), rgba(accent, 0.75), '#90C0FC'];
+    const legend = [c.cell0].concat(green);
+    let seed = 23;
+    const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    const weeks = Array.from({ length: 17 }, (_, w) => ({
+      days: Array.from({ length: 7 }, (_, d) => {
+        const i = w * 7 + d;
+        const fromEnd = 17 * 7 - 1 - i;
+        let lv = fromEnd === 12 ? 0 : fromEnd < 12 ? 2 + Math.floor(rnd() * 3) : (rnd() < 0.28 ? 0 : 1 + Math.floor(rnd() * 3));
+        if (fromEnd === 0) lv = 4;
+        return { bg: legend[lv], i: i, cls: fromEnd === 0 ? 'pop today' : 'pop' };
+      })
+    }));
+    seed = 5;
+    const stars = Array.from({ length: 34 }, () => ({ x: Math.round(rnd() * 400), y: Math.round(rnd() * 200), r: rnd() > 0.85 ? 2.5 : 1.5 }));
+    const alerts = [
+      { title: 'Codex has no second login', desc: 'Add one to hop to next time.', action: 'Add', color: rgba(sys.red, 0.18), glyph: '#FF8A82', icon: icons.plus, btnBg: '#262626', btnInk: '#F5F5F5' },
+      { title: 'spare@personal.dev signed out', desc: 'Cursor needs you to sign in.', action: 'Sign In', color: rgba(sys.orange, 0.18), glyph: '#FFC266', icon: icons.key, btnBg: accent, btnInk: '#0A1628' }
+    ];
+    const stageNames = ['Speck', 'Hatch', 'Frame', 'Bulk', 'Mass', 'Monument'];
+    const stages = stageNames.map((n, i) => ({
+      name: n, size: 12 + i * 3, o: i <= 3 ? 1 : 0.35,
+      bg: i <= 3 ? (i === 3 ? rgba(accent, 0.30) : 'rgba(255,255,255,0.08)') : 'rgba(255,255,255,0.03)',
+      ring: i === 3 ? '0 0 0 2px ' + accent : 'none',
+      weight: i === 3 ? 700 : 500, ink: i <= 3 ? c.label : c.tertiary
+    }));
+    const models = [['openai/gpt-5.6-sol', 20, 'OpenCode'], ['composer-2', 19, 'Cursor'], ['claude-opus-5', 18, 'Claude Code'], ['gpt-5.6-sol', 14, 'Codex']]
+      .map((m, i) => ({ n: i + 1, name: m[0], tool: m[2], pct: m[1] + '%', w: (m[1] * 5) + '%', bar: i === 0 ? accent : 'rgba(255,255,255,0.55)' }));
+    const L = (() => {
+      const win = (name, u, reset) => ({ name: name, used: u + '%', reset: reset,
+        bar: u >= 90 ? sys.red : u >= 70 ? sys.orange : 'rgba(255,255,255,0.78)', ink: u >= 90 ? '#FF8A82' : c.label, weight: u >= 90 ? 600 : 500 });
+      const login = (o) => Object.assign({ hasBadge: false, badge: '', badgeBg: 'transparent', badgeInk: c.secondary, hasNote: false, note: '', windows: [],
+        forecast: '', foreInk: c.tertiary, hasAction: false, action: '', btnBg: 'transparent', btnInk: '#E5E5E5', btnLine: '1px solid rgba(255,255,255,0.10)',
+        bg: 'transparent', dot: c.green, line: 'none' }, o);
+      const inUse = { hasBadge: true, badge: 'In use', badgeBg: rgba(accent, 0.16), badgeInk: '#93C5FD' };
+      const divide = 'inset 0 1px 0 rgba(255,255,255,0.07)';
+      const groups = [
+        { name: 'Codex', left: '7% of 100% left · partial outage', leftInk: '#FF8A82', logins: [
+          login(Object.assign({ name: 'me@personal.dev', sub: 'Plus · read 2m ago', dot: sys.red, bg: rgba(sys.red, 0.06), windows: [win('5-hour', 93, 'runs out 11:19 AM')], forecast: 'No other Codex login', foreInk: '#FF8A82', hasAction: true, action: 'Add a login' }, inUse))
+        ] },
+        { name: 'Claude Code', left: '108% of 200% left · about 28%/h', leftInk: c.secondary, logins: [
+          login(Object.assign({ name: 'Personal', sub: 'Max 5x · me@personal.dev', windows: [win('5-hour', 51, 'back in 3h 05m'), win('Weekly', 6, 'back in 6d 19h')], forecast: 'Empty around 12:43 PM' }, inUse)),
+          login({ name: 'work@studio.dev', sub: 'Pro · read 2m ago', line: divide, windows: [win('5-hour', 12, 'back in 39m'), win('Weekly', 41, 'back in 3d 11h')], forecast: 'Has the most room', foreInk: c.green, hasAction: true, action: 'Hop here', btnBg: accent, btnInk: '#0A1628', btnLine: '0' })
+        ] },
+        { name: 'Cursor', left: '38% of 100% left · about 0.2%/h', leftInk: c.secondary, logins: [
+          login(Object.assign({ name: 'me@personal.dev', sub: 'Ultra · read 2m ago', windows: [win('Auto', 62, 'back in 13d 4h')] }, inUse)),
+          login({ name: 'spare@personal.dev', sub: 'Pro · login expired', line: divide, dot: sys.red, hasBadge: true, badge: 'Signed out', badgeBg: rgba(sys.red, 0.16), badgeInk: '#FF8A82', hasNote: true, note: 'Hop to it and sign in to Cursor again to read its limits.', hasAction: true, action: 'Hop and sign in' })
+        ] }
+      ];
+      const singles = [['Copilot', 53, 'Premium · back in 13d 4h'], ['Windsurf', 67, 'Day · back in 14h 16m'], ['Codebuff', 70, 'Usage'], ['Gemini CLI', 72, 'Quota']]
+        .map((s) => ({ tool: s[0], left: s[1] + '% left', used: (100 - s[1]) + '%', sub: s[2] }));
+      const tabs = [['All', '11'], ['Codex', '1'], ['Claude Code', '2'], ['Cursor', '2'], ['Copilot', '1'], ['Windsurf', '1'], ['Codebuff', '1'], ['Gemini CLI', '1']]
+        .map((t, i) => ({ name: t[0], n: t[1], on: i === 0 ? 'true' : 'false', bg: i === 0 ? '#2A2A2A' : 'transparent', ink: i === 0 ? '#F5F5F5' : '#A3A3A3', weight: i === 0 ? 600 : 500 }));
+      const stats = [['Draining', '80%/h', 'this hour, all logins', c.label], ['Next reset', '+35%', 'at 12:41 PM', c.green], ['At this pace', '7 days', 'before all run out', c.label]]
+        .map((s) => ({ name: s[0], value: s[1], sub: s[2], ink: s[3] }));
+      const y = (v) => (400 - v / 800 * 400).toFixed(1);
+      const mPts = [[0, 640], [40, 610], [80, 520], [110, 560], [150, 470], [190, 500], [230, 430], [270, 450], [300, 415]];
+      const pPts = [[300, 415], [330, 395], [330, 430], [400, 360], [400, 470], [520, 330], [520, 420], [640, 300], [640, 380], [780, 250], [780, 330], [1000, 180]];
+      const resets = [[330, 395, 430], [400, 360, 470], [520, 330, 420], [640, 300, 380], [780, 250, 330]].map((r) => ({ x: r[0], y1: y(r[1]), y2: y(r[2]) }));
+      const ticks = ['Sun', 'Mon', 'Today', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'].map((d, i) => ({ label: d, ink: i === 2 ? c.label : c.tertiary }));
+      return { groups: groups, singles: singles, tabs: tabs, stats: stats, resets: resets, ticks: ticks,
+        measured: mPts.map((p) => p[0] + ',' + y(p[1])).join(' '), projected: pPts.map((p) => p[0] + ',' + y(p[1])).join(' '),
+        area: 'M0,400 L' + mPts.map((p) => p[0] + ',' + y(p[1])).join(' L') + ' L300,400 Z' };
+    })();
+    const extra = L;
+    return { ...extra, models: models, c: c, places: places, limits: limits, ranges: ranges, mix: mix, bars: bars, weeks: weeks, legend: legend, stars: stars, alerts: alerts, stages: stages };
+  }
+}
+</script>
+</body>
+</html>

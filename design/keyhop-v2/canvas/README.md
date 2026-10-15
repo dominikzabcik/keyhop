@@ -22,8 +22,14 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
   - a wider sidebar with roomier rows and group spacing, and a 60px header;
   - 18–24px gutters, more padding in every card, and four Top models instead of five;
   - finer heatmap cells and a Live tag in normal case.
-  `KB-Components` is still the unpolished blue sheet.
-- **Next once a colour is picked:** apply it to System, Limits, the menu bar popover and keyhop.app (Mac and web in parity), then rewrite `design/keyhop-v2/index.html` and the window and site tokens.
+- **Coss Blue across the product** (2026-10-15). Mac and web are now in parity:
+  - `KB-Limits` is the window's Limits page: the pooled figure, the forecast, logins grouped by tool and one-login tools.
+  - `KB-Menu` is the menu bar popover.
+  - `KB-Web` is keyhop.app.
+  - `KB-Components` is the component sheet, now with the same spacing.
+  - `tools/kb_page.py` builds window pages from KB-Home's shell and `tools/kb_board.py` builds standalone boards. Both read `tools/kb/<page>.html` and `.js`.
+- **Next:** owner feedback on the KB boards, then rewrite `design/keyhop-v2/index.html` and the real window and site tokens to Coss Blue.
+- **Was next once a colour is picked:** apply it to System, Limits, the menu bar popover and keyhop.app (Mac and web in parity), then rewrite `design/keyhop-v2/index.html` and the window and site tokens.
 
 ## How we got there (rows on the canvas, oldest at the bottom)
 
@@ -59,6 +65,7 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
 - `node tools/check-dc.mjs <artboard>` runs `renderVals()` for each theme and checks that every hole resolves.
 - `python3 tools/devl.py <mono|ember|blue|iris> project/S1-Home.dc.html project/S1-Components.dc.html` writes the `K-<name>-*` devl.dev takes.
 - `HTML=<out.html> node tools/render-dc.mjs …` also saves the rendered artboard as static HTML.
+- `python3 tools/kb_page.py limits "#limits" 1330 Limits` and `python3 tools/kb_board.py <menu|web> <w> <h> <title>` rebuild the Coss Blue boards.
 - `python3 tools/palettes.py <iris|graphite|emerald|ember|cobalt> S1-Home.dc.html S1-Components.dc.html` writes the `P-<name>-*` recolours.
 
 ## Restoring the canvas on another claude.ai account

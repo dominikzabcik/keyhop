@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyhop Home — Coss Blue, polished</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:#111111}
+a{color:inherit;text-decoration:none}
+input::placeholder{color:inherit;opacity:.6}
+button{font:inherit;cursor:default}
+a,button{transition:background-color .15s ease,filter .15s ease,transform .15s ease}
+.side a:hover,.side button:hover{background-color:rgba(255,255,255,.05)}
+.side a[aria-current="page"]:hover{background-color:rgba(255,255,255,.09)}
+button:hover{filter:brightness(1.12)}
+button:active{filter:brightness(.92);transform:scale(.98)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #60A5FA;outline-offset:2px}
+.glass{background:#1A1A1A;box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);border-radius:8px}
+.well{background:#1F1F1F;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);border-radius:6px}
+.card{transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s ease}
+.card:hover{box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
+@media (prefers-reduced-motion: no-preference){
+  .pet{animation:hop 2.4s cubic-bezier(.3,.7,.3,1) infinite;transform-origin:50% 100%}
+  @keyframes hop{0%,55%,100%{transform:translateY(0) scale(1,1)}62%{transform:translateY(0) scale(1.08,.9)}75%{transform:translateY(-16px) scale(.96,1.05)}88%{transform:translateY(0) scale(1.05,.94)}}
+  .shadow{animation:shade 2.4s cubic-bezier(.3,.7,.3,1) infinite}
+  @keyframes shade{0%,55%,100%{transform:scaleX(1);opacity:.45}75%{transform:scaleX(.6);opacity:.2}}
+  .star{animation:twinkle 3.2s ease-in-out infinite;animation-delay:calc(var(--i) * -0.37s)}
+  @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:.55}}
+  .grow{animation:grow 1s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i, 0) * 70ms + 200ms);transform-origin:0 50%}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .rise{animation:rise .9s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i, 0) * 45ms + 300ms);transform-origin:50% 100%}
+  @keyframes rise{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  .pop{animation:pop .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i, 0) * 6ms + 400ms)}
+  @keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+  .live{animation:live 1.6s ease-out infinite}
+  @keyframes live{0%{box-shadow:0 0 0 0 rgba(52,211,153,.6)}100%{box-shadow:0 0 0 8px rgba(52,211,153,0)}}
+  .bubble{animation:bubble .6s cubic-bezier(.2,.8,.2,1) .9s both}
+  @keyframes bubble{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
+  .today{animation:today 1.8s ease-in-out infinite}
+  @keyframes today{0%,100%{filter:brightness(1)}50%{filter:brightness(1.35)}}
+}
+
+.glass{background:#1A1A1A;box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);border-radius:12px}
+.well{background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);border-radius:10px}
+.card:hover{box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+h2[id$="-h"]:not(#total-h){font-family:'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace!important;text-transform:uppercase;letter-spacing:.16em;font-size:11px!important;font-weight:500!important;color:#A3A3A3!important}
+.lab{font-family:'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace!important;text-transform:uppercase;letter-spacing:.16em;font-size:11px!important;font-weight:500!important;color:#A3A3A3!important}
+.sans{font-family:'Geist', system-ui, sans-serif!important}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 960px; overflow: hidden; display: flex; background: #111111; font-family: 'Geist', system-ui, sans-serif; font-size: 13px; line-height: 18px; color: {{c.label}}; font-variant-numeric: tabular-nums">
+
+  <aside class="side" style="flex: 0 0 256px; display: flex; flex-direction: column; padding: 12px 12px 14px; box-sizing: border-box; background: #111111; box-shadow: inset -1px 0 0 rgba(255,255,255,0.08)">
+      <div style="display: flex; gap: 7px; height: 14px; padding: 0 8px; margin: 2px 0 10px">
+        <span style="width: 10px; height: 10px; border-radius: 5px; background: rgba(255,95,87,0.75)"></span>
+        <span style="width: 10px; height: 10px; border-radius: 5px; background: rgba(254,188,46,0.75)"></span>
+        <span style="width: 10px; height: 10px; border-radius: 5px; background: rgba(40,200,64,0.75)"></span>
+      </div>
+      <button type="button" aria-label="Switch workspace" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; padding: 0 8px; box-sizing: border-box; border: 0; border-radius: 6px; background: transparent; color: #F5F5F5; text-align: left">
+        <span style="flex: none; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #60A5FA; color: #0A1628"><svg width="16" height="16" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 16px"><span style="font-size: 13px; font-weight: 600">Keyhop</span><span style="font-size: 12px; color: #A3A3A3">Personal · 11 logins</span></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg>
+      </button>
+      <button type="button" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; margin: 12px 0 4px; padding: 0 10px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(255,255,255,0.03); color: #A3A3A3; font-size: 13px; text-align: left"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3a8 8 0 1 0 0 16a8 8 0 0 0 0-16zM21 21l-4.3-4.3"></path></svg><span style="flex: 1">Hop to a login…</span><kbd style="font-family: inherit; font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.04); color: #A3A3A3">⌘K</kbd></button>
+
+      <div style="height: 28px; display: flex; align-items: center; padding: 0 8px; margin-top: 22px; font-size: 12px; font-weight: 500; color: #737373" class="lab">Platform</div>
+      <nav aria-label="Places" style="display: flex; flex-direction: column; gap: 3px">
+        <a href="#home" aria-current="page" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 13px; text-align: left; background: rgba(255,255,255,0.07); color: #FFFFFF; font-weight: 500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span style="flex: 1">Home</span></a>
+        <a href="#limits" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 13px; text-align: left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14l4-4M3.34 19a10 10 0 1 1 17.32 0"></path></svg><span style="flex: 1">Limits</span><span style="height: 20px; min-width: 20px; padding: 0 6px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(251,65,74,0.16); color: #FF8A82; font-size: 11px; font-weight: 600">2</span></a>
+        <a href="#usage" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 13px; text-align: left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16M18 17V9M13 17V5M8 17v-3"></path></svg><span style="flex: 1">Usage</span></a>
+        <button type="button" aria-expanded="true" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 13px; text-align: left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4"></path></svg><span style="flex: 1">Insights</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+        <div style="display: flex; flex-direction: column; gap: 1px; margin: 2px 0 4px 18px; padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.08)">
+          <a href="#coach" style="display: flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 8px; color: #A3A3A3; font-size: 13px">Coach</a>
+          <a href="#plans" style="display: flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 8px; color: #A3A3A3; font-size: 13px">Plans</a>
+          <a href="#budgets" style="display: flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 8px; color: #A3A3A3; font-size: 13px">Budgets</a>
+        </div>
+        <button type="button" aria-expanded="false" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px; background: transparent; color: #E5E5E5; font-size: 13px; text-align: left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span style="flex: 1">Community</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg></button>
+      </nav>
+
+      <div style="height: 28px; display: flex; align-items: center; padding: 0 8px; margin-top: 22px; font-size: 12px; font-weight: 500; color: #737373; justify-content: space-between" class="lab"><span>Limits</span><span style="display: flex; align-items: center; gap: 6px; color: {{c.green}}; text-transform: none; letter-spacing: 0; font-family: 'Geist', system-ui, sans-serif; font-size: 12px"><span class="live" style="width: 6px; height: 6px; border-radius: 3px; background: {{c.green}}"></span>Live</span></div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <sc-for list="{{limits}}" as="l" hint-placeholder-count="5">
+          <a href="#limits" style="display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 8px">
+            <span style="display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 16px"><span style="flex: none; width: 6px; height: 6px; border-radius: 3px; background: {{l.tool}}"></span><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #F5F5F5">{{l.name}}</span><span style="color: #737373">{{l.reset}}</span><span style="width: 30px; text-align: right; font-weight: 600; color: {{l.ink}}">{{l.left}}</span></span>
+            <span style="height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden"><span class="grow" style="--i: {{$index}}; display: block; height: 4px; width: {{l.left}}; border-radius: 2px; background: {{l.bar}}"></span></span>
+          </a>
+        </sc-for>
+      </div>
+
+      <div style="flex: 1"></div>
+      <button type="button" aria-label="Account" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; padding: 0 8px; box-sizing: border-box; border: 0; border-radius: 6px; background: transparent; color: #F5F5F5; text-align: left">
+        <span style="flex: none; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: rgba(96,165,250,0.25); font-size: 12px; font-weight: 600">DZ</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 16px"><span style="font-size: 13px; font-weight: 600">Personal</span><span style="font-size: 12px; color: #A3A3A3">@you</span></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3A3A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg>
+      </button>
+  </aside>
+
+  <div style="position: relative; flex: 1; min-width: 0; margin: 10px 10px 10px 2px; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; background: #161616; box-shadow: 0 0 0 1px rgba(255,255,255,0.09)">
+    <header style="flex: none; display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 16px 0 28px; box-shadow: inset 0 -1px 0 rgba(255,255,255,0.07)">
+      <h1 style="margin: 0; font-size: 15px; font-weight: 600">Home</h1>
+      <div role="group" aria-label="Range" class="glass" style="display: flex; padding: 3px; margin-left: 8px; border-radius: 8px">
+        <sc-for list="{{ranges}}" as="r" hint-placeholder-count="4"><button type="button" aria-pressed="{{r.on}}" style="height: 28px; padding: 0 14px; border: 0; border-radius: 6px; background: {{r.bg}}; color: {{r.ink}}; font-size: 12px; font-weight: {{r.weight}}">{{r.name}}</button></sc-for>
+      </div>
+      <span style="flex: 1"></span>
+      <span style="font-size: 12px; color: {{c.secondary}}">Tuesday, October 13 · limits read 2 min ago</span>
+      <button type="button" aria-label="Refresh limits" class="glass" style="width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; color: {{c.secondary}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"></path></svg></button>
+    </header>
+
+    <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 18px; padding: 20px 24px 24px">
+
+      <div style="min-height: 0; display: flex; flex-direction: column; gap: 18px">
+        <section class="card glass" aria-labelledby="total-h" style="flex: none; display: flex; flex-direction: column; gap: 20px; padding: 24px 26px 26px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <span style="display: flex; flex-direction: column; gap: 6px"><span class="lab">Tue, Oct 13 · Week</span><h2 id="total-h" class="sans" style="margin: 0; font-weight: 500; font-size: 26px; line-height: 30px; letter-spacing: -0.02em">This week, so far</h2></span>
+            <span style="font-size: 12px; font-weight: 600; color: {{c.green}}">↑ 16% on last week</span>
+          </div>
+          <div style="display: flex; align-items: flex-end; flex-wrap: wrap; gap: 6px 20px">
+            <span class="sans" style="font-size: 60px; line-height: 56px; font-weight: 500; letter-spacing: -0.04em">44,958,228</span>
+            <span style="display: flex; flex-direction: column; line-height: 18px; padding-bottom: 2px"><span class="sans" style="font-size: 20px; line-height: 24px; font-weight: 500; color: {{c.green}}">$92.59</span><span style="color: {{c.secondary}}">tokens · value at API prices</span></span>
+          </div>
+          <div role="img" aria-label="Share of tokens by tool" style="display: flex; height: 8px; gap: 2px; border-radius: 4px; overflow: hidden">
+            <sc-for list="{{mix}}" as="m" hint-placeholder-count="6"><span class="grow" style="--i: {{$index}}; width: {{m.w}}; background: {{m.color}}"></span></sc-for>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{mix}}" as="m" hint-placeholder-count="6">
+              <div class="well" style="min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: 12px 12px">
+                <span style="min-width: 0; font-size: 12px; font-weight: 500; color: {{c.secondary}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.name}}</span>
+                <span style="display: flex; align-items: center; gap: 7px; font-size: 18px; line-height: 22px; font-weight: 500" class="sans"><span style="flex: none; width: 7px; height: 7px; border-radius: 2px; background: {{m.color}}"></span>{{m.pct}}</span>
+                <span style="font-size: 11px; color: {{c.tertiary}}">{{m.tokens}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <section class="card glass" aria-labelledby="trend-h" style="flex: none; height: 240px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px; padding: 22px 26px 22px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 id="trend-h" style="margin: 0; font-size: 13px; font-weight: 600">Tokens per day</h2>
+            <span style="display: flex; align-items: center; gap: 14px; font-size: 12px; color: {{c.secondary}}"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span>Last week</span><span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 2px; background: rgba(255,255,255,0.55)"></span>This week</span><span>today <span style="color: {{c.label}}; font-weight: 600">7.6M</span></span></span>
+          </div>
+          <div style="flex: 1; min-height: 0; display: flex; gap: 10px">
+            <div style="display: flex; flex-direction: column; justify-content: space-between; padding-bottom: 22px; font-size: 11px; color: {{c.tertiary}}; text-align: right"><span>8M</span><span>4M</span><span>0</span></div>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+              <div style="position: relative; flex: 1; min-height: 0; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px">
+                <span style="position: absolute; left: 0; right: 0; top: 0; height: 1px; background: rgba(255,255,255,0.05)"></span>
+                <span style="position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(255,255,255,0.05)"></span>
+                <sc-for list="{{bars}}" as="b" hint-placeholder-count="14"><span class="rise" style="--i: {{$index}}; position: relative; flex: 1; max-width: 34px; height: {{b.h}}; border-radius: 3px 3px 1px 1px; background: {{b.bg}}"></span></sc-for>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: {{c.tertiary}}"><span>Sep 30</span><span>Oct 6</span><span style="color: {{c.label}}">Today</span></div>
+            </div>
+          </div>
+        </section>
+        <section class="card glass" aria-labelledby="models-h" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 22px 26px 18px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 id="models-h" style="margin: 0; font-size: 13px; font-weight: 600">Top models</h2>
+            <span style="font-size: 12px; color: {{c.secondary}}">share of tokens this week</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <sc-for list="{{models}}" as="m" hint-placeholder-count="4">
+              <div style="display: grid; grid-template-columns: 20px minmax(0, 1.4fr) minmax(0, 2fr) 44px; gap: 12px; align-items: center; height: 42px">
+                <span style="font-size: 12px; color: {{c.tertiary}}">{{m.n}}</span>
+                <span style="min-width: 0; display: flex; flex-direction: column; line-height: 16px"><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.name}}</span><span style="font-size: 11px; color: {{c.tertiary}}">via {{m.tool}}</span></span>
+                <span style="height: 4px; border-radius: 2px; background: {{c.track}}; overflow: hidden"><span class="grow" style="--i: {{$index}}; display: block; height: 4px; width: {{m.w}}; border-radius: 2px; background: {{m.bar}}"></span></span>
+                <span style="text-align: right; font-weight: 600">{{m.pct}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </div>
+
+      <div style="min-height: 0; display: flex; flex-direction: column; gap: 18px">
+        <section class="card glass" aria-labelledby="pet-h" style="position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: {{c.sky}}">
+          <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%">
+            <sc-for list="{{stars}}" as="s" hint-placeholder-count="30"><rect class="star" style="--i: {{$index}}" x="{{s.x}}" y="{{s.y}}" width="{{s.r}}" height="{{s.r}}" fill="#FFFFFF"></rect></sc-for>
+            <path d="M0 236 C 70 214 140 220 210 228 C 280 236 340 216 400 222 L400 300 L0 300 Z" fill="{{c.hill1}}"></path>
+            <path d="M0 266 C 100 252 210 256 300 262 C 350 265 380 264 400 262 L400 300 L0 300 Z" fill="{{c.hill2}}"></path>
+          </svg>
+          <div style="position: relative; display: flex; align-items: center; justify-content: space-between; padding: 22px 24px 0">
+            <h2 id="pet-h" style="margin: 0; font-size: 13px; font-weight: 600">Bulk</h2>
+            <span style="display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 6px; background: rgba(255,255,255,0.08); font-size: 11px; font-weight: 600"><span style="width: 6px; height: 6px; border-radius: 3px; background: #FFB27A"></span>On a 12-day streak</span>
+          </div>
+          <div style="position: relative; display: flex; flex-direction: column; gap: 6px; padding: 14px 24px 0">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: {{c.secondary}}"><span>About 800M so far</span><span>4.2B tokens until Mass</span></div>
+            <span style="height: 4px; border-radius: 2px; background: {{c.track}}; overflow: hidden"><span class="grow" style="display: block; height: 4px; width: 16%; border-radius: 2px; background: {{c.accent}}"></span></span>
+          </div>
+          <div style="position: relative; flex: 1; min-height: 0; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 0 28px 26px 24px">
+            <div class="bubble" style="max-width: 220px; margin-bottom: 64px; padding: 10px 12px; border-radius: 8px 8px 2px 8px; background: #F5F5F5; color: #1D1D1F; line-height: 17px; box-shadow: 0 10px 28px rgba(0,0,10,0.45)">
+              <span style="display: block; font-weight: 600">Codex is nearly out.</span>
+              <span style="display: block; color: #48484A">I can hop Claude Code to work@studio.dev, it has 59% left.</span>
+              <span style="display: flex; gap: 6px; margin-top: 8px"><button type="button" style="height: 26px; padding: 0 12px; border: 0; border-radius: 6px; background: {{c.accent}}; color: #0A1628; font-size: 12px; font-weight: 600">Hop</button><button type="button" style="height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: rgba(0,0,0,0.06); color: #3A3A3C; font-size: 12px; font-weight: 500">Later</button></span>
+            </div>
+            <div style="flex: none; display: flex; flex-direction: column; align-items: center">
+              <svg class="pet" width="72" height="72" viewBox="0 0 16 16" shape-rendering="crispEdges" role="img" aria-label="Your pet, Bulk, hopping"><rect x="9" y="1" width="2" height="4" fill="#FFF4E2"></rect><rect x="8" y="4" width="5" height="4" fill="#FFF4E2"></rect><rect x="11" y="5" width="1" height="1" fill="#2B2420"></rect><rect x="3" y="7" width="10" height="4" fill="#FFF4E2"></rect><rect x="3" y="11" width="10" height="1" fill="#E8D7BC"></rect><rect x="4" y="12" width="2" height="2" fill="#FFF4E2"></rect><rect x="10" y="12" width="2" height="2" fill="#FFF4E2"></rect><rect x="1" y="8" width="2" height="2" fill="#FF8A3D"></rect><rect x="12" y="9" width="3" height="3" fill="#FF8A3D"></rect></svg>
+              <span class="shadow" style="width: 46px; height: 7px; margin-top: 2px; border-radius: 50%; background: #000000; opacity: .45"></span>
+            </div>
+          </div>
+          <div style="position: relative; display: flex; justify-content: space-between; gap: 4px; padding: 14px 22px 16px; background: rgba(22,22,22,0.72); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06)">
+            <sc-for list="{{stages}}" as="s" hint-placeholder-count="6">
+              <span style="display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0">
+                <span style="width: 34px; height: 34px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: {{s.bg}}; box-shadow: {{s.ring}}"><svg width="{{s.size}}" height="{{s.size}}" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true" opacity="{{s.o}}"><rect x="9" y="1" width="2" height="4" fill="#FFF4E2"></rect><rect x="8" y="4" width="5" height="4" fill="#FFF4E2"></rect><rect x="11" y="5" width="1" height="1" fill="#2B2420"></rect><rect x="3" y="7" width="10" height="4" fill="#FFF4E2"></rect><rect x="3" y="11" width="10" height="1" fill="#E8D7BC"></rect><rect x="4" y="12" width="2" height="2" fill="#FFF4E2"></rect><rect x="10" y="12" width="2" height="2" fill="#FFF4E2"></rect><rect x="1" y="8" width="2" height="2" fill="#FF8A3D"></rect><rect x="12" y="9" width="3" height="3" fill="#FF8A3D"></rect></svg></span>
+                <span style="font-size: 11px; font-weight: {{s.weight}}; color: {{s.ink}}">{{s.name}}</span>
+              </span>
+            </sc-for>
+          </div>
+        </section>
+
+        <section class="card glass" aria-labelledby="act-h" style="flex: none; display: flex; flex-direction: column; gap: 16px; padding: 22px 24px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 id="act-h" style="margin: 0; font-size: 13px; font-weight: 600">Activity</h2>
+            <span style="font-size: 12px; color: {{c.secondary}}">12-day streak, your best</span>
+          </div>
+          <div role="img" aria-label="Tokens per day for the last 17 weeks" style="display: grid; grid-template-columns: repeat(17, minmax(0, 1fr)); gap: 4px">
+            <sc-for list="{{weeks}}" as="w" hint-placeholder-count="17">
+              <div style="display: grid; grid-template-rows: repeat(7, 11px); gap: 4px">
+                <sc-for list="{{w.days}}" as="d" hint-placeholder-count="7"><span class="{{d.cls}}" style="--i: {{d.i}}; border-radius: 3px; background: {{d.bg}}"></span></sc-for>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: {{c.tertiary}}"><span>June</span><span style="display: flex; align-items: center; gap: 4px"><span style="margin-right: 2px">Less</span><sc-for list="{{legend}}" as="g" hint-placeholder-count="5"><span style="width: 10px; height: 10px; border-radius: 2px; background: {{g}}"></span></sc-for><span style="margin-left: 2px">More</span></span></div>
+        </section>
+
+        <section class="card glass" aria-labelledby="att-h" style="flex: none; display: flex; flex-direction: column; gap: 12px; padding: 22px 20px 20px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px 2px">
+            <h2 id="att-h" style="margin: 0; font-size: 13px; font-weight: 600">Needs you</h2>
+            <span style="height: 20px; min-width: 20px; padding: 0 6px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(251,65,74,0.16); color: #FF8A82; font-size: 11px; font-weight: 600">2</span>
+          </div>
+          <sc-for list="{{alerts}}" as="a" hint-placeholder-count="2">
+            <div class="well" style="display: flex; align-items: center; gap: 10px; padding: 11px 12px">
+              <span style="flex: none; width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: {{a.color}}; color: {{a.glyph}}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.icon}}"></path></svg></span>
+              <span style="flex: 1; min-width: 0; line-height: 16px"><span style="display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.title}}</span><span style="display: block; font-size: 12px; color: {{c.secondary}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.desc}}</span></span>
+              <button type="button" style="flex: none; height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: {{a.btnBg}}; color: {{a.btnInk}}; font-size: 12px; font-weight: 600">{{a.action}}</button>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"appearance":{"editor":"enum","options":["night"],"default":"night"},"glow":{"editor":"boolean","default":true},"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const glow = this.props.glow ?? true;
+    const mode = 'calm';
+    const vivid = mode === 'vivid';
+    const mono = mode === 'mono';
+    const accent = '#60A5FA';
+    const rgba = (h, a) => { const n = parseInt(String(h).replace('#', '').slice(0, 6), 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+    const sys = { blue: '#0A84FF', green: '#34D399', orange: '#F59E0B', red: '#FB414A', purple: '#BF5AF2', pink: '#FF375F', teal: '#40C8E0', gray: '#8E8E93' };
+    const c = Object.assign({
+      sky: glow ? 'radial-gradient(80% 55% at 70% 100%, ' + rgba(accent, 0.30) + ', transparent 72%), #13151A' : '#13151A',
+      hill1: '#1C1F26', hill2: '#171A20',
+      label: '#F5F5F5', secondary: '#A3A3A3', tertiary: '#737373',
+      selected: 'rgba(255,255,255,0.08)', track: 'rgba(255,255,255,0.08)', cell0: '#1F1F1F'
+    }, sys, { accent: accent });
+    if (!vivid) c.green = mono ? '#F5F5F5' : '#34D399';
+    const icons = {
+      home: 'M2.5 7.5L8 3l5.5 4.5V13.5H10V10H6v3.5H2.5z',
+      limits: 'M8 13.5a5.5 5.5 0 1 1 5.5-5.5M8 8l3-2.5',
+      usage: 'M3 13V9M8 13V4M13 13V7',
+      insights: 'M8 2.5a4 4 0 0 1 2.2 7.3V11.5H5.8V9.8A4 4 0 0 1 8 2.5zM6.5 13.5h3',
+      community: 'M6 7a2.2 2.2 0 1 0 0-4.4A2.2 2.2 0 0 0 6 7zM2 13c.4-2.2 2-3.5 4-3.5s3.6 1.3 4 3.5M11 3a2 2 0 0 1 0 4M12 9.6c1.1.5 1.8 1.7 2 3.4',
+      plus: 'M8 3.5v9M3.5 8h9',
+      key: 'M6 10a3.5 3.5 0 1 1 2.8-1.4L14 13.8M11.5 11.3l1.2-1.2'
+    };
+    const places = [['Home', 'home', sys.blue, '#home'], ['Limits', 'limits', sys.orange, '#limits'], ['Usage', 'usage', sys.green, '#usage'], ['Insights', 'insights', sys.purple, '#insights'], ['Community', 'community', sys.pink, '#community']]
+      .map((p, i) => ({ name: p[0], icon: icons[p[1]], color: vivid ? p[2] : (i === 0 ? (mono ? 'rgba(255,255,255,0.22)' : rgba(accent, 0.55)) : 'rgba(255,255,255,0.10)'), href: p[3], current: i === 0 ? 'page' : 'false', bg: i === 0 ? c.selected : 'transparent', weight: i === 0 ? 600 : 400, hasBadge: i === 1 }));
+    const toolColor = vivid ? { codex: '#10A37F', claude: '#D97757', cursor: '#C7C7CC', copilot: '#8E5CF7', gemini: '#4285F4', windsurf: '#09B6A2', opencode: '#F59E0B', pi: '#FF5E8A' }
+      : mono ? { claude: 'rgba(255,255,255,0.92)', opencode: 'rgba(255,255,255,0.72)', cursor: 'rgba(255,255,255,0.56)', codex: 'rgba(255,255,255,0.42)', gemini: 'rgba(255,255,255,0.30)', pi: 'rgba(255,255,255,0.20)', copilot: 'rgba(255,255,255,0.42)', windsurf: 'rgba(255,255,255,0.30)' }
+      : { claude: '#A8CEFC', opencode: '#80B7FB', cursor: '#60A5FA', codex: '#4D84C8', gemini: '#3D6AA0', pi: '#2E4F78', copilot: '#80B7FB', windsurf: '#4D84C8' };
+    const limits = [['Codex · 5h', 'codex', 7, '~11:19'], ['Claude Code · 5h', 'claude', 49, 'in 3h 05m'], ['Cursor · auto', 'cursor', 38, 'in 13d'], ['Copilot', 'copilot', 53, 'in 13d'], ['Windsurf · day', 'windsurf', 67, 'in 14h']]
+      .map((l) => ({ name: l[0], tool: toolColor[l[1]], left: l[2] + '%', reset: l[3], dash: (l[2] / 100 * 56.55).toFixed(1) + ' 60', bar: l[2] <= 15 ? sys.red : vivid ? (l[2] <= 40 ? sys.orange : sys.green) : (!mono && l[2] <= 40 ? sys.orange : 'rgba(255,255,255,0.78)'), ink: l[2] <= 15 ? sys.red : c.label }));
+    const ranges = ['Day', 'Week', 'Month', 'All'].map((r, i) => ({ name: r, on: i === 1 ? 'true' : 'false', bg: i === 1 ? '#2A2A2A' : 'transparent', ink: i === 1 ? '#F5F5F5' : '#A3A3A3', weight: i === 1 ? 600 : 500 }));
+    const mix = [['Claude Code', 'claude', 25, '11.2M'], ['OpenCode', 'opencode', 20, '9.0M'], ['Cursor', 'cursor', 19, '8.5M'], ['Codex', 'codex', 14, '6.3M'], ['Gemini CLI', 'gemini', 14, '6.3M'], ['Pi', 'pi', 8, '3.6M']]
+      .map((m) => ({ name: m[0], color: toolColor[m[1]], pct: m[2] + '%', w: m[2] + '%', tokens: m[3] + ' tokens' }));
+    const days = [5.6, 6.2, 6.8, 3.0, 2.7, 7.1, 7.3, 7.7, 8.1, 2.9, 3.4, 7.9, 7.4, 7.6];
+    const bars = days.map((d, i) => ({ h: Math.round(d / 8.4 * 100) + '%', bg: i === days.length - 1 ? accent : vivid ? (i >= 7 ? rgba(sys.blue, 0.75) : rgba(sys.blue, 0.32)) : (i >= 7 ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.16)') }));
+    const green = vivid ? ['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.45)', 'rgba(52,211,153,0.7)', '#34D399']
+      : mono ? ['rgba(255,255,255,0.16)', 'rgba(255,255,255,0.32)', 'rgba(255,255,255,0.55)', 'rgba(255,255,255,0.9)']
+      : [rgba(accent, 0.28), rgba(accent, 0.5), rgba(accent, 0.75), '#90C0FC'];
+    const legend = [c.cell0].concat(green);
+    let seed = 23;
+    const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    const weeks = Array.from({ length: 17 }, (_, w) => ({
+      days: Array.from({ length: 7 }, (_, d) => {
+        const i = w * 7 + d;
+        const fromEnd = 17 * 7 - 1 - i;
+        let lv = fromEnd === 12 ? 0 : fromEnd < 12 ? 2 + Math.floor(rnd() * 3) : (rnd() < 0.28 ? 0 : 1 + Math.floor(rnd() * 3));
+        if (fromEnd === 0) lv = 4;
+        return { bg: legend[lv], i: i, cls: fromEnd === 0 ? 'pop today' : 'pop' };
+      })
+    }));
+    seed = 5;
+    const stars = Array.from({ length: 34 }, () => ({ x: Math.round(rnd() * 400), y: Math.round(rnd() * 200), r: rnd() > 0.85 ? 2.5 : 1.5 }));
+    const alerts = [
+      { title: 'Codex has no second login', desc: 'Add one to hop to next time.', action: 'Add', color: rgba(sys.red, 0.18), glyph: '#FF8A82', icon: icons.plus, btnBg: '#262626', btnInk: '#F5F5F5' },
+      { title: 'spare@personal.dev signed out', desc: 'Cursor needs you to sign in.', action: 'Sign In', color: rgba(sys.orange, 0.18), glyph: '#FFC266', icon: icons.key, btnBg: accent, btnInk: '#0A1628' }
+    ];
+    const stageNames = ['Speck', 'Hatch', 'Frame', 'Bulk', 'Mass', 'Monument'];
+    const stages = stageNames.map((n, i) => ({
+      name: n, size: 12 + i * 3, o: i <= 3 ? 1 : 0.35,
+      bg: i <= 3 ? (i === 3 ? rgba(accent, 0.30) : 'rgba(255,255,255,0.08)') : 'rgba(255,255,255,0.03)',
+      ring: i === 3 ? '0 0 0 2px ' + accent : 'none',
+      weight: i === 3 ? 700 : 500, ink: i <= 3 ? c.label : c.tertiary
+    }));
+    const models = [['openai/gpt-5.6-sol', 20, 'OpenCode'], ['composer-2', 19, 'Cursor'], ['claude-opus-5', 18, 'Claude Code'], ['gpt-5.6-sol', 14, 'Codex']]
+      .map((m, i) => ({ n: i + 1, name: m[0], tool: m[2], pct: m[1] + '%', w: (m[1] * 5) + '%', bar: i === 0 ? accent : 'rgba(255,255,255,0.55)' }));
+    return { models: models, c: c, places: places, limits: limits, ranges: ranges, mix: mix, bars: bars, weeks: weeks, legend: legend, stars: stars, alerts: alerts, stages: stages };
+  }
+}
+</script>
+</body>
+</html>

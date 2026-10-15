@@ -15,6 +15,14 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
   - Emerald (zinc + green)
   - Ember (warm stone + the pet's orange; "tight" moves to yellow)
   - Cobalt (slate + blue)
+- **devl.dev takes (2026-10-15, new account):** S1 restyled after devl.dev, which is built on coss-ui (cal.com). The four variants are `project/K-<mono|ember|blue|iris>-Home.dc.html` and `-Components`, made by `tools/devl.py`. The comparison page is https://claude.ai/artifact/J7dTXDiZn4qxFtfz4SygT2.
+  - They share coss-ui's dark neutrals: background #161616, sidebar #111, cards #1A1A1A, borders at 10% white, radius 10 and 12, tracked uppercase labels, sans titles and numbers, amber-500 and red for limits running out, and emerald-400 for money.
+  - Mono has a monospace body (Geist Mono) and a white primary. Ember has a monospace body and the pet's orange, with tight limits moving to yellow. Blue has a Geist body and blue-400. Iris has a Geist body and S1's violet on the neutral grounds.
+- **Picked: Coss Blue** (2026-10-15). The owner loved it and asked for more air. `project/KB-Home.dc.html` is the polished Home:
+  - a wider sidebar with roomier rows and group spacing, and a 60px header;
+  - 18–24px gutters, more padding in every card, and four Top models instead of five;
+  - finer heatmap cells and a Live tag in normal case.
+  `KB-Components` is still the unpolished blue sheet.
 - **Next once a colour is picked:** apply it to System, Limits, the menu bar popover and keyhop.app (Mac and web in parity), then rewrite `design/keyhop-v2/index.html` and the window and site tokens.
 
 ## How we got there (rows on the canvas, oldest at the bottom)
@@ -49,6 +57,8 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
   - Renders an artboard to PNG with Playwright's Chromium: it expands `{{holes}}`, `<sc-for>` and `<sc-if>` with `renderVals()`.
   - Optional env vars: `SCALE=2` and `CLIP=x,y,w,h`.
 - `node tools/check-dc.mjs <artboard>` runs `renderVals()` for each theme and checks that every hole resolves.
+- `python3 tools/devl.py <mono|ember|blue|iris> project/S1-Home.dc.html project/S1-Components.dc.html` writes the `K-<name>-*` devl.dev takes.
+- `HTML=<out.html> node tools/render-dc.mjs …` also saves the rendered artboard as static HTML.
 - `python3 tools/palettes.py <iris|graphite|emerald|ember|cobalt> S1-Home.dc.html S1-Components.dc.html` writes the `P-<name>-*` recolours.
 
 ## Restoring the canvas on another claude.ai account

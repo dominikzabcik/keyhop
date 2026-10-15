@@ -53,6 +53,7 @@ const err = await page.evaluate(({ script, props }) => {
 }, { script, props });
 if (err) { console.error('RENDER ERROR', err); }
 await page.waitForTimeout(2600);
+if (process.env.HTML) fs.writeFileSync(process.env.HTML, (await page.content()).replace(/<template id="t">[\s\S]*?<\/template>/, ''));
 if (process.env.CLIP) { const [x, y, cw, ch] = process.env.CLIP.split(',').map(Number); await page.screenshot({ path: out, clip: { x, y, width: cw, height: ch } }); }
 else await page.screenshot({ path: out, fullPage: true });
 await browser.close();

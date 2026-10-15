@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Field — keyhop.app</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Pixelify+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:#0D1024}
+a{color:#EEF0FF}a:hover{color:#FFFFFF}
+@keyframes kh-walk{from{transform:translateX(0)}to{transform:translateX(34px)}}
+@keyframes kh-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
+@keyframes kh-twinkle{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+</helmet>
+<div style="background: #0D1024; color: #EEF0FF; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow-x: hidden">
+
+  <section aria-label="Keyhop" style="position: relative; min-height: 820px; overflow: hidden; background: #221F45">
+    <svg aria-hidden="true" viewBox="0 0 360 205" preserveAspectRatio="xMidYMax slice" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block; shape-rendering: crispEdges">
+      <rect x="0" y="0" width="360" height="34" fill="#080A1A"></rect>
+      <rect x="0" y="34" width="360" height="26" fill="#0B0E21"></rect>
+      <rect x="0" y="60" width="360" height="22" fill="#0F1229"></rect>
+      <rect x="0" y="82" width="360" height="20" fill="#141632"></rect>
+      <rect x="0" y="102" width="360" height="18" fill="#19193A"></rect>
+      <rect x="0" y="120" width="360" height="85" fill="#221F45"></rect>
+      <path d="{{hero.sparkB}}" fill="#6E74A8"></path>
+      <path d="{{hero.sparkA}}" fill="#EEF0FF" style="animation: kh-twinkle 5s steps(2) infinite"></path>
+      <path d="{{hero.halo}}" fill="{{accent}}" opacity="0.3"></path>
+      <path d="{{hero.sun}}" fill="{{accent}}"></path>
+      <path d="{{hero.sunShade}}" fill="#000000" opacity="0.16"></path>
+      <path d="{{hero.far}}" fill="#24274D"></path>
+      <path d="{{hero.mid}}" fill="#1A1D3D"></path>
+      <path d="{{hero.midTop}}" fill="#262A52"></path>
+      <path d="{{hero.near}}" fill="#12142A"></path>
+      <path d="{{hero.nearTop}}" fill="#2C3060"></path>
+      <g style="animation: kh-walk 7s steps(17) infinite alternate">
+        <path d="{{walker.w}}" fill="#F3EBDD"></path>
+        <path d="{{walker.s}}" fill="#C9BBA3"></path>
+        <path d="{{walker.o}}" fill="#E8875A"></path>
+        <path d="{{walker.k}}" fill="#1B1A2E"></path>
+      </g>
+      <g style="animation: kh-bob 1.4s steps(2) infinite">
+        <path d="{{hatch.w}}" fill="#F3EBDD"></path>
+        <path d="{{hatch.s}}" fill="#C9BBA3"></path>
+        <path d="{{hatch.o}}" fill="#4FD1B5"></path>
+        <path d="{{hatch.k}}" fill="#1B1A2E"></path>
+      </g>
+    </svg>
+
+    <header style="position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; max-width: 1240px; margin: 0 auto; padding: 20px 32px">
+      <a href="#" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #EEF0FF">
+        <svg aria-hidden="true" viewBox="0 0 7 6" width="28" height="24" style="shape-rendering: crispEdges"><path d="{{logo.k}}" fill="#EEF0FF"></path><path d="M5 0h2v2h-2z" fill="{{accent}}"></path></svg>
+        <span style="font: 700 22px/24px 'Pixelify Sans', sans-serif">Keyhop</span>
+      </a>
+      <nav aria-label="Site" style="display: flex; flex-wrap: wrap; gap: 4px 22px; font: 500 14px/20px 'IBM Plex Sans', sans-serif">
+        <a href="#" style="text-decoration: none; color: #C3C7EA">Product</a>
+        <a href="#" style="text-decoration: none; color: #C3C7EA">Leaderboard</a>
+        <a href="#" style="text-decoration: none; color: #C3C7EA">Season</a>
+        <a href="#" style="text-decoration: none; color: #C3C7EA">Docs</a>
+        <a href="#" style="text-decoration: none; color: #C3C7EA">Download</a>
+      </nav>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 16px">
+        <a href="#" style="text-decoration: none; color: #C3C7EA; font: 500 14px/20px 'IBM Plex Sans', sans-serif">Sign in</a>
+        <a href="#" style="display: inline-flex; align-items: center; height: 38px; padding: 0 16px; text-decoration: none; background: {{accent}}; color: #14162E; font: 600 14px/16px 'IBM Plex Sans', sans-serif; clip-path: polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))">Get Keyhop</a>
+      </div>
+    </header>
+
+    <div style="position: relative; max-width: 980px; margin: 0 auto; padding: 72px 24px 0; text-align: center">
+      <p style="display: inline-flex; align-items: center; gap: 8px; margin: 0 0 22px; padding: 6px 12px; background: rgba(16,18,40,.86); border: 1px solid rgba(160,170,255,.22); font: 600 12px/16px 'Pixelify Sans', sans-serif; letter-spacing: .1em; color: #C3C7EA; clip-path: polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))"><span aria-hidden="true" style="width: 6px; height: 6px; background: #5BD38A"></span>KEYHOP 2.0 · 13 TOOLS · EVERY LOGIN</p>
+      <h1 style="margin: 0; font: 700 clamp(44px, 6.4vw, 92px)/1.02 'Pixelify Sans', sans-serif; letter-spacing: -.015em; color: #EEF0FF">Every account.<br><span style="color: {{accent}}">One hop away.</span></h1>
+      <p style="margin: 22px auto 0; max-width: 620px; font: 400 19px/29px 'IBM Plex Sans', sans-serif; color: #C3C7EA">Keyhop watches the limits on every account you own and moves your tools to the one with room, before a limit stops you.</p>
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 30px">
+        <a href="#" style="display: inline-flex; align-items: center; gap: 10px; height: 50px; padding: 0 22px; text-decoration: none; background: {{accent}}; color: #14162E; font: 600 16px/20px 'IBM Plex Sans', sans-serif; clip-path: polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))">
+          <svg aria-hidden="true" viewBox="0 0 8 8" width="16" height="16" style="shape-rendering: crispEdges"><path d="M3 0h2v4h2v1h-1v1h-1v1h-2v-1h-1v-1h-1v-1h2z" fill="currentColor"></path></svg>Download Keyhop</a>
+        <a href="#" style="display: inline-flex; align-items: center; gap: 10px; height: 50px; padding: 0 22px; text-decoration: none; background: rgba(16,18,40,.86); border: 1px solid rgba(160,170,255,.28); color: #EEF0FF; font: 600 16px/20px 'IBM Plex Sans', sans-serif; border-radius: 4px">View on GitHub</a>
+      </div>
+      <p style="margin: 18px 0 0; font: 400 13px/18px 'IBM Plex Mono', monospace; color: #9BA0C8">Free and open source, for macOS, Linux and Windows.</p>
+    </div>
+  </section>
+
+  <section aria-label="The Keyhop window" style="position: relative; background: #12142A; padding: 0 24px 72px">
+    <div style="position: relative; max-width: 1120px; margin: -230px auto 0; background: #0D1024; border: 1px solid rgba(160,170,255,.22); border-radius: 10px; overflow: hidden; box-shadow: 0 12px 0 rgba(4,5,14,.55), 0 30px 80px rgba(4,5,14,.6)">
+      <div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; background: #0A0C1D; border-bottom: 1px solid rgba(160,170,255,.12)">
+        <span aria-hidden="true" style="width: 10px; height: 10px; background: #FF5C7A"></span>
+        <span aria-hidden="true" style="width: 10px; height: 10px; background: #FFD24A"></span>
+        <span aria-hidden="true" style="width: 10px; height: 10px; background: #5BD38A"></span>
+        <span style="flex: 1; text-align: center; font: 600 12px/16px 'Pixelify Sans', sans-serif; letter-spacing: .08em; color: #9BA0C8">KEYHOP</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap">
+        <div aria-hidden="true" style="flex: 1 0 56px; display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: center; gap: 8px; padding: 12px 6px; background: #0A0C1D; border-right: 1px solid rgba(160,170,255,.12)">
+          <span style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: {{accent}}; color: #14162E; clip-path: polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px))"><svg viewBox="0 0 10 10" width="18" height="18" style="shape-rendering: crispEdges"><path d="{{icons.hop}}" fill="currentColor"></path></svg></span>
+          <sc-for list="{{miniNav}}" as="n" hint-placeholder-count="5">
+            <span style="width: 40px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 5px; background: {{n.bg}}; color: {{n.color}}"><svg viewBox="0 0 10 10" width="18" height="18" style="shape-rendering: crispEdges"><path d="{{n.icon}}" fill="currentColor"></path></svg></span>
+          </sc-for>
+        </div>
+        <div style="flex: 999 1 520px; min-width: 0">
+          <div style="position: relative; height: 230px; overflow: hidden; background: #201E42">
+            <svg aria-hidden="true" viewBox="0 0 264 58" preserveAspectRatio="xMidYMax slice" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block; shape-rendering: crispEdges">
+              <rect x="0" y="0" width="264" height="12" fill="#090B1C"></rect>
+              <rect x="0" y="12" width="264" height="10" fill="#0E1126"></rect>
+              <rect x="0" y="22" width="264" height="9" fill="#141631"></rect>
+              <rect x="0" y="31" width="264" height="27" fill="#1D1C40"></rect>
+              <path d="{{mini.sparkB}}" fill="#6E74A8"></path>
+              <path d="{{mini.sparkA}}" fill="#EEF0FF"></path>
+              <path d="{{mini.halo}}" fill="{{accent}}" opacity="0.3"></path>
+              <path d="{{mini.sun}}" fill="{{accent}}"></path>
+              <path d="{{mini.far}}" fill="#24274D"></path>
+              <path d="{{mini.mid}}" fill="#1A1D3D"></path>
+              <path d="{{mini.near}}" fill="#12142A"></path>
+              <path d="{{mini.nearTop}}" fill="#2C3060"></path>
+              <path d="{{miniPet.w}}" fill="#F3EBDD"></path>
+              <path d="{{miniPet.s}}" fill="#C9BBA3"></path>
+              <path d="{{miniPet.o}}" fill="#E8875A"></path>
+              <path d="{{miniPet.k}}" fill="#1B1A2E"></path>
+            </svg>
+            <div style="position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 20px 22px">
+              <div>
+                <p style="margin: 0 0 6px; font: 500 11px/14px 'IBM Plex Mono', monospace; letter-spacing: .08em; color: #9BA0C8">TUESDAY, OCTOBER 13</p>
+                <p style="margin: 0; font: 600 34px/38px 'Pixelify Sans', sans-serif">Codex is at 93%.</p>
+                <p style="margin: 6px 0 0; max-width: 420px; font: 400 14px/20px 'IBM Plex Sans', sans-serif; color: #C3C7EA">The 5-hour window runs out around 11:19 AM. There is no other login to hop to.</p>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start">
+                <span style="padding: 5px 10px; background: rgba(16,18,40,.88); border: 1px solid rgba(160,170,255,.22); font: 500 13px/16px 'Pixelify Sans', sans-serif">12 day streak</span>
+                <span style="padding: 5px 10px; background: rgba(16,18,40,.88); border: 1px solid rgba(160,170,255,.22); font: 500 13px/16px 'Pixelify Sans', sans-serif">7.6M today</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 14px; padding: 16px">
+            <div style="flex: 1 1 300px; min-width: 0; background: #12142A; border: 1px solid rgba(160,170,255,.12); border-radius: 6px">
+              <p style="margin: 0; padding: 10px 12px; border-bottom: 1px solid rgba(160,170,255,.12); font: 600 15px/20px 'Pixelify Sans', sans-serif">Needs your attention <span style="padding: 0 5px; background: #FFD24A; color: #14162E; font-size: 11px">3</span></p>
+              <sc-for list="{{miniAttention}}" as="a" hint-placeholder-count="3">
+                <div style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-bottom: 1px solid rgba(160,170,255,.08)">
+                  <span aria-hidden="true" style="flex: 0 0 7px; height: 7px; margin-top: 6px; background: {{a.tone}}"></span>
+                  <span style="flex: 1; min-width: 0; font: 600 13px/18px 'IBM Plex Sans', sans-serif">{{a.title}}</span>
+                  <span style="font: 600 12px/18px 'IBM Plex Sans', sans-serif; color: #C3C7EA">{{a.action}}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="flex: 1.3 1 360px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-content: start">
+              <sc-for list="{{miniTools}}" as="t" hint-placeholder-count="6">
+                <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; background: #1A1D38; border-radius: 5px; min-width: 0">
+                  <svg aria-hidden="true" viewBox="0 0 16 16" width="32" height="32" style="flex: 0 0 32px; shape-rendering: crispEdges"><path d="{{t.ring.track}}" fill="#262A4C"></path><path d="{{t.ring.fill}}" fill="{{t.color}}"></path></svg>
+                  <span style="flex: 1; min-width: 0; font: 600 12px/16px 'IBM Plex Sans', sans-serif">{{t.tool}}<br><span style="font: 600 12px/16px 'IBM Plex Mono', monospace; color: {{t.pctColor}}">{{t.pct}}</span></span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="bw-what" style="background: #0D1024; padding: 96px 32px; border-top: 1px solid rgba(160,170,255,.1)">
+    <div style="max-width: 1180px; margin: 0 auto">
+      <p style="margin: 0 0 10px; font: 600 12px/16px 'Pixelify Sans', sans-serif; letter-spacing: .12em; color: #9BA0C8">WHAT IT DOES</p>
+      <h2 id="bw-what" style="margin: 0; max-width: 760px; font: 600 clamp(32px, 4vw, 48px)/1.08 'Pixelify Sans', sans-serif">Every limit you own, on one horizon.</h2>
+      <ol style="list-style: none; margin: 44px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 16px">
+        <sc-for list="{{features}}" as="f" hint-placeholder-count="6">
+          <li style="display: flex; flex-direction: column; gap: 12px; padding: 20px; background: #12142A; border: 1px solid rgba(160,170,255,.12); border-radius: 8px">
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <span style="font: 600 14px/16px 'Pixelify Sans', sans-serif; color: {{accent}}">{{f.n}}</span>
+              <svg aria-hidden="true" viewBox="0 0 10 10" width="22" height="22" style="shape-rendering: crispEdges"><path d="{{f.icon}}" fill="#C3C7EA"></path></svg>
+            </div>
+            <h3 style="margin: 0; font: 600 22px/26px 'Pixelify Sans', sans-serif">{{f.title}}</h3>
+            <p style="margin: 0; font: 400 15px/23px 'IBM Plex Sans', sans-serif; color: #A8ADD3">{{f.line}}</p>
+            <div style="margin-top: auto; padding: 12px; background: #0D1024; border: 1px solid rgba(160,170,255,.1); display: flex; flex-direction: column; gap: 8px">
+              <sc-for list="{{f.rows}}" as="r" hint-placeholder-count="2">
+                <div style="display: flex; align-items: center; gap: 10px; font: 500 12px/16px 'IBM Plex Mono', monospace; color: #C3C7EA">
+                  <span style="flex: 0 0 auto; min-width: 64px">{{r.k}}</span>
+                  <span aria-hidden="true" style="display: flex; gap: 2px">
+                    <sc-for list="{{r.blocks}}" as="b" hint-placeholder-count="10"><span style="width: 8px; height: 8px; background: {{b.bg}}"></span></sc-for>
+                  </span>
+                  <span style="margin-left: auto; color: {{r.color}}">{{r.v}}</span>
+                </div>
+              </sc-for>
+            </div>
+          </li>
+        </sc-for>
+      </ol>
+    </div>
+  </section>
+
+  <section aria-labelledby="bw-pet" style="position: relative; background: #12142A; padding: 88px 32px 0; overflow: hidden">
+    <div style="max-width: 1180px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 24px 48px; align-items: flex-end">
+      <div style="flex: 1 1 420px">
+        <p style="margin: 0 0 10px; font: 600 12px/16px 'Pixelify Sans', sans-serif; letter-spacing: .12em; color: #9BA0C8">A PET THAT GROWS</p>
+        <h2 id="bw-pet" style="margin: 0; font: 600 clamp(30px, 3.6vw, 44px)/1.1 'Pixelify Sans', sans-serif">From Speck to Monument.</h2>
+      </div>
+      <p style="flex: 1 1 380px; margin: 0; font: 400 16px/25px 'IBM Plex Sans', sans-serif; color: #A8ADD3">One pet per account, grown from your synced daily totals. Your main tool paints its markings, your streak sets its pose, your commits set its build. Share it at /u/you/pet.svg.</p>
+    </div>
+    <div style="max-width: 1180px; margin: 40px auto 0">
+      <svg role="img" aria-label="Six stages: Speck, Hatch at 1M tokens, Frame at 50M, Bulk at 500M, Mass at 5B, Monument at 25B" viewBox="0 0 150 32" style="width: 100%; height: auto; display: block; shape-rendering: crispEdges">
+        <path d="{{stageStars}}" fill="#6E74A8"></path>
+        <rect x="0" y="26" width="150" height="6" fill="#0D1024"></rect>
+        <rect x="0" y="26" width="150" height="1" fill="#2C3060"></rect>
+        <path d="{{stages.p}}" fill="#3A3F6E"></path>
+        <path d="{{stages.h}}" fill="#565C94"></path>
+        <path d="{{stages.q}}" fill="#9BA0C8"></path>
+        <path d="{{stages.f}}" fill="{{accent}}"></path>
+        <path d="{{stages.w}}" fill="#F3EBDD"></path>
+        <path d="{{stages.s}}" fill="#C9BBA3"></path>
+        <path d="{{stages.o}}" fill="#E8875A"></path>
+        <path d="{{stages.k}}" fill="#1B1A2E"></path>
+      </svg>
+    </div>
+    <ol style="list-style: none; margin: 0 auto; padding: 0; position: relative; max-width: 1180px; height: 96px; background: #0D1024">
+      <sc-for list="{{stageLabels}}" as="s" hint-placeholder-count="6">
+        <li style="position: absolute; top: 14px; left: {{s.left}}; transform: translateX(-50%); text-align: center; white-space: nowrap">
+          <span style="display: block; font: 600 16px/20px 'Pixelify Sans', sans-serif; color: #EEF0FF">{{s.name}}</span>
+          <span style="display: block; font: 400 12px/16px 'IBM Plex Mono', monospace; color: #9BA0C8">{{s.at}}</span>
+        </li>
+      </sc-for>
+    </ol>
+  </section>
+
+  <section aria-labelledby="bw-cta" style="position: relative; overflow: hidden; background: #0B0E21; padding: 120px 24px 128px; text-align: center">
+    <svg aria-hidden="true" viewBox="0 0 360 80" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block; shape-rendering: crispEdges">
+      <path d="{{ctaStars.b}}" fill="#4B5085"></path>
+      <path d="{{ctaStars.a}}" fill="#C3C7EA" style="animation: kh-twinkle 6s steps(2) infinite"></path>
+    </svg>
+    <div style="position: relative">
+      <h2 id="bw-cta" style="margin: 0; font: 700 clamp(36px, 5vw, 64px)/1.05 'Pixelify Sans', sans-serif">Every account.<br><span style="color: {{accent}}">One hop away.</span></h2>
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 30px">
+        <a href="#" style="display: inline-flex; align-items: center; gap: 10px; height: 50px; padding: 0 22px; text-decoration: none; background: {{accent}}; color: #14162E; font: 600 16px/20px 'IBM Plex Sans', sans-serif; clip-path: polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))">Download Keyhop</a>
+        <a href="#" style="display: inline-flex; align-items: center; height: 50px; padding: 0 22px; text-decoration: none; background: transparent; border: 1px solid rgba(160,170,255,.28); color: #EEF0FF; font: 600 16px/20px 'IBM Plex Sans', sans-serif; border-radius: 4px">View on GitHub</a>
+      </div>
+      <p style="margin: 18px 0 0; font: 400 13px/18px 'IBM Plex Mono', monospace; color: #9BA0C8">Free and open source, for macOS, Linux and Windows.</p>
+    </div>
+  </section>
+
+  <footer style="background: #0A0C1D; border-top: 1px solid rgba(160,170,255,.12); padding: 32px">
+    <div style="max-width: 1180px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-start">
+      <a href="#" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: #EEF0FF">
+        <svg aria-hidden="true" viewBox="0 0 7 6" width="21" height="18" style="shape-rendering: crispEdges"><path d="{{logo.k}}" fill="#EEF0FF"></path><path d="M5 0h2v2h-2z" fill="{{accent}}"></path></svg>
+        <span style="font: 700 17px/20px 'Pixelify Sans', sans-serif">Keyhop</span>
+      </a>
+      <p style="flex: 1 1 420px; margin: 0; font: 400 13px/20px 'IBM Plex Sans', sans-serif; color: #9BA0C8">The Keyhop app sends tokens, API value, requests and commit counts per day. Commit subjects and current limits go only if you turn them on.</p>
+      <nav aria-label="Footer" style="display: flex; flex-wrap: wrap; gap: 8px 20px; font: 500 13px/20px 'IBM Plex Sans', sans-serif">
+        <a href="#" style="text-decoration: none; color: #C3C7EA">Roadmap</a>
+        <a href="#" style="text-decoration: none; color: #C3C7EA">Privacy</a>
+        <a href="#" style="text-decoration: none; color: #C3C7EA">Terms</a>
+        <a href="#" style="text-decoration: none; color: #C3C7EA">Security</a>
+        <a href="#" style="text-decoration: none; color: #C3C7EA">GitHub</a>
+      </nav>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","options":["#FF8A3D","#5BD38A","#FFD24A","#7AA2FF"],"default":"#FF8A3D"},"$preview":{"width":1440,"height":2200}}'>
+class Component extends DCLogic {
+  pix(rows, ox, oy, into) {
+    var out = into || {};
+    for (var y = 0; y < rows.length; y++) {
+      var r = rows[y];
+      for (var x = 0; x < r.length; x++) {
+        var ch = r[x];
+        if (ch === '.' || ch === ' ') continue;
+        out[ch] = (out[ch] || '') + 'M' + (ox + x) + ' ' + (oy + y) + 'h1v1h-1z';
+      }
+    }
+    return out;
+  }
+  icon(rows) { return this.pix(rows, 0, 0)['#'] || ''; }
+  rnd(seed) {
+    var s = seed >>> 0;
+    return function () { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+  }
+  cell(x, y) { return 'M' + x + ' ' + y + 'h1v1h-1z'; }
+  layer(W, H, base, amps, freqs, phases, flats) {
+    var hs = [], body = '', top = '';
+    for (var x = 0; x < W; x++) {
+      var h = base;
+      for (var i = 0; i < amps.length; i++) h += amps[i] * Math.sin(x * freqs[i] + phases[i]);
+      hs.push(Math.round(h));
+    }
+    (flats || []).forEach(function (f) { var fh = hs[f[0]]; for (var k = f[0]; k <= f[1] && k < W; k++) hs[k] = fh; });
+    var x0 = 0;
+    for (var x2 = 1; x2 <= W; x2++) {
+      if (x2 === W || hs[x2] !== hs[x0]) {
+        var len = x2 - x0, hh = hs[x0];
+        body += 'M' + x0 + ' ' + (H - hh) + 'h' + len + 'v' + hh + 'h-' + len + 'z';
+        top += 'M' + x0 + ' ' + (H - hh) + 'h' + len + 'v1h-' + len + 'z';
+        x0 = x2;
+      }
+    }
+    return { body: body, top: top, hs: hs };
+  }
+  sunAndHalo(sx, sy, sr) {
+    var sun = '', shade = '', halo = '';
+    for (var dy = -sr - 10; dy <= sr + 10; dy++) for (var dx = -sr - 10; dx <= sr + 10; dx++) {
+      var q = Math.sqrt(dx * dx + dy * dy), x = sx + dx, y = sy + dy;
+      if (q * q <= sr * sr + sr * 0.6) { sun += this.cell(x, y); if (dx + dy > sr * 0.75) shade += this.cell(x, y); }
+      else if ((q <= sr + 4 && (x + y) % 2 === 0) || (q <= sr + 10 && x % 2 === 0 && y % 2 === 0)) halo += this.cell(x, y);
+    }
+    return { sun: sun, shade: shade, halo: halo };
+  }
+  stars(W, maxY, n, seed) {
+    var R = this.rnd(seed), a = '', b = '';
+    for (var i = 0; i < n; i++) {
+      var x = Math.floor(R() * W), y = Math.floor(R() * maxY), t = R();
+      if (t < 0.06 && y > 2) a += 'M' + x + ' ' + (y - 1) + 'h1v3h-1zM' + (x - 1) + ' ' + y + 'h3v1h-3z';
+      else if (t < 0.32) a += this.cell(x, y);
+      else b += this.cell(x, y);
+    }
+    return { a: a, b: b };
+  }
+  ring(pct) {
+    var fill = '', track = '';
+    for (var y = 0; y < 16; y++) for (var x = 0; x < 16; x++) {
+      var dx = x + 0.5 - 8, dy = y + 0.5 - 8, q = Math.sqrt(dx * dx + dy * dy);
+      if (q < 5.2 || q > 8) continue;
+      var a = Math.atan2(dx, -dy); if (a < 0) a += Math.PI * 2;
+      if (a / (Math.PI * 2) < pct / 100) fill += this.cell(x, y); else track += this.cell(x, y);
+    }
+    return { fill: fill, track: track };
+  }
+  blocks(n, col) {
+    var out = [];
+    for (var i = 0; i < 10; i++) out.push({ bg: i < n ? col : '#262A4C' });
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#FF8A3D';
+    var self = this;
+    var BULK = ['...........ww...', '..........wwww..', '..........wkww..', '..........wwwwo.', '..wwwooowwwww...', '.wwwwwoowwwww...', 'owwwwwwwwwwww...', '.wwwwwwwwwwww...', '.sssssssssss....', '.ww.ww...ww.ww..', '.ww.ww...ww.ww..', '.ss.ss...ss.ss..'];
+    var HATCH = ['.w...w.', '.ww.ww.', '.wwwww.', 'wwkwkww', 'wwwwwww', 'wwwowww', 'wwwwwww', '.sssss.'];
+    var SPECK = ['.www.', 'wwwww', 'wwoww', 'wwwww', '.sss.'];
+    var FRAME = ['.......ww.', '......wwww', '......wkww', '.wwwwwwww.', 'owwwoowww.', '.wwwwwwww.', '.w.w..w.w.', '.s.s..s.s.'];
+    var MASS = ['...............ww...', '..............wwww..', '..............wkwww.', '..............wwwwwo', '...wwwwwwwwwwwwwww..', '..wwwwooowwwwwwwww..', '.wwwwwwooowwwwwwww..', 'owwwwwwwwwwwwwwwww..', 'owwwwwwwwwwwwwwwww..', '.wwwwwwwwwwwwwwwww..', '.wwwwwwwwwwwwwwwww..', '..ssssssssssssssss..', '..www.www....www.www', '..www.www....www.www', '..sss.sss....sss.sss'];
+    var MONUMENT = ['...................qfff', '...................qff.', '...................q...']
+      .concat(MASS.map(function (r) { return '..' + r; }))
+      .concat(['hhhhhhhhhhhhhhhhhhhhhhhh', 'pppppppppppppppppppppppp', 'pppppppppppppppppppppppp']);
+
+    var W = 360, H = 205;
+    var st = this.stars(W, 118, 170, 9);
+    var sun = this.sunAndHalo(300, 130, 14);
+    var far = this.layer(W, H, 66, [8, 4], [0.035, 0.09], [0.5, 1.9]);
+    var mid = this.layer(W, H, 50, [6, 3], [0.05, 0.13], [2.3, 0.4]);
+    var near = this.layer(W, H, 36, [2], [0.04], [1.2], [[14, 66], [318, 352]]);
+    var hero = { sparkA: st.a, sparkB: st.b, sun: sun.sun, sunShade: sun.shade, halo: sun.halo, far: far.body, mid: mid.body, midTop: mid.top, near: near.body, nearTop: near.top };
+    var walker = this.pix(BULK, 18, H - near.hs[18] - 12);
+    var hatch = this.pix(HATCH, 334, H - near.hs[334] - 8);
+
+    var mW = 264, mH = 58;
+    var mst = this.stars(mW, 30, 60, 4);
+    var msun = this.sunAndHalo(214, 38, 8);
+    var mfar = this.layer(mW, mH, 17, [3, 2], [0.05, 0.14], [0.4, 1.1]);
+    var mmid = this.layer(mW, mH, 12, [2, 1], [0.08, 0.2], [2.1, 0.3]);
+    var mnear = this.layer(mW, mH, 7, [0.8], [0.06], [0.9], [[220, 244]]);
+    var mini = { sparkA: mst.a, sparkB: mst.b, sun: msun.sun, halo: msun.halo, far: mfar.body, mid: mmid.body, near: mnear.body, nearTop: mnear.top };
+    var miniPet = this.pix(BULK, 224, mH - mnear.hs[224] - 12);
+
+    var I = {
+      home: ['....##....', '...####...', '..######..', '.########.', '##########', '.########.', '.##....##.', '.##.##.##.', '.##.##.##.', '.########.'],
+      limits: ['..........', '.#######..', '.#.....###', '.#.###.###', '.#.###.###', '.#.....###', '.#######..', '..........', '..........', '..........'],
+      usage: ['.......##.', '.......##.', '....##.##.', '....##.##.', '....##.##.', '.##.##.##.', '.##.##.##.', '.##.##.##.', '.##.##.##.', '##########'],
+      insights: ['....##....', '....##....', '.#..##..#.', '..#....#..', '...####...', '##.####.##', '...####...', '..#....#..', '.#..##..#.', '....##....'],
+      community: ['.##....##.', '####..####', '####..####', '.##....##.', '..........', '####..####', '####..####', '####..####', '..........', '..........'],
+      hop: ['..........', '....#####.', '.......##.', '......#.#.', '.....#..#.', '....#.....', '...#......', '..#.......', '.#........', '..........'],
+      coin: ['..####....', '.#....#...', '#..##..#..', '#.#..#.#..', '#.#....#..', '#.#..#.#..', '#..##..#..', '.#....#...', '..####....', '..........'],
+      pet: ['......##..', '.....####.', '.....#.##.', '.#########', '##########', '#########.', '.#.#..#.#.', '.#.#..#.#.', '..........', '..........']
+    };
+    var miniNav = [I.home, I.limits, I.usage, I.insights, I.community].map(function (r, i) {
+      return { icon: self.icon(r), bg: i === 0 ? '#1A1D38' : 'transparent', color: i === 0 ? '#EEF0FF' : '#9BA0C8' };
+    });
+    var miniAttention = [
+      { title: 'Codex is at 93% on me@personal.dev', action: 'Add a login', tone: '#FF5C7A' },
+      { title: 'spare@personal.dev is signed out', action: 'Switch and sign in', tone: '#FF5C7A' },
+      { title: 'Codex partial outage', action: 'Status page', tone: '#FFD24A' }
+    ];
+    var miniTools = [['Claude Code', 51, '#FFD24A', '#FFD24A'], ['Cursor', 62, '#C9CCF0', '#EEF0FF'], ['Codex', 93, '#FF5C7A', '#FF8399'], ['GitHub Copilot', 47, '#C9CCF0', '#EEF0FF'], ['Windsurf', 33, '#C9CCF0', '#EEF0FF'], ['Gemini CLI', 28, '#C9CCF0', '#EEF0FF']].map(function (t) {
+      return { tool: t[0], pct: t[1] + '%', ring: self.ring(t[1]), color: t[2], pctColor: t[3] };
+    });
+    function row(k, n, col, v, color) { return { k: k, blocks: self.blocks(n, col), v: v, color: color || '#EEF0FF' }; }
+    var features = [
+      { n: '01', icon: this.icon(I.limits), title: 'Watch every limit', line: 'Thirteen tools and every login: 5-hour, weekly and premium windows, with a forecast of when each one runs dry.',
+        rows: [row('5-hour', 5, '#FFD24A', '51%', '#FFD24A'), row('Weekly', 1, '#C9CCF0', '6%'), row('Premium', 5, '#C9CCF0', '47%')] },
+      { n: '02', icon: this.icon(I.hop), title: 'Hop before the wall', line: 'Auto-hop moves a tool to the login with room before a limit. Or hop yourself with ⌘K, or keyhop hop in a terminal.',
+        rows: [row('Codex', 9, '#FF5C7A', '93%', '#FF8399'), row('studio', 4, '#5BD38A', '41%', '#5BD38A')] },
+      { n: '03', icon: this.icon(I.coin), title: 'Count what it costs', line: 'Tokens, API value, cache hit and every model, counted from local logs. Nothing leaves your machine unless you say so.',
+        rows: [row('API value', 7, accent, '$92.59'), row('Cache', 9, '#C9CCF0', '91%')] },
+      { n: '04', icon: this.icon(I.usage), title: 'Efficiency, not tokenmaxxing', line: 'Ranked by commits per million tokens, in free, pro and max divisions, with uploads verified on the server.',
+        rows: [row('You', 10, accent, '2.4 per M'), row('Priya', 5, '#C9CCF0', '1.2 per M')] },
+      { n: '05', icon: this.icon(I.community), title: 'Teams and seasons', line: 'A team day of what everyone shipped, live sharing when you opt in, and a daily digest to Slack or Discord.',
+        rows: [row('Team day', 8, '#5BD38A', '38 commits', '#5BD38A'), row('Season', 6, '#C9CCF0', 'Pro div.')] },
+      { n: '06', icon: this.icon(I.pet), title: 'A pet that grows', line: 'One pet per account, from Speck to Monument, shaped by your tools, your streak and your commits.',
+        rows: [row('Bulk', 6, '#E8875A', '4.2B to Mass', '#E8875A')] }
+    ];
+    var stages = {};
+    var defs = [['Speck', 'start', SPECK, 6], ['Hatch', '1M tokens', HATCH, 22], ['Frame', '50M', FRAME, 40], ['Bulk', '500M', BULK, 60], ['Mass', '5B', MASS, 86], ['Monument', '25B', MONUMENT, 118]];
+    var stageLabels = defs.map(function (d) {
+      var rows = d[2], w = rows[0].length;
+      self.pix(rows, d[3], 26 - rows.length, stages);
+      return { name: d[0], at: d[1], left: ((d[3] + w / 2) / 150 * 100).toFixed(2) + '%' };
+    });
+    var ss = this.stars(150, 14, 30, 3);
+    var cta = this.stars(360, 80, 120, 31);
+    var LOGO = ['##..##.', '##.##..', '####...', '##.##..', '##..##.', '.......'];
+    return {
+      accent: accent, hero: hero, walker: walker, hatch: hatch, mini: mini, miniPet: miniPet,
+      miniNav: miniNav, miniAttention: miniAttention, miniTools: miniTools, features: features,
+      stages: stages, stageLabels: stageLabels, stageStars: ss.a + ss.b, ctaStars: cta,
+      icons: { hop: this.icon(I.hop) }, logo: { k: this.pix(LOGO, 0, 0)['#'] }
+    };
+  }
+}
+</script>
+</body>
+</html>

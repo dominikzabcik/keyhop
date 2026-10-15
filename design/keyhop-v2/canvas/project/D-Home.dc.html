@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyhop Home — Daylight</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'Instrument Sans',system-ui,sans-serif}
+a{color:#1f3dd0}a:hover{color:#15140F}
+input::placeholder{color:inherit;opacity:.62}
+</style>
+</helmet>
+<div style="min-height: 900px; background: {{c.bg}}; color: {{c.ink}}; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 14px; line-height: 20px; display: flex; flex-direction: column">
+
+  <header style="background: {{c.bg}}; border-bottom: 1px solid {{c.rule}}">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 32px; box-sizing: border-box; min-height: 64px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px">
+      <a href="#home" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: {{c.ink}}; min-height: 44px">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="5" height="16" fill="{{c.ink}}"></rect><rect x="9" y="2" width="5" height="5" fill="{{c.ink}}"></rect><rect x="13" y="9" width="5" height="5" fill="{{c.accent}}"></rect><rect x="9" y="13" width="5" height="5" fill="{{c.ink}}"></rect></svg>
+        <span style="font-family: 'Newsreader', Georgia, serif; font-size: 23px; font-weight: 600; letter-spacing: -0.015em">Keyhop</span>
+      </a>
+      <nav aria-label="Places" style="display: flex; flex-wrap: wrap; align-items: center; gap: 0 26px">
+        <sc-for list="{{nav}}" as="item" hint-placeholder-count="5">
+          <a href="{{item.href}}" aria-current="{{item.current}}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; text-decoration: none; font-size: 14px; font-weight: {{item.weight}}; color: {{item.color}}; border-bottom: 2px solid {{item.line}}; box-sizing: border-box; padding-top: 2px">
+            {{item.label}}
+            <sc-if value="{{item.badge}}" hint-placeholder-val="{{false}}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 8px; background: {{c.warnSoft}}; color: {{c.warnInk}}">{{item.badge}}</span></sc-if>
+          </a>
+        </sc-for>
+      </nav>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <button type="button" style="display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px 0 14px; border-radius: 8px; border: 1px solid {{c.ink}}; background: {{c.ink}}; color: {{c.bg}}; font: inherit; font-weight: 600; cursor: pointer">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 11c2-5 6-6 8-6"></path><path d="M8 3l3 2-2 3"></path><circle cx="3" cy="12.5" r="1.2"></circle></svg>
+          Hop
+          <kbd style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: {{c.kbd}}; color: {{c.bg}}">⌘K</kbd>
+        </button>
+        <a href="#settings" aria-label="Settings" style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 8px; color: {{c.muted}}">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M3 5h8M14 5h1M3 13h1M7 13h8"></path><circle cx="12.5" cy="5" r="1.6"></circle><circle cx="5.5" cy="13" r="1.6"></circle></svg>
+        </a>
+        <a href="#profile" aria-label="Profile" style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 17px; background: {{c.track}}; color: {{c.ink}}; text-decoration: none; font-family: 'Newsreader', Georgia, serif; font-size: 16px; font-style: italic">Y</a>
+      </div>
+    </div>
+  </header>
+
+  <div style="border-bottom: 1px solid {{c.rule}}">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 32px; box-sizing: border-box; min-height: 40px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 22px; font-size: 12.5px; color: {{c.muted}}">
+      <span style="font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 15px; color: {{c.ink}}">Tuesday, October 13</span>
+      <span style="display: inline-flex; align-items: center; gap: 7px"><span style="width: 7px; height: 7px; border-radius: 4px; background: {{c.warn}}"></span>2 need a hop</span>
+      <span style="display: inline-flex; align-items: center; gap: 7px"><span style="width: 7px; height: 7px; border-radius: 4px; background: {{c.danger}}"></span>Codex partial outage</span>
+      <span style="flex: 1 1 auto"></span>
+      <span>Limits read 2m ago</span>
+      <button type="button" onClick="{{toggleTheme}}" aria-label="{{themeAria}}" style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 6px; border: 1px solid {{c.rule}}; background: transparent; color: {{c.ink}}; font: inherit; font-size: 12.5px; cursor: pointer">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="7" cy="7" r="3"></circle><path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13"></path></svg>
+        {{themeLabel}}
+      </button>
+    </div>
+  </div>
+
+  <main style="width: 100%; max-width: 1200px; margin: 0 auto; padding: 36px 32px 44px; box-sizing: border-box; display: flex; flex-direction: column; gap: 34px">
+
+    <section style="display: flex; flex-wrap: wrap; gap: 32px 48px">
+      <div style="flex: 7 1 520px; min-width: 0">
+        <div style="font-size: 11.5px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; color: {{c.dangerInk}}">Limits · Codex</div>
+        <h1 style="margin: 10px 0 0; font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 76px; line-height: 76px; letter-spacing: -0.03em">Codex is at 93%.</h1>
+        <p style="margin: 16px 0 0; max-width: 30em; font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 22px; line-height: 30px; color: {{c.muted}}">The 5-hour window runs out around 11:19 AM. There is no other login to hop to.</p>
+        <form onSubmit="{{noSubmit}}" style="margin-top: 28px; max-width: 640px; background: {{c.panel}}; border: 1px solid {{c.ruleStrong}}; border-radius: 10px; padding: 6px 6px 10px 16px; box-sizing: border-box">
+          <label for="hop-d-home" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">Hop to a login</label>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <input id="hop-d-home" type="text" placeholder="Name a login, or hop to the one with room" style="flex: 1 1 auto; min-width: 0; height: 44px; border: 0; outline: none; background: transparent; color: {{c.ink}}; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 16px">
+            <button type="submit" aria-label="Hop" style="flex: 0 0 auto; width: 44px; height: 44px; border-radius: 8px; border: 0; background: {{c.accentFill}}; color: {{c.onAccent}}; display: inline-flex; align-items: center; justify-content: center; cursor: pointer">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h11M10 5l4 4-4 4"></path></svg>
+            </button>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: {{c.faint}}">
+            <span style="margin-right: 4px">Room on</span>
+            <button type="button" style="height: 30px; padding: 0 10px; border-radius: 15px; border: 1px solid {{c.rule}}; background: {{c.bg}}; color: {{c.ink}}; font: inherit; font-size: 12.5px; cursor: pointer">Claude Code</button>
+            <button type="button" style="height: 30px; padding: 0 10px; border-radius: 15px; border: 1px solid {{c.rule}}; background: {{c.bg}}; color: {{c.ink}}; font: inherit; font-size: 12.5px; cursor: pointer">work@studio.dev · <span style="font-family: 'IBM Plex Mono', monospace; color: {{c.okInk}}">41%</span></button>
+          </div>
+        </form>
+      </div>
+
+      <aside style="flex: 5 1 340px; min-width: 0; border-left: 1px solid {{c.rule}}; padding-left: 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+        <div style="font-size: 11.5px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; color: {{c.muted}}">Left across your logins</div>
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap">
+          <span style="font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 96px; line-height: 88px; letter-spacing: -0.04em; font-variant-numeric: lining-nums">415%</span>
+          <span style="font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 26px; color: {{c.muted}}">of 800%</span>
+        </div>
+        <div style="font-size: 13px; color: {{c.muted}}">8 logins with limits · draining <span style="color: {{c.ink}}; font-weight: 600">~80% an hour</span> · next reset <span style="color: {{c.okInk}}; font-weight: 600">+35%</span> at 12:41 PM</div>
+        <svg viewBox="0 0 1200 300" width="100%" role="img" aria-label="Remaining limits across logins, measured since Sunday and projected for seven days" style="display: block; height: auto">
+          <line x1="56" y1="260" x2="1176" y2="260" stroke="{{c.rule}}" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+          <polygon points="{{chart.projArea}}" fill="{{c.accentSoft}}"></polygon>
+          <polyline points="{{chart.measured}}" fill="none" stroke="{{c.ink}}" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>
+          <polyline points="{{chart.projected}}" fill="none" stroke="{{c.accent}}" stroke-width="1.6" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"></polyline>
+          <line x1="{{chart.nowX}}" y1="12" x2="{{chart.nowX}}" y2="260" stroke="{{c.faint}}" stroke-width="1" stroke-dasharray="2 3" vector-effect="non-scaling-stroke"></line>
+        </svg>
+        <div style="border-top: 1px solid {{c.rule}}; padding-top: 14px; display: flex; align-items: center; gap: 16px">
+          <svg width="92" height="68" viewBox="0 0 92 68" aria-hidden="true">
+            <ellipse cx="46" cy="62" rx="34" ry="3.5" fill="{{c.track}}"></ellipse>
+            <path d="M14 44c0-14 10-22 26-22h14c12 0 20 7 20 18v6c0 6-4 10-10 10H24c-6 0-10-4-10-12z" fill="{{c.petBody}}" stroke="{{c.ink}}" stroke-width="1.6"></path>
+            <path d="M58 22c2-9 8-14 16-14 1 5-1 11-6 15" fill="{{c.petBody}}" stroke="{{c.ink}}" stroke-width="1.6" stroke-linejoin="round"></path>
+            <path d="M30 24c6 4 14 4 20 0v12c-6 3-14 3-20 0z" fill="#E07A3B"></path>
+            <circle cx="66" cy="30" r="2.2" fill="{{c.ink}}"></circle>
+            <path d="M22 56v6M34 56v6M54 56v6M66 56v6" stroke="{{c.ink}}" stroke-width="2.4" stroke-linecap="round"></path>
+            <path d="M14 40c-5-1-8-5-8-9" fill="none" stroke="{{c.ink}}" stroke-width="1.6" stroke-linecap="round"></path>
+          </svg>
+          <div style="min-width: 0">
+            <div style="font-family: 'Newsreader', Georgia, serif; font-size: 20px; line-height: 24px; font-weight: 500">Bulk <span style="font-style: italic; color: {{c.muted}}">· Claude</span></div>
+            <div style="font-size: 12.5px; color: {{c.muted}}">4.2B tokens to Mass · 12-day streak</div>
+            <a href="#profile" style="font-size: 12.5px; font-weight: 600; color: {{c.accent}}; text-decoration: none">See your pet →</a>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section style="display: flex; flex-wrap: wrap; gap: 32px 48px; border-top: 2px solid {{c.ink}}; padding-top: 16px">
+      <div style="flex: 5 1 340px; min-width: 0">
+        <h2 style="margin: 0; display: flex; align-items: baseline; gap: 10px; font-size: 11.5px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600">Needs your attention <span style="font-family: 'IBM Plex Mono', monospace; letter-spacing: 0; color: {{c.muted}}">3</span></h2>
+        <sc-for list="{{attention}}" as="item" hint-placeholder-count="3">
+          <article style="padding: 14px 0 16px; border-bottom: 1px solid {{c.rule}}; display: flex; flex-direction: column; gap: 5px">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; color: {{item.tagColor}}"><span style="width: 7px; height: 7px; border-radius: 4px; background: {{item.dot}}"></span>{{item.tag}}</div>
+            <h3 style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 21px; line-height: 26px; letter-spacing: -0.01em">{{item.title}}</h3>
+            <p style="margin: 0; font-size: 13.5px; line-height: 20px; color: {{c.muted}}">{{item.body}}</p>
+            <div><button type="button" style="margin-top: 4px; height: 34px; padding: 0 12px; border-radius: 7px; border: 1px solid {{c.ruleStrong}}; background: transparent; color: {{c.ink}}; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">{{item.action}}</button></div>
+          </article>
+        </sc-for>
+      </div>
+
+      <div style="flex: 7 1 520px; min-width: 0">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px">
+          <h2 style="margin: 0; font-size: 11.5px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600">In use</h2>
+          <a href="#limits" style="font-size: 13px; font-weight: 600; color: {{c.accent}}; text-decoration: none">All limits →</a>
+        </div>
+        <div style="overflow-x: auto; margin-top: 8px">
+          <div style="min-width: 600px">
+            <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 76px 150px 96px; gap: 12px; align-items: center; min-height: 32px; border-bottom: 1px solid {{c.ruleStrong}}; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: {{c.faint}}; font-weight: 600">
+              <span>Tool</span><span>Login</span><span>Window</span><span>Used</span><span style="text-align: right">Resets</span>
+            </div>
+            <sc-for list="{{inUse}}" as="row" hint-placeholder-count="7">
+              <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 76px 150px 96px; gap: 12px; align-items: center; min-height: 40px; border-bottom: 1px solid {{c.rule}}">
+                <span style="font-weight: 600">{{row.tool}}</span>
+                <span style="color: {{c.muted}}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{row.login}}</span>
+                <span style="color: {{c.muted}}; font-size: 13px">{{row.window}}</span>
+                <span style="display: flex; align-items: center; gap: 10px">
+                  <span style="flex: 1 1 auto; height: 4px; background: {{c.track}}; border-radius: 2px; overflow: hidden"><span style="display: block; height: 4px; width: {{row.pct}}%; background: {{row.bar}}"></span></span>
+                  <span style="width: 34px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: {{row.ink}}; font-weight: {{row.weight}}">{{row.pct}}%</span>
+                </span>
+                <span style="text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{row.resetInk}}">{{row.reset}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <p style="margin: 10px 0 0; font-size: 12.5px; color: {{c.faint}}">OpenCode and Pi have no limit to read. Not set up: Amp, Goose, Qwen Code, Kimi Code, Grok Build, Kilo, OpenClaw.</p>
+      </div>
+    </section>
+
+    <section style="border-top: 2px solid {{c.ink}}; padding-top: 16px">
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px">
+        <h2 style="margin: 0; font-size: 11.5px; line-height: 16px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600">The week</h2>
+        <a href="#usage" style="font-size: 13px; font-weight: 600; color: {{c.accent}}; text-decoration: none">Usage →</a>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; margin-top: 12px">
+        <sc-for list="{{figures}}" as="f" hint-placeholder-count="6">
+          <div style="flex: 1 1 160px; min-width: 0; padding: 2px 20px 0 0; margin-bottom: 8px">
+            <div style="font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 40px; line-height: 44px; letter-spacing: -0.025em; font-variant-numeric: lining-nums tabular-nums">{{f.value}}</div>
+            <div style="font-size: 12.5px; line-height: 18px; color: {{c.muted}}">{{f.caption}}</div>
+            <div style="font-size: 12px; line-height: 18px; font-weight: 600; color: {{f.noteInk}}">{{f.note}}</div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["day","night"],"default":"day"},"accent":{"editor":"color","options":["#2448F5","#E5482F","#0E8A5F","#111111"],"default":"#2448F5"},"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  rgb(h) {
+    h = String(h || '#2448F5').replace('#', '');
+    if (h.length === 3) h = h.split('').map(function (x) { return x + x; }).join('');
+    var n = parseInt(h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  mix(a, b, t) {
+    var x = this.rgb(a), y = this.rgb(b);
+    return '#' + x.map(function (v, i) { return Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0'); }).join('');
+  }
+  rgba(a, al) { return 'rgba(' + this.rgb(a).join(',') + ',' + al + ')'; }
+  palette(theme, accent) {
+    var day = theme !== 'night';
+    var dark = accent.toLowerCase() === '#111111';
+    var base = day ? {
+      bg: '#F7F7F4', panel: '#FFFFFF', rule: '#E4E3DD', ruleStrong: '#BDBBB2', ink: '#15140F', muted: '#5D5B53', faint: '#6E6C64', track: '#E9E8E2', kbd: '#3A3934',
+      warn: '#C77700', warnInk: '#9A5B00', danger: '#D93A2B', dangerInk: '#B8301F', ok: '#0E8A5F', okInk: '#0E7A52', petBody: '#F6EEDD'
+    } : {
+      bg: '#121211', panel: '#1A1A18', rule: '#2B2A27', ruleStrong: '#4A4843', ink: '#F2F1EC', muted: '#A3A199', faint: '#8A8880', track: '#272623', kbd: '#C9C7BF',
+      warn: '#E9A23B', warnInk: '#E9A23B', danger: '#F07A6A', dangerInk: '#F07A6A', ok: '#5CC79A', okInk: '#5CC79A', petBody: '#EDE3CF'
+    };
+    var a = day ? this.mix(accent, '#000000', 0.12) : (dark ? '#F2F1EC' : this.mix(accent, '#FFFFFF', 0.4));
+    base.accent = a;
+    base.accentFill = a;
+    base.onAccent = day ? '#FFFFFF' : '#121211';
+    base.accentSoft = this.rgba(a, day ? 0.10 : 0.16);
+    base.warnSoft = this.rgba(base.warn, day ? 0.14 : 0.2);
+    return base;
+  }
+  chart() {
+    var x0 = 56, x1 = 1176, days = 9;
+    var X = function (t) { return x0 + (t / days) * (x1 - x0); };
+    var Y = function (v) { return 20 + (1 - v / 800) * 240; };
+    var m = [];
+    for (var k = 0; k <= 48; k++) {
+      var t = (k / 48) * 2;
+      var v = 440 + 110 * Math.sin(t * 2.4 + 0.6) + 40 * Math.sin(t * 9.1) - (k % 12) * 5;
+      if (k === 48) v = 415;
+      v = Math.max(300, Math.min(640, v));
+      m.push(X(t).toFixed(1) + ',' + Y(v).toFixed(1));
+    }
+    var resets = [2.25, 2.9, 3.6, 4.3, 5.0, 5.7, 6.4, 7.1, 7.8, 8.5];
+    var p = [], v2 = 415, ri = 0, dots = [];
+    for (var s = 0; s <= 140; s++) {
+      var tt = 2 + s * 0.05;
+      if (ri < resets.length && tt >= resets[ri]) {
+        p.push(X(tt).toFixed(1) + ',' + Y(v2).toFixed(1));
+        v2 += ri === 0 ? 35 : (resets[ri] === 4.3 || resets[ri] === 7.8 ? 140 : 55);
+        v2 = Math.min(600, v2);
+        dots.push({ x: X(tt).toFixed(1), y: Y(v2).toFixed(1) });
+        ri++;
+      }
+      p.push(X(tt).toFixed(1) + ',' + Y(v2).toFixed(1));
+      v2 = Math.max(260, v2 - 4.1 - 1.5 * Math.sin(s * 1.7));
+    }
+    var projected = p.join(' ');
+    return {
+      measured: m.join(' '),
+      projected: projected,
+      projArea: projected + ' ' + X(9).toFixed(1) + ',' + Y(0) + ' ' + X(2).toFixed(1) + ',' + Y(0),
+      nowX: X(2).toFixed(1),
+      dots: dots
+    };
+  }
+  renderVals() {
+    var self = this;
+    var theme = (this.state && this.state.theme) || this.props.theme || 'day';
+    var accent = this.props.accent ?? '#2448F5';
+    var c = this.palette(theme, accent);
+    var navItems = [['Home', '#home'], ['Limits', '#limits'], ['Usage', '#usage'], ['Insights', '#insights'], ['Community', '#community']];
+    var nav = navItems.map(function (n) {
+      var on = n[0] === 'Home';
+      return { label: n[0], href: n[1], current: on ? 'page' : 'false', weight: on ? 600 : 500, color: on ? c.ink : c.muted, line: on ? c.ink : 'transparent', badge: n[0] === 'Limits' ? '2' : '' };
+    });
+    var attention = [
+      { tag: 'Limit', title: 'Codex is at 93% on me@personal.dev', body: '5-hour runs out around 11:19 AM. There is no other login to hop to.', action: 'Add a login', dot: c.danger, tagColor: c.dangerInk },
+      { tag: 'Sign-in', title: 'spare@personal.dev is signed out', body: 'Cursor. Login expired. Switch to it and sign in to Cursor again.', action: 'Switch and sign in', dot: c.warn, tagColor: c.warnInk },
+      { tag: 'Outage', title: 'Codex partial outage', body: 'Every account is affected, so hopping won’t help.', action: 'Status page', dot: c.warn, tagColor: c.warnInk }
+    ];
+    var rows = [
+      ['Claude Code', 'Personal', '5-hour', 51, '3h 5m', 'warn'],
+      ['Cursor', 'me@personal.dev', 'Auto', 62, '13d 4h', ''],
+      ['Codex', 'me@personal.dev', '5-hour', 93, 'out 11:19 AM', 'danger'],
+      ['Gemini CLI', 'me@personal.dev', 'Quota', 28, '—', ''],
+      ['GitHub Copilot', 'Personal', 'Premium', 47, '13d 4h', ''],
+      ['Windsurf', 'me@windsurf.dev', 'Day', 33, '14h 16m', ''],
+      ['Codebuff', 'me@codebuff.dev', 'Usage', 30, '—', '']
+    ];
+    var inUse = rows.map(function (r) {
+      var tone = r[5];
+      return {
+        tool: r[0], login: r[1], window: r[2], pct: r[3], reset: r[4],
+        bar: tone === 'danger' ? c.danger : tone === 'warn' ? c.warn : c.ink,
+        ink: tone === 'danger' ? c.dangerInk : tone === 'warn' ? c.warnInk : c.ink,
+        weight: tone ? 600 : 400,
+        resetInk: tone === 'danger' ? c.dangerInk : c.muted
+      };
+    });
+    var figures = [
+      { value: '7.6M', caption: 'tokens today', note: '', noteInk: c.muted },
+      { value: '45M', caption: 'tokens, 7 days', note: '+16% vs 38.7M', noteInk: c.okInk },
+      { value: '$92.59', caption: 'at API prices, 7 days', note: '4,870 requests', noteInk: c.muted },
+      { value: '91%', caption: 'from cache', note: '', noteInk: c.muted },
+      { value: '38', caption: 'commits this week', note: '12-day streak', noteInk: c.muted },
+      { value: '2.4', caption: 'commits per million tokens', note: '#1 of 6 on the board', noteInk: c.accent }
+    ];
+    return {
+      c: c,
+      nav: nav,
+      attention: attention,
+      inUse: inUse,
+      figures: figures,
+      chart: this.chart(),
+      themeLabel: theme === 'night' ? 'Night' : 'Day',
+      themeAria: theme === 'night' ? 'Night field. Switch to day' : 'Day field. Switch to night',
+      toggleTheme: function () { self.setState({ theme: theme === 'night' ? 'day' : 'night' }); },
+      noSubmit: function (e) { if (e && e.preventDefault) e.preventDefault(); }
+    };
+  }
+}
+</script>
+</body>
+</html>

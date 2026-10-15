@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Field — Limits</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Pixelify+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}a:hover{opacity:.86}
+</style>
+</helmet>
+<div style="min-height: 1000px; display: flex; flex-wrap: wrap; background: {{c.bg}}; color: {{c.ink}}; font-family: 'IBM Plex Sans', system-ui, sans-serif">
+
+  <nav aria-label="Places" style="flex: 1 0 72px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; padding: 14px 8px; box-sizing: border-box; background: {{c.rail}}; border-right: 1px solid {{c.line}}">
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 6px">
+      <a href="#" aria-label="Keyhop" style="width: 56px; height: 36px; display: flex; align-items: center; justify-content: center; color: {{c.ink}}">
+        <svg aria-hidden="true" viewBox="0 0 7 6" width="28" height="24" style="shape-rendering: crispEdges; display: block"><path d="{{logo.k}}" fill="currentColor"></path><path d="{{logo.dot}}" fill="{{c.accent}}"></path></svg>
+      </a>
+      <button type="button" aria-label="Hop, Command K" style="width: 56px; height: 56px; margin: 4px 0 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; cursor: pointer; background: {{c.accent}}; color: {{c.onAccent}}; clip-path: polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))">
+        <svg aria-hidden="true" viewBox="0 0 10 10" width="20" height="20" style="shape-rendering: crispEdges; display: block"><path d="{{icons.hop}}" fill="currentColor"></path></svg>
+        <span style="font: 600 11px/12px 'Pixelify Sans', sans-serif; letter-spacing: .04em">HOP</span>
+      </button>
+      <sc-for list="{{nav}}" as="n" hint-placeholder-count="5">
+        <a href="#" aria-current="{{n.current}}" style="position: relative; width: 56px; height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; text-decoration: none; color: {{n.color}}; background: {{n.bg}}; border-radius: 6px">
+          <span aria-hidden="true" style="position: absolute; left: -8px; top: 15px; width: 4px; height: 24px; background: {{n.marker}}"></span>
+          <svg aria-hidden="true" viewBox="0 0 10 10" width="20" height="20" style="shape-rendering: crispEdges; display: block"><path d="{{n.icon}}" fill="currentColor"></path></svg>
+          <span style="font: 500 10px/12px 'IBM Plex Sans', sans-serif">{{n.label}}</span>
+          <sc-if value="{{n.hasBadge}}" hint-placeholder-val="{{ false }}">
+            <span style="position: absolute; top: 4px; right: 6px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: {{c.warn}}; color: #14162E; font: 600 10px/16px 'Pixelify Sans', sans-serif">{{n.badge}}</span>
+          </sc-if>
+        </a>
+      </sc-for>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 6px">
+      <a href="#" style="width: 56px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; text-decoration: none; color: {{c.muted}}; border-radius: 6px">
+        <svg aria-hidden="true" viewBox="0 0 10 10" width="20" height="20" style="shape-rendering: crispEdges; display: block"><path d="{{icons.settings}}" fill="currentColor"></path></svg>
+        <span style="font: 500 10px/12px 'IBM Plex Sans', sans-serif">Settings</span>
+      </a>
+    </div>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 18px 32px 14px; border-bottom: 1px solid {{c.line}}">
+      <h1 style="margin: 0; font: 600 30px/36px 'Pixelify Sans', sans-serif; color: {{c.ink}}">Limits</h1>
+      <div style="margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px">
+        <div role="group" aria-label="Range" style="display: flex; padding: 3px; gap: 2px; background: {{c.raised}}; border: 1px solid {{c.line}}; border-radius: 6px">
+          <button type="button" aria-pressed="false" style="height: 30px; padding: 0 12px; border: 0; border-radius: 4px; background: transparent; color: {{c.muted}}; font: 500 13px/16px 'IBM Plex Sans', sans-serif; cursor: pointer">24 hours</button>
+          <button type="button" aria-pressed="true" style="height: 30px; padding: 0 12px; border: 0; border-radius: 4px; background: {{c.panel}}; color: {{c.ink}}; font: 600 13px/16px 'IBM Plex Sans', sans-serif; cursor: pointer; box-shadow: 0 0 0 1px {{c.line2}}">7 days</button>
+        </div>
+        <div role="group" aria-label="View" style="display: flex; padding: 3px; gap: 2px; background: {{c.raised}}; border: 1px solid {{c.line}}; border-radius: 6px">
+          <button type="button" aria-pressed="true" style="height: 30px; padding: 0 12px; border: 0; border-radius: 4px; background: {{c.panel}}; color: {{c.ink}}; font: 600 13px/16px 'IBM Plex Sans', sans-serif; cursor: pointer; box-shadow: 0 0 0 1px {{c.line2}}">Remaining</button>
+          <button type="button" aria-pressed="false" style="height: 30px; padding: 0 12px; border: 0; border-radius: 4px; background: transparent; color: {{c.muted}}; font: 500 13px/16px 'IBM Plex Sans', sans-serif; cursor: pointer">Drain rate</button>
+        </div>
+      </div>
+    </header>
+
+    <div style="display: flex; flex-direction: column; gap: 18px; padding: 18px 32px 28px">
+      <div role="group" aria-label="Tools" style="display: flex; flex-wrap: wrap; gap: 6px">
+        <sc-for list="{{chips}}" as="ch" hint-placeholder-count="10">
+          <button type="button" aria-pressed="{{ch.pressed}}" style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border: 1px solid {{ch.border}}; background: {{ch.bg}}; color: {{ch.color}}; font: 500 13px/16px 'IBM Plex Sans', sans-serif; cursor: pointer; border-radius: 4px">
+            <span aria-hidden="true" style="width: 8px; height: 8px; background: {{ch.hue}}"></span>{{ch.label}}<span style="font: 600 12px/16px 'IBM Plex Mono', monospace; color: {{ch.countColor}}">{{ch.count}}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <section aria-labelledby="b-lim-pool" style="position: relative; overflow: hidden; background: {{c.panel}}; border: 1px solid {{c.line}}; border-radius: 8px">
+        <svg aria-hidden="true" viewBox="0 0 300 30" preserveAspectRatio="xMidYMin slice" style="position: absolute; left: 0; top: 0; width: 100%; height: 120px; display: block; shape-rendering: crispEdges">
+          <rect x="0" y="0" width="300" height="10" fill="{{c.band0}}"></rect>
+          <rect x="0" y="10" width="300" height="8" fill="{{c.band2}}"></rect>
+          <rect x="0" y="18" width="300" height="12" fill="{{c.band4}}"></rect>
+          <path d="{{strip.sparkB}}" fill="{{c.sparkB}}"></path>
+          <path d="{{strip.sparkA}}" fill="{{c.sparkA}}"></path>
+          <path d="{{strip.far}}" fill="{{c.far}}"></path>
+          <path d="{{strip.mid}}" fill="{{c.panel}}"></path>
+        </svg>
+        <div style="position: relative; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px; padding: 18px 20px 6px">
+          <div style="flex: 1 1 420px; min-width: 0">
+            <p id="b-lim-pool" style="margin: 0; font: 500 12px/16px 'IBM Plex Mono', monospace; letter-spacing: .06em; text-transform: uppercase; color: {{c.muted}}">Left across your own logins · 8 logins with limits</p>
+            <p style="margin: 8px 0 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px">
+              <span style="font: 700 76px/80px 'Pixelify Sans', sans-serif; letter-spacing: -.01em; color: {{c.ink}}">415%</span>
+              <span style="font: 500 30px/36px 'Pixelify Sans', sans-serif; color: {{c.muted}}">/ 800%</span>
+              <span style="align-self: center; padding: 5px 10px; background: {{c.accentTint}}; border: 1px solid {{c.line2}}; color: {{c.ink}}; font: 600 14px/18px 'Pixelify Sans', sans-serif">~80% an hour</span>
+            </p>
+            <p style="margin: 6px 0 0; max-width: 620px; font: 400 14px/21px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">Each login keeps its own limits. This adds up what each one has left, so you can see where there is room before you hop.</p>
+          </div>
+          <dl style="margin: 0; display: flex; gap: 8px; flex-wrap: wrap">
+            <div style="padding: 10px 12px; background: {{c.raised}}; border: 1px solid {{c.line}}; min-width: 150px">
+              <dt style="font: 400 12px/16px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">Next reset</dt>
+              <dd style="margin: 2px 0 0; font: 600 22px/26px 'Pixelify Sans', sans-serif; color: {{c.roomInk}}">+35%</dd>
+              <dd style="margin: 2px 0 0; font: 400 12px/16px 'IBM Plex Mono', monospace; color: {{c.muted}}">12:41 PM · me@personal.dev</dd>
+            </div>
+            <div style="padding: 10px 12px; background: {{c.raised}}; border: 1px solid {{c.line}}; min-width: 150px">
+              <dt style="font: 400 12px/16px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">At this pace</dt>
+              <dd style="margin: 2px 0 0; font: 600 22px/26px 'Pixelify Sans', sans-serif; color: {{c.ink}}">7 days</dd>
+              <dd style="margin: 2px 0 0; font: 400 12px/16px 'IBM Plex Mono', monospace; color: {{c.muted}}">lasts the whole week</dd>
+            </div>
+          </dl>
+        </div>
+
+        <figure style="margin: 0; padding: 8px 20px 0 64px; position: relative">
+          <figcaption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Remaining limit across logins: measured from Sunday to now, projected for the next seven days with resets lifting each window.</figcaption>
+          <div style="position: relative">
+            <svg role="img" aria-label="Remaining limit chart, 0 to 800 percent" viewBox="0 0 240 56" style="width: 100%; height: auto; display: block; shape-rendering: crispEdges">
+              <path d="{{chart.grid}}" fill="{{c.line2}}"></path>
+              <path d="{{chart.areaM}}" fill="{{c.fill}}" opacity="0.16"></path>
+              <path d="{{chart.areaP}}" fill="{{c.accent}}" opacity="0.34"></path>
+              <path d="{{chart.nowLine}}" fill="{{c.muted}}"></path>
+              <path d="{{chart.lineM}}" fill="{{c.ink}}"></path>
+              <path d="{{chart.lineP}}" fill="{{c.accent}}"></path>
+              <path d="{{chart.resets}}" fill="{{c.roomFill}}"></path>
+            </svg>
+            <span style="position: absolute; left: -46px; top: -6px; font: 500 11px/12px 'IBM Plex Mono', monospace; color: {{c.muted}}">800%</span>
+            <span style="position: absolute; left: -46px; top: calc(50% - 6px); font: 500 11px/12px 'IBM Plex Mono', monospace; color: {{c.muted}}">400%</span>
+            <span style="position: absolute; left: -46px; bottom: -4px; font: 500 11px/12px 'IBM Plex Mono', monospace; color: {{c.muted}}">0%</span>
+            <span style="position: absolute; left: 30%; top: -2px; transform: translateX(6px); padding: 1px 5px; background: {{c.raised}}; border: 1px solid {{c.line2}}; font: 600 11px/14px 'Pixelify Sans', sans-serif; letter-spacing: .06em; color: {{c.ink}}">NOW</span>
+          </div>
+          <div aria-hidden="true" style="position: relative; height: 22px; margin-top: 6px">
+            <sc-for list="{{chart.days}}" as="d" hint-placeholder-count="10">
+              <span style="position: absolute; left: {{d.left}}; transform: translateX(-50%); font: 500 11px/14px 'IBM Plex Mono', monospace; color: {{d.color}}">{{d.label}}</span>
+            </sc-for>
+          </div>
+        </figure>
+        <footer style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 10px 20px 14px; border-top: 1px solid {{c.line}}; font: 400 13px/18px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">
+          <span>Next reset <strong style="color: {{c.ink}}">+35%</strong> · 12:41 PM · me@personal.dev</span>
+          <span>Lasts the next 7 days at this pace</span>
+          <span style="margin-left: auto; display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 4px; background: {{c.ink}}"></span>Measured</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 4px; background: {{c.accent}}"></span>Projected</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 6px; height: 6px; background: {{c.roomFill}}"></span>Reset</span>
+        </footer>
+      </section>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr)); gap: 16px; align-items: start">
+        <sc-for list="{{groups}}" as="g" hint-placeholder-count="8">
+          <section style="min-width: 0; background: {{c.panel}}; border: 1px solid {{c.line}}; border-radius: 8px">
+            <header style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding: 12px 14px; border-bottom: 1px solid {{c.line}}">
+              <span aria-hidden="true" style="width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; background: {{g.hue}}; color: #14162E; font: 600 10px/10px 'Pixelify Sans', sans-serif">{{g.badge}}</span>
+              <h2 style="margin: 0; font: 600 17px/22px 'Pixelify Sans', sans-serif; color: {{c.ink}}">{{g.name}}</h2>
+              <span style="font: 600 12px/16px 'IBM Plex Mono', monospace; color: {{c.muted}}">{{g.count}}</span>
+              <span style="font: 400 13px/18px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">{{g.summary}}</span>
+              <sc-if value="{{g.canAdd}}" hint-placeholder-val="{{ true }}">
+                <button type="button" style="margin-left: auto; display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 0; background: transparent; color: {{c.ink}}; font: 600 13px/16px 'IBM Plex Sans', sans-serif; cursor: pointer">
+                  <svg aria-hidden="true" viewBox="0 0 6 6" width="12" height="12" style="shape-rendering: crispEdges"><path d="M2 0h2v2h2v2h-2v2h-2v-2h-2v-2h2z" fill="currentColor"></path></svg>Add account
+                </button>
+              </sc-if>
+            </header>
+            <sc-for list="{{g.logins}}" as="l" hint-placeholder-count="1">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 14px; border-top: 1px solid {{l.divider}}; background: {{l.rowBg}}">
+                <div style="flex: 1 1 170px; min-width: 0">
+                  <p style="margin: 0; display: flex; align-items: center; gap: 8px; font: 600 14px/20px 'IBM Plex Sans', sans-serif; color: {{c.ink}}">
+                    <span aria-hidden="true" style="flex: 0 0 8px; height: 8px; background: {{l.dot}}"></span>
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{l.name}}</span>
+                    <sc-if value="{{l.inUse}}" hint-placeholder-val="{{ false }}"><span style="padding: 1px 6px; background: {{c.accentTint}}; color: {{c.ink}}; font: 600 10px/14px 'Pixelify Sans', sans-serif; letter-spacing: .06em">IN USE</span></sc-if>
+                  </p>
+                  <p style="margin: 2px 0 0 16px; font: 400 12px/16px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">{{l.plan}}</p>
+                  <p style="margin: 2px 0 0 16px; font: 600 12px/16px 'IBM Plex Mono', monospace; color: {{l.statusColor}}">{{l.status}}</p>
+                </div>
+                <div style="flex: 2 1 250px; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+                  <sc-if value="{{l.expired}}" hint-placeholder-val="{{ false }}">
+                    <p style="margin: 0; font: 400 13px/19px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">Login expired. Switch to it and sign in to Cursor again.</p>
+                  </sc-if>
+                  <sc-for list="{{l.windows}}" as="w" hint-placeholder-count="2">
+                    <div style="display: flex; align-items: center; gap: 10px">
+                      <span style="flex: 0 0 62px; font: 400 12px/16px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">{{w.label}}</span>
+                      <span role="img" aria-label="{{w.aria}}" style="display: flex; gap: 2px">
+                        <sc-for list="{{w.blocks}}" as="b" hint-placeholder-count="10"><span style="width: 10px; height: 10px; background: {{b.bg}}"></span></sc-for>
+                      </span>
+                      <span style="flex: 0 0 38px; text-align: right; font: 600 13px/16px 'IBM Plex Mono', monospace; color: {{w.pctColor}}">{{w.pct}}</span>
+                      <span style="font: 400 12px/16px 'IBM Plex Mono', monospace; color: {{c.muted}}; white-space: nowrap">{{w.reset}}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; margin-left: auto">
+                  <sc-if value="{{l.hasAction}}" hint-placeholder-val="{{ false }}">
+                    <button type="button" style="height: 32px; padding: 0 12px; border: 0; background: {{c.accent}}; color: {{c.onAccent}}; font: 600 13px/16px 'IBM Plex Sans', sans-serif; cursor: pointer; clip-path: polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px))">{{l.action}}</button>
+                  </sc-if>
+                  <button type="button" aria-label="{{l.moreLabel}}" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 0; background: transparent; color: {{c.muted}}; cursor: pointer">
+                    <svg aria-hidden="true" viewBox="0 0 10 2" width="15" height="3" style="shape-rendering: crispEdges"><path d="M0 0h2v2h-2zM4 0h2v2h-2zM8 0h2v2h-2z" fill="currentColor"></path></svg>
+                  </button>
+                </div>
+              </div>
+            </sc-for>
+          </section>
+        </sc-for>
+      </div>
+    </div>
+
+    <footer style="margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; min-height: 34px; padding: 6px 16px; box-sizing: border-box; border-top: 1px solid {{c.line}}; background: {{c.rail}}; font: 500 12px/16px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">
+      <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 6px; height: 6px; background: {{c.warn}}"></span>2 need a hop</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 6px; height: 6px; background: {{c.danger}}"></span>Codex partial outage</span>
+      <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace">7.6M today</span>
+      <span style="font-family: 'IBM Plex Mono', monospace">12 day streak</span>
+      <button type="button" style="height: 22px; padding: 0 8px; border: 1px solid {{c.line2}}; background: transparent; color: {{c.ink}}; font: 600 11px/14px 'Pixelify Sans', sans-serif; letter-spacing: .06em; cursor: pointer">{{themeLabel}}</button>
+      <span>Limits read 2m ago</span>
+    </footer>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["night","day"],"default":"night"},"accent":{"editor":"color","options":["#FF8A3D","#5BD38A","#FFD24A","#7AA2FF"],"default":"#FF8A3D"},"$preview":{"width":1280,"height":1000}}'>
+class Component extends DCLogic {
+  hexA(hex, a) {
+    var h = String(hex || '#FF8A3D').replace('#', '');
+    if (h.length === 3) h = h.split('').map(function (x) { return x + x; }).join('');
+    var n = parseInt(h, 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  palette(theme, accent) {
+    var night = theme !== 'day';
+    var p = night ? {
+      bg: '#0D1024', panel: '#12142A', raised: '#1A1D38', rail: '#0A0C1D',
+      line: 'rgba(160,170,255,.12)', line2: 'rgba(160,170,255,.22)',
+      ink: '#EEF0FF', muted: '#9BA0C8', onAccent: '#14162E',
+      roomFill: '#5BD38A', roomInk: '#5BD38A', warn: '#FFD24A', warnInk: '#FFD24A', danger: '#FF5C7A', dangerInk: '#FF8399',
+      fill: '#C9CCF0', track: '#262A4C',
+      band0: '#0B0E21', band2: '#11142C', band4: '#171936',
+      sparkA: '#EEF0FF', sparkB: '#6E74A8', far: '#1C1F3E'
+    } : {
+      bg: '#EEF3FC', panel: '#FFFFFF', raised: '#F3F5FC', rail: '#E6ECF8',
+      line: 'rgba(21,24,51,.10)', line2: 'rgba(21,24,51,.18)',
+      ink: '#151833', muted: '#4F5478', onAccent: '#14162E',
+      roomFill: '#5BD38A', roomInk: '#1C7A45', warn: '#F2B705', warnInk: '#7A5600', danger: '#E0405F', dangerInk: '#B4233F',
+      fill: '#2E3360', track: '#DDE2F2',
+      band0: '#CFDFFF', band2: '#DCE6FD', band4: '#E9EEF8',
+      sparkA: '#FFFFFF', sparkB: '#E4EAF7', far: '#D3E2C8'
+    };
+    p.accent = accent;
+    p.accentTint = this.hexA(accent, night ? 0.18 : 0.28);
+    return p;
+  }
+  pix(rows, ox, oy) {
+    var out = {};
+    for (var y = 0; y < rows.length; y++) {
+      var r = rows[y];
+      for (var x = 0; x < r.length; x++) {
+        var ch = r[x];
+        if (ch === '.' || ch === ' ') continue;
+        out[ch] = (out[ch] || '') + 'M' + (ox + x) + ' ' + (oy + y) + 'h1v1h-1z';
+      }
+    }
+    return out;
+  }
+  icon(rows) { return this.pix(rows, 0, 0)['#'] || ''; }
+  rnd(seed) {
+    var s = seed >>> 0;
+    return function () { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+  }
+  cell(x, y) { return 'M' + x + ' ' + y + 'h1v1h-1z'; }
+  layer(W, H, base, amps, freqs, phases) {
+    var d = '';
+    for (var x = 0; x < W; x++) {
+      var h = base;
+      for (var i = 0; i < amps.length; i++) h += amps[i] * Math.sin(x * freqs[i] + phases[i]);
+      h = Math.round(h);
+      d += 'M' + x + ' ' + (H - h) + 'h1v' + h + 'h-1z';
+    }
+    return d;
+  }
+  strip(night) {
+    var R = this.rnd(23), A = '', B = '';
+    if (night) {
+      for (var i = 0; i < 46; i++) {
+        var x = Math.floor(R() * 300), y = Math.floor(R() * 20), b = R();
+        if (b < 0.3) A += this.cell(x, y); else B += this.cell(x, y);
+      }
+    } else {
+      var cloud = ['...#####....', '.#########..', '############'];
+      var spots = [[150, 3], [228, 7], [276, 2]];
+      for (var k = 0; k < spots.length; k++) A += this.pix(cloud, spots[k][0], spots[k][1])['#'];
+    }
+    return { sparkA: A, sparkB: B, far: this.layer(300, 30, 6, [2, 1], [0.06, 0.19], [0.3, 1.1]), mid: this.layer(300, 30, 3, [1], [0.09], [2]) };
+  }
+  chart() {
+    var W = 240, H = 56, NOW = 72, R = this.rnd(11), v = 520, vals = [];
+    for (var x = 0; x < W; x++) {
+      if (x > 0 && x % 5 === 0) v += 24 + R() * 10;
+      if (x % 24 === 10) v += 84;
+      v -= x < NOW ? 7 + R() * 4.5 : 8.4 + 2 * Math.sin(x / 9);
+      v = Math.max(160, Math.min(740, v));
+      vals.push(v);
+    }
+    var shift = 415 - vals[NOW];
+    var ys = vals.map(function (q) { var t = Math.max(30, Math.min(790, q + shift)); return H - 1 - Math.round(t / 800 * (H - 3)); });
+    var areaM = '', areaP = '', lineM = '', lineP = '', resets = '', grid = '', nowLine = '';
+    for (var i = 0; i < W; i++) {
+      var y = ys[i], prev = i > 0 ? ys[i - 1] : y, top = Math.min(y, prev), len = Math.abs(y - prev) + 1;
+      var seg = 'M' + i + ' ' + top + 'h1v' + len + 'h-1z';
+      if (i < NOW) {
+        lineM += seg;
+        areaM += 'M' + i + ' ' + (y + 1) + 'h1v' + (H - y - 1) + 'h-1z';
+      } else {
+        lineP += seg;
+        for (var yy = y + 2; yy < H; yy++) if ((i + yy) % 2 === 0) areaP += this.cell(i, yy);
+        if (i % 24 === 10) resets += 'M' + (i - 1) + ' ' + (y - 4) + 'h2v2h-2z';
+      }
+    }
+    for (var g = 0; g < W; g += 3) { grid += this.cell(g, 1) + this.cell(g, Math.round(H / 2)); }
+    for (var n = 0; n < H; n += 2) nowLine += this.cell(NOW, n);
+    var names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
+    var self = this;
+    var days = names.map(function (label, k) {
+      var x = 12 + k * 24;
+      return { label: label, left: (x / W * 100).toFixed(2) + '%', color: k < 3 ? self._c.ink : self._c.muted };
+    });
+    return { areaM: areaM, areaP: areaP, lineM: lineM, lineP: lineP, resets: resets, grid: grid, nowLine: nowLine, days: days };
+  }
+  blocks(pct, tone, c) {
+    var filled = pct === null ? 0 : Math.max(pct > 0 ? 1 : 0, Math.round(pct / 10));
+    var col = tone === 'danger' ? c.danger : tone === 'warn' ? c.warn : c.fill;
+    var out = [];
+    for (var i = 0; i < 10; i++) out.push({ bg: i < filled ? col : c.track });
+    return out;
+  }
+  renderVals() {
+    var theme = this.props.theme ?? 'night';
+    var accent = this.props.accent ?? '#FF8A3D';
+    var night = theme !== 'day';
+    var c = this.palette(theme, accent);
+    this._c = c;
+    var self = this;
+    var I = {
+      home: ['....##....', '...####...', '..######..', '.########.', '##########', '.########.', '.##....##.', '.##.##.##.', '.##.##.##.', '.########.'],
+      limits: ['..........', '.#######..', '.#.....###', '.#.###.###', '.#.###.###', '.#.....###', '.#######..', '..........', '..........', '..........'],
+      usage: ['.......##.', '.......##.', '....##.##.', '....##.##.', '....##.##.', '.##.##.##.', '.##.##.##.', '.##.##.##.', '.##.##.##.', '##########'],
+      insights: ['....##....', '....##....', '.#..##..#.', '..#....#..', '...####...', '##.####.##', '...####...', '..#....#..', '.#..##..#.', '....##....'],
+      community: ['.##....##.', '####..####', '####..####', '.##....##.', '..........', '####..####', '####..####', '####..####', '..........', '..........'],
+      settings: ['....##....', '.#.####.#.', '..######..', '.###..###.', '####..####', '####..####', '.###..###.', '..######..', '.#.####.#.', '....##....'],
+      hop: ['..........', '....#####.', '.......##.', '......#.#.', '.....#..#.', '....#.....', '...#......', '..#.......', '.#........', '..........']
+    };
+    var navDefs = [['Home', I.home, ''], ['Limits', I.limits, '2'], ['Usage', I.usage, ''], ['Insights', I.insights, ''], ['Community', I.community, '']];
+    var nav = navDefs.map(function (d, i) {
+      var on = i === 1;
+      return { label: d[0], icon: self.icon(d[1]), badge: d[2], hasBadge: d[2] !== '', current: on ? 'page' : 'false', color: on ? c.ink : c.muted, bg: on ? c.raised : 'transparent', marker: on ? c.accent : 'transparent' };
+    });
+    var chipDefs = [['All', '11', c.accent], ['Claude Code', '2', '#E8875A'], ['Cursor', '2', '#7AA2FF'], ['Codex', '1', '#4FD1B5'], ['Gemini CLI', '1', '#FFD24A'], ['OpenCode', '1', '#B48CFF'], ['Pi', '1', '#FF8FB4'], ['GitHub Copilot', '1', '#B9BEE6'], ['Windsurf', '1', '#5BC0EB'], ['Codebuff', '1', '#A3E05B']];
+    var chips = chipDefs.map(function (d, i) {
+      var on = i === 0;
+      return { label: d[0], count: d[1], hue: d[2], pressed: on ? 'true' : 'false', bg: on ? c.ink : c.panel, color: on ? c.bg : c.ink, countColor: on ? c.bg : c.muted, border: on ? c.ink : c.line2 };
+    });
+    function win(label, pct, reset, tone) {
+      return {
+        label: label, pct: pct + '%', reset: reset, blocks: self.blocks(pct, tone, c),
+        aria: label + ' window ' + pct + ' percent used',
+        pctColor: tone === 'danger' ? c.dangerInk : tone === 'warn' ? c.warnInk : c.ink
+      };
+    }
+    function login(o) {
+      return {
+        name: o.name, plan: o.plan, inUse: !!o.inUse, expired: !!o.expired, windows: o.windows || [],
+        status: o.status || '', statusColor: o.statusTone === 'danger' ? c.dangerInk : o.statusTone === 'warn' ? c.warnInk : o.statusTone === 'room' ? c.roomInk : c.muted,
+        dot: o.dot === 'danger' ? c.danger : o.dot === 'warn' ? c.warn : o.dot === 'room' ? c.roomFill : c.fill,
+        hasAction: !!o.action, action: o.action || '', moreLabel: 'More for ' + o.name,
+        rowBg: o.inUse ? (night ? 'rgba(160,170,255,.04)' : 'rgba(21,24,51,.025)') : 'transparent',
+        divider: o.first ? 'transparent' : c.line
+      };
+    }
+    var groups = [
+      { name: 'Claude Code', badge: 'CC', hue: '#E8875A', count: '2', summary: '108% of 200% left · ~28% an hour', canAdd: true, logins: [
+        login({ first: true, name: 'Personal', plan: 'Max 5x · me@personal.dev · read 2m ago', inUse: true, dot: 'warn', status: 'Empty ~12:43 PM', statusTone: 'warn', windows: [win('5-hour', 51, '3h 5m', 'warn'), win('Weekly', 6, '6d 19h', 'normal')] }),
+        login({ name: 'work@studio.dev', plan: 'Pro · read 2m ago', dot: 'room', status: '~0.7% an hour', statusTone: 'room', action: 'Switch', windows: [win('5-hour', 12, '39m', 'normal'), win('Weekly', 41, '3d 11h', 'normal')] })
+      ] },
+      { name: 'Cursor', badge: 'Cu', hue: '#7AA2FF', count: '2', summary: '38% of 100% left · ~0.2% an hour', canAdd: true, logins: [
+        login({ first: true, name: 'me@personal.dev', plan: 'Ultra · read 2m ago', inUse: true, dot: 'normal', status: 'Lasts to the reset', windows: [win('Auto', 62, '13d 4h', 'normal')] }),
+        login({ name: 'spare@personal.dev', plan: 'Pro', expired: true, dot: 'danger', status: 'Login expired', statusTone: 'danger', action: 'Switch and sign in' })
+      ] },
+      { name: 'Codex', badge: 'Cx', hue: '#4FD1B5', count: '1', summary: '7% of 100% left · no other login', canAdd: true, logins: [
+        login({ first: true, name: 'me@personal.dev', plan: 'Plus · read 2m ago', inUse: true, dot: 'danger', status: 'Runs out ~11:19 AM', statusTone: 'danger', action: 'Add a login', windows: [win('5-hour', 93, '', 'danger')] })
+      ] },
+      { name: 'GitHub Copilot', badge: 'Co', hue: '#B9BEE6', count: '1', summary: '53% of 100% left', canAdd: true, logins: [
+        login({ first: true, name: 'Personal', plan: 'Pro · read 2m ago', inUse: true, dot: 'normal', status: 'Lasts to the reset', windows: [win('Premium', 47, '13d 4h', 'normal')] })
+      ] },
+      { name: 'Gemini CLI', badge: 'Ge', hue: '#FFD24A', count: '1', summary: '72% of 100% left', canAdd: true, logins: [
+        login({ first: true, name: 'me@personal.dev', plan: 'read 2m ago', inUse: true, dot: 'normal', status: 'Lasts to the reset', windows: [win('Quota', 28, '', 'normal')] })
+      ] },
+      { name: 'Windsurf', badge: 'Ws', hue: '#5BC0EB', count: '1', summary: '67% of 100% left', canAdd: true, logins: [
+        login({ first: true, name: 'me@windsurf.dev', plan: 'Pro · read 2m ago', inUse: true, dot: 'normal', status: 'Lasts to the reset', windows: [win('Day', 33, '14h 16m', 'normal')] })
+      ] },
+      { name: 'Codebuff', badge: 'Cb', hue: '#A3E05B', count: '1', summary: '70% of 100% left', canAdd: true, logins: [
+        login({ first: true, name: 'me@codebuff.dev', plan: 'read 2m ago', inUse: true, dot: 'normal', status: 'Lasts to the reset', windows: [win('Usage', 30, '', 'normal')] })
+      ] },
+      { name: 'OpenCode · Pi', badge: 'Oc', hue: '#B48CFF', count: '2', summary: 'No limit to read', canAdd: false, logins: [
+        login({ first: true, name: 'Multi-provider', plan: 'Provider quotas stay in OpenCode and Pi. Keyhop counts their tokens from local logs.', dot: 'normal', status: '' })
+      ] }
+    ];
+    var LOGO = ['##..##.', '##.##..', '####...', '##.##..', '##..##.', '.......'];
+    return {
+      c: c, nav: nav, chips: chips, groups: groups,
+      icons: { hop: this.icon(I.hop), settings: this.icon(I.settings) },
+      logo: { k: this.pix(LOGO, 0, 0)['#'], dot: 'M5 0h2v2h-2z' },
+      strip: this.strip(night), chart: this.chart(),
+      themeLabel: night ? 'NIGHT' : 'DAY'
+    };
+  }
+}
+</script>
+</body>
+</html>

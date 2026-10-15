@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Instrument — Limits</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'JetBrains Mono',ui-monospace,monospace}
+a{color:inherit}a:hover{opacity:.85}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+</style>
+</helmet>
+<div style="min-height: 1000px; display: flex; flex-direction: column; background: {{c.bg}}; color: {{c.ink}}; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; line-height: 18px; font-variant-numeric: tabular-nums">
+
+  <header style="min-height: 44px; display: flex; flex-wrap: wrap; align-items: stretch; background: {{c.panel}}; border-bottom: 1px solid {{c.line}}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 16px; border-right: 1px solid {{c.grid}}">
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><rect x="1" y="1" width="4" height="14" fill="{{c.ink}}"></rect><rect x="7" y="5" width="4" height="4" fill="{{c.accent}}"></rect><rect x="11" y="1" width="4" height="4" fill="{{c.ink}}"></rect><rect x="11" y="11" width="4" height="4" fill="{{c.ink}}"></rect></svg>
+      <span style="font-weight: 700; letter-spacing: .14em">KEYHOP</span>
+    </div>
+    <nav aria-label="Places" style="display: flex; align-items: stretch; overflow-x: auto">
+      <a href="C-Home.dc.html" style="display: flex; align-items: center; padding: 0 14px; text-decoration: none; letter-spacing: .08em; color: {{c.muted}}">HOME</a>
+      <a href="#" aria-current="page" style="display: flex; align-items: center; gap: 6px; padding: 0 14px; text-decoration: none; letter-spacing: .08em; font-weight: 600; color: {{c.ink}}; box-shadow: inset 0 -2px 0 {{c.accent}}">LIMITS <span style="background: {{c.danger}}; color: {{c.onAccent}}; padding: 0 4px; font-size: 10px; line-height: 14px; font-weight: 700">2</span></a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 14px; text-decoration: none; letter-spacing: .08em; color: {{c.muted}}">USAGE</a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 14px; text-decoration: none; letter-spacing: .08em; color: {{c.muted}}">INSIGHTS</a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 14px; text-decoration: none; letter-spacing: .08em; color: {{c.muted}}">COMMUNITY</a>
+    </nav>
+    <div style="flex: 1 1 260px; display: flex; align-items: center; padding: 6px 12px; min-width: 0">
+      <label style="flex: 1; display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border: 1px solid {{c.line}}; background: {{c.bg}}; min-width: 0">
+        <span style="color: {{c.accentInk}}; font-weight: 700">›</span>
+        <input type="text" aria-label="Hop, run or search" placeholder="hop / run / search" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: {{c.ink}}; font: 400 12px 'JetBrains Mono', monospace">
+        <span style="width: 7px; height: 14px; background: {{c.accent}}; animation: blink 1.1s steps(1) infinite"></span>
+        <span style="padding: 0 5px; border: 1px solid {{c.line}}; color: {{c.muted}}; font-size: 10px">⌘K</span>
+      </label>
+    </div>
+    <div style="display: flex; align-items: center; gap: 14px; padding: 0 16px; border-left: 1px solid {{c.grid}}; color: {{c.muted}}; letter-spacing: .06em">
+      <span>TUE 13 OCT · 10:52</span>
+      <button type="button" aria-label="Settings" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 1px solid {{c.line}}; background: transparent; color: {{c.ink}}; border-radius: 0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"></path><rect x="14" y="4" width="4" height="4"></rect><rect x="8" y="10" width="4" height="4"></rect><rect x="16" y="16" width="4" height="4"></rect></svg></button>
+    </div>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 8px 12px; border-bottom: 1px solid {{c.grid}}">
+    <div style="display: flex; flex-wrap: wrap; gap: 6px" role="group" aria-label="Filter by tool">
+      <sc-for list="{{chips}}" as="ch" hint-placeholder-count="10">
+        <button type="button" style="height: 26px; padding: 0 8px; border-radius: 0; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em; border: 1px solid {{ch.border}}; background: {{ch.bg}}; color: {{ch.ink}}">{{ch.name}} <span style="opacity: .65">{{ch.n}}</span></button>
+      </sc-for>
+    </div>
+    <div style="display: flex; gap: 8px">
+      <div style="display: inline-flex; border: 1px solid {{c.line}}" role="group" aria-label="Range">
+        <button type="button" style="height: 26px; padding: 0 10px; border: 0; border-radius: 0; background: transparent; color: {{c.muted}}; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em">24H</button>
+        <button type="button" aria-pressed="true" style="height: 26px; padding: 0 10px; border: 0; border-radius: 0; background: {{c.ink}}; color: {{c.bg}}; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .06em">7D</button>
+      </div>
+      <div style="display: inline-flex; border: 1px solid {{c.line}}" role="group" aria-label="View">
+        <button type="button" aria-pressed="true" style="height: 26px; padding: 0 10px; border: 0; border-radius: 0; background: {{c.ink}}; color: {{c.bg}}; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .06em">REMAINING</button>
+        <button type="button" style="height: 26px; padding: 0 10px; border: 0; border-radius: 0; background: transparent; color: {{c.muted}}; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em">DRAIN RATE</button>
+      </div>
+    </div>
+  </div>
+
+  <main style="flex: 1; display: flex; flex-direction: column; gap: 1px; background: {{c.grid}}">
+
+    <div style="display: flex; flex-wrap: wrap; gap: 1px">
+      <section aria-label="Pooled remaining" style="flex: 1 1 300px; max-width: 100%; min-width: 0; background: {{c.bg}}; display: flex; flex-direction: column">
+        <div style="height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: {{c.panel}}; border-bottom: 1px solid {{c.grid}}; font-size: 11px; letter-spacing: .08em; color: {{c.muted}}">
+          <span style="color: {{c.ink}}; font-weight: 600">POOLED · 8 LOGINS</span>
+          <span>OWN LOGINS ONLY</span>
+        </div>
+        <div style="padding: 16px 12px; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; align-items: baseline; gap: 8px">
+            <span style="font-size: 72px; line-height: 68px; font-weight: 600; letter-spacing: -.05em">415<span style="color: {{c.muted}}; font-size: 32px">%</span></span>
+            <span style="color: {{c.muted}}; font-size: 16px">/ 800%</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: {{c.grid}}; border: 1px solid {{c.grid}}">
+            <div style="background: {{c.bg}}; padding: 8px; display: flex; flex-direction: column"><span style="font-size: 10px; letter-spacing: .08em; color: {{c.muted}}">DRAIN NOW</span><span style="font-size: 15px; font-weight: 600; color: {{c.accentInk}}">−80%/h</span></div>
+            <div style="background: {{c.bg}}; padding: 8px; display: flex; flex-direction: column"><span style="font-size: 10px; letter-spacing: .08em; color: {{c.muted}}">NEXT RESET</span><span style="font-size: 15px; font-weight: 600; color: {{c.projInk}}">+35% 12:41</span></div>
+            <div style="background: {{c.bg}}; padding: 8px; display: flex; flex-direction: column"><span style="font-size: 10px; letter-spacing: .08em; color: {{c.muted}}">RESET LOGIN</span><span style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">me@personal.dev</span></div>
+            <div style="background: {{c.bg}}; padding: 8px; display: flex; flex-direction: column"><span style="font-size: 10px; letter-spacing: .08em; color: {{c.muted}}">AT THIS PACE</span><span style="font-size: 13px; font-weight: 600">lasts 7 days</span></div>
+          </div>
+          <p style="margin: 0; font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 14px; line-height: 20px; color: {{c.muted}}">Each login keeps its own limits. This adds up what each one has left, so you can see where there is room before you hop.</p>
+        </div>
+      </section>
+
+      <section aria-label="Remaining, measured and projected" style="flex: 3 1 600px; min-width: 0; background: {{c.bg}}; display: flex; flex-direction: column">
+        <div style="height: 32px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 12px; background: {{c.panel}}; border-bottom: 1px solid {{c.grid}}; font-size: 11px; letter-spacing: .08em; color: {{c.muted}}">
+          <span style="color: {{c.ink}}; font-weight: 600">REMAINING · 0–800%</span>
+          <span style="display: flex; gap: 14px; flex-wrap: wrap">
+            <span><span style="display: inline-block; width: 14px; height: 2px; background: {{c.accent}}; vertical-align: middle"></span> MEASURED</span>
+            <span><span style="display: inline-block; width: 14px; border-top: 2px dashed {{c.proj}}; vertical-align: middle"></span> PROJECTED</span>
+            <span><span style="display: inline-block; width: 6px; height: 6px; background: {{c.proj}}; vertical-align: middle"></span> RESET</span>
+          </span>
+        </div>
+        <div style="padding: 14px 12px 8px 48px; position: relative">
+          <div style="position: relative; height: 240px">
+            <sc-for list="{{yTicks}}" as="t" hint-placeholder-count="5">
+              <span style="position: absolute; left: -40px; width: 32px; text-align: right; top: {{t.top}}; transform: translateY(-50%); font-size: 10px; color: {{c.muted}}">{{t.label}}</span>
+            </sc-for>
+            <svg width="100%" height="240" viewBox="0 0 1000 240" preserveAspectRatio="none" aria-hidden="true" style="display: block; overflow: visible">
+              <path d="{{chart.grid}}" stroke="{{c.grid}}" stroke-width="1" fill="none" vector-effect="non-scaling-stroke"></path>
+              <path d="{{chart.days}}" stroke="{{c.grid}}" stroke-width="1" stroke-dasharray="2 4" fill="none" vector-effect="non-scaling-stroke"></path>
+              <path d="{{chart.pastArea}}" fill="{{c.accentSoft}}" stroke="none"></path>
+              <path d="{{chart.futArea}}" fill="{{c.projSoft}}" stroke="none"></path>
+              <path d="{{chart.past}}" stroke="{{c.accent}}" stroke-width="1.5" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round"></path>
+              <path d="{{chart.fut}}" stroke="{{c.proj}}" stroke-width="1.5" stroke-dasharray="5 4" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round"></path>
+              <path d="{{chart.ticks}}" fill="{{c.proj}}" stroke="none"></path>
+              <path d="{{chart.now}}" stroke="{{c.ink}}" stroke-width="1" fill="none" vector-effect="non-scaling-stroke"></path>
+            </svg>
+            <span style="position: absolute; top: -12px; left: {{chart.nowPct}}; transform: translateX(6px); font-size: 10px; letter-spacing: .08em; color: {{c.ink}}; background: {{c.bg}}; padding: 0 4px">NOW 10:52 · 415%</span>
+          </div>
+          <div style="position: relative; height: 18px; margin-top: 6px">
+            <sc-for list="{{xTicks}}" as="t" hint-placeholder-count="10">
+              <span style="position: absolute; left: {{t.left}}; font-size: 10px; letter-spacing: .08em; color: {{t.ink}}">{{t.label}}</span>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div style="flex: 1; display: flex; flex-wrap: wrap; gap: 1px">
+      <sc-for list="{{cols}}" as="col" hint-placeholder-count="2">
+        <div style="flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+          <sc-for list="{{col.groups}}" as="g" hint-placeholder-count="3">
+            <section aria-label="{{g.name}}" style="background: {{c.bg}}; display: flex; flex-direction: column">
+              <div style="min-height: 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding: 0 12px; background: {{c.panel}}; border-bottom: 1px solid {{c.grid}}; font-size: 11px; letter-spacing: .08em; color: {{c.muted}}">
+                <span><span style="color: {{c.ink}}; font-weight: 600">{{g.name}}</span> <span>{{g.count}}</span> · <span style="color: {{c.ink}}">{{g.left}}</span> {{g.rate}}</span>
+                <button type="button" style="height: 24px; padding: 0 8px; border: 0; border-radius: 0; background: transparent; color: {{c.muted}}; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em">{{g.add}}</button>
+              </div>
+              <sc-for list="{{g.logins}}" as="l" hint-placeholder-count="2">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 12px; border-bottom: 1px solid {{c.grid}}; background: {{l.rowBg}}; box-shadow: inset 2px 0 0 {{l.edge}}">
+                  <div style="flex: 1 1 170px; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                    <span style="display: flex; align-items: center; gap: 8px; white-space: nowrap"><span style="width: 7px; height: 7px; flex: none; background: {{l.dot}}"></span><span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis">{{l.name}}</span>
+                      <sc-if value="{{l.hasBadge}}" hint-placeholder-val="{{ true }}"><span style="padding: 0 5px; font-size: 10px; letter-spacing: .08em; border: 1px solid {{l.badgeBorder}}; color: {{l.badgeInk}}; background: {{l.badgeBg}}">{{l.badge}}</span></sc-if>
+                    </span>
+                    <span style="color: {{c.muted}}; padding-left: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{l.sub}}</span>
+                  </div>
+                  <div style="flex: 2 1 230px; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+                    <sc-for list="{{l.wins}}" as="w" hint-placeholder-count="2">
+                      <div style="display: flex; align-items: center; gap: 8px">
+                        <span style="width: 58px; color: {{c.muted}}">{{w.name}}</span>
+                        <span style="flex: 1; height: 4px; background: {{c.track}}; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{w.w}}; background: {{w.bar}}"></span><span style="position: absolute; left: {{w.pace}}; top: -3px; width: 1px; height: 10px; background: {{c.muted}}"></span></span>
+                        <span style="width: 34px; text-align: right; font-weight: 600; color: {{w.ink}}">{{w.used}}</span>
+                        <span style="width: 54px; text-align: right; color: {{c.muted}}">{{w.reset}}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <span style="flex: 0 1 120px; text-align: right; font-weight: 600; white-space: nowrap; color: {{l.fcInk}}">{{l.forecast}}</span>
+                  <span style="display: flex; align-items: center; gap: 4px">
+                    <sc-if value="{{l.hasAction}}" hint-placeholder-val="{{ true }}"><button type="button" style="height: 28px; padding: 0 10px; border-radius: 0; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .06em; border: 1px solid {{l.actBorder}}; background: {{l.actBg}}; color: {{l.actInk}}">{{l.action}}</button></sc-if>
+                    <button type="button" aria-label="More for {{l.name}}" style="width: 28px; height: 28px; border: 0; border-radius: 0; background: transparent; color: {{c.muted}}; font: 600 12px 'JetBrains Mono', monospace">···</button>
+                  </span>
+                </div>
+              </sc-for>
+            </section>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </main>
+
+  <footer style="min-height: 28px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px; padding: 0 12px; background: {{c.panel}}; border-top: 1px solid {{c.line}}; font-size: 11px; letter-spacing: .04em">
+    <div style="display: flex; gap: 16px; align-items: center">
+      <span style="background: {{c.accent}}; color: {{c.onAccent}}; padding: 0 5px; font-weight: 700">SAMPLE</span>
+      <span><span style="color: {{c.dangerInk}}">●</span> 2 NEED A HOP</span>
+      <span><span style="color: {{c.warnInk}}">▲</span> CODEX PARTIAL OUTAGE</span>
+    </div>
+    <div style="display: flex; gap: 16px; align-items: center; color: {{c.muted}}">
+      <span>7.6M TODAY</span>
+      <span>12D STREAK</span>
+      <button type="button" style="border: 1px solid {{c.line}}; background: transparent; color: {{c.ink}}; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em; padding: 0 6px; border-radius: 0">{{themeLabel}}</button>
+      <span>↻ LIMITS 2M AGO</span>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["night","day"],"default":"night"},"accent":{"editor":"color","options":["#FFB020","#3EE6C4","#FF5F3D","#9DFF57"],"default":"#FFB020"},"$preview":{"width":1280,"height":1000}}'>
+class Component extends DCLogic {
+  palette(theme, accent) {
+    const night = theme !== 'day';
+    const shade = (hex, f) => {
+      const n = parseInt(hex.replace('#', ''), 16);
+      return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => Math.round(v * f).toString(16).padStart(2, '0')).join('');
+    };
+    const rgba = (hex, a) => {
+      const n = parseInt(hex.replace('#', ''), 16);
+      return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+    };
+    const c = night ? {
+      bg: '#0A0A0B', panel: '#111113', grid: 'rgba(255,255,255,.06)', line: 'rgba(255,255,255,.12)',
+      ink: '#E8E6E1', muted: '#8C8A85', track: 'rgba(255,255,255,.08)',
+      danger: '#FF5F3D', dangerInk: '#FF5F3D', warn: '#F5C542', warnInk: '#F5C542', ok: '#9DFF57', okInk: '#9DFF57',
+      proj: '#3EE6C4', projInk: '#3EE6C4', projSoft: 'rgba(62,230,196,.07)', dangerRow: 'rgba(255,95,61,.07)'
+    } : {
+      bg: '#F2F1EC', panel: '#FFFFFF', grid: 'rgba(0,0,0,.07)', line: 'rgba(0,0,0,.14)',
+      ink: '#111111', muted: '#5E5C57', track: 'rgba(0,0,0,.08)',
+      danger: '#E2502E', dangerInk: '#C2381A', warn: '#D99A00', warnInk: '#9A6A00', ok: '#4E9A12', okInk: '#2F7A00',
+      proj: '#0A8F78', projInk: '#0A7563', projSoft: 'rgba(10,143,120,.08)', dangerRow: 'rgba(194,56,26,.06)'
+    };
+    c.accent = accent;
+    c.accentInk = night ? accent : shade(accent, 0.5);
+    c.accentSoft = rgba(accent, night ? 0.10 : 0.14);
+    c.onAccent = '#0A0A0B';
+    return c;
+  }
+  chart() {
+    const W = 1000, H = 240, spanDays = 9.5, perDay = 48;
+    const total = spanDays * perDay;
+    const nowStep = Math.round((2 + 10.87 / 24) * perDay);
+    let s = 11;
+    const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    const clamp = v => Math.max(0, Math.min(800, v));
+    const hour = i => (i / 2) % 24;
+    const active = h => h >= 9 && h < 20;
+    const x = i => (i / total * W);
+    const y = v => (H - clamp(v) / 800 * H);
+    let v = 500;
+    const past = [v];
+    for (let i = 1; i <= nowStep; i++) {
+      v -= active(hour(i)) ? 6 + rnd() * 9 : rnd() * 1.5;
+      if (i % 10 === 0) v += 22 + rnd() * 26;
+      if (i === 60) v += 110;
+      past.push(v);
+    }
+    const shift = 415 - past[past.length - 1];
+    const pastV = past.map(p => clamp(p + shift));
+    pastV[pastV.length - 1] = 415;
+    let f = 415;
+    const fut = [f];
+    const resets = [];
+    for (let j = 1; total >= nowStep + j; j++) {
+      const i = nowStep + j;
+      if (j <= 6) f -= 40;
+      else f -= active(hour(i)) ? 6.5 : 0.6;
+      let up = 0;
+      if (j === 4) up = 35;
+      else if (j > 6 && j % 10 === 0) up = 26 + rnd() * 10;
+      if (j === 100 || j === 244) up += 130;
+      if (j < 30 && j > 6 && j % 10 === 0) up += 60;
+      if (up) { f += up; resets.push([i, clamp(f)]); }
+      f = clamp(f);
+      fut.push(f);
+    }
+    const line = (vals, start) => vals.map((val, k) => (k === 0 ? 'M' : 'L') + x(start + k).toFixed(1) + ' ' + y(val).toFixed(1)).join(' ');
+    const pastD = line(pastV, 0);
+    const futD = line(fut, nowStep);
+    const nowX = x(nowStep).toFixed(1);
+    const endX = x(nowStep + fut.length - 1).toFixed(1);
+    const grid = [0, 200, 400, 600, 800].map(g => 'M0 ' + y(g).toFixed(1) + ' H' + W).join(' ');
+    const days = Array.from({ length: 9 }, (_, d) => 'M' + x((d + 1) * perDay).toFixed(1) + ' 0 V' + H).join(' ');
+    const ticks = resets.map(r => {
+      const cx = x(r[0]), cy = y(r[1]);
+      return 'M' + (cx - 3).toFixed(1) + ' ' + (cy - 3).toFixed(1) + ' h6 v6 h-6 Z';
+    }).join(' ');
+    return {
+      grid, days, ticks,
+      past: pastD,
+      fut: futD,
+      pastArea: pastD + ' L' + nowX + ' ' + H + ' L0 ' + H + ' Z',
+      futArea: futD + ' L' + endX + ' ' + H + ' L' + nowX + ' ' + H + ' Z',
+      now: 'M' + nowX + ' 0 V' + H,
+      nowPct: (nowStep / total * 100).toFixed(2) + '%'
+    };
+  }
+  renderVals() {
+    const theme = this.props.theme ?? 'night';
+    const c = this.palette(theme, this.props.accent ?? '#FFB020');
+    const level = u => u >= 90 ? 'danger' : u >= 70 ? 'warn' : 'ok';
+    const win = (name, u, reset, pace) => {
+      const lv = level(u);
+      return {
+        name, used: u + '%', w: u + '%', reset, pace: (pace ?? u) + '%',
+        bar: lv === 'danger' ? c.danger : lv === 'warn' ? c.warn : c.ink,
+        ink: lv === 'danger' ? c.dangerInk : lv === 'warn' ? c.warnInk : c.ink
+      };
+    };
+    const login = o => {
+      const danger = o.state === 'danger';
+      const badges = {
+        use: { badge: 'IN USE', badgeBorder: c.ink, badgeInk: c.ink, badgeBg: 'transparent' },
+        expired: { badge: 'EXPIRED', badgeBorder: c.dangerInk, badgeInk: c.dangerInk, badgeBg: 'transparent' },
+        none: { badge: 'NO LIMIT', badgeBorder: c.line, badgeInk: c.muted, badgeBg: 'transparent' }
+      };
+      const b = o.badge ? badges[o.badge] : { badge: '', badgeBorder: 'transparent', badgeInk: c.muted, badgeBg: 'transparent' };
+      const primary = o.primary;
+      return Object.assign({
+        name: o.name, sub: o.sub, wins: o.wins || [], forecast: o.forecast || '',
+        fcInk: o.fcInk || c.muted,
+        hasBadge: !!o.badge,
+        dot: danger || o.badge === 'expired' ? c.danger : o.wins && o.wins.length ? c.ok : c.muted,
+        rowBg: danger ? c.dangerRow : 'transparent',
+        edge: danger ? c.danger : 'transparent',
+        hasAction: !!o.action, action: o.action || '',
+        actBg: primary ? c.accent : 'transparent', actInk: primary ? c.onAccent : c.ink, actBorder: primary ? c.accent : c.line
+      }, b);
+    };
+    const groups = {
+      claude: { name: 'CLAUDE CODE', count: '2', left: '108% OF 200% LEFT', rate: '· ~28%/H', add: '+ ADD ACCOUNT', logins: [
+        login({ name: 'Personal', sub: 'Max 5x · me@personal.dev · read 2m ago', badge: 'use', wins: [win('5-hour', 51, '3h 05m', 44), win('weekly', 6, '6d 19h', 3)], forecast: 'EMPTY ~12:43 PM', fcInk: c.warnInk }),
+        login({ name: 'work@studio.dev', sub: 'Pro · read 2m ago', wins: [win('5-hour', 12, '39m', 92), win('weekly', 41, '3d 11h', 52)], forecast: '~0.7%/H', action: 'SWITCH', primary: true })
+      ] },
+      cursor: { name: 'CURSOR', count: '2', left: '38% OF 100% LEFT', rate: '· ~0.2%/H', add: '+ ADD ACCOUNT', logins: [
+        login({ name: 'me@personal.dev', sub: 'Ultra · read 2m ago', badge: 'use', wins: [win('auto', 62, '13d 4h', 57)], forecast: '~0.2%/H' }),
+        login({ name: 'spare@personal.dev', sub: 'Pro · login expired', badge: 'expired', forecast: 'SIGN IN AGAIN', fcInk: c.dangerInk, action: 'SWITCH AND SIGN IN', primary: true })
+      ] },
+      codex: { name: 'CODEX', count: '1', left: '7% OF 100% LEFT', rate: '· NO OTHER LOGIN', add: '+ ADD ACCOUNT', logins: [
+        login({ name: 'me@personal.dev', sub: 'Plus · read 2m ago', badge: 'use', state: 'danger', wins: [win('5-hour', 93, '—', 60)], forecast: 'EMPTY ~11:19 AM', fcInk: c.dangerInk, action: '+ ADD A LOGIN' })
+      ] },
+      gemini: { name: 'GEMINI CLI', count: '1', left: '72% OF 100% LEFT', rate: '', add: '+ ADD ACCOUNT', logins: [
+        login({ name: 'me@personal.dev', sub: 'read 2m ago', badge: 'use', wins: [win('quota', 28, '—')], forecast: '' })
+      ] },
+      copilot: { name: 'GITHUB COPILOT', count: '1', left: '53% OF 100% LEFT', rate: '', add: '+ ADD ACCOUNT', logins: [
+        login({ name: 'Personal', sub: 'Pro · read 2m ago', badge: 'use', wins: [win('premium', 47, '13d 4h', 56)], forecast: '' })
+      ] },
+      windsurf: { name: 'WINDSURF', count: '1', left: '67% OF 100% LEFT', rate: '', add: '+ ADD ACCOUNT', logins: [
+        login({ name: 'me@windsurf.dev', sub: 'Pro · read 2m ago', badge: 'use', wins: [win('day', 33, '14h 16m', 41)], forecast: '' })
+      ] },
+      codebuff: { name: 'CODEBUFF', count: '1', left: '70% OF 100% LEFT', rate: '', add: '+ ADD ACCOUNT', logins: [
+        login({ name: 'me@codebuff.dev', sub: 'read 2m ago', badge: 'use', wins: [win('usage', 30, '—')], forecast: '' })
+      ] },
+      measured: { name: 'MEASURED ONLY', count: '2', left: 'NO LIMIT TO READ', rate: '', add: 'WHY?', logins: [
+        login({ name: 'OpenCode', sub: 'Multi-provider · local token and cost ledger', badge: 'none' }),
+        login({ name: 'Pi', sub: 'Multi-provider · local token and cost ledger', badge: 'none' })
+      ] }
+    };
+    const cols = [
+      { groups: [groups.claude, groups.cursor, groups.codex] },
+      { groups: [groups.gemini, groups.copilot, groups.windsurf, groups.codebuff, groups.measured] }
+    ];
+    const chips = [['ALL', 11], ['CLAUDE CODE', 2], ['CURSOR', 2], ['CODEX', 1], ['GEMINI CLI', 1], ['OPENCODE', 1], ['PI', 1], ['GITHUB COPILOT', 1], ['WINDSURF', 1], ['CODEBUFF', 1]]
+      .map((ch, i) => ({ name: ch[0], n: ch[1], bg: i === 0 ? c.ink : 'transparent', ink: i === 0 ? c.bg : c.ink, border: i === 0 ? c.ink : c.line }));
+    const yTicks = [800, 600, 400, 200, 0].map(t => ({ label: t + '%', top: ((800 - t) / 800 * 100) + '%' }));
+    const names = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN', 'MON', 'TUE'];
+    const xTicks = names.map((n, i) => ({ label: n, left: (i / 9.5 * 100).toFixed(2) + '%', ink: i < 3 ? c.ink : c.muted }));
+    return { c, chips, cols, chart: this.chart(), yTicks, xTicks, themeLabel: theme === 'day' ? 'DAY ◐' : 'NIGHT ◑' };
+  }
+}
+</script>
+</body>
+</html>

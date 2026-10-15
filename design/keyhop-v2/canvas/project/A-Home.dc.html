@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyhop Home — Nocturne</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
+input::placeholder{color:inherit;opacity:.55}
+button{font:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 900px; background: {{c.side}}; color: {{c.ink}}; font-family: 'Geist', system-ui, sans-serif; font-size: 13px; line-height: 20px">
+
+  <aside style="flex: 1 1 248px; display: flex; flex-direction: column; gap: 2px; padding: 12px 10px 12px 10px; box-sizing: border-box; background: {{c.side}}">
+    <div style="display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 6px; margin-bottom: 10px">
+      <span style="width: 12px; height: 12px; border-radius: 50%; background: #FF5F57"></span>
+      <span style="width: 12px; height: 12px; border-radius: 50%; background: #FEBC2E"></span>
+      <span style="width: 12px; height: 12px; border-radius: 50%; background: #28C840"></span>
+      <span style="flex: 1"></span>
+      <button type="button" aria-label="Hide sidebar" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z"></path><path d="M6 3.5v9"></path></svg></button>
+    </div>
+
+    <button type="button" style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: {{c.ink}}; text-align: left">
+      <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; background: {{c.accentFill}}; color: {{c.onAccent}}"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg></span>
+      <span style="display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 16px"><span style="font-weight: 600">Keyhop</span><span style="font-size: 12px; color: {{c.muted}}">Personal · 11 logins</span></span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6"></path><path d="M5.5 10L8 12.5 10.5 10"></path></svg>
+    </button>
+
+    <button type="button" style="display: flex; align-items: center; gap: 10px; height: 34px; margin: 8px 0 10px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 8px; background: {{c.field}}; color: {{c.muted}}; text-align: left">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12.5c1.5-5.5 7-8 11.5-5"></path><path d="M10.5 4.5l3 3-3.8 1"></path></svg>
+      <span style="flex: 1">Hop to a login</span>
+      <kbd style="font-family: 'Geist Mono', monospace; font-size: 11px; padding: 0 5px; border-radius: 4px; border: 1px solid {{c.line2}}; color: {{c.muted}}">⌘K</kbd>
+    </button>
+
+    <nav aria-label="Places" style="display: flex; flex-direction: column; gap: 2px">
+      <a href="#home" aria-current="page" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; background: {{c.navActive}}; color: {{c.ink}}; font-weight: 500"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.5L8 3l5.5 4.5V13a.5.5 0 0 1-.5.5H10V10H6v3.5H3a.5.5 0 0 1-.5-.5z"></path></svg>Home</a>
+      <a href="A-Limits.dc.html" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h2v10H3z"></path><path d="M7 3h2v10H7z"></path><path d="M11 3h2v10h-2z"></path></svg><span style="flex: 1">Limits</span><span style="font-family: 'Geist Mono', monospace; font-size: 11px; line-height: 18px; padding: 0 6px; border-radius: 9px; background: {{c.warnSoft}}; color: {{c.warnInk}}">2</span></a>
+      <a href="#usage" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 13.5h11"></path><path d="M4.5 11V8"></path><path d="M8 11V4.5"></path><path d="M11.5 11V6.5"></path></svg>Usage</a>
+      <a href="#insights" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 11.5a5.5 5.5 0 0 1 11 0"></path><path d="M8 11.5l2.5-3"></path></svg>Insights</a>
+      <a href="#community" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7.5a2.5 2.5 0 1 0 0-5a2.5 2.5 0 0 0 0 5z"></path><path d="M1.5 13.5c.5-2.5 2.3-4 4.5-4s4 1.5 4.5 4"></path><path d="M10.5 2.8a2.5 2.5 0 0 1 0 4.4"></path><path d="M12 9.8c1.3.6 2.2 1.9 2.5 3.7"></path></svg>Community</a>
+    </nav>
+
+    <div style="display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; margin-top: 18px; font-size: 12px; color: {{c.faint}}">Logins in use<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"></path></svg></div>
+    <div style="display: flex; flex-direction: column; gap: 1px">
+      <a href="A-Limits.dc.html" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M8 2v12M2 8h12M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Claude Code <span style="color: {{c.faint}}">Personal</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">51%</span></a>
+      <a href="A-Limits.dc.html" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5l5.5 3.2v6.6L8 14.5l-5.5-3.2V4.7z"></path><path d="M2.5 4.7L8 8l5.5-3.3M8 8v6.5"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Cursor <span style="color: {{c.faint}}">me@personal.dev</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">62%</span></a>
+      <a href="A-Limits.dc.html" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z"></path><path d="M8 5.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5z"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Codex <span style="color: {{c.faint}}">me@personal.dev</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.dangerInk}}">93%</span></a>
+      <a href="A-Limits.dc.html" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5C8.6 5.5 10.5 7.4 14.5 8C10.5 8.6 8.6 10.5 8 14.5C7.4 10.5 5.5 8.6 1.5 8C5.5 7.4 7.4 5.5 8 1.5z"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Gemini CLI <span style="color: {{c.faint}}">me@personal.dev</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">28%</span></a>
+      <a href="A-Limits.dc.html" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2.5 6.5c0-2 1.5-3 5.5-3s5.5 1 5.5 3v3.5c0 2-2.5 3.5-5.5 3.5S2.5 12 2.5 10z"></path><path d="M6 8v1.5M10 8v1.5"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">GitHub Copilot <span style="color: {{c.faint}}">Personal</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">47%</span></a>
+      <a href="A-Limits.dc.html" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 10.5l3-4.5 3 4.5 3-4.5 3 4.5"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Windsurf <span style="color: {{c.faint}}">me@windsurf.dev</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">33%</span></a>
+      <a href="A-Limits.dc.html" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h10v10H3z"></path><path d="M6 6h4v4H6z"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Codebuff <span style="color: {{c.faint}}">me@codebuff.dev</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">30%</span></a>
+      <a href="#usage" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5h8v11H4z"></path><path d="M6.5 5.5h3v5h-3z"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">OpenCode <span style="color: {{c.faint}}">Multi-provider</span></span><span style="font-size: 12px; color: {{c.faint}}">—</span></a>
+      <a href="#usage" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M3 4.5h10M6 4.5v8M10.5 4.5V11c0 1 .5 1.5 1.5 1.5"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Pi <span style="color: {{c.faint}}">Multi-provider</span></span><span style="font-size: 12px; color: {{c.faint}}">—</span></a>
+    </div>
+
+    <div style="flex: 1; min-height: 16px"></div>
+
+    <a href="#community" style="display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; border: 1px solid {{c.line}}; background: {{c.panel}}; color: {{c.ink}}">
+      <svg width="32" height="32" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="9" y="1" width="2" height="4" fill="#EFE7D6"></rect><rect x="8" y="4" width="5" height="4" fill="#EFE7D6"></rect><rect x="11" y="5" width="1" height="1" fill="#1C1C20"></rect><rect x="3" y="7" width="10" height="4" fill="#EFE7D6"></rect><rect x="3" y="11" width="10" height="1" fill="#C9BFA9"></rect><rect x="4" y="12" width="2" height="2" fill="#EFE7D6"></rect><rect x="10" y="12" width="2" height="2" fill="#EFE7D6"></rect><rect x="1" y="8" width="2" height="2" fill="#E28A33"></rect><rect x="12" y="9" width="3" height="3" fill="#E28A33"></rect></svg>
+      <span style="display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 16px"><span style="font-weight: 500">Bulk · Claude</span><span style="font-size: 12px; color: {{c.muted}}">4.2B to Mass</span></span>
+    </a>
+    <a href="#settings" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; margin-top: 6px; border-radius: 6px; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4.5h7M12.5 4.5h1M11 3v3M2.5 11.5h2M7.5 11.5h6M6 10v3"></path></svg>Settings</a>
+  </aside>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; padding: 8px 8px 8px 0; box-sizing: border-box">
+    <main style="flex: 1; min-width: 0; display: flex; flex-direction: column; border-radius: 12px; border: 1px solid {{c.line}}; background: {{c.ground}}; overflow: hidden">
+      <header style="display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 12px 0 24px; border-bottom: 1px solid {{c.line}}">
+        <h1 style="margin: 0; font-size: 14px; font-weight: 500">Home</h1>
+        <span style="flex: 1"></span>
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: {{c.muted}}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.5"></path><path d="M13 2.5v3h-3"></path></svg>Limits read 2m ago</span>
+        <button type="button" aria-label="Switch to day" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M13 9.5A5.5 5.5 0 1 1 6.5 3a4.5 4.5 0 0 0 6.5 6.5z"></path></svg></button>
+      </header>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; padding: 24px 32px 28px; max-width: 1040px; width: 100%; box-sizing: border-box; margin: 0 auto">
+
+        <section style="position: relative; overflow: hidden; border-radius: 12px; border: 1px solid {{c.line}}; background: {{c.hero}}; padding: 36px 32px 28px; text-align: center">
+          <span style="position: absolute; left: 8%; top: 22%; width: 2px; height: 2px; border-radius: 1px; background: {{c.star}}"></span>
+          <span style="position: absolute; left: 17%; top: 58%; width: 2px; height: 2px; border-radius: 1px; background: {{c.star}}"></span>
+          <span style="position: absolute; left: 26%; top: 14%; width: 1px; height: 1px; background: {{c.star}}"></span>
+          <span style="position: absolute; left: 34%; top: 40%; width: 2px; height: 2px; border-radius: 1px; background: {{c.star}}"></span>
+          <span style="position: absolute; left: 63%; top: 12%; width: 2px; height: 2px; border-radius: 1px; background: {{c.star}}"></span>
+          <span style="position: absolute; left: 72%; top: 46%; width: 1px; height: 1px; background: {{c.star}}"></span>
+          <span style="position: absolute; left: 84%; top: 24%; width: 2px; height: 2px; border-radius: 1px; background: {{c.star}}"></span>
+          <span style="position: absolute; left: 91%; top: 62%; width: 2px; height: 2px; border-radius: 1px; background: {{c.star}}"></span>
+          <div style="position: relative; font-size: 12px; color: {{c.muted}}; letter-spacing: 0.01em">Tuesday, October 13</div>
+          <h2 style="position: relative; margin: 6px 0 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 56px; line-height: 60px; letter-spacing: -0.02em">Codex is at 93%.</h2>
+          <p style="position: relative; margin: 10px auto 0; max-width: 480px; font-size: 15px; line-height: 22px; color: {{c.muted}}">The 5-hour window runs out around 11:19 AM. There is no other login to hop to.</p>
+          <form style="position: relative; margin: 24px auto 0; max-width: 620px; text-align: left; background: {{c.panel}}; border: 1px solid {{c.line2}}; border-radius: 12px; padding: 12px 10px 10px 16px; box-shadow: {{c.shadow}}">
+            <label for="hop-home" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">Hop to a login</label>
+            <input id="hop-home" type="text" placeholder="Name a login, or hop to the one with room" style="display: block; width: 100%; box-sizing: border-box; padding: 2px 0 12px; border: 0; outline: none; background: transparent; color: {{c.ink}}; font: inherit; font-size: 14px">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap">
+              <button type="button" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 7px; background: transparent; color: {{c.muted}}; font-size: 12px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 2v12M2 8h12M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4"></path></svg>Claude Code</button>
+              <button type="button" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 7px; background: transparent; color: {{c.muted}}; font-size: 12px"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{c.ok}}"></span>work@studio.dev · 41%</button>
+              <span style="flex: 1"></span>
+              <button type="submit" aria-label="Hop" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 0; border-radius: 8px; background: {{c.accentFill}}; color: {{c.onAccent}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V3"></path><path d="M4 7l4-4 4 4"></path></svg></button>
+            </div>
+          </form>
+        </section>
+
+        <section aria-label="This week" style="display: flex; flex-wrap: wrap; border: 1px solid {{c.line}}; border-radius: 12px; overflow: hidden">
+          <div style="flex: 1 1 130px; padding: 14px 18px; border-right: 1px solid {{c.line}}">
+            <div style="font-family: 'Geist Mono', monospace; font-size: 20px; line-height: 28px; font-weight: 500">7.6M</div>
+            <div style="font-size: 12px; color: {{c.muted}}">tokens today</div>
+          </div>
+          <div style="flex: 1 1 130px; padding: 14px 18px; border-right: 1px solid {{c.line}}">
+            <div style="display: flex; align-items: baseline; gap: 6px"><span style="font-family: 'Geist Mono', monospace; font-size: 20px; line-height: 28px; font-weight: 500">45M</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.okInk}}">+16%</span></div>
+            <div style="font-size: 12px; color: {{c.muted}}">7 days</div>
+          </div>
+          <div style="flex: 1 1 130px; padding: 14px 18px; border-right: 1px solid {{c.line}}">
+            <div style="font-family: 'Geist Mono', monospace; font-size: 20px; line-height: 28px; font-weight: 500">$92.59</div>
+            <div style="font-size: 12px; color: {{c.muted}}">at API prices</div>
+          </div>
+          <div style="flex: 1 1 130px; padding: 14px 18px; border-right: 1px solid {{c.line}}">
+            <div style="font-family: 'Geist Mono', monospace; font-size: 20px; line-height: 28px; font-weight: 500">91%</div>
+            <div style="font-size: 12px; color: {{c.muted}}">from cache</div>
+          </div>
+          <div style="flex: 1 1 130px; padding: 14px 18px; border-right: 1px solid {{c.line}}">
+            <div style="font-family: 'Geist Mono', monospace; font-size: 20px; line-height: 28px; font-weight: 500">38</div>
+            <div style="font-size: 12px; color: {{c.muted}}">commits this week</div>
+          </div>
+          <div style="flex: 1 1 130px; padding: 14px 18px">
+            <div style="display: flex; align-items: baseline; gap: 6px"><span style="font-family: 'Geist Mono', monospace; font-size: 20px; line-height: 28px; font-weight: 500; color: {{c.accentInk}}">2.4</span><span style="font-size: 12px; color: {{c.muted}}">per M</span></div>
+            <div style="font-size: 12px; color: {{c.muted}}">#1 of 6 · efficiency</div>
+          </div>
+        </section>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+          <section style="flex: 1 1 340px; min-width: 0; border: 1px solid {{c.line}}; border-radius: 12px; overflow: hidden">
+            <div style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px">
+              <h3 style="margin: 0; font-size: 13px; font-weight: 500">Needs your attention</h3>
+              <span style="font-family: 'Geist Mono', monospace; font-size: 11px; line-height: 18px; padding: 0 6px; border-radius: 9px; background: {{c.navActive}}; color: {{c.muted}}">3</span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-top: 1px solid {{c.line}}">
+              <span style="flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: {{c.warn}}"></span>
+              <div style="flex: 1; min-width: 0">
+                <div style="font-weight: 500">Codex is at 93% on me@personal.dev</div>
+                <div style="margin-top: 2px; color: {{c.muted}}">5-hour runs out around 11:19 AM. There is no other login to hop to.</div>
+              </div>
+              <button type="button" style="flex: none; display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 7px; background: {{c.raised}}; color: {{c.ink}}; font-size: 12px; font-weight: 500"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>Add a login</button>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-top: 1px solid {{c.line}}">
+              <span style="flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: {{c.danger}}"></span>
+              <div style="flex: 1; min-width: 0">
+                <div style="font-weight: 500">spare@personal.dev is signed out</div>
+                <div style="margin-top: 2px; color: {{c.muted}}">Cursor. Login expired. Switch to it and sign in to Cursor again.</div>
+              </div>
+              <button type="button" style="flex: none; height: 30px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 7px; background: {{c.raised}}; color: {{c.ink}}; font-size: 12px; font-weight: 500">Switch and sign in</button>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-top: 1px solid {{c.line}}">
+              <span style="flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: {{c.warn}}"></span>
+              <div style="flex: 1; min-width: 0">
+                <div style="font-weight: 500">Codex partial outage</div>
+                <div style="margin-top: 2px; color: {{c.muted}}">Every account is affected, so hopping won't help.</div>
+              </div>
+              <a href="#status" style="flex: none; display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 6px; color: {{c.muted}}; font-size: 12px; font-weight: 500">Status page<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11l6-6M6 5h5v5"></path></svg></a>
+            </div>
+          </section>
+
+          <section style="flex: 1 1 340px; min-width: 0; border: 1px solid {{c.line}}; border-radius: 12px; overflow: hidden">
+            <div style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px">
+              <h3 style="margin: 0; font-size: 13px; font-weight: 500">In use</h3>
+              <span style="font-size: 12px; color: {{c.muted}}">415% of 800% left in all</span>
+              <span style="flex: 1"></span>
+              <a href="A-Limits.dc.html" style="font-size: 12px; font-weight: 500; color: {{c.accentInk}}">All limits</a>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 16px; border-top: 1px solid {{c.line}}">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M8 2v12M2 8h12M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4"></path></svg>
+              <div style="flex: 1; min-width: 0; line-height: 16px"><div style="font-weight: 500">Claude Code</div><div style="font-size: 12px; color: {{c.faint}}">Personal · 5-hour</div></div>
+              <div style="width: 88px; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 51%; height: 4px; border-radius: 2px; background: {{c.warn}}"></div></div>
+              <span style="width: 34px; text-align: right; font-family: 'Geist Mono', monospace; font-size: 12px">51%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 16px; border-top: 1px solid {{c.line}}">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5l5.5 3.2v6.6L8 14.5l-5.5-3.2V4.7z"></path><path d="M2.5 4.7L8 8l5.5-3.3M8 8v6.5"></path></svg>
+              <div style="flex: 1; min-width: 0; line-height: 16px"><div style="font-weight: 500">Cursor</div><div style="font-size: 12px; color: {{c.faint}}">me@personal.dev · Auto</div></div>
+              <div style="width: 88px; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 62%; height: 4px; border-radius: 2px; background: {{c.meter}}"></div></div>
+              <span style="width: 34px; text-align: right; font-family: 'Geist Mono', monospace; font-size: 12px">62%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 16px; border-top: 1px solid {{c.line}}">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z"></path><path d="M8 5.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5z"></path></svg>
+              <div style="flex: 1; min-width: 0; line-height: 16px"><div style="font-weight: 500">Codex</div><div style="font-size: 12px; color: {{c.faint}}">me@personal.dev · 5-hour</div></div>
+              <div style="width: 88px; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 93%; height: 4px; border-radius: 2px; background: {{c.danger}}"></div></div>
+              <span style="width: 34px; text-align: right; font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 500; color: {{c.dangerInk}}">93%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 16px; border-top: 1px solid {{c.line}}">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5C8.6 5.5 10.5 7.4 14.5 8C10.5 8.6 8.6 10.5 8 14.5C7.4 10.5 5.5 8.6 1.5 8C5.5 7.4 7.4 5.5 8 1.5z"></path></svg>
+              <div style="flex: 1; min-width: 0; line-height: 16px"><div style="font-weight: 500">Gemini CLI</div><div style="font-size: 12px; color: {{c.faint}}">me@personal.dev · Quota</div></div>
+              <div style="width: 88px; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 28%; height: 4px; border-radius: 2px; background: {{c.meter}}"></div></div>
+              <span style="width: 34px; text-align: right; font-family: 'Geist Mono', monospace; font-size: 12px">28%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 16px; border-top: 1px solid {{c.line}}">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2.5 6.5c0-2 1.5-3 5.5-3s5.5 1 5.5 3v3.5c0 2-2.5 3.5-5.5 3.5S2.5 12 2.5 10z"></path><path d="M6 8v1.5M10 8v1.5"></path></svg>
+              <div style="flex: 1; min-width: 0; line-height: 16px"><div style="font-weight: 500">GitHub Copilot</div><div style="font-size: 12px; color: {{c.faint}}">Personal · Premium</div></div>
+              <div style="width: 88px; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 47%; height: 4px; border-radius: 2px; background: {{c.meter}}"></div></div>
+              <span style="width: 34px; text-align: right; font-family: 'Geist Mono', monospace; font-size: 12px">47%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 16px; border-top: 1px solid {{c.line}}">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 10.5l3-4.5 3 4.5 3-4.5 3 4.5"></path></svg>
+              <div style="flex: 1; min-width: 0; line-height: 16px"><div style="font-weight: 500">Windsurf</div><div style="font-size: 12px; color: {{c.faint}}">me@windsurf.dev · Day</div></div>
+              <div style="width: 88px; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 33%; height: 4px; border-radius: 2px; background: {{c.meter}}"></div></div>
+              <span style="width: 34px; text-align: right; font-family: 'Geist Mono', monospace; font-size: 12px">33%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 16px; border-top: 1px solid {{c.line}}">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h10v10H3z"></path><path d="M6 6h4v4H6z"></path></svg>
+              <div style="flex: 1; min-width: 0; line-height: 16px"><div style="font-weight: 500">Codebuff</div><div style="font-size: 12px; color: {{c.faint}}">me@codebuff.dev</div></div>
+              <div style="width: 88px; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 30%; height: 4px; border-radius: 2px; background: {{c.meter}}"></div></div>
+              <span style="width: 34px; text-align: right; font-family: 'Geist Mono', monospace; font-size: 12px">30%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 16px; border-top: 1px solid {{c.line}}; font-size: 12px; color: {{c.muted}}">OpenCode and Pi measure tokens only — no limit to read.</div>
+          </section>
+        </div>
+      </div>
+
+      <footer style="margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; min-height: 30px; padding: 0 16px; border-top: 1px solid {{c.line}}; font-size: 12px; color: {{c.muted}}">
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{c.warn}}"></span>2 need a hop</span>
+        <span>Codex partial outage</span>
+        <span style="flex: 1"></span>
+        <span style="font-family: 'Geist Mono', monospace">7.6M today</span>
+        <span>12 day streak</span>
+        <span>Night</span>
+      </footer>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["night","day"],"default":"night"},"accent":{"editor":"color","options":["#7C6CFF","#3B82F6","#22C55E","#F97316"],"default":"#7C6CFF"},"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme ?? 'night';
+    const accent = this.props.accent ?? '#7C6CFF';
+    const hex = (h) => { const n = parseInt(String(h).replace('#', '').slice(0, 6), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+    const rgba = (h, a) => { const p = hex(h); return 'rgba(' + p[0] + ',' + p[1] + ',' + p[2] + ',' + a + ')'; };
+    const mix = (h, t, w) => { const a = hex(h); const b = hex(t); return 'rgb(' + a.map((v, i) => Math.round(v * (1 - w) + b[i] * w)).join(',') + ')'; };
+    const lum = (h) => { const p = hex(h).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2]; };
+    const night = theme !== 'day';
+    const light = lum(accent) > 0.3;
+    const base = night ? {
+      ground: '#141416', side: '#18181B', panel: '#1C1C20', raised: '#232328', field: '#1C1C20',
+      line: 'rgba(255,255,255,0.07)', line2: 'rgba(255,255,255,0.12)', navActive: 'rgba(255,255,255,0.07)',
+      ink: '#F4F4F5', muted: '#A1A1AA', faint: '#8A8A93', track: 'rgba(255,255,255,0.08)', meter: '#D4D4D8',
+      warn: '#F5A524', warnInk: '#F7B54A', danger: '#F2555A', dangerInk: '#F6787C', ok: '#3DD68C', okInk: '#5FE0A3',
+      star: 'rgba(244,244,245,0.45)', shadow: '0 12px 32px rgba(0,0,0,0.35)'
+    } : {
+      ground: '#FFFFFF', side: '#F4F4F5', panel: '#FFFFFF', raised: '#F4F4F5', field: '#FFFFFF',
+      line: 'rgba(0,0,0,0.08)', line2: 'rgba(0,0,0,0.14)', navActive: 'rgba(0,0,0,0.06)',
+      ink: '#18181B', muted: '#52525B', faint: '#6B6B74', track: 'rgba(0,0,0,0.07)', meter: '#3F3F46',
+      warn: '#E3940B', warnInk: '#9A5B00', danger: '#D93A3F', dangerInk: '#C2272D', ok: '#14935A', okInk: '#11804E',
+      star: 'rgba(24,24,27,0.18)', shadow: '0 8px 24px rgba(24,24,27,0.08)'
+    };
+    const heroBase = night ? '#18181C' : '#FAFAFA';
+    const c = Object.assign({}, base, {
+      accentFill: light ? accent : mix(accent, '#000000', 0.12),
+      onAccent: light ? '#111114' : '#FFFFFF',
+      accentInk: night ? mix(accent, '#FFFFFF', 0.35) : mix(accent, '#000000', 0.35),
+      accentSoft: rgba(accent, night ? 0.16 : 0.1),
+      warnSoft: rgba(night ? '#F5A524' : '#E3940B', night ? 0.16 : 0.14),
+      hero: 'radial-gradient(80% 120% at 50% -20%, ' + rgba(accent, night ? 0.3 : 0.14) + ', transparent 62%), ' + heroBase
+    });
+    return { c: c };
+  }
+}
+</script>
+</body>
+</html>

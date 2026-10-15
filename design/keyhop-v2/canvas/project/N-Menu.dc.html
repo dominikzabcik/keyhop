@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyhop menu — Native</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:default}
+a,button{transition:background-color .15s ease,filter .15s ease}
+.menu a:hover,.menu .row:hover{background-color:rgba(120,120,128,.14)}
+button:hover{filter:brightness(1.05)}
+button:active{filter:brightness(.92)}
+a:focus-visible,button:focus-visible{outline:3px solid rgba(0,122,255,.45);outline-offset:1px}
+</style>
+</helmet>
+<div style="width: 560px; height: 760px; box-sizing: border-box; position: relative; overflow: hidden; background: {{c.desktop}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif; font-size: 13px; line-height: 18px; color: {{c.label}}; font-variant-numeric: tabular-nums">
+
+  <div style="display: flex; align-items: center; justify-content: flex-end; gap: 16px; height: 26px; padding: 0 14px; background: {{c.menubar}}; backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); color: {{c.menubarInk}}; font-size: 13px; font-weight: 500">
+    <span style="display: flex; align-items: center; gap: 5px; height: 22px; padding: 0 7px; border-radius: 5px; background: {{c.menubarActive}}">
+      <svg width="15" height="15" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg>
+      <span>7%</span>
+    </span>
+    <span>Tue 13 Oct</span>
+    <span>10:52</span>
+  </div>
+
+  <div class="menu" role="dialog" aria-label="Keyhop" style="position: absolute; top: 32px; right: 40px; width: 360px; display: flex; flex-direction: column; padding: 6px; box-sizing: border-box; border-radius: 12px; background: {{c.popover}}; backdrop-filter: blur(40px) saturate(1.8); -webkit-backdrop-filter: blur(40px) saturate(1.8); box-shadow: {{c.popShadow}}">
+
+    <div style="display: flex; align-items: center; gap: 12px; padding: 10px 10px 12px">
+      <svg width="44" height="44" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true" style="flex: none"><rect x="9" y="1" width="2" height="4" fill="#FFF4E2"></rect><rect x="8" y="4" width="5" height="4" fill="#FFF4E2"></rect><rect x="11" y="5" width="1" height="1" fill="#2B2420"></rect><rect x="3" y="7" width="10" height="4" fill="#FFF4E2"></rect><rect x="3" y="11" width="10" height="1" fill="#E8D7BC"></rect><rect x="4" y="12" width="2" height="2" fill="#FFF4E2"></rect><rect x="10" y="12" width="2" height="2" fill="#FFF4E2"></rect><rect x="1" y="8" width="2" height="2" fill="#FF8A3D"></rect><rect x="12" y="9" width="3" height="3" fill="#FF8A3D"></rect></svg>
+      <div style="flex: 1; display: flex; flex-direction: column; line-height: 18px">
+        <span style="font-size: 15px; font-weight: 700">415% left</span>
+        <span style="color: {{c.secondary}}">across 8 logins · next reset +35% at 12:41</span>
+      </div>
+      <button type="button" aria-label="Settings" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 7px; background: transparent; color: {{c.secondary}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 4.5h6M12 4.5h1M10.5 3v3M3 11.5h1.5M7.5 11.5H13M6 10v3"></path></svg></button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; margin: 0 4px 6px; padding: 10px 12px; border-radius: 9px; background: {{c.warnBg}}">
+      <span style="flex: none; width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: {{c.red}}; color: #FFFFFF; font-weight: 700">!</span>
+      <span style="flex: 1; line-height: 17px"><span style="display: block; font-weight: 600">Codex is nearly out</span><span style="color: {{c.secondary}}">Runs out around 11:19 AM</span></span>
+      <button type="button" style="height: 22px; padding: 0 10px; border: 0; border-radius: 11px; background: {{c.accent}}; color: #FFFFFF; font-size: 12px; font-weight: 600">Add Login</button>
+    </div>
+
+    <div style="margin: 8px 10px 4px; font-size: 11px; font-weight: 600; color: {{c.tertiary}}">In use</div>
+    <sc-for list="{{tools}}" as="t" hint-placeholder-count="6">
+      <div class="row" style="display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px">
+        <span style="flex: none; width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; background: {{t.color}}; color: #FFFFFF; font-size: 11px; font-weight: 700">{{t.mark}}</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+          <span style="display: flex; justify-content: space-between; gap: 8px; line-height: 16px"><span style="font-weight: 600; white-space: nowrap">{{t.name}}</span><span style="color: {{c.secondary}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.login}}</span></span>
+          <span style="height: 6px; border-radius: 3px; background: {{c.track}}; overflow: hidden"><span style="display: block; height: 6px; width: {{t.w}}; border-radius: 3px; background: {{t.bar}}"></span></span>
+        </span>
+        <span style="width: 40px; text-align: right; font-weight: 600; color: {{t.ink}}">{{t.left}}</span>
+      </div>
+    </sc-for>
+
+    <div style="display: flex; align-items: center; gap: 10px; margin: 6px 4px 4px; padding: 10px 12px; border-radius: 9px; background: {{c.hopBg}}">
+      <span style="flex: 1; line-height: 17px"><span style="display: block; font-weight: 600">work@studio.dev has more room</span><span style="color: {{c.secondary}}">Claude Code · 59% left this week</span></span>
+      <button type="button" style="height: 22px; padding: 0 12px; border: 0; border-radius: 11px; background: {{c.accent}}; color: #FFFFFF; font-size: 12px; font-weight: 600">Hop</button>
+    </div>
+
+    <div style="height: 1px; margin: 6px 10px; background: {{c.separator}}"></div>
+    <a href="N-Home.dc.html" style="display: flex; justify-content: space-between; padding: 5px 10px; border-radius: 6px"><span>Open Keyhop</span><span style="color: {{c.tertiary}}">⌘O</span></a>
+    <a href="#refresh" style="display: flex; justify-content: space-between; padding: 5px 10px; border-radius: 6px"><span>Refresh Limits</span><span style="color: {{c.tertiary}}">⌘R</span></a>
+    <a href="#quit" style="display: flex; justify-content: space-between; padding: 5px 10px; border-radius: 6px"><span>Quit Keyhop</span><span style="color: {{c.tertiary}}">⌘Q</span></a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"appearance":{"editor":"enum","options":["light","dark"],"default":"light"},"accent":{"editor":"color","options":["#007AFF","#FF7A2F","#AF52DE","#34C759"],"default":"#007AFF"},"$preview":{"width":560,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dark = (this.props.appearance ?? 'light') === 'dark';
+    const accent = this.props.accent ?? '#007AFF';
+    const rgba = (h, a) => { const n = parseInt(String(h).replace('#', '').slice(0, 6), 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+    const sys = dark
+      ? { green: '#30D158', orange: '#FF9F0A', red: '#FF453A' }
+      : { green: '#34C759', orange: '#FF9500', red: '#FF3B30' };
+    const c = Object.assign(dark ? {
+      desktop: 'linear-gradient(160deg, #2B3A67 0%, #6B4E7A 60%, #C47A5A 100%)',
+      menubar: 'rgba(30,30,34,0.55)', menubarInk: '#F5F5F7', menubarActive: 'rgba(255,255,255,0.18)',
+      popover: 'rgba(44,44,48,0.78)', popShadow: '0 20px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)',
+      label: '#F5F5F7', secondary: 'rgba(235,235,245,0.62)', tertiary: 'rgba(235,235,245,0.42)', separator: 'rgba(255,255,255,0.12)',
+      track: 'rgba(255,255,255,0.12)', meter: 'rgba(235,235,245,0.7)'
+    } : {
+      desktop: 'linear-gradient(160deg, #BFD8FF 0%, #F6D5E6 60%, #FFE2C2 100%)',
+      menubar: 'rgba(255,255,255,0.45)', menubarInk: '#1D1D1F', menubarActive: 'rgba(0,0,0,0.12)',
+      popover: 'rgba(246,246,248,0.82)', popShadow: '0 20px 50px rgba(40,30,80,0.25), 0 0 0 1px rgba(0,0,0,0.08)',
+      label: '#1D1D1F', secondary: 'rgba(60,60,67,0.72)', tertiary: 'rgba(60,60,67,0.52)', separator: 'rgba(0,0,0,0.1)',
+      track: 'rgba(0,0,0,0.08)', meter: 'rgba(60,60,67,0.55)'
+    }, sys, { accent: accent });
+    c.warnBg = rgba(sys.red, dark ? 0.2 : 0.1);
+    c.hopBg = rgba(accent, dark ? 0.2 : 0.1);
+    const raw = [['Codex', 'Cx', '#10A37F', 'me@personal.dev', 7], ['Claude Code', 'CC', '#D97757', 'Personal', 49], ['Cursor', 'Cu', '#3A3A3C', 'me@personal.dev', 38], ['Copilot', 'GH', '#6E40C9', 'Personal', 53], ['Gemini CLI', 'G', '#4285F4', 'me@personal.dev', 72], ['Windsurf', 'W', '#09B6A2', 'me@windsurf.dev', 67]];
+    const tools = raw.map((t) => {
+      const left = t[4];
+      const bar = left <= 15 ? sys.red : left <= 40 ? sys.orange : sys.green;
+      const ink = left <= 15 ? sys.red : c.label;
+      return { name: t[0], mark: t[1], color: t[2], login: t[3], left: left + '%', w: left + '%', bar: bar, ink: ink };
+    });
+    return { c: c, tools: tools };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyhop Limits — Nocturne</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
+button{font:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1000px; background: {{c.side}}; color: {{c.ink}}; font-family: 'Geist', system-ui, sans-serif; font-size: 13px; line-height: 20px">
+
+  <aside style="flex: 1 1 248px; display: flex; flex-direction: column; gap: 2px; padding: 12px 10px; box-sizing: border-box; background: {{c.side}}">
+    <div style="display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 6px; margin-bottom: 10px">
+      <span style="width: 12px; height: 12px; border-radius: 50%; background: #FF5F57"></span>
+      <span style="width: 12px; height: 12px; border-radius: 50%; background: #FEBC2E"></span>
+      <span style="width: 12px; height: 12px; border-radius: 50%; background: #28C840"></span>
+      <span style="flex: 1"></span>
+      <button type="button" aria-label="Hide sidebar" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z"></path><path d="M6 3.5v9"></path></svg></button>
+    </div>
+    <button type="button" style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: {{c.ink}}; text-align: left">
+      <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; background: {{c.accentFill}}; color: {{c.onAccent}}"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg></span>
+      <span style="display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 16px"><span style="font-weight: 600">Keyhop</span><span style="font-size: 12px; color: {{c.muted}}">Personal · 11 logins</span></span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6"></path><path d="M5.5 10L8 12.5 10.5 10"></path></svg>
+    </button>
+    <button type="button" style="display: flex; align-items: center; gap: 10px; height: 34px; margin: 8px 0 10px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 8px; background: {{c.field}}; color: {{c.muted}}; text-align: left">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12.5c1.5-5.5 7-8 11.5-5"></path><path d="M10.5 4.5l3 3-3.8 1"></path></svg>
+      <span style="flex: 1">Hop to a login</span>
+      <kbd style="font-family: 'Geist Mono', monospace; font-size: 11px; padding: 0 5px; border-radius: 4px; border: 1px solid {{c.line2}}; color: {{c.muted}}">⌘K</kbd>
+    </button>
+    <nav aria-label="Places" style="display: flex; flex-direction: column; gap: 2px">
+      <a href="A-Home.dc.html" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.5L8 3l5.5 4.5V13a.5.5 0 0 1-.5.5H10V10H6v3.5H3a.5.5 0 0 1-.5-.5z"></path></svg>Home</a>
+      <a href="#limits" aria-current="page" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; background: {{c.navActive}}; color: {{c.ink}}; font-weight: 500"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h2v10H3z"></path><path d="M7 3h2v10H7z"></path><path d="M11 3h2v10h-2z"></path></svg><span style="flex: 1">Limits</span><span style="font-family: 'Geist Mono', monospace; font-size: 11px; line-height: 18px; padding: 0 6px; border-radius: 9px; background: {{c.warnSoft}}; color: {{c.warnInk}}">2</span></a>
+      <a href="#usage" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 13.5h11"></path><path d="M4.5 11V8"></path><path d="M8 11V4.5"></path><path d="M11.5 11V6.5"></path></svg>Usage</a>
+      <a href="#insights" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 11.5a5.5 5.5 0 0 1 11 0"></path><path d="M8 11.5l2.5-3"></path></svg>Insights</a>
+      <a href="#community" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7.5a2.5 2.5 0 1 0 0-5a2.5 2.5 0 0 0 0 5z"></path><path d="M1.5 13.5c.5-2.5 2.3-4 4.5-4s4 1.5 4.5 4"></path><path d="M10.5 2.8a2.5 2.5 0 0 1 0 4.4"></path><path d="M12 9.8c1.3.6 2.2 1.9 2.5 3.7"></path></svg>Community</a>
+    </nav>
+    <div style="display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; margin-top: 18px; font-size: 12px; color: {{c.faint}}">Logins in use<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"></path></svg></div>
+    <div style="display: flex; flex-direction: column; gap: 1px">
+      <a href="#claude" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M8 2v12M2 8h12M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Claude Code <span style="color: {{c.faint}}">Personal</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">51%</span></a>
+      <a href="#cursor" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5l5.5 3.2v6.6L8 14.5l-5.5-3.2V4.7z"></path><path d="M2.5 4.7L8 8l5.5-3.3M8 8v6.5"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Cursor <span style="color: {{c.faint}}">me@personal.dev</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">62%</span></a>
+      <a href="#codex" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z"></path><path d="M8 5.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5z"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Codex <span style="color: {{c.faint}}">me@personal.dev</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.dangerInk}}">93%</span></a>
+      <a href="#gemini" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5C8.6 5.5 10.5 7.4 14.5 8C10.5 8.6 8.6 10.5 8 14.5C7.4 10.5 5.5 8.6 1.5 8C5.5 7.4 7.4 5.5 8 1.5z"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Gemini CLI <span style="color: {{c.faint}}">me@personal.dev</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">28%</span></a>
+      <a href="#copilot" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2.5 6.5c0-2 1.5-3 5.5-3s5.5 1 5.5 3v3.5c0 2-2.5 3.5-5.5 3.5S2.5 12 2.5 10z"></path><path d="M6 8v1.5M10 8v1.5"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">GitHub Copilot <span style="color: {{c.faint}}">Personal</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">47%</span></a>
+      <a href="#windsurf" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 10.5l3-4.5 3 4.5 3-4.5 3 4.5"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Windsurf <span style="color: {{c.faint}}">me@windsurf.dev</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">33%</span></a>
+      <a href="#codebuff" style="display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: {{c.ink}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h10v10H3z"></path><path d="M6 6h4v4H6z"></path></svg><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Codebuff <span style="color: {{c.faint}}">me@codebuff.dev</span></span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">30%</span></a>
+    </div>
+    <div style="flex: 1; min-height: 16px"></div>
+    <a href="#community" style="display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; border: 1px solid {{c.line}}; background: {{c.panel}}; color: {{c.ink}}">
+      <svg width="32" height="32" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="9" y="1" width="2" height="4" fill="#EFE7D6"></rect><rect x="8" y="4" width="5" height="4" fill="#EFE7D6"></rect><rect x="11" y="5" width="1" height="1" fill="#1C1C20"></rect><rect x="3" y="7" width="10" height="4" fill="#EFE7D6"></rect><rect x="3" y="11" width="10" height="1" fill="#C9BFA9"></rect><rect x="4" y="12" width="2" height="2" fill="#EFE7D6"></rect><rect x="10" y="12" width="2" height="2" fill="#EFE7D6"></rect><rect x="1" y="8" width="2" height="2" fill="#E28A33"></rect><rect x="12" y="9" width="3" height="3" fill="#E28A33"></rect></svg>
+      <span style="display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 16px"><span style="font-weight: 500">Bulk · Claude</span><span style="font-size: 12px; color: {{c.muted}}">4.2B to Mass</span></span>
+    </a>
+    <a href="#settings" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; margin-top: 6px; border-radius: 6px; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4.5h7M12.5 4.5h1M11 3v3M2.5 11.5h2M7.5 11.5h6M6 10v3"></path></svg>Settings</a>
+  </aside>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; padding: 8px 8px 8px 0; box-sizing: border-box">
+    <main style="flex: 1; min-width: 0; display: flex; flex-direction: column; border-radius: 12px; border: 1px solid {{c.line}}; background: {{c.ground}}; overflow: hidden">
+      <header style="display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 12px 0 24px; border-bottom: 1px solid {{c.line}}">
+        <h1 style="margin: 0; font-size: 14px; font-weight: 500">Limits</h1>
+        <span style="flex: 1"></span>
+        <div role="group" aria-label="Range" style="display: flex; padding: 2px; border-radius: 8px; background: {{c.raised}}">
+          <button type="button" style="height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: {{c.muted}}; font-size: 12px">24 hours</button>
+          <button type="button" aria-pressed="true" style="height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: {{c.seg}}; color: {{c.ink}}; font-size: 12px; font-weight: 500; box-shadow: {{c.segShadow}}">7 days</button>
+        </div>
+      </header>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; padding: 20px 32px 32px; max-width: 1040px; width: 100%; box-sizing: border-box; margin: 0 auto">
+
+        <div role="group" aria-label="Tools" style="display: flex; flex-wrap: wrap; gap: 6px">
+          <button type="button" aria-pressed="true" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid transparent; border-radius: 14px; background: {{c.accentSoft}}; color: {{c.accentInk}}; font-size: 12px; font-weight: 500">All <span style="font-family: 'Geist Mono', monospace">11</span></button>
+          <button type="button" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 14px; background: transparent; color: {{c.muted}}; font-size: 12px">Claude Code <span style="font-family: 'Geist Mono', monospace; color: {{c.faint}}">2</span></button>
+          <button type="button" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 14px; background: transparent; color: {{c.muted}}; font-size: 12px">Cursor <span style="font-family: 'Geist Mono', monospace; color: {{c.faint}}">2</span></button>
+          <button type="button" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 14px; background: transparent; color: {{c.muted}}; font-size: 12px">Codex <span style="font-family: 'Geist Mono', monospace; color: {{c.faint}}">1</span></button>
+          <button type="button" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 14px; background: transparent; color: {{c.muted}}; font-size: 12px">Gemini CLI <span style="font-family: 'Geist Mono', monospace; color: {{c.faint}}">1</span></button>
+          <button type="button" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 14px; background: transparent; color: {{c.muted}}; font-size: 12px">OpenCode <span style="font-family: 'Geist Mono', monospace; color: {{c.faint}}">1</span></button>
+          <button type="button" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 14px; background: transparent; color: {{c.muted}}; font-size: 12px">Pi <span style="font-family: 'Geist Mono', monospace; color: {{c.faint}}">1</span></button>
+          <button type="button" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 14px; background: transparent; color: {{c.muted}}; font-size: 12px">GitHub Copilot <span style="font-family: 'Geist Mono', monospace; color: {{c.faint}}">1</span></button>
+          <button type="button" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 14px; background: transparent; color: {{c.muted}}; font-size: 12px">Windsurf <span style="font-family: 'Geist Mono', monospace; color: {{c.faint}}">1</span></button>
+          <button type="button" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid {{c.line2}}; border-radius: 14px; background: transparent; color: {{c.muted}}; font-size: 12px">Codebuff <span style="font-family: 'Geist Mono', monospace; color: {{c.faint}}">1</span></button>
+        </div>
+
+        <section style="border: 1px solid {{c.line}}; border-radius: 12px; background: {{c.pool}}; overflow: hidden">
+          <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; padding: 24px 24px 8px">
+            <div style="flex: 1 1 420px; min-width: 0">
+              <div style="font-size: 12px; color: {{c.muted}}">Left across your own logins · 8 logins with limits</div>
+              <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-top: 4px">
+                <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 80px; line-height: 80px; letter-spacing: -0.03em">415%</span>
+                <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 32px; line-height: 36px; color: {{c.muted}}">of 800% left</span>
+                <span style="align-self: center; font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 22px; padding: 0 8px; border-radius: 11px; border: 1px solid {{c.line2}}; color: {{c.muted}}">~80% an hour</span>
+              </div>
+              <p style="margin: 10px 0 0; max-width: 560px; color: {{c.muted}}">Each login keeps its own limits. This adds up what each one has left, so you can see where there is room before you hop.</p>
+            </div>
+            <div role="group" aria-label="View" style="display: flex; padding: 2px; border-radius: 8px; background: {{c.raised}}">
+              <button type="button" aria-pressed="true" style="height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: {{c.seg}}; color: {{c.ink}}; font-size: 12px; font-weight: 500; box-shadow: {{c.segShadow}}">Remaining</button>
+              <button type="button" style="height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: {{c.muted}}; font-size: 12px">Drain rate</button>
+            </div>
+          </div>
+
+          <figure style="margin: 0; padding: 12px 24px 0 24px" role="img" aria-label="Remaining across logins: measured over the last three days, projected for the next seven, with resets lifting it back up">
+            <div style="display: flex; gap: 10px">
+              <div style="display: flex; flex-direction: column; justify-content: space-between; height: 220px; font-family: 'Geist Mono', monospace; font-size: 11px; line-height: 12px; color: {{c.faint}}; text-align: right; width: 36px">
+                <span>800%</span><span>600%</span><span>400%</span><span>200%</span><span>0%</span>
+              </div>
+              <div style="position: relative; flex: 1; min-width: 0; height: 220px">
+                <svg width="100%" height="220" viewBox="0 0 1000 240" preserveAspectRatio="none" aria-hidden="true" style="display: block; overflow: visible">
+                  <path d="M0 0.5H1000M0 60H1000M0 120H1000M0 180H1000" stroke="{{c.grid}}" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+                  <path d="M0 239.5H1000" stroke="{{c.line2}}" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+                  <path d="M0 99 L20 108 L40 120 L60 126 L75 114 L90 60 L110 72 L130 84 L150 99 L165 105 L180 72 L200 75 L220 90 L240 99 L255 111 L270 72 L285 84 L300 115.5 L300 240 L0 240 Z" fill="{{c.measuredFill}}"></path>
+                  <path d="M0 99 L20 108 L40 120 L60 126 L75 114 L90 60 L110 72 L130 84 L150 99 L165 105 L180 72 L200 75 L220 90 L240 99 L255 111 L270 72 L285 84 L300 115.5" fill="none" stroke="{{c.ink}}" stroke-width="1.75" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+                  <path d="M300 115.5 L330 129 L330 105 L400 120 L430 129 L430 99 L520 117 L560 126 L560 102 L650 117 L690 126 L690 96 L780 111 L820 120 L820 90 L910 105 L950 114 L950 90 L1000 99 L1000 240 L300 240 Z" fill="{{c.projFill}}"></path>
+                  <path d="M300 115.5 L330 129 L330 105 L400 120 L430 129 L430 99 L520 117 L560 126 L560 102 L650 117 L690 126 L690 96 L780 111 L820 120 L820 90 L910 105 L950 114 L950 90 L1000 99" fill="none" stroke="{{c.accentLine}}" stroke-width="1.75" stroke-dasharray="5 4" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+                  <path d="M300 0V240" stroke="{{c.muted}}" stroke-width="1" stroke-dasharray="2 3" vector-effect="non-scaling-stroke"></path>
+                </svg>
+                <span style="position: absolute; left: 30%; top: -2px; transform: translateX(6px); font-size: 11px; line-height: 14px; font-weight: 500; color: {{c.ink}}">Now</span>
+                <span style="position: absolute; left: 33%; top: 43.75%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: {{c.ok}}; box-shadow: 0 0 0 2px {{c.pool}}"></span>
+                <span style="position: absolute; left: 43%; top: 41.25%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: {{c.ok}}; box-shadow: 0 0 0 2px {{c.pool}}"></span>
+                <span style="position: absolute; left: 56%; top: 42.5%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: {{c.ok}}; box-shadow: 0 0 0 2px {{c.pool}}"></span>
+                <span style="position: absolute; left: 69%; top: 40%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: {{c.ok}}; box-shadow: 0 0 0 2px {{c.pool}}"></span>
+                <span style="position: absolute; left: 82%; top: 37.5%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: {{c.ok}}; box-shadow: 0 0 0 2px {{c.pool}}"></span>
+                <span style="position: absolute; left: 95%; top: 37.5%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: {{c.ok}}; box-shadow: 0 0 0 2px {{c.pool}}"></span>
+              </div>
+            </div>
+            <div style="display: flex; padding: 8px 0 0 46px; font-family: 'Geist Mono', monospace; font-size: 11px; color: {{c.faint}}">
+              <span style="flex: 1; text-align: center">Sun</span><span style="flex: 1; text-align: center">Mon</span><span style="flex: 1; text-align: center">Tue</span><span style="flex: 1; text-align: center">Wed</span><span style="flex: 1; text-align: center">Thu</span><span style="flex: 1; text-align: center">Fri</span><span style="flex: 1; text-align: center">Sat</span><span style="flex: 1; text-align: center">Sun</span><span style="flex: 1; text-align: center">Mon</span><span style="flex: 1; text-align: center">Tue</span>
+            </div>
+          </figure>
+
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin-top: 16px; padding: 12px 24px; border-top: 1px solid {{c.line}}; font-size: 12px; color: {{c.muted}}">
+            <span>Next reset <span style="font-family: 'Geist Mono', monospace; font-weight: 500; color: {{c.okInk}}">+35%</span> · 12:41 PM · me@personal.dev</span>
+            <span>Lasts the next 7 days at this pace</span>
+            <span style="flex: 1"></span>
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 2px; background: {{c.ink}}"></span>Measured</span>
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 0; border-top: 2px dashed {{c.accentLine}}"></span>Projected</span>
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{c.ok}}"></span>Reset</span>
+          </div>
+        </section>
+
+        <section style="border: 1px solid {{c.line}}; border-radius: 12px; overflow: hidden">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 48px; padding: 0 12px 0 16px">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.ink}}" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M8 2v12M2 8h12M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4"></path></svg>
+            <h2 style="margin: 0; font-size: 14px; font-weight: 500">Claude Code</h2>
+            <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.faint}}">2</span>
+            <span style="font-size: 12px; color: {{c.muted}}"><span style="font-family: 'Geist Mono', monospace; color: {{c.ink}}">108%</span> of 200% left · ~28% an hour</span>
+            <span style="flex: 1"></span>
+            <button type="button" style="display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: {{c.muted}}; font-size: 12px; font-weight: 500"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>Add account</button>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 12px 14px 16px; border-top: 1px solid {{c.line}}; background: {{c.rowActive}}">
+            <div style="flex: 1 1 200px; min-width: 0">
+              <div style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid {{c.accentInk}}; box-sizing: border-box"></span><span style="font-weight: 500">Personal</span><span style="font-size: 11px; line-height: 18px; padding: 0 6px; border-radius: 4px; background: {{c.accentSoft}}; color: {{c.accentInk}}; font-weight: 500">In use</span></div>
+              <div style="margin-left: 15px; font-size: 12px; color: {{c.faint}}">Max 5x · me@personal.dev · read 2m ago</div>
+            </div>
+            <div style="flex: 2 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12px"><span style="width: 56px; color: {{c.muted}}">5-hour</span><div style="flex: 1; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 51%; height: 4px; border-radius: 2px; background: {{c.warn}}"></div></div><span style="width: 32px; text-align: right; font-family: 'Geist Mono', monospace">51%</span><span style="width: 52px; font-family: 'Geist Mono', monospace; color: {{c.faint}}">3h 5m</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12px"><span style="width: 56px; color: {{c.muted}}">Weekly</span><div style="flex: 1; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 6%; height: 4px; border-radius: 2px; background: {{c.meter}}"></div></div><span style="width: 32px; text-align: right; font-family: 'Geist Mono', monospace">6%</span><span style="width: 52px; font-family: 'Geist Mono', monospace; color: {{c.faint}}">6d 19h</span></div>
+            </div>
+            <div style="flex: 0 1 200px; display: flex; align-items: center; justify-content: flex-end; gap: 8px">
+              <span style="font-size: 12px; font-weight: 500; color: {{c.warnInk}}">Empty ~12:43 PM</span>
+              <button type="button" aria-label="More for Personal" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h.01M8 8h.01M12 8h.01"></path></svg></button>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 12px 14px 16px; border-top: 1px solid {{c.line}}">
+            <div style="flex: 1 1 200px; min-width: 0">
+              <div style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{c.ok}}"></span><span style="font-weight: 500">work@studio.dev</span></div>
+              <div style="margin-left: 15px; font-size: 12px; color: {{c.faint}}">Pro · read 2m ago</div>
+            </div>
+            <div style="flex: 2 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12px"><span style="width: 56px; color: {{c.muted}}">5-hour</span><div style="flex: 1; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 12%; height: 4px; border-radius: 2px; background: {{c.meter}}"></div></div><span style="width: 32px; text-align: right; font-family: 'Geist Mono', monospace">12%</span><span style="width: 52px; font-family: 'Geist Mono', monospace; color: {{c.faint}}">39m</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12px"><span style="width: 56px; color: {{c.muted}}">Weekly</span><div style="flex: 1; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 41%; height: 4px; border-radius: 2px; background: {{c.meter}}"></div></div><span style="width: 32px; text-align: right; font-family: 'Geist Mono', monospace">41%</span><span style="width: 52px; font-family: 'Geist Mono', monospace; color: {{c.faint}}">3d 11h</span></div>
+            </div>
+            <div style="flex: 0 1 200px; display: flex; align-items: center; justify-content: flex-end; gap: 8px">
+              <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">~0.7% an hour</span>
+              <button type="button" style="height: 30px; padding: 0 12px; border: 0; border-radius: 7px; background: {{c.accentFill}}; color: {{c.onAccent}}; font-size: 12px; font-weight: 500">Switch</button>
+              <button type="button" aria-label="More for work@studio.dev" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h.01M8 8h.01M12 8h.01"></path></svg></button>
+            </div>
+          </div>
+        </section>
+
+        <section style="border: 1px solid {{c.line}}; border-radius: 12px; overflow: hidden">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 48px; padding: 0 12px 0 16px">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.ink}}" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5l5.5 3.2v6.6L8 14.5l-5.5-3.2V4.7z"></path><path d="M2.5 4.7L8 8l5.5-3.3M8 8v6.5"></path></svg>
+            <h2 style="margin: 0; font-size: 14px; font-weight: 500">Cursor</h2>
+            <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.faint}}">2</span>
+            <span style="font-size: 12px; color: {{c.muted}}"><span style="font-family: 'Geist Mono', monospace; color: {{c.ink}}">38%</span> of 100% left · ~0.2% an hour</span>
+            <span style="flex: 1"></span>
+            <button type="button" style="display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: {{c.muted}}; font-size: 12px; font-weight: 500"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>Add account</button>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 12px 14px 16px; border-top: 1px solid {{c.line}}; background: {{c.rowActive}}">
+            <div style="flex: 1 1 200px; min-width: 0">
+              <div style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid {{c.accentInk}}; box-sizing: border-box"></span><span style="font-weight: 500">me@personal.dev</span><span style="font-size: 11px; line-height: 18px; padding: 0 6px; border-radius: 4px; background: {{c.accentSoft}}; color: {{c.accentInk}}; font-weight: 500">In use</span></div>
+              <div style="margin-left: 15px; font-size: 12px; color: {{c.faint}}">Ultra · read 2m ago</div>
+            </div>
+            <div style="flex: 2 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12px"><span style="width: 56px; color: {{c.muted}}">Auto</span><div style="flex: 1; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 62%; height: 4px; border-radius: 2px; background: {{c.meter}}"></div></div><span style="width: 32px; text-align: right; font-family: 'Geist Mono', monospace">62%</span><span style="width: 52px; font-family: 'Geist Mono', monospace; color: {{c.faint}}">13d 4h</span></div>
+            </div>
+            <div style="flex: 0 1 200px; display: flex; align-items: center; justify-content: flex-end; gap: 8px">
+              <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.muted}}">~0.2% an hour</span>
+              <button type="button" aria-label="More for me@personal.dev" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h.01M8 8h.01M12 8h.01"></path></svg></button>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 12px 14px 16px; border-top: 1px solid {{c.line}}">
+            <div style="flex: 1 1 200px; min-width: 0">
+              <div style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{c.danger}}"></span><span style="font-weight: 500">spare@personal.dev</span><span style="font-size: 11px; line-height: 18px; padding: 0 6px; border-radius: 4px; background: {{c.dangerSoft}}; color: {{c.dangerInk}}; font-weight: 500">Signed out</span></div>
+              <div style="margin-left: 15px; font-size: 12px; color: {{c.faint}}">Pro · login expired</div>
+            </div>
+            <div style="flex: 2 1 300px; min-width: 0; font-size: 12px; color: {{c.muted}}">Switch to it and sign in to Cursor again to read its limits.</div>
+            <div style="flex: 0 1 200px; display: flex; align-items: center; justify-content: flex-end; gap: 8px">
+              <button type="button" style="height: 30px; padding: 0 12px; border: 1px solid {{c.line2}}; border-radius: 7px; background: {{c.raised}}; color: {{c.ink}}; font-size: 12px; font-weight: 500">Switch and sign in</button>
+              <button type="button" aria-label="More for spare@personal.dev" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h.01M8 8h.01M12 8h.01"></path></svg></button>
+            </div>
+          </div>
+        </section>
+
+        <section style="border: 1px solid {{c.line}}; border-radius: 12px; overflow: hidden">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 48px; padding: 0 12px 0 16px">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.ink}}" stroke-width="1.4" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z"></path><path d="M8 5.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5z"></path></svg>
+            <h2 style="margin: 0; font-size: 14px; font-weight: 500">Codex</h2>
+            <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{c.faint}}">1</span>
+            <span style="font-size: 12px; color: {{c.muted}}"><span style="font-family: 'Geist Mono', monospace; color: {{c.dangerInk}}">7%</span> of 100% left · partial outage</span>
+            <span style="flex: 1"></span>
+            <button type="button" style="display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: {{c.muted}}; font-size: 12px; font-weight: 500"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>Add account</button>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 12px 14px 16px; border-top: 1px solid {{c.line}}; background: {{c.rowActive}}">
+            <div style="flex: 1 1 200px; min-width: 0">
+              <div style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid {{c.accentInk}}; box-sizing: border-box"></span><span style="font-weight: 500">me@personal.dev</span><span style="font-size: 11px; line-height: 18px; padding: 0 6px; border-radius: 4px; background: {{c.accentSoft}}; color: {{c.accentInk}}; font-weight: 500">In use</span></div>
+              <div style="margin-left: 15px; font-size: 12px; color: {{c.faint}}">Plus · read 2m ago</div>
+            </div>
+            <div style="flex: 2 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12px"><span style="width: 56px; color: {{c.muted}}">5-hour</span><div style="flex: 1; height: 4px; border-radius: 2px; background: {{c.track}}"><div style="width: 93%; height: 4px; border-radius: 2px; background: {{c.danger}}"></div></div><span style="width: 32px; text-align: right; font-family: 'Geist Mono', monospace; font-weight: 500; color: {{c.dangerInk}}">93%</span><span style="width: 52px; font-family: 'Geist Mono', monospace; color: {{c.faint}}">25m</span></div>
+            </div>
+            <div style="flex: 0 1 200px; display: flex; align-items: center; justify-content: flex-end; gap: 8px">
+              <span style="font-size: 12px; font-weight: 500; color: {{c.dangerInk}}">Runs out ~11:19 AM</span>
+              <button type="button" aria-label="More for Codex me@personal.dev" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: {{c.muted}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h.01M8 8h.01M12 8h.01"></path></svg></button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["night","day"],"default":"night"},"accent":{"editor":"color","options":["#7C6CFF","#3B82F6","#22C55E","#F97316"],"default":"#7C6CFF"},"$preview":{"width":1280,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme ?? 'night';
+    const accent = this.props.accent ?? '#7C6CFF';
+    const hex = (h) => { const n = parseInt(String(h).replace('#', '').slice(0, 6), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+    const rgba = (h, a) => { const p = hex(h); return 'rgba(' + p[0] + ',' + p[1] + ',' + p[2] + ',' + a + ')'; };
+    const mix = (h, t, w) => { const a = hex(h); const b = hex(t); return 'rgb(' + a.map((v, i) => Math.round(v * (1 - w) + b[i] * w)).join(',') + ')'; };
+    const lum = (h) => { const p = hex(h).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2]; };
+    const night = theme !== 'day';
+    const light = lum(accent) > 0.3;
+    const base = night ? {
+      ground: '#141416', side: '#18181B', panel: '#1C1C20', raised: '#232328', field: '#1C1C20', pool: '#17171A',
+      seg: '#34343B', segShadow: 'none', rowActive: 'rgba(255,255,255,0.025)', grid: 'rgba(255,255,255,0.06)',
+      line: 'rgba(255,255,255,0.07)', line2: 'rgba(255,255,255,0.12)', navActive: 'rgba(255,255,255,0.07)',
+      ink: '#F4F4F5', muted: '#A1A1AA', faint: '#8A8A93', track: 'rgba(255,255,255,0.08)', meter: '#D4D4D8',
+      warn: '#F5A524', warnInk: '#F7B54A', danger: '#F2555A', dangerInk: '#F6787C', ok: '#3DD68C', okInk: '#5FE0A3',
+      measuredFill: 'rgba(244,244,245,0.06)'
+    } : {
+      ground: '#FFFFFF', side: '#F4F4F5', panel: '#FFFFFF', raised: '#F4F4F5', field: '#FFFFFF', pool: '#FCFCFC',
+      seg: '#FFFFFF', segShadow: '0 1px 2px rgba(24,24,27,0.12)', rowActive: 'rgba(0,0,0,0.018)', grid: 'rgba(0,0,0,0.06)',
+      line: 'rgba(0,0,0,0.08)', line2: 'rgba(0,0,0,0.14)', navActive: 'rgba(0,0,0,0.06)',
+      ink: '#18181B', muted: '#52525B', faint: '#6B6B74', track: 'rgba(0,0,0,0.07)', meter: '#3F3F46',
+      warn: '#E3940B', warnInk: '#9A5B00', danger: '#D93A3F', dangerInk: '#C2272D', ok: '#14935A', okInk: '#11804E',
+      measuredFill: 'rgba(24,24,27,0.05)'
+    };
+    const c = Object.assign({}, base, {
+      accentFill: light ? accent : mix(accent, '#000000', 0.12),
+      onAccent: light ? '#111114' : '#FFFFFF',
+      accentInk: night ? mix(accent, '#FFFFFF', 0.35) : mix(accent, '#000000', 0.35),
+      accentLine: night ? mix(accent, '#FFFFFF', 0.2) : accent,
+      accentSoft: rgba(accent, night ? 0.16 : 0.1),
+      projFill: rgba(accent, night ? 0.12 : 0.08),
+      warnSoft: rgba(night ? '#F5A524' : '#E3940B', night ? 0.16 : 0.14),
+      dangerSoft: rgba(night ? '#F2555A' : '#D93A3F', night ? 0.16 : 0.1)
+    });
+    return { c: c };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keyhop: every login, one hop away</title>
+<meta name="description" content="Keyhop watches the limits on every AI coding account you own and moves your tools to the login with room, before a limit stops you. Free and open source for macOS, Linux and Windows.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Instrument+Serif&amp;display=swap">
+<style>
+:root{
+  --bg:#141416;--surface:#1B1B1F;--surface-2:#222228;--surface-3:#2A2A31;
+  --ink:#F4F4F5;--muted:#A1A1AA;--accent:#6D5FE0;--on-accent:#FFFFFF;--ok:#3DD68C;--danger:#F2555A;--danger-ink:#F6787C;
+  --display:'Instrument Serif',Georgia,'Times New Roman',serif;--text:'Geist',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --xl:clamp(60px,12vw,200px);--l:clamp(38px,4.6vw,74px);--m:clamp(26px,3.2vw,50px);--body:18px;--small:15px;
+  --margin:clamp(16px,2.2vw,32px);--gutter:clamp(12px,1.4vw,24px);--r:4px;
+  --ease-out:cubic-bezier(.22,1,.36,1);--t-press:140ms;--t-hover:180ms;--t-reveal:800ms;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="night"]){--bg:#FAFAFA;--surface:#F0F0F2;--surface-2:#E7E7EB;--surface-3:#DCDCE2;--ink:#18181B;--muted:#52525B;--accent:#5B4BD6;--ok:#11804E;--danger:#C2272D;--danger-ink:#C2272D}}
+:root[data-theme="day"]{--bg:#FAFAFA;--surface:#F0F0F2;--surface-2:#E7E7EB;--surface-3:#DCDCE2;--ink:#18181B;--muted:#52525B;--accent:#5B4BD6;--ok:#11804E;--danger:#C2272D;--danger-ink:#C2272D}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--text);font-size:var(--body);line-height:1.55;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+a{color:inherit;text-decoration-thickness:1px;text-underline-offset:.2em}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+h1,h2,h3,p{margin:0}
+.wrap{padding-inline:var(--margin)}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 20px;border:0;border-radius:var(--r);background:var(--accent);color:var(--on-accent);font:500 var(--small)/1 var(--text);text-decoration:none;cursor:pointer;transition:transform var(--t-press) var(--ease-out),background-color var(--t-hover) ease}
+.btn:hover{background:color-mix(in srgb,var(--accent) 86%,var(--ink))}
+.btn:active{transform:translateY(1px) scale(.98)}
+.textlink{text-decoration:none;transition:color var(--t-hover) ease}
+.textlink:hover{text-decoration:underline}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+code,pre{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace}
+
+/* hero: the sentence holds while the hop plays out */
+.run{position:relative;height:200vh}
+.stage{position:sticky;top:0;height:100svh;min-height:620px;display:grid;grid-template-rows:auto 1fr auto;padding:20px var(--margin) 32px}
+.nav{display:flex;align-items:center;gap:28px;font-size:var(--small)}
+.nav .word{font-weight:600;font-size:var(--body);text-decoration:none;margin-right:auto}
+.nav .links{display:flex;gap:24px}
+.nav .btn{height:38px;padding:0 16px}
+.headline{align-self:center;font-family:var(--display);font-weight:400;font-size:var(--xl);line-height:.98;letter-spacing:-.03em}
+.headline .line{display:block}
+.slot{position:relative;display:inline-block;width:2.6em;height:.72em;margin:0 .06em 0 .04em;vertical-align:-.02em;border-radius:var(--r);overflow:hidden;background:#0B0C14}
+.slot video,.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 62%}
+.pet{position:absolute;left:12%;bottom:8%;width:15%;height:auto;image-rendering:pixelated}
+.foot{display:grid;grid-template-columns:minmax(0,560px) 1fr;align-items:end;gap:var(--gutter)}
+.captions{position:relative;min-height:6.4em}
+.cap{font-size:var(--body);line-height:1.5}
+.cap b{font-weight:500}
+.cap + .cap{display:none}
+.note{margin-top:10px;font-size:var(--small);color:var(--muted)}
+
+/* showcase: type a tool, see where the room is */
+.ask{min-height:88svh;padding-block:140px 72px;display:flex;flex-direction:column;gap:48px}
+.ask label{font-size:var(--small);color:var(--muted)}
+.askline{display:flex;align-items:baseline;font-family:var(--display);font-size:var(--xl);line-height:1;letter-spacing:-.035em;max-width:100%;overflow:hidden}
+.askline input{field-sizing:content;min-width:1ch;max-width:100%;padding:0;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;letter-spacing:inherit}
+.askline input:focus-visible{outline:0}
+.caret{flex:none;width:.08em;height:.78em;margin-left:.04em;background:var(--accent);animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.answer{width:min(560px,100%);border-radius:var(--r);background:var(--surface);padding:20px;display:flex;flex-direction:column;gap:6px;font-size:var(--small);line-height:1.4}
+.answer .pick{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 0 10px}
+.answer .pick span{font-weight:500}
+.answer .pick button{height:32px;padding:0 14px;border:0;border-radius:var(--r);background:var(--accent);color:var(--on-accent);font:500 15px/1 var(--text);cursor:pointer}
+.row{display:grid;grid-template-columns:10px 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:var(--r);background:var(--surface-2)}
+.row .dot{width:8px;height:8px;border-radius:4px;background:var(--ok)}
+.row.full .dot{background:var(--danger)}
+.row.out .dot{background:var(--muted)}
+.row .who{display:flex;flex-direction:column}
+.row .who small{font-size:15px;color:var(--muted)}
+.row .left{text-align:right;font-weight:500}
+.row.full .left{color:var(--danger-ink)}
+.meter{grid-column:2 / 4;height:6px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ink)}
+.row.full .meter i{background:var(--danger)}
+.examples{display:flex;flex-wrap:wrap;gap:8px 28px;font-size:var(--body);color:var(--muted)}
+.examples span{color:var(--muted)}
+.examples button{padding:0;border:0;background:none;color:var(--ink);font:inherit;text-decoration:underline;text-underline-offset:.2em;text-decoration-thickness:1px;cursor:pointer;transition:color var(--t-hover) ease}
+.examples button:hover{color:var(--muted)}
+
+/* how a switch works */
+.switch{position:relative;display:grid;grid-template-columns:1fr 1fr;min-height:88svh;margin-top:120px}
+.switch .say{background:var(--surface);padding:64px var(--margin) 140px}
+.switch .say h2{font-family:var(--display);font-weight:400;font-size:var(--l);line-height:1;letter-spacing:-.025em;max-width:11em}
+.switch .say p{margin-top:24px;max-width:36ch}
+.switch .show{background:var(--surface-2);display:flex;align-items:center;justify-content:center;padding:64px var(--margin) 140px}
+.card{width:min(440px,100%);border-radius:var(--r);background:var(--bg);padding:20px;font-size:var(--small);line-height:1.4;display:flex;flex-direction:column;gap:8px}
+.card .top{display:flex;justify-content:space-between;color:var(--muted);padding-bottom:6px}
+.card .top b{color:var(--ink);font-weight:500}
+.acct{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 14px;border-radius:var(--r);background:var(--surface);transition:background-color 200ms ease}
+.acct small{grid-column:1 / 3;color:var(--muted);font-size:15px}
+.acct.on{background:var(--surface-3)}
+.acct .tag{font-size:15px;color:var(--muted)}
+.acct.on .tag{color:var(--ink)}
+.status{padding:10px 2px 0;min-height:3em;transition:opacity 200ms ease}
+.slide{position:absolute;left:var(--margin);right:var(--margin);bottom:28px}
+.slide input{position:relative;z-index:1;display:block;width:100%;height:32px;margin:0;appearance:none;-webkit-appearance:none;background:transparent;cursor:pointer}
+.track{position:absolute;left:0;right:0;top:12px;height:8px;background:var(--surface-3);pointer-events:none}
+.slide input::-webkit-slider-runnable-track{height:8px;border-radius:0;background:transparent}
+.slide input::-webkit-slider-thumb{-webkit-appearance:none;width:32px;height:32px;margin-top:-12px;border-radius:var(--r);background:var(--accent);transition:transform var(--t-press) var(--ease-out)}
+.slide input:active::-webkit-slider-thumb{transform:scale(.94)}
+.slide input::-moz-range-track{height:8px;background:transparent}
+.slide input::-moz-range-thumb{width:32px;height:32px;border:0;border-radius:var(--r);background:var(--accent)}
+.passed{position:absolute;left:0;top:12px;height:8px;background:var(--ink);pointer-events:none;width:calc((100% - 32px) * var(--p, 0) + 16px)}
+.stops{display:grid;grid-template-columns:repeat(4,1fr);margin-top:8px;font-size:var(--small);color:var(--muted)}
+.stops span:nth-child(2){text-align:center;transform:translateX(-17%)}
+.stops span:nth-child(3){text-align:center;transform:translateX(17%)}
+.stops span:last-child{text-align:right}
+.stops .now{color:var(--ink)}
+
+/* tools table */
+.tools{padding-block:200px 40px}
+.tools h2{font-family:var(--display);font-weight:400;font-size:var(--l);line-height:.98;letter-spacing:-.025em;text-indent:3vw;max-width:20em;text-wrap:balance}
+.tools .body{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gutter);margin-top:96px;align-items:end}
+.tools figure{grid-column:1 / 5;margin:0;align-self:end}
+.tools figure img{display:block;width:22vw;max-width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;object-position:28% 50%;border-radius:var(--r)}
+.tools figcaption{margin-top:10px;font-size:var(--small);color:var(--muted);max-width:22vw}
+.tools .what{grid-column:6 / 7;align-self:start;font-size:var(--small);color:var(--muted);padding-top:3px}
+.tools table{grid-column:7 / 13;border-collapse:collapse;width:100%;font-size:var(--body)}
+.tools td{padding:0 0 26px;vertical-align:baseline}
+.tools td:first-child{color:var(--muted);width:30%}
+.tools td:nth-child(2){width:34%}
+.tools td:last-child{text-align:right}
+.tools tr.gap td{padding-top:44px}
+.tools .fine{grid-column:7 / 13;margin-top:12px;color:var(--muted);font-size:var(--small);max-width:46ch}
+
+/* sentences with switches */
+.bands{margin-top:200px}
+.band{min-height:20vh;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gutter);align-items:center;padding:28px var(--margin);background:var(--bg);transition:background-color 260ms ease}
+.band .s{grid-column:1 / 11}
+.band .s p:first-child{font-family:var(--display);font-size:var(--m);line-height:1.05;letter-spacing:-.02em;color:var(--muted);transition:color 260ms ease}
+.band .then{display:none;margin-top:10px;font-family:var(--text);font-size:var(--body);letter-spacing:0;line-height:1.5;color:var(--ink)}
+.band .tg{grid-column:11 / 13;justify-self:end}
+.band.on{background:var(--surface)}
+.band.on:nth-child(2n){background:var(--surface-2)}
+.band.on .s p:first-child{color:var(--ink)}
+.band.on .then{display:block}
+.toggle{position:relative;width:2.1em;height:1.1em;font-size:var(--m);border:0;border-radius:.55em;background:var(--surface-3);cursor:pointer;padding:0;transition:background-color var(--t-hover) ease}
+.toggle::after{content:"";position:absolute;top:.12em;left:.12em;width:.86em;height:.86em;border-radius:50%;background:var(--ink);transition:transform 220ms var(--ease-out)}
+.toggle[aria-checked="true"]{background:var(--accent)}
+.toggle[aria-checked="true"]::after{transform:translateX(1em);background:#FFFFFF}
+.toggle:active::after{width:1em}
+
+/* the close, inverted */
+.close{min-height:90svh;margin-top:200px;background:var(--ink);color:var(--bg);display:grid;grid-template-rows:1fr auto;padding:96px var(--margin) 40px}
+.close h2{font-family:var(--display);font-weight:400;font-size:var(--xl);line-height:.9;letter-spacing:-.035em;max-width:7em}
+.close .base{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gutter);align-items:end}
+.close p{grid-column:1 / 6;font-size:var(--body);line-height:1.5}
+.close .btn{grid-column:10 / 13;justify-self:end;height:56px;padding:0 28px;font-size:var(--body)}
+
+/* questions */
+.faq{padding-block:200px 160px}
+.qa{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gutter);align-items:baseline}
+.qa + .qa{margin-top:80px}
+.qa h2,.qa h3{grid-column:1 / 7;font-family:var(--display);font-weight:400;font-size:var(--m);line-height:1.1;letter-spacing:-.015em}
+.qa h2{color:var(--muted)}
+.qa div{grid-column:8 / 13;max-width:40ch;font-size:var(--body);line-height:1.55}
+.qa div p + p,.qa div p + pre,.qa div pre + p,.qa div pre + pre{margin-top:12px}
+.qa code{font-size:.92em}
+.qa pre{margin:0;padding:14px 16px;border-radius:var(--r);background:var(--surface);font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-all}
+
+/* footer */
+.end{position:relative;min-height:100svh;overflow:hidden;background:var(--ink);color:var(--bg);padding:96px var(--margin) 0;display:flex;flex-direction:column}
+.end .top{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gutter)}
+.end .inv{grid-column:1 / 8}
+.end .inv h2{font-family:var(--display);font-weight:400;font-size:var(--l);line-height:1;letter-spacing:-.025em}
+.end .inv .btn{margin-top:28px}
+.end ul{grid-column:10 / 13;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:var(--body)}
+.end ul a{text-decoration:none}.end ul a:hover{text-decoration:underline}
+.end .legal{margin-top:auto;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;font-size:var(--small);line-height:1.5;padding-bottom:12px}
+.end .legal p{max-width:80ch}
+.end .name{font-family:var(--display);font-size:28vw;line-height:.8;letter-spacing:-.045em;white-space:nowrap;transform:translateY(22%);margin-left:-.04em}
+
+/* motion: the hop, entrances, the story */
+@media (prefers-reduced-motion: no-preference){
+  .pet{animation:hop 2.6s var(--ease-out) infinite}
+  @keyframes hop{0%{transform:translate(0,0)}22%{transform:translate(120%,-60%)}40%{transform:translate(240%,0)}55%{transform:translate(240%,0)}78%{transform:translate(380%,-60%)}100%{transform:translate(480%,-30%)}}
+  .rise{animation:rise var(--t-reveal) var(--ease-out) both;animation-delay:calc(var(--i,0) * 90ms + 120ms)}
+  @keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+  @supports (animation-timeline: view()){
+    .in{animation:rise linear both;animation-timeline:view();animation-range:entry 0% entry 70%}
+    .in.d1{animation-range:entry 8% entry 78%}.in.d2{animation-range:entry 16% entry 86%}.in.d3{animation-range:entry 24% entry 94%}
+    .tools figure img{animation:settle linear both;animation-timeline:view();animation-range:entry 0% cover 50%}
+    @keyframes settle{from{transform:scale(1.08)}to{transform:scale(1)}}
+  }
+}
+@supports (animation-timeline: view()){
+  .run{view-timeline:--run block}
+  .captions .cap{position:absolute;left:0;right:0;bottom:0;display:block;opacity:0;animation:capshow linear both;animation-timeline:--run}
+  .captions .c1{animation-range:contain 0% contain 34%}
+  .captions .c2{animation-range:contain 33% contain 67%}
+  .captions .c3{animation-name:caplast;animation-range:contain 66% contain 100%}
+  @keyframes capshow{0%{opacity:0}12%{opacity:1}88%{opacity:1}100%{opacity:0}}
+  @keyframes caplast{0%{opacity:0}12%{opacity:1}100%{opacity:1}}
+  .captions .c1{animation-name:capfirst}
+  @keyframes capfirst{0%{opacity:1}88%{opacity:1}100%{opacity:0}}
+}
+@media (prefers-reduced-motion: reduce){.caret{animation:none}.slot video{display:none}}
+
+@media (max-width: 800px){
+  .run{height:auto}.stage{position:relative;height:auto;min-height:100svh}
+  .nav .links a:not(:first-child){display:none}
+  .headline{font-size:clamp(46px,13vw,96px);padding-block:48px}
+  .foot{grid-template-columns:1fr}
+  .captions{min-height:0}.captions .cap{position:static;opacity:1;animation:none}.captions .c2,.captions .c3{display:none}
+  .ask{padding-top:96px}.askline{font-size:11vw}
+  .examples{gap:8px}.examples button{min-height:44px;padding:0 14px;border-radius:var(--r);background:var(--surface);text-decoration:none}
+  .switch{grid-template-columns:1fr;margin-top:64px}
+  .switch .show{order:-1;min-height:46svh;padding:40px var(--margin) 120px}
+  .switch .say{padding:48px var(--margin)}
+  .slide{position:static;padding:0 var(--margin) 24px;background:var(--surface-2);order:0}
+  .stops{grid-template-columns:1fr 1fr;gap:4px;font-size:15px}.stops span{text-align:left!important;transform:none!important}
+  .tools{padding-top:120px}.tools h2{text-indent:0}
+  .tools .body{display:flex;flex-direction:column;align-items:stretch;margin-top:48px}
+  .tools .what{display:none}
+  .tools figure{order:2;margin-top:32px;align-self:flex-end;width:60%}.tools figure img{width:100%}.tools figcaption{max-width:none}
+  .bands{margin-top:120px}
+  .band{min-height:132px}.band .s{grid-column:1 / 10}.band .s p:first-child{font-size:6.4vw}.band .then{font-size:15px}.band .tg{grid-column:10 / 13}
+  .toggle{font-size:28px}
+  .close{min-height:80svh;margin-top:120px;padding:64px 20px 20px}.close h2{font-size:15vw}
+  .close .base{display:flex;flex-direction:column;align-items:stretch;gap:24px}.close p{font-size:17px}.close .btn{width:100%}
+  .faq{padding-block:120px 96px}.qa{display:flex;flex-direction:column;gap:12px}.qa + .qa{margin-top:56px}.qa h2,.qa h3{font-size:24px}
+  .end .top{display:flex;flex-direction:column;gap:32px}.end .inv h2{font-size:11vw}.end .inv .btn{width:100%}
+  .end ul{flex-direction:row;flex-wrap:wrap;gap:8px 18px;font-size:15px}
+  .end .name{font-size:34vw}
+}
+</style>
+</head>
+<body>
+<script>document.documentElement.classList.add('js')</script>
+<main>
+  <section class="run" aria-label="Keyhop">
+    <div class="stage">
+      <nav class="nav" aria-label="Site">
+        <a class="word" href="#top">Keyhop</a>
+        <div class="links"><a class="textlink" href="#tools">Tools</a><a class="textlink" href="https://keyhop.app/leaderboard">Leaderboard</a><a class="textlink" href="https://github.com/dominikzabcik/keyhop">GitHub</a></div>
+        <a class="btn" href="#install">Download</a>
+      </nav>
+      <h1 class="headline rise" id="top">
+        <span class="line">Every login,</span>
+        <span class="line">one <span class="slot"><video autoplay muted loop playsinline preload="metadata" poster="assets/milky-way-poster.jpg" width="854" height="480" aria-hidden="true"><source src="assets/milky-way.webm" type="video/webm"></video><svg class="pet" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="9" y="1" width="2" height="4" fill="#EFE7D6"></rect><rect x="8" y="4" width="5" height="4" fill="#EFE7D6"></rect><rect x="11" y="5" width="1" height="1" fill="#1C1C20"></rect><rect x="3" y="7" width="10" height="4" fill="#EFE7D6"></rect><rect x="3" y="11" width="10" height="1" fill="#C9BFA9"></rect><rect x="4" y="12" width="2" height="2" fill="#EFE7D6"></rect><rect x="10" y="12" width="2" height="2" fill="#EFE7D6"></rect><rect x="1" y="8" width="2" height="2" fill="#E28A33"></rect><rect x="12" y="9" width="3" height="3" fill="#E28A33"></rect></svg><span class="sr">hop</span></span> away.</span>
+      </h1>
+      <div class="foot">
+        <div>
+          <div class="captions rise" style="--i:1">
+            <p class="cap c1">Keyhop watches the limits on every AI coding account you own and moves your tools to the login with room, before a limit stops you.</p>
+            <p class="cap c2"><b>Claude Code on Personal</b> is 51% into its 5-hour window and will be empty around 12:43 PM at this pace.</p>
+            <p class="cap c3">Smart Hop offers <b>work@studio.dev</b>, 12% into its window. One click, and Claude Code carries on there.</p>
+          </div>
+          <p class="note rise" style="--i:2">Free and open source under MIT, for macOS, Linux and Windows. Sample accounts shown.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ask wrap" aria-label="Ask which login has room">
+    <label for="tool" class="in">Type one of your tools</label>
+    <div class="askline in d1" data-ui><input id="tool" type="text" value="claude code" autocomplete="off" spellcheck="false"><span class="caret" aria-hidden="true"></span></div>
+    <div class="answer in d2" data-ui aria-live="polite" id="answer"></div>
+    <div class="examples in d3"><span>Or try</span><button type="button" data-q="codex">codex</button><button type="button" data-q="cursor">cursor</button><button type="button" data-q="copilot">copilot</button></div>
+  </section>
+
+  <section class="switch" aria-labelledby="stage-h">
+    <div class="say">
+      <h2 id="stage-h" class="in">First, it saves the login in use.</h2>
+      <p class="in d1">A switch never signs you out anywhere. Logins stay in the system's own vault: Keychain on macOS, Secret Service on Linux, DPAPI on Windows.</p>
+    </div>
+    <div class="show">
+      <div class="card in d1" data-ui>
+        <div class="top"><b>Claude Code</b><span id="card-step">Saving</span></div>
+        <div class="acct on" id="acct-a"><span>Personal</span><span class="tag" id="tag-a">In use</span><small>Max 5x · 5-hour 51%, weekly 6%</small></div>
+        <div class="acct" id="acct-b"><span>work@studio.dev</span><span class="tag" id="tag-b">Chosen</span><small>Pro · 5-hour 12%, weekly 41%</small></div>
+        <p class="status" id="status">Personal is saved to your keychain before anything changes.</p>
+      </div>
+    </div>
+    <div class="slide">
+      <div style="position:relative"><span class="track" aria-hidden="true"></span><span class="passed" id="passed" aria-hidden="true"></span><input id="stage" type="range" min="0" max="3" step="1" value="0" aria-label="Stage of a switch" aria-valuetext="Save"></div>
+      <div class="stops" aria-hidden="true"><span class="now">Save</span><span>Load</span><span>Hand over</span><span>Confirm</span></div>
+    </div>
+  </section>
+
+  <section class="tools wrap" id="tools" aria-labelledby="tools-h">
+    <h2 id="tools-h" class="in">Nine tools, each switched its own way.</h2>
+    <div class="body">
+      <figure class="in">
+        <img src="assets/keys-39.jpg" width="2500" height="1250" alt="An iron key from around 1500 with an openwork bow, photographed on grey" loading="lazy">
+        <figcaption>One of 39 keys, c. 1500–1600. Rijksmuseum, CC0.</figcaption>
+      </figure>
+      <span class="what in">Tools</span>
+      <table class="in d1">
+        <caption class="sr">What Keyhop reads from each tool and how it switches it</caption>
+        <tbody>
+          <tr><td>Claude Code</td><td>5-hour and weekly</td><td>Its own login, in your keychain</td></tr>
+          <tr><td>Cursor</td><td>Auto and API</td><td>Cursor's own login link</td></tr>
+          <tr><td>Codex</td><td>5-hour and weekly</td><td>~/.codex/auth.json</td></tr>
+          <tr class="gap"><td>Gemini CLI</td><td>Stays in Gemini CLI</td><td>Google sign-in files</td></tr>
+          <tr><td>OpenCode</td><td>Stays with each provider</td><td>The whole auth.json profile</td></tr>
+          <tr><td>Pi</td><td>Stays with each provider</td><td>The whole auth.json profile</td></tr>
+          <tr class="gap"><td>GitHub Copilot</td><td>Plan quota from GitHub</td><td>The GitHub CLI's accounts</td></tr>
+          <tr><td>Windsurf</td><td>Cached for the login in use</td><td>~/.codeium/config.json</td></tr>
+          <tr><td>Codebuff</td><td>Credits, block and week</td><td>Its default profile</td></tr>
+        </tbody>
+      </table>
+      <p class="fine in d2">The first six keep a token history, counted on your computer by account, model and project. The last three keep none, so Keyhop shows their limits and invents no totals.</p>
+    </div>
+  </section>
+
+  <section class="bands" aria-label="What you can turn on">
+    <div class="band on"><div class="s"><p class="in">Hop for me before a limit runs out.</p><p class="then">The alert switches to Smart Hop's best login by itself, ranked offline by room, resets, forecast and budget.</p></div><span class="tg"><button class="toggle" type="button" role="switch" aria-checked="true" aria-label="Hop for me before a limit runs out"></button></span></div>
+    <div class="band on"><div class="s"><p class="in">Warn me when a budget passes 80%.</p><p class="then">Per login or across all of them, by day, week or month. Keyhop notifies you at 80% and at 100%.</p></div><span class="tg"><button class="toggle" type="button" role="switch" aria-checked="true" aria-label="Warn me when a budget passes 80%"></button></span></div>
+    <div class="band"><div class="s"><p class="in">Share today's totals live with my team.</p><p class="then">Per-tool totals go every 90 seconds; your team day marks you live for three minutes.</p></div><span class="tg"><button class="toggle" type="button" role="switch" aria-checked="false" aria-label="Share today's totals live with my team"></button></span></div>
+    <div class="band"><div class="s"><p class="in">Count the commits I wrote myself.</p><p class="then">Merge commits are left out, and each day is rewritten on sync, so a rebase counts once.</p></div><span class="tg"><button class="toggle" type="button" role="switch" aria-checked="false" aria-label="Count the commits I wrote myself"></button></span></div>
+    <div class="band"><div class="s"><p class="in">Rank me by commits per million tokens.</p><p class="then">The season compares people on your plan, past a floor of one million tokens.</p></div><span class="tg"><button class="toggle" type="button" role="switch" aria-checked="false" aria-label="Rank me by commits per million tokens"></button></span></div>
+  </section>
+
+  <section class="close" aria-labelledby="close-h">
+    <h2 id="close-h" class="in">Hop before the wall.</h2>
+    <div class="base">
+      <p class="in d1">Bring the logins you already pay for. The installer checks the release's SHA-256 before it installs anything.</p>
+      <a class="btn in d2" href="#install">Download Keyhop</a>
+    </div>
+  </section>
+
+  <section class="faq wrap" aria-label="Questions">
+    <div class="qa"><h2 class="in">Fair questions</h2></div>
+    <div class="qa"><h3 class="in">What is Keyhop, exactly?</h3><div class="in d1"><p>A small app on your own computer. It sits in the menu bar or tray, answers as the <code>keyhop</code> command, holds the logins you already have for each AI coding tool, and hands a tool another of your accounts when you ask or when the one in use runs out.</p></div></div>
+    <div class="qa"><h3 class="in">Does it share accounts or add usage?</h3><div class="in d1"><p>No. Keyhop only switches between accounts you own. It cannot raise a plan's limits, and every provider's terms still apply.</p></div></div>
+    <div class="qa"><h3 class="in">What leaves my computer?</h3><div class="in d1"><p>Nothing, until you link GitHub. Then daily totals per tool go to the leaderboard, and current limits only if you share them. Prompts, code and logins never do.</p><pre><code>keyhop cloud show-data</code></pre><p>prints every payload before it goes.</p></div></div>
+    <div class="qa" id="install"><h3 class="in">How do I install it?</h3><div class="in d1"><p>On macOS and Linux:</p><pre><code>curl -fsSL https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.sh | bash</code></pre><p>On Windows, in PowerShell:</p><pre><code>irm https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.ps1 | iex</code></pre></div></div>
+    <div class="qa"><h3 class="in">What does API value mean?</h3><div class="in d1"><p>The tokens you used, priced at each provider's standard API rates. It is the value of your usage, not a bill from your subscription.</p></div></div>
+    <div class="qa"><h3 class="in">Can I build it myself?</h3><div class="in d1"><p>Yes. Keyhop is MIT licensed, its installers are readable shell scripts, and the app, the website, the packaging and the tests are in one public repository.</p></div></div>
+  </section>
+</main>
+
+<footer class="end">
+  <div class="top">
+    <div class="inv"><h2>Bring every login.</h2><a class="btn" href="#install">Download Keyhop</a></div>
+    <ul><li><a href="https://github.com/dominikzabcik/keyhop">GitHub</a></li><li><a href="https://keyhop.app/leaderboard">Leaderboard</a></li><li><a href="https://keyhop.app/privacy">Privacy</a></li><li><a href="https://keyhop.app/terms">Terms</a></li></ul>
+  </div>
+  <div class="legal">
+    <p>Footage: <a href="https://commons.wikimedia.org/wiki/File:Milky_Way_Timelapse.webm">“Milky Way Timelapse”</a> by Gamer noscope, <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>, via Wikimedia Commons. Picture: <a href="https://www.rijksmuseum.nl/en/collection/BK-KOG-2172">“39 keys from the collection of Emmanuel Vita Israël”</a>, c. 1500–1600, <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>, Rijksmuseum.</p>
+    <p>© 2026 Keyhop · MIT licence</p>
+  </div>
+  <div class="name" aria-hidden="true">Keyhop</div>
+</footer>
+
+<script>
+(function(){
+  var data={
+    'claude code':{pick:'Smart Hop picks work@studio.dev',rows:[['work@studio.dev','Pro · weekly 41% used','59% left',59,''],['Personal','Max 5x · empty ~12:43 PM','49% left',49,'']]},
+    'codex':{pick:'No other Codex login to hop to',rows:[['me@personal.dev','Plus · runs out ~11:19 AM','7% left',7,'full']]},
+    'cursor':{pick:'Smart Hop keeps me@personal.dev',rows:[['me@personal.dev','Ultra · auto','38% left',38,''],['spare@personal.dev','Pro · signed out','Sign in',0,'out']]},
+    'copilot':{pick:'Smart Hop keeps Personal',rows:[['Personal','Pro · premium, resets in 13d 4h','53% left',53,'']]}
+  };
+  var input=document.getElementById('tool'),answer=document.getElementById('answer');
+  function render(){
+    var q=input.value.trim().toLowerCase().replace(/\s+/g,' ');
+    var hit=data[q]||Object.keys(data).filter(function(k){return q&&k.indexOf(q)===0;}).map(function(k){return data[k];})[0];
+    if(!hit){answer.innerHTML='<div class="pick"><span>No saved login for “'+q.replace(/[<>&"]/g,'')+'” yet</span></div><div class="row out"><span class="dot"></span><span class="who">Add one with keyhop add, then it shows here</span><span class="left"></span></div>';return;}
+    var h='<div class="pick"><span>'+hit.pick+'</span>'+(hit.rows.length>1&&hit.rows[0][4]===''?'<button type="button">Switch</button>':'')+'</div>';
+    hit.rows.forEach(function(r){h+='<div class="row '+r[4]+'"><span class="dot"></span><span class="who">'+r[0]+'<small>'+r[1]+'</small></span><span class="left">'+r[2]+'</span><span class="meter"><i style="width:'+r[3]+'%"></i></span></div>';});
+    answer.innerHTML=h;
+  }
+  input.addEventListener('input',render);
+  document.querySelectorAll('[data-q]').forEach(function(b){b.addEventListener('click',function(){input.value=b.getAttribute('data-q');render();input.focus();});});
+  render();
+
+  var stages=[
+    ['First, it saves the login in use.','Saving','In use','Chosen','a','Personal is saved to your keychain before anything changes.'],
+    ['Then it loads the one you chose.','Loading','Saved','Loading','b','work@studio.dev comes out of the same vault.'],
+    ['Next, it hands it to the tool.','Handing over','Saved','Handing over','b','Claude Code gets it through the path it already reads.'],
+    ['Last, it reads it back to confirm.','Done','Saved','In use','b','Claude Code now uses work@studio.dev · 5-hour 12%.']
+  ];
+  var names=['Save','Load','Hand over','Confirm'];
+  var range=document.getElementById('stage'),stops=document.querySelectorAll('.stops span');
+  function stage(){
+    var i=+range.value,s=stages[i];
+    document.getElementById('stage-h').textContent=s[0];
+    document.getElementById('card-step').textContent=s[1];
+    document.getElementById('tag-a').textContent=s[2];
+    document.getElementById('tag-b').textContent=s[3];
+    document.getElementById('acct-a').classList.toggle('on',s[4]==='a');
+    document.getElementById('acct-b').classList.toggle('on',s[4]==='b');
+    document.getElementById('status').textContent=s[5];
+    document.getElementById('passed').style.setProperty('--p',i/3);
+    range.setAttribute('aria-valuetext',names[i]);
+    stops.forEach(function(el,k){el.classList.toggle('now',k===i);});
+  }
+  range.addEventListener('input',stage);stage();
+
+  document.querySelectorAll('.toggle').forEach(function(t){t.addEventListener('click',function(){var on=t.getAttribute('aria-checked')!=='true';t.setAttribute('aria-checked',on);t.closest('.band').classList.toggle('on',on);});});
+})();
+</script>
+</body>
+</html>

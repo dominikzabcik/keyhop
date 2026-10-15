@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyhop Home — Blade</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Archivo:wdth,wght@62..125,700;62..125,800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:#050508}
+a{color:inherit;text-decoration:none}
+input::placeholder{color:inherit;opacity:.6}
+button{font:inherit;cursor:default;border-radius:0}
+a,button{transition:background-color .12s linear,color .12s linear,transform .12s ease}
+.side a:hover,.side button:hover{background-color:#1A1A26}
+.side a[aria-current="page"]:hover{background-color:#9A8EFF}
+button:hover{filter:brightness(1.12)}
+button:active{transform:translateY(1px)}
+a:focus-visible,button:focus-visible{outline:2px solid #FFFFFF;outline-offset:2px}
+.blk{background:#0D0D14}
+.disp{font-family:'Archivo','Geist',sans-serif;font-stretch:75%;font-weight:800;letter-spacing:-0.02em}
+.card{transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+.card:hover{transform:translateY(-2px)}
+@media (prefers-reduced-motion: no-preference){
+  .pet{animation:hop 2.4s cubic-bezier(.3,.7,.3,1) infinite;transform-origin:50% 100%}
+  @keyframes hop{0%,55%,100%{transform:translateY(0) scale(1,1)}62%{transform:translateY(0) scale(1.08,.9)}75%{transform:translateY(-16px) scale(.96,1.05)}88%{transform:translateY(0) scale(1.05,.94)}}
+  .shadow{animation:shade 2.4s cubic-bezier(.3,.7,.3,1) infinite}
+  @keyframes shade{0%,55%,100%{transform:scaleX(1);opacity:.6}75%{transform:scaleX(.6);opacity:.25}}
+  .star{animation:twinkle 3.2s steps(4) infinite;animation-delay:calc(var(--i) * -0.37s)}
+  @keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+  .grow{animation:grow .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i, 0) * 60ms + 150ms);transform-origin:0 50%}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i, 0) * 35ms + 250ms);transform-origin:50% 100%}
+  @keyframes rise{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  .pop{animation:pop .35s steps(3) both;animation-delay:calc(var(--i, 0) * 5ms + 350ms)}
+  @keyframes pop{from{opacity:0}to{opacity:1}}
+  .live{animation:live 1s steps(2) infinite}
+  @keyframes live{0%{opacity:1}50%{opacity:.25}}
+  .bubble{animation:bubble .4s cubic-bezier(.2,.8,.2,1) .8s both}
+  @keyframes bubble{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .today{animation:today 1.2s steps(2) infinite}
+  @keyframes today{0%{filter:brightness(1)}50%{filter:brightness(1.4)}}
+}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 960px; overflow: hidden; display: flex; background: #050508; font-family: 'Geist', system-ui, sans-serif; font-size: 13px; line-height: 18px; color: #FFFFFF; font-variant-numeric: tabular-nums">
+
+  <aside class="side" style="flex: 0 0 248px; display: flex; flex-direction: column; padding: 10px 0 10px 10px; box-sizing: border-box; background: #050508">
+      <div style="display: flex; gap: 7px; height: 14px; padding: 0 8px; margin: 2px 0 10px">
+        <span style="width: 10px; height: 10px; border-radius: 5px; background: rgba(255,95,87,0.6)"></span>
+        <span style="width: 10px; height: 10px; border-radius: 5px; background: rgba(254,188,46,0.6)"></span>
+        <span style="width: 10px; height: 10px; border-radius: 5px; background: rgba(40,200,64,0.6)"></span>
+      </div>
+      <button type="button" aria-label="Switch workspace" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; padding: 0 8px; box-sizing: border-box; border: 0; background: transparent; color: #FFFFFF; text-align: left">
+        <span style="flex: none; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #8B7DFF; color: #050508"><svg width="16" height="16" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 16px"><span class="disp" style="font-size: 16px; letter-spacing: 0.01em; text-transform: uppercase">Keyhop</span><span style="font-size: 12px; color: #9A9AB0">Personal · 11 logins</span></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9AB0" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg>
+      </button>
+      <button type="button" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; margin: 8px 0 2px; padding: 0 10px; box-sizing: border-box; border: 1px solid #2A2A3A; background: #0D0D14; color: #9A9AB0; font-size: 13px; text-align: left"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9AB0" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M11 3a8 8 0 1 0 0 16a8 8 0 0 0 0-16zM21 21l-4.3-4.3"></path></svg><span style="flex: 1">Hop to a login…</span><kbd style="font-family: inherit; font-size: 11px; line-height: 18px; padding: 0 6px; background: #1A1A26; color: #FFFFFF">⌘K</kbd></button>
+
+      <div style="height: 32px; display: flex; align-items: flex-end; padding: 0 8px 6px; margin-top: 10px; box-sizing: border-box; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9A9AB0">Platform</div>
+      <nav aria-label="Places" style="display: flex; flex-direction: column">
+        <a href="#home" aria-current="page" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; background: #8B7DFF; color: #FFFFFF; font-weight: 600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M3 10l9-7 9 7v11H15v-8H9v8H3z"></path></svg><span style="flex: 1">Home</span></a>
+        <a href="#limits" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; color: #FFFFFF"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9AB0" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M12 14l4-4M3.34 19a10 10 0 1 1 17.32 0"></path></svg><span style="flex: 1">Limits</span><span style="height: 20px; min-width: 20px; padding: 0 6px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: #FF453A; color: #050508; font-size: 11px; font-weight: 700">2</span></a>
+        <a href="#usage" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; color: #FFFFFF"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9AB0" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3"></path></svg><span style="flex: 1">Usage</span></a>
+        <button type="button" aria-expanded="true" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; background: transparent; color: #FFFFFF; font-size: 13px; text-align: left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9AB0" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4"></path></svg><span style="flex: 1">Insights</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9AB0" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+        <div style="display: flex; flex-direction: column; margin: 0 0 4px 18px; padding-left: 10px; box-shadow: inset 2px 0 0 #1A1A26">
+          <a href="#coach" style="display: flex; align-items: center; height: 30px; padding: 0 8px; color: #9A9AB0">Coach</a>
+          <a href="#plans" style="display: flex; align-items: center; height: 30px; padding: 0 8px; color: #9A9AB0">Plans</a>
+          <a href="#budgets" style="display: flex; align-items: center; height: 30px; padding: 0 8px; color: #9A9AB0">Budgets</a>
+        </div>
+        <button type="button" aria-expanded="false" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; background: transparent; color: #FFFFFF; font-size: 13px; text-align: left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9AB0" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span style="flex: 1">Community</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9AB0" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg></button>
+      </nav>
+
+      <div style="height: 32px; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 8px 6px; margin-top: 10px; box-sizing: border-box; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9A9AB0"><span>Limits</span><span style="display: flex; align-items: center; gap: 6px; color: #FFFFFF"><span class="live" style="width: 6px; height: 6px; background: #8FE3BC"></span>Live</span></div>
+      <div style="display: flex; flex-direction: column">
+        <sc-for list="{{limits}}" as="l" hint-placeholder-count="5">
+          <a href="#limits" style="display: flex; flex-direction: column; gap: 6px; padding: 7px 8px">
+            <span style="display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 16px"><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{l.name}}</span><span style="color: #9A9AB0">{{l.reset}}</span><span style="width: 32px; text-align: right; font-weight: 700; color: {{l.ink}}">{{l.left}}</span></span>
+            <span style="height: 4px; background: #1A1A26; overflow: hidden"><span class="grow" style="--i: {{$index}}; display: block; height: 4px; width: {{l.left}}; background: {{l.bar}}"></span></span>
+          </a>
+        </sc-for>
+      </div>
+
+      <div style="flex: 1"></div>
+      <button type="button" aria-label="Account" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; padding: 0 8px; box-sizing: border-box; border: 0; background: transparent; color: #FFFFFF; text-align: left">
+        <span style="flex: none; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #1A1A26; font-size: 12px; font-weight: 700">DZ</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 16px"><span style="font-weight: 600">Personal</span><span style="font-size: 12px; color: #9A9AB0">@you</span></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9AB0" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg>
+      </button>
+  </aside>
+
+  <div style="position: relative; flex: 1; min-width: 0; margin: 8px 8px 8px 10px; overflow: hidden; background: {{c.sky}}">
+    <svg viewBox="0 0 1440 960" preserveAspectRatio="none" aria-hidden="true" shape-rendering="crispEdges" style="position: absolute; inset: 0; width: 100%; height: 100%">
+      <sc-for list="{{stars}}" as="s" hint-placeholder-count="60"><rect class="star" style="--i: {{$index}}" x="{{s.x}}" y="{{s.y}}" width="{{s.r}}" height="{{s.r}}" fill="#FFFFFF"></rect></sc-for>
+      <path d="M0 842 L 220 814 L 420 820 L 640 832 L 860 840 L 1080 806 L 1300 810 L 1440 816 L1440 960 L0 960 Z" fill="#0F0F1A"></path>
+      <path d="M0 892 L 260 876 L 560 880 L 860 888 L 1080 890 L 1280 882 L 1440 878 L1440 960 L0 960 Z" fill="#0A0A12"></path>
+    </svg>
+
+    <div class="bubble" style="position: absolute; left: 764px; bottom: 90px; width: 240px; padding: 12px 14px; background: #FFFFFF; color: #050508; line-height: 17px">
+      <span style="display: block; font-weight: 700">Codex is nearly out.</span>
+      <span style="display: block; color: #3A3A48">I can hop Claude Code to work@studio.dev, it has 59% left.</span>
+      <button type="button" style="margin-top: 10px; height: 30px; padding: 0 14px; border: 0; background: #8B7DFF; color: #FFFFFF; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase">Hop</button>
+    </div>
+    <div style="position: absolute; left: 1012px; bottom: 50px; display: flex; flex-direction: column; align-items: center">
+      <svg class="pet" width="84" height="84" viewBox="0 0 16 16" shape-rendering="crispEdges" role="img" aria-label="Your pet, Bulk, hopping"><rect x="9" y="1" width="2" height="4" fill="#FFF4E2"></rect><rect x="8" y="4" width="5" height="4" fill="#FFF4E2"></rect><rect x="11" y="5" width="1" height="1" fill="#2B2420"></rect><rect x="3" y="7" width="10" height="4" fill="#FFF4E2"></rect><rect x="3" y="11" width="10" height="1" fill="#E8D7BC"></rect><rect x="4" y="12" width="2" height="2" fill="#FFF4E2"></rect><rect x="10" y="12" width="2" height="2" fill="#FFF4E2"></rect><rect x="1" y="8" width="2" height="2" fill="#FF8A3D"></rect><rect x="12" y="9" width="3" height="3" fill="#FF8A3D"></rect></svg>
+      <span class="shadow" style="width: 52px; height: 6px; margin-top: 2px; background: #000000; opacity: .6"></span>
+    </div>
+
+    <div style="position: relative; height: 100%; display: flex; padding: 10px 14px 14px; box-sizing: border-box">
+    <main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+      <header style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 0 0 4px">
+        <h1 class="disp" style="margin: 0; font-size: 22px; line-height: 24px; text-transform: uppercase; letter-spacing: 0">Home</h1>
+        <div role="group" aria-label="Range" style="display: flex; margin-left: 16px; background: #0D0D14">
+          <sc-for list="{{ranges}}" as="r" hint-placeholder-count="4"><button type="button" aria-pressed="{{r.on}}" style="height: 30px; padding: 0 14px; border: 0; background: {{r.bg}}; color: {{r.ink}}; font-size: 12px; font-weight: {{r.weight}}">{{r.name}}</button></sc-for>
+        </div>
+        <span style="flex: 1"></span>
+        <span style="font-size: 12px; color: #9A9AB0">Tuesday, October 13 · limits read 2 min ago</span>
+        <button type="button" aria-label="Refresh" style="width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 0; background: #0D0D14; color: #FFFFFF"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.6-3.7"></path><path d="M13 2.5v3h-3"></path></svg></button>
+      </header>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 8px; padding-top: 8px">
+
+        <section class="card blk" aria-labelledby="total-h" style="display: flex; flex-direction: column; gap: 14px; padding: 22px 24px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 id="total-h" style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9AB0">This week, so far</h2>
+            <span style="font-size: 12px; font-weight: 700; color: #8FE3BC">↑ 16% on last week</span>
+          </div>
+          <div style="display: flex; align-items: flex-end; flex-wrap: wrap; gap: 6px 20px">
+            <span class="disp" style="font-size: 88px; line-height: 76px; letter-spacing: -0.03em">44,958,228</span>
+            <span style="display: flex; flex-direction: column; line-height: 18px; padding-bottom: 4px"><span class="disp" style="font-size: 26px; line-height: 26px; color: #8FE3BC">$92.59</span><span style="color: #9A9AB0">tokens · value at API prices</span></span>
+          </div>
+          <div role="img" aria-label="Share of tokens by tool" style="display: flex; height: 12px; gap: 2px">
+            <sc-for list="{{mix}}" as="m" hint-placeholder-count="6"><span class="grow" style="--i: {{$index}}; width: {{m.w}}; background: {{m.color}}"></span></sc-for>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px">
+            <sc-for list="{{mix}}" as="m" hint-placeholder-count="6">
+              <div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; background: #15151F; box-shadow: inset 0 3px 0 {{m.color}}">
+                <span style="font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.name}}</span>
+                <span class="disp" style="font-size: 24px; line-height: 28px">{{m.pct}}</span>
+                <span style="font-size: 11px; color: #9A9AB0">{{m.tokens}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <section class="card blk" aria-labelledby="pet-h" style="display: flex; flex-direction: column; gap: 14px; padding: 20px 22px">
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <h2 id="pet-h" class="disp" style="margin: 0; font-size: 28px; line-height: 28px; text-transform: uppercase; letter-spacing: 0">Bulk</h2>
+            <span style="display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; background: #1A1A26; font-size: 11px; font-weight: 600"><span style="width: 6px; height: 6px; background: #FFB27A"></span>On a 12-day streak</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #9A9AB0"><span>About 800M so far</span><span>4.2B tokens until Mass</span></div>
+            <span style="height: 8px; background: #1A1A26; overflow: hidden"><span class="grow" style="display: block; height: 8px; width: 16%; background: #8B7DFF"></span></span>
+          </div>
+          <div style="flex: 1"></div>
+          <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px">
+            <sc-for list="{{stages}}" as="s" hint-placeholder-count="6">
+              <span style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0 8px; background: {{s.bg}}">
+                <svg width="{{s.size}}" height="{{s.size}}" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true" opacity="{{s.o}}"><rect x="9" y="1" width="2" height="4" fill="#FFF4E2"></rect><rect x="8" y="4" width="5" height="4" fill="#FFF4E2"></rect><rect x="3" y="7" width="10" height="4" fill="#FFF4E2"></rect><rect x="4" y="11" width="2" height="3" fill="#FFF4E2"></rect><rect x="10" y="11" width="2" height="3" fill="#FFF4E2"></rect><rect x="1" y="8" width="2" height="2" fill="#FF8A3D"></rect></svg>
+                <span style="font-size: 11px; font-weight: {{s.weight}}; color: {{s.ink}}">{{s.name}}</span>
+              </span>
+            </sc-for>
+          </div>
+        </section>
+
+        <section class="card blk" aria-labelledby="trend-h" style="display: flex; flex-direction: column; gap: 12px; height: 224px; box-sizing: border-box; padding: 18px 22px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 id="trend-h" style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9AB0">Tokens per day</h2>
+            <span style="font-size: 12px; color: #9A9AB0">last 14 days · today <b style="color: #FFFFFF">7.6M</b></span>
+          </div>
+          <div style="flex: 1; min-height: 0; display: flex; align-items: flex-end; gap: 4px">
+            <sc-for list="{{bars}}" as="b" hint-placeholder-count="14"><span class="rise" style="--i: {{$index}}; flex: 1; height: {{b.h}}; background: {{b.bg}}"></span></sc-for>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 11px; color: #9A9AB0"><span>Sep 30</span><span>Oct 6</span><span style="color: #FFFFFF; font-weight: 600">Today</span></div>
+        </section>
+
+        <section class="card blk" aria-labelledby="act-h" style="display: flex; flex-direction: column; gap: 12px; height: 224px; box-sizing: border-box; padding: 18px 22px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 id="act-h" style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9AB0">Activity</h2>
+            <span style="font-size: 12px; color: #9A9AB0">12-day streak, your best</span>
+          </div>
+          <div role="img" aria-label="Tokens per day for the last 17 weeks" style="display: grid; grid-template-columns: repeat(17, minmax(0, 1fr)); gap: 2px">
+            <sc-for list="{{weeks}}" as="w" hint-placeholder-count="17">
+              <div style="display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); gap: 2px">
+                <sc-for list="{{w.days}}" as="d" hint-placeholder-count="7"><span class="{{d.cls}}" style="--i: {{d.i}}; aspect-ratio: 1; background: {{d.bg}}"></span></sc-for>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 2px; font-size: 11px; color: #9A9AB0"><span style="margin-right: 6px">Less</span><sc-for list="{{legend}}" as="g" hint-placeholder-count="5"><span style="width: 10px; height: 10px; background: {{g}}"></span></sc-for><span style="margin-left: 6px">More</span></div>
+        </section>
+
+        <section class="card blk" aria-labelledby="att-h" style="grid-column: 1 / 3; display: flex; align-items: stretch; gap: 2px; padding: 0">
+          <h2 id="att-h" style="margin: 0; flex: none; display: flex; align-items: center; padding: 0 18px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9AB0">Needs you</h2>
+          <sc-for list="{{alerts}}" as="a" hint-placeholder-count="2">
+            <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #15151F">
+              <span style="flex: none; width: 8px; height: 8px; background: {{a.color}}"></span>
+              <span style="flex: 1; min-width: 0; line-height: 16px"><span style="display: block; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.title}}</span><span style="display: block; font-size: 12px; color: #9A9AB0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.desc}}</span></span>
+              <button type="button" style="flex: none; height: 34px; padding: 0 14px; border: 0; background: {{a.btnBg}}; color: {{a.btnInk}}; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase">{{a.action}}</button>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </main>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"glow":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const glow = this.props.glow ?? false;
+    const accent = '#8B7DFF';
+    const red = '#FF453A';
+    const amber = '#FF9F0A';
+    const rgba = (h, a) => { const n = parseInt(String(h).replace('#', '').slice(0, 6), 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+    const c = { sky: glow ? 'radial-gradient(70% 40% at 62% 100%, ' + rgba(accent, 0.3) + ', transparent 72%), #07070C' : '#07070C' };
+    const toolColor = { claude: '#FFFFFF', opencode: '#C9C1FF', cursor: '#8B7DFF', codex: '#6F62E0', gemini: '#4E44A8', pi: '#33305E' };
+    const limits = [['Codex · 5h', 7, '~11:19'], ['Claude Code · 5h', 49, 'in 3h 05m'], ['Cursor · auto', 38, 'in 13d'], ['Copilot', 53, 'in 13d'], ['Windsurf · day', 67, 'in 14h']]
+      .map((l) => ({ name: l[0], left: l[1] + '%', reset: l[2], bar: l[1] <= 15 ? red : l[1] <= 40 ? amber : '#FFFFFF', ink: l[1] <= 15 ? red : '#FFFFFF' }));
+    const ranges = ['Day', 'Week', 'Month', 'All'].map((r, i) => ({ name: r, on: i === 1 ? 'true' : 'false', bg: i === 1 ? '#FFFFFF' : 'transparent', ink: i === 1 ? '#050508' : '#9A9AB0', weight: i === 1 ? 700 : 500 }));
+    const mix = [['Claude Code', 'claude', 25, '11.2M'], ['OpenCode', 'opencode', 20, '9.0M'], ['Cursor', 'cursor', 19, '8.5M'], ['Codex', 'codex', 14, '6.3M'], ['Gemini CLI', 'gemini', 14, '6.3M'], ['Pi', 'pi', 8, '3.6M']]
+      .map((m) => ({ name: m[0], color: toolColor[m[1]], pct: m[2] + '%', w: m[2] + '%', tokens: m[3] + ' tokens' }));
+    const days = [5.6, 6.2, 6.8, 3.0, 2.7, 7.1, 7.3, 7.7, 8.1, 2.9, 3.4, 7.9, 7.4, 7.6];
+    const bars = days.map((d, i) => ({ h: Math.round(d / 8.4 * 100) + '%', bg: i === days.length - 1 ? accent : i >= 7 ? '#FFFFFF' : '#2A2A3A' }));
+    const legend = ['#15151F', '#2E2A5C', '#4E44A8', '#6F62E0', '#B4A9FF'];
+    let seed = 23;
+    const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    const weeks = Array.from({ length: 17 }, (_, w) => ({
+      days: Array.from({ length: 7 }, (_, d) => {
+        const i = w * 7 + d;
+        const fromEnd = 17 * 7 - 1 - i;
+        let lv = fromEnd === 12 ? 0 : fromEnd < 12 ? 2 + Math.floor(rnd() * 3) : (rnd() < 0.28 ? 0 : 1 + Math.floor(rnd() * 3));
+        if (fromEnd === 0) lv = 4;
+        return { bg: legend[lv], i: i, cls: fromEnd === 0 ? 'pop today' : 'pop' };
+      })
+    }));
+    seed = 5;
+    const stars = Array.from({ length: 64 }, () => ({ x: Math.round(rnd() * 1440), y: Math.round(rnd() * 760), r: rnd() > 0.82 ? 3 : 2 }));
+    const alerts = [
+      { title: 'Codex has no second login', desc: 'Add one to hop to next time.', action: 'Add', color: red, btnBg: '#FFFFFF', btnInk: '#050508' },
+      { title: 'spare@personal.dev signed out', desc: 'Cursor needs you to sign in.', action: 'Sign in', color: amber, btnBg: accent, btnInk: '#FFFFFF' }
+    ];
+    const stages = ['Speck', 'Hatch', 'Frame', 'Bulk', 'Mass', 'Monument'].map((n, i) => ({
+      name: n, size: 14 + i * 2, o: i <= 3 ? 1 : 0.3,
+      bg: i === 3 ? accent : i < 3 ? '#15151F' : '#0A0A10',
+      weight: i === 3 ? 700 : 500, ink: i <= 3 ? '#FFFFFF' : '#5C5C70'
+    }));
+    return { c: c, limits: limits, ranges: ranges, mix: mix, bars: bars, weeks: weeks, legend: legend, stars: stars, alerts: alerts, stages: stages };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyhop Home — Signal</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:'Familjen Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+input::placeholder{color:inherit;opacity:.6}
+button{font:inherit;cursor:pointer}
+a,button{transition:background-color .2s ease,color .2s ease,transform .2s ease,filter .2s ease}
+aside a:hover,aside button:hover{background-color:rgba(150,190,170,.12)}
+button:hover{filter:brightness(1.08)}
+button:active,aside a:active{transform:scale(.98)}
+a:focus-visible,button:focus-visible{outline:3px solid #F2C230;outline-offset:2px}
+form:focus-within{outline:3px solid rgba(242,194,48,.6);outline-offset:0}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 960px; background: {{c.side}}; color: {{c.ink}}; font-family: 'Familjen Grotesk', system-ui, sans-serif; font-size: 15px; line-height: 22px; font-variant-numeric: tabular-nums">
+
+  <aside style="flex: 1 1 232px; display: flex; flex-direction: column; gap: 2px; padding: 12px 10px; box-sizing: border-box">
+    <button type="button" style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px; margin-top: 30px; border: 0; border-radius: 8px; background: transparent; color: {{c.ink}}; text-align: left">
+      <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 14px; background: {{c.accent}}; color: {{c.onAccent}}; font-weight: 700; font-size: 15px">K</span>
+      <span style="display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 17px"><span style="font-weight: 700">Keyhop</span><span style="font-size: 13px; color: {{c.muted}}">Personal · 11 logins</span></span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6"></path><path d="M5.5 10L8 12.5 10.5 10"></path></svg>
+    </button>
+
+    <nav aria-label="Places" style="display: flex; flex-direction: column; gap: 2px; margin-top: 14px">
+      <a href="#home" aria-current="page" style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; border-radius: 8px; background: {{c.navActive}}; color: {{c.ink}}; font-weight: 600"><span style="width: 6px; height: 18px; border-radius: 3px; background: {{c.accent}}"></span>Home</a>
+      <a href="AC-Limits.dc.html" style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; border-radius: 8px; color: {{c.muted}}"><span style="width: 6px; height: 18px"></span><span style="flex: 1">Limits</span><span style="min-width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 11px; background: {{c.danger}}; color: {{c.onDanger}}; font-size: 13px; font-weight: 700">2</span></a>
+      <a href="#usage" style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; border-radius: 8px; color: {{c.muted}}"><span style="width: 6px; height: 18px"></span>Usage</a>
+      <a href="#insights" style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; border-radius: 8px; color: {{c.muted}}"><span style="width: 6px; height: 18px"></span>Insights</a>
+      <a href="#community" style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; border-radius: 8px; color: {{c.muted}}"><span style="width: 6px; height: 18px"></span>Community</a>
+    </nav>
+
+    <h2 style="margin: 24px 0 6px; padding: 0 12px; font-size: 14px; font-weight: 600; color: {{c.faint}}">In use</h2>
+    <div style="display: flex; flex-direction: column">
+      <sc-for list="{{side}}" as="s" hint-placeholder-count="5">
+        <a href="AC-Limits.dc.html" style="position: relative; display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px 0 10px; border-radius: 8px; color: {{c.ink}}">
+          <span style="position: relative; flex: none; width: 16px; height: 36px; display: flex; align-items: center; justify-content: center">
+            <span style="position: absolute; left: 6px; width: 4px; top: {{s.lineTop}}; bottom: {{s.lineBottom}}; background: {{c.route}}"></span>
+            <span style="position: relative; width: 12px; height: 12px; box-sizing: border-box; border-radius: 6px; border: 3px solid {{s.ring}}; background: {{s.fill}}"></span>
+          </span>
+          <span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: {{s.weight}}">{{s.tool}}</span>
+          <span style="font-weight: 600; color: {{s.ink}}">{{s.left}}</span>
+        </a>
+      </sc-for>
+      <a href="AC-Limits.dc.html" style="display: flex; align-items: center; gap: 12px; height: 34px; padding: 0 12px 0 10px; border-radius: 8px; color: {{c.faint}}; font-size: 14px"><span style="flex: none; width: 16px"></span>4 more</a>
+    </div>
+
+    <div style="flex: 1; min-height: 16px"></div>
+
+    <a href="#community" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: {{c.raised}}; color: {{c.ink}}">
+      <svg width="32" height="32" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="9" y="1" width="2" height="4" fill="#EFE7D6"></rect><rect x="8" y="4" width="5" height="4" fill="#EFE7D6"></rect><rect x="11" y="5" width="1" height="1" fill="#1C1C20"></rect><rect x="3" y="7" width="10" height="4" fill="#EFE7D6"></rect><rect x="3" y="11" width="10" height="1" fill="#C9BFA9"></rect><rect x="4" y="12" width="2" height="2" fill="#EFE7D6"></rect><rect x="10" y="12" width="2" height="2" fill="#EFE7D6"></rect><rect x="1" y="8" width="2" height="2" fill="#E28A33"></rect><rect x="12" y="9" width="3" height="3" fill="#E28A33"></rect></svg>
+      <span style="display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 18px"><span style="font-weight: 700">Bulk</span><span style="font-size: 13px; color: {{c.muted}}">4.2B tokens to Mass</span></span>
+    </a>
+    <a href="#settings" style="display: flex; align-items: center; height: 36px; padding: 0 12px; margin-top: 6px; border-radius: 8px; color: {{c.muted}}">Settings</a>
+  </aside>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; padding: 8px 8px 8px 0; box-sizing: border-box">
+    <main style="flex: 1; min-width: 0; display: flex; flex-direction: column; border-radius: 14px; background: {{c.ground}}; overflow: hidden">
+
+      <header style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px 0 28px">
+        <h1 style="margin: 0; font-size: 15px; font-weight: 600">Home</h1>
+        <span style="color: {{c.muted}}">Tuesday, October 13</span>
+        <span style="flex: 1"></span>
+        <span style="font-size: 14px; color: {{c.muted}}">Limits read 2m ago</span>
+        <a href="#settings-appearance" style="height: 32px; display: flex; align-items: center; padding: 0 10px; border-radius: 8px; font-size: 14px; color: {{c.muted}}">{{themeLabel}}</a>
+      </header>
+
+      <section aria-label="Now" style="display: flex; flex-direction: column; gap: 20px; padding: 24px 28px 40px">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <h2 style="margin: 0; font-size: 64px; line-height: 62px; font-weight: 700; letter-spacing: -0.035em; text-wrap: balance">Codex is almost out.</h2>
+          <p style="margin: 0; max-width: 52ch; font-size: 17px; line-height: 26px; color: {{c.inkSoft}}">Its 5-hour window is 93% used and runs out around 11:19 AM. There is no other Codex login to hop to.</p>
+        </div>
+
+        <div role="table" aria-label="Next hops" style="display: flex; flex-direction: column; gap: 6px; padding: 18px 18px 20px; border-radius: 16px; background: {{c.board}}; color: #EEF3EF">
+          <div role="row" style="display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr) 150px 190px; gap: 16px; padding: 0 12px 4px; font-size: 13px; font-weight: 600; color: #8FA79B">
+            <span role="columnheader">Tool</span><span role="columnheader">Login</span><span role="columnheader">Left</span><span role="columnheader">Departs</span>
+          </div>
+          <sc-for list="{{board}}" as="r" hint-placeholder-count="3">
+            <div role="row" style="display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr) 150px 190px; gap: 16px; align-items: center; min-height: 64px; padding: 8px 12px; border-radius: 10px; background: {{r.rowBg}}">
+              <span role="cell" style="display: flex; align-items: center; gap: 12px; min-width: 0"><span style="flex: none; width: 10px; height: 34px; border-radius: 5px; background: {{r.line}}"></span><span style="font-size: 22px; line-height: 26px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.tool}}</span></span>
+              <span role="cell" style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 18px; line-height: 24px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.login}}</span><span style="font-size: 13px; color: #8FA79B">{{r.note}}</span></span>
+              <span role="cell" aria-label="{{r.leftLabel}}" style="display: flex; gap: 3px">
+                <sc-for list="{{r.left}}" as="f" hint-placeholder-count="3"><span style="width: 30px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 5px; background: {{f.bg}}; color: {{f.ink}}; font-size: 28px; font-weight: 700">{{f.ch}}</span></sc-for>
+              </span>
+              <span role="cell" style="display: flex; align-items: center; gap: 10px">
+                <span aria-label="{{r.whenLabel}}" style="display: flex; gap: 3px"><sc-for list="{{r.when}}" as="f" hint-placeholder-count="5"><span style="width: 24px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 5px; background: {{f.bg}}; color: {{f.ink}}; font-size: 24px; font-weight: 700">{{f.ch}}</span></sc-for></span>
+                <sc-if value="{{r.hasPet}}" hint-placeholder-val="{{false}}"><svg width="28" height="28" viewBox="0 0 16 16" shape-rendering="crispEdges" role="img" aria-label="Your pet rides along"><rect x="9" y="1" width="2" height="4" fill="#EFE7D6"></rect><rect x="8" y="4" width="5" height="4" fill="#EFE7D6"></rect><rect x="11" y="5" width="1" height="1" fill="#1C1C20"></rect><rect x="3" y="7" width="10" height="4" fill="#EFE7D6"></rect><rect x="3" y="11" width="10" height="1" fill="#C9BFA9"></rect><rect x="4" y="12" width="2" height="2" fill="#EFE7D6"></rect><rect x="10" y="12" width="2" height="2" fill="#EFE7D6"></rect><rect x="1" y="8" width="2" height="2" fill="#E28A33"></rect><rect x="12" y="9" width="3" height="3" fill="#E28A33"></rect></svg></sc-if>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+
+        <form style="width: 100%; max-width: 680px; box-sizing: border-box; background: {{c.panel}}; border-radius: 16px; padding: 14px 10px 10px 18px">
+          <label for="hop-home" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">Hop to a login</label>
+          <input id="hop-home" type="text" placeholder="Hop to a login, or ask where there is room" style="display: block; width: 100%; box-sizing: border-box; padding: 0 0 14px; border: 0; outline: none; background: transparent; color: {{c.ink}}; font: inherit; font-size: 17px">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+            <button type="button" style="height: 32px; padding: 0 14px; border: 0; border-radius: 16px; background: {{c.raised}}; color: {{c.inkSoft}}; font-size: 14px">Claude Code</button>
+            <button type="button" style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border: 0; border-radius: 16px; background: {{c.raised}}; color: {{c.inkSoft}}; font-size: 14px"><span style="width: 10px; height: 10px; border-radius: 5px; background: {{c.ok}}"></span>work@studio.dev has 59% left</button>
+            <span style="flex: 1"></span>
+            <button type="submit" style="height: 40px; padding: 0 20px; border: 0; border-radius: 20px; background: {{c.accent}}; color: {{c.onAccent}}; font-size: 15px; font-weight: 700">Hop</button>
+          </div>
+        </form>
+      </section>
+
+      <div style="display: flex; flex-direction: column; gap: 48px; padding: 0 28px 40px">
+
+        <section aria-labelledby="week-h" style="display: flex; flex-direction: column; gap: 14px">
+          <h2 id="week-h" style="margin: 0; font-size: 18px; font-weight: 700">This week <span style="font-weight: 400; color: {{c.muted}}">against last week</span></h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 8px">
+            <sc-for list="{{tiles}}" as="t" hint-placeholder-count="4">
+              <div style="display: flex; flex-direction: column; border-radius: 14px; background: {{c.tile}}; overflow: hidden">
+                <span style="height: 6px; background: {{t.line}}"></span>
+                <div style="display: flex; flex-direction: column; gap: 2px; padding: 16px 20px 20px">
+                  <span style="color: {{c.muted}}">{{t.k}}</span>
+                  <span style="font-size: 44px; line-height: 48px; font-weight: 700; letter-spacing: -0.035em">{{t.v}}</span>
+                  <span style="font-size: 14px; color: {{t.noteInk}}">{{t.note}}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 48px 40px; align-items: flex-start">
+          <section aria-labelledby="att-h" style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+            <h2 id="att-h" style="margin: 0; font-size: 18px; font-weight: 700">Needs your attention</h2>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <sc-for list="{{alerts}}" as="a" hint-placeholder-count="3">
+                <div style="display: flex; align-items: center; gap: 14px; padding: 14px 16px 14px 14px; border-radius: 12px; background: {{c.tile}}">
+                  <span style="flex: none; width: 10px; height: 10px; border-radius: 5px; background: {{a.dot}}"></span>
+                  <div style="flex: 1; min-width: 0">
+                    <div style="font-weight: 600">{{a.title}}</div>
+                    <div style="color: {{c.muted}}">{{a.desc}}</div>
+                  </div>
+                  <button type="button" style="flex: none; height: 34px; padding: 0 16px; border: 0; border-radius: 17px; background: {{a.bg}}; color: {{a.ink}}; font-size: 14px; font-weight: 600">{{a.action}}</button>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+
+          <section aria-labelledby="act-h" style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+            <h2 id="act-h" style="margin: 0; font-size: 18px; font-weight: 700">Activity <span style="font-weight: 400; color: {{c.muted}}">a 12-day streak, your best</span></h2>
+            <div style="padding: 18px 20px; border-radius: 14px; background: {{c.tile}}; display: flex; flex-direction: column; gap: 12px">
+              <div role="img" aria-label="Tokens per day for the last 18 weeks" style="display: grid; grid-template-columns: repeat(18, minmax(0, 1fr)); gap: 5px">
+                <sc-for list="{{weeks}}" as="w" hint-placeholder-count="18">
+                  <div style="display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); gap: 5px">
+                    <sc-for list="{{w.days}}" as="d" hint-placeholder-count="7"><span style="aspect-ratio: 1; border-radius: 50%; background: {{d.bg}}"></span></sc-for>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 14px; color: {{c.muted}}"><span>June</span><span>7.6M tokens today</span></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["night","day"],"default":"night"},"$preview":{"width":1280,"height":960}}'>
+class Component extends DCLogic {
+  palette(theme) {
+    const night = theme !== 'day';
+    return night ? {
+      side: '#0B1512', ground: '#0E1A16', tile: '#13231E', raised: '#1B2F28', panel: '#13231E', navActive: 'rgba(238,243,239,0.07)',
+      ink: '#EEF3EF', inkSoft: '#D2DED7', muted: '#A3B5AD', faint: '#85988F', route: '#2C4A3F',
+      board: '#06100C', flapTop: '#1E2E28', flapBottom: '#17251F',
+      accent: '#F2C230', onAccent: '#14140C', accentInk: '#F2C230',
+      ok: '#5CD69B', okInk: '#7BE0AF', warn: '#F29E38', danger: '#F0605A', dangerInk: '#F5837E', onDanger: '#1A0907'
+    } : {
+      side: '#E7ECE6', ground: '#F3F5F1', tile: '#FFFFFF', raised: '#E2E8E1', panel: '#FFFFFF', navActive: 'rgba(14,26,22,0.07)',
+      ink: '#0E1A16', inkSoft: '#2C3D36', muted: '#3E5249', faint: '#56695F', route: '#B8C9BF',
+      board: '#0E1A16', flapTop: '#1E2E28', flapBottom: '#17251F',
+      accent: '#F2C230', onAccent: '#14140C', accentInk: '#7A5C00',
+      ok: '#178A55', okInk: '#11704A', warn: '#C8700E', danger: '#C9302C', dangerInk: '#B0221F', onDanger: '#FFFFFF'
+    };
+  }
+  renderVals() {
+    const theme = this.props.theme ?? 'night';
+    const night = theme !== 'day';
+    const c = this.palette(theme);
+    const rgba = (h, a) => { const n = parseInt(String(h).replace('#', '').slice(0, 6), 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+    const flapBg = 'linear-gradient(to bottom, ' + c.flapTop + ' 50%, ' + c.flapBottom + ' 50%)';
+    const flaps = (str, ink) => String(str).split('').map((ch) => ({ ch: ch === ' ' ? ' ' : ch, bg: flapBg, ink: ink || '#EEF3EF' }));
+    const lines = { yellow: '#F2C230', teal: '#3FB8A0', orange: '#E8823A', blue: '#5A9BE0' };
+    const board = [
+      { tool: 'Codex', login: 'me@personal.dev', note: 'No other Codex login', line: c.danger, left: flaps('7%', '#F5837E'), leftLabel: '7% left', when: flaps('11:19', '#F5837E'), whenLabel: 'Runs out around 11:19 AM', rowBg: 'rgba(240,96,90,0.10)', hasPet: false },
+      { tool: 'Claude Code', login: 'work@studio.dev', note: 'Hop here next', line: lines.yellow, left: flaps('59%', '#F2C230'), leftLabel: '59% left', when: flaps('Now', '#F2C230'), whenLabel: 'Ready now', rowBg: 'rgba(242,194,48,0.08)', hasPet: true },
+      { tool: 'All logins', login: 'Next reset', note: 'me@personal.dev', line: lines.teal, left: flaps('+35%', '#7BE0AF'), leftLabel: 'plus 35%', when: flaps('12:41', '#EEF3EF'), whenLabel: 'At 12:41 PM', rowBg: 'transparent', hasPet: false }
+    ];
+    const sideRaw = [
+      { tool: 'Codex', left: '7% left', danger: true },
+      { tool: 'Claude Code', left: '49%' },
+      { tool: 'Cursor', left: '38%' },
+      { tool: 'Copilot', left: '53%' },
+      { tool: 'Gemini CLI', left: '72%' }
+    ];
+    const side = sideRaw.map((s, i) => ({
+      tool: s.tool, left: s.left,
+      lineTop: i === 0 ? '18px' : '0px', lineBottom: i === sideRaw.length - 1 ? '18px' : '0px',
+      ring: s.danger ? c.danger : c.route, fill: s.danger ? c.danger : c.ground,
+      ink: s.danger ? c.dangerInk : c.muted, weight: s.danger ? 600 : 400
+    }));
+    const tiles = [
+      { k: 'Tokens', v: '45.0M', note: '+16% on 38.7M', noteInk: c.okInk, line: lines.yellow },
+      { k: 'API value', v: '$92.59', note: 'at list prices', noteInk: c.muted, line: lines.teal },
+      { k: 'Commits', v: '38', note: '2.4 per million tokens', noteInk: c.muted, line: lines.orange },
+      { k: 'From cache', v: '91%', note: 'of tokens read', noteInk: c.muted, line: lines.blue }
+    ];
+    const alerts = [
+      { dot: c.danger, title: 'Codex has no login with room', desc: 'Add a second Codex login to hop to next time.', action: 'Add a login', bg: c.raised, ink: c.ink },
+      { dot: c.danger, title: 'spare@personal.dev is signed out', desc: 'Cursor. Switch to it and sign in again.', action: 'Sign in', bg: c.accent, ink: c.onAccent },
+      { dot: c.warn, title: 'Codex has a partial outage', desc: 'Every account is affected, so hopping won’t help.', action: 'Status', bg: 'transparent', ink: c.muted }
+    ];
+    const cell0 = night ? '#1B2F28' : '#E2E8E1';
+    const ramp = [cell0, rgba('#F2C230', 0.3), rgba('#F2C230', 0.55), rgba('#F2C230', 0.8), '#F2C230'];
+    let seed = 23;
+    const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    const weeks = Array.from({ length: 18 }, (_, w) => ({
+      days: Array.from({ length: 7 }, (_, d) => {
+        const fromEnd = 18 * 7 - 1 - (w * 7 + d);
+        if (fromEnd === 12) return { bg: cell0 };
+        let lv = fromEnd < 12 ? 2 + Math.floor(rnd() * 3) : (rnd() < 0.3 ? 0 : 1 + Math.floor(rnd() * 3));
+        if (fromEnd === 0) lv = 4;
+        return { bg: ramp[lv] };
+      })
+    }));
+    return { c: c, board: board, side: side, tiles: tiles, alerts: alerts, weeks: weeks, themeLabel: night ? 'Night' : 'Day' };
+  }
+}
+</script>
+</body>
+</html>

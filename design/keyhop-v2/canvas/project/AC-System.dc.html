@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Observatory design system</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400&amp;family=Instrument+Serif&amp;display=swap">
+<style>
+body{margin:0;font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#B4ABFF;text-decoration:none}a:hover{color:#D3CDFF}
+input::placeholder{color:inherit;opacity:.6}
+button{font:inherit;cursor:pointer}
+a,button{transition:background-color .2s ease,filter .2s ease,transform .2s ease}
+button:hover{filter:brightness(1.1)}
+button:active{transform:scale(.98)}
+a:focus-visible,button:focus-visible{outline:2px solid #B4ABFF;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1280px; min-height: 1400px; box-sizing: border-box; padding: 56px; background: #141416; color: #F4F4F5; font-size: 14px; line-height: 22px; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; gap: 56px">
+
+  <header style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 40px">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span style="display: flex; align-items: center; gap: 10px; font-weight: 600"><span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; background: #6D5FE0; color: #FFFFFF"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg></span>Keyhop</span>
+      <h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 72px; line-height: 72px; letter-spacing: -0.025em">Observatory</h1>
+    </div>
+    <p style="margin: 0 0 8px; max-width: 46ch; color: #D4D4D8">The quiet graphite workspace of Nocturne with the exact numbers of Instrument. Night first, with a day that keeps every role.</p>
+  </header>
+
+  <section aria-labelledby="rules-h" style="display: flex; flex-direction: column; gap: 16px">
+    <h2 id="rules-h" style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 500">Four rules</h2>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{rules}}" as="r" hint-placeholder-count="4">
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: 14px; background: #1B1B1F">
+          <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; line-height: 30px">{{r.t}}</span>
+          <span style="color: #A1A1AA">{{r.b}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <div style="display: flex; gap: 48px; align-items: flex-start">
+    <section aria-labelledby="type-h" style="flex: 1 1 620px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+      <h2 id="type-h" style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 500">Type</h2>
+      <div style="display: flex; flex-direction: column; gap: 22px">
+        <div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #8A8A93">Headline · Instrument Serif 64/64 · −2.5%</span><span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 64px; line-height: 64px; letter-spacing: -0.025em">Codex is almost out.</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #8A8A93">Figure · Geist 500 34/40 · tabular</span><span style="font-size: 34px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">45.0M <span style="font-size: 14px; letter-spacing: 0; color: #5FE0A3">+16% on 38.7M</span></span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #8A8A93">Title · Geist 500 20/28</span><span style="font-size: 20px; line-height: 28px; font-weight: 500">Needs your attention</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #8A8A93">Body · Geist 400 14/22 · full ink for what you read</span><span style="max-width: 56ch">Its 5-hour window is 93% used and runs out around 11:19 AM. There is no other Codex login to hop to.</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #8A8A93">Small · Geist 400 13/20 · muted, for secondary notes</span><span style="font-size: 13px; line-height: 20px; color: #A1A1AA">Limits read 2m ago · back in 3h 05m</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px; color: #8A8A93">Code · Geist Mono, only where something is typed</span><code style="align-self: flex-start; padding: 8px 12px; border-radius: 8px; background: #1B1B1F; font-family: 'Geist Mono', monospace; font-size: 13px; color: #D4D4D8">keyhop switch work@studio.dev</code></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="color-h" style="flex: 0 0 470px; display: flex; flex-direction: column; gap: 16px">
+      <h2 id="color-h" style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 500">Color</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <div style="padding: 16px; border-radius: 14px; background: #1B1B1F; display: flex; flex-direction: column; gap: 8px">
+          <span style="font-weight: 500">Night</span>
+          <sc-for list="{{night}}" as="t" hint-placeholder-count="8"><div style="display: flex; align-items: center; gap: 10px"><span style="flex: none; width: 24px; height: 24px; border-radius: 6px; background: {{t.hex}}; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08)"></span><span style="flex: 1">{{t.name}}</span><span style="font-size: 12px; color: #8A8A93">{{t.label}}</span></div></sc-for>
+        </div>
+        <div style="padding: 16px; border-radius: 14px; background: #F6F6F7; color: #18181B; display: flex; flex-direction: column; gap: 8px">
+          <span style="font-weight: 500">Day</span>
+          <sc-for list="{{day}}" as="t" hint-placeholder-count="8"><div style="display: flex; align-items: center; gap: 10px"><span style="flex: none; width: 24px; height: 24px; border-radius: 6px; background: {{t.hex}}; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08)"></span><span style="flex: 1">{{t.name}}</span><span style="font-size: 12px; color: #52525B">{{t.label}}</span></div></sc-for>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{status}}" as="t" hint-placeholder-count="3"><div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #1B1B1F"><span style="flex: none; width: 10px; height: 10px; border-radius: 5px; background: {{t.hex}}"></span><span style="line-height: 18px"><span style="display: block">{{t.name}}</span><span style="font-size: 12px; color: #8A8A93">{{t.label}}</span></span></div></sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{accents}}" as="t" hint-placeholder-count="4"><div style="display: flex; flex-direction: column; gap: 8px"><span style="height: 36px; border-radius: 18px; background: {{t.hex}}"></span><span style="line-height: 18px"><span style="display: block">{{t.name}}</span><span style="font-size: 12px; color: #8A8A93">{{t.note}}</span></span></div></sc-for>
+      </div>
+    </section>
+  </div>
+
+  <section aria-labelledby="comp-h" style="display: flex; flex-direction: column; gap: 16px">
+    <h2 id="comp-h" style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 500">Components</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+
+      <div style="display: flex; flex-direction: column; gap: 16px; padding: 22px; border-radius: 14px; background: #1B1B1F">
+        <span style="color: #A1A1AA">Buttons and tabs · fully round</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <button type="button" style="height: 34px; padding: 0 16px; border: 0; border-radius: 17px; background: #6D5FE0; color: #FFFFFF; font-size: 13px; font-weight: 500">Switch</button>
+          <button type="button" style="height: 34px; padding: 0 16px; border: 0; border-radius: 17px; background: #2A2A30; color: #F4F4F5; font-size: 13px; font-weight: 500">Add a login</button>
+          <button type="button" style="height: 34px; padding: 0 12px; border: 0; border-radius: 17px; background: transparent; color: #A1A1AA; font-size: 13px; font-weight: 500">Status</button>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <a href="#all" aria-current="page" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 17px; background: #2A2A30; color: #F4F4F5; font-weight: 500">All<span style="color: #8A8A93">11</span></a>
+          <a href="#codex" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 17px; color: #A1A1AA">Codex<span style="color: #8A8A93">1</span></a>
+          <a href="#cursor" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 17px; color: #A1A1AA">Cursor<span style="color: #8A8A93">2</span></a>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px; padding: 22px 22px 24px; border-radius: 14px; background: #1B1B1F">
+        <span style="color: #A1A1AA">Figure tile · a step lighter than the ground</span>
+        <span style="margin-top: 10px; color: #A1A1AA">Tokens</span>
+        <span style="font-size: 34px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">45.0M</span>
+        <span style="font-size: 13px; color: #5FE0A3">+16% on 38.7M</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 22px; border-radius: 14px; background: #1B1B1F">
+        <span style="color: #A1A1AA">Meters · 6px, round, ink until it gets tight</span>
+        <sc-for list="{{meters}}" as="m" hint-placeholder-count="3">
+          <div style="display: grid; grid-template-columns: 64px minmax(0, 1fr) 40px; gap: 12px; align-items: center"><span style="color: #A1A1AA">{{m.name}}</span><span style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden"><span style="display: block; height: 6px; width: {{m.used}}; border-radius: 3px; background: {{m.bar}}"></span></span><span style="text-align: right; color: {{m.ink}}">{{m.used}}</span></div>
+        </sc-for>
+        <span style="font-size: 13px; color: #8A8A93">Under 70% ink · 70–89% amber · 90% and over red</span>
+      </div>
+
+      <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 12px; padding: 22px; border-radius: 14px; background: #1B1B1F">
+        <span style="color: #A1A1AA">Login row · a tile per login, the action at the end</span>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px 32px; padding: 18px 20px; border-radius: 14px; background: #232328">
+          <div style="flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="display: flex; align-items: center; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #3DD68C"></span><span style="font-weight: 500">work@studio.dev</span></span><span style="padding-left: 18px; font-size: 13px; color: #A1A1AA">Claude Code · Pro</span></div>
+          <div style="flex: 2 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+            <div style="display: grid; grid-template-columns: 64px minmax(0, 1fr) 40px 110px; gap: 12px; align-items: center"><span style="color: #A1A1AA">5-hour</span><span style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden"><span style="display: block; height: 6px; width: 12%; border-radius: 3px; background: #D4D4D8"></span></span><span style="text-align: right">12%</span><span style="font-size: 13px; color: #8A8A93">back in 39m</span></div>
+            <div style="display: grid; grid-template-columns: 64px minmax(0, 1fr) 40px 110px; gap: 12px; align-items: center"><span style="color: #A1A1AA">Weekly</span><span style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden"><span style="display: block; height: 6px; width: 41%; border-radius: 3px; background: #D4D4D8"></span></span><span style="text-align: right">41%</span><span style="font-size: 13px; color: #8A8A93">back in 3d 11h</span></div>
+          </div>
+          <button type="button" style="height: 34px; padding: 0 16px; border: 0; border-radius: 17px; background: #6D5FE0; color: #FFFFFF; font-size: 13px; font-weight: 500">Switch</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 22px; border-radius: 14px; background: #1B1B1F">
+        <span style="color: #A1A1AA">Attention item</span>
+        <div style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 10px; background: #232328">
+          <span style="flex: none; width: 8px; height: 8px; border-radius: 4px; background: #F2555A"></span>
+          <div style="flex: 1; min-width: 0"><div style="font-weight: 500">spare@personal.dev is signed out</div><div style="color: #A1A1AA">Cursor. Sign in again.</div></div>
+          <button type="button" style="flex: none; height: 32px; padding: 0 14px; border: 0; border-radius: 16px; background: #6D5FE0; color: #FFFFFF; font-size: 13px; font-weight: 500">Sign in</button>
+        </div>
+      </div>
+
+      <div style="grid-column: span 2; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 40px 22px 64px; border-radius: 14px; background: radial-gradient(70% 90% at 50% 100%, rgba(124,108,255,0.34), transparent 70%), #111114">
+        <span style="position: relative; align-self: flex-start; color: #A1A1AA">Field and composer · the one glow, behind the field only</span>
+        <svg viewBox="0 0 800 120" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 90px"><path d="M0 60 C 140 30 260 40 400 52 C 540 64 660 30 800 40 L800 120 L0 120 Z" fill="#1C1C22"></path><path d="M0 92 C 200 74 420 80 600 88 C 700 92 760 90 800 88 L800 120 L0 120 Z" fill="#1B1B1F"></path></svg>
+        <form style="position: relative; width: 100%; max-width: 560px; background: #202025; border-radius: 14px; padding: 14px 10px 10px 16px; box-shadow: 0 18px 44px rgba(10,8,28,0.55)">
+          <label for="hop-sys" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">Hop to a login</label>
+          <input id="hop-sys" type="text" placeholder="Hop to a login, or ask where there is room" style="display: block; width: 100%; box-sizing: border-box; padding: 0 0 14px; border: 0; outline: none; background: transparent; color: #F4F4F5; font: inherit; font-size: 15px">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <button type="button" style="height: 30px; padding: 0 12px; border: 0; border-radius: 15px; background: #2A2A30; color: #D4D4D8; font-size: 13px">Claude Code</button>
+            <span style="flex: 1"></span>
+            <button type="submit" aria-label="Hop" style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 0; border-radius: 17px; background: #6D5FE0; color: #FFFFFF"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V3"></path><path d="M4 7l4-4 4 4"></path></svg></button>
+          </div>
+        </form>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 14px; background: #1B1B1F">
+        <span style="color: #A1A1AA">Radius · tighter inside, softer outside</span>
+        <div style="display: flex; align-items: flex-end; gap: 12px">
+          <sc-for list="{{radii}}" as="r" hint-placeholder-count="5"><div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 44px; height: 44px; border-radius: {{r.px}}; background: #2A2A30"></span><span style="font-size: 12px; color: #8A8A93">{{r.n}}</span></div></sc-for>
+        </div>
+        <span style="font-size: 13px; color: #8A8A93">Space on a 4 base · 8 between tiles · 48 between sections</span>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      rules: [
+        { t: 'Words in serif, figures in Geist.', b: 'One serif sentence leads each place. Every figure is Geist with tabular numbers. Mono only where you type a command.' },
+        { t: 'Surfaces by tone, never by lines.', b: 'Ground, tile and raised are three steps of graphite. No hairlines, no grids, no outlines.' },
+        { t: 'One accent, for what you can do.', b: 'Hop, switch, sign in and the current day. Room, tight and needs a hop keep their own colors.' },
+        { t: 'One thing first.', b: 'Each place opens on one sentence and one number. The detail lives one place deeper.' }
+      ],
+      night: [
+        { name: 'Sidebar', hex: '#18181B', label: '#18181B' }, { name: 'Ground', hex: '#141416', label: '#141416' },
+        { name: 'Tile', hex: '#1B1B1F', label: '#1B1B1F' }, { name: 'Raised', hex: '#2A2A30', label: '#2A2A30' },
+        { name: 'Ink', hex: '#F4F4F5', label: '#F4F4F5' }, { name: 'Ink soft', hex: '#D4D4D8', label: '#D4D4D8' },
+        { name: 'Muted', hex: '#A1A1AA', label: '#A1A1AA' }, { name: 'Faint', hex: '#8A8A93', label: '#8A8A93' }
+      ],
+      day: [
+        { name: 'Sidebar', hex: '#F4F4F5', label: '#F4F4F5' }, { name: 'Ground', hex: '#FFFFFF', label: '#FFFFFF' },
+        { name: 'Tile', hex: '#F6F6F7', label: '#F6F6F7' }, { name: 'Raised', hex: '#EFEFF1', label: '#EFEFF1' },
+        { name: 'Ink', hex: '#18181B', label: '#18181B' }, { name: 'Ink soft', hex: '#3F3F46', label: '#3F3F46' },
+        { name: 'Muted', hex: '#52525B', label: '#52525B' }, { name: 'Faint', hex: '#6B6B74', label: '#6B6B74' }
+      ],
+      status: [
+        { name: 'Room', hex: '#3DD68C', label: '#3DD68C · day #14935A' },
+        { name: 'Tight', hex: '#F5A524', label: '#F5A524 · day #E3940B' },
+        { name: 'Needs a hop', hex: '#F2555A', label: '#F2555A · day #D93A3F' }
+      ],
+      accents: [
+        { name: 'Iris', hex: '#7C6CFF', note: 'default' }, { name: 'Phosphor', hex: '#FFB020', note: 'clashes with tight' },
+        { name: 'Mint', hex: '#3EE6C4', note: 'option' }, { name: 'Blue', hex: '#3B82F6', note: 'option' }
+      ],
+      meters: [
+        { name: 'Weekly', used: '41%', bar: '#D4D4D8', ink: '#F4F4F5' },
+        { name: '5-hour', used: '76%', bar: '#F5A524', ink: '#F7B54A' },
+        { name: '5-hour', used: '93%', bar: '#F2555A', ink: '#F6787C' }
+      ],
+      radii: [
+        { n: 'cell 3', px: '3px' }, { n: 'row 10', px: '10px' }, { n: 'window 12', px: '12px' }, { n: 'tile 14', px: '14px' }, { n: 'control', px: '22px' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

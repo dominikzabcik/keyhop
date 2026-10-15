@@ -87,6 +87,18 @@ What changed:
   keyhop.app has `/limits` (main, `3fca563`): signed in only, your own shared limits pooled the
   same way, each login's windows and resets; it goes live with the next approved deploy.
 
+## The design reset (2026-10-14 → 15)
+
+The owner did not like how the built V2 looked and asked to settle design and layout before more
+UI code. The whole exploration (about 50 artboards on a claude.ai design canvas) is saved in
+`design/keyhop-v2/canvas/`; read its `README.md` first. **Chosen: S1 "Crisp"**
+(`design/keyhop-v2/canvas/project/S1-Home.dc.html` + `S1-Components.dc.html`): calm night, solid
+surfaces, radius 6, Geist, shadcn-style inset sidebar, the pet's night scene inside the Bulk card.
+**Still open: the colour**; five recolours of S1 (Iris, Graphite, Emerald, Ember, Cobalt) wait
+for the owner's pick (`shots/P-*-Home.png`). After that: carry S1 to Limits, the menu bar popover
+and keyhop.app, then rewrite `design/keyhop-v2/index.html` and the window/site tokens. Do not
+build new UI on the old look until then.
+
 ## Everything travels in this branch
 
 `design/keyhop-v2/index.html` (the **binding** M2 design direction), `AGENTS.md`,

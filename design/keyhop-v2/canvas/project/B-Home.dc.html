@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Field — Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Pixelify+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}a:hover{opacity:.86}
+input::placeholder{color:inherit;opacity:.62}
+@keyframes kh-twinkle{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes kh-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
+</style>
+</helmet>
+<div style="min-height: 900px; display: flex; flex-wrap: wrap; background: {{c.bg}}; color: {{c.ink}}; font-family: 'IBM Plex Sans', system-ui, sans-serif">
+
+  <nav aria-label="Places" style="flex: 1 0 72px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; padding: 14px 8px; box-sizing: border-box; background: {{c.rail}}; border-right: 1px solid {{c.line}}">
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 6px">
+      <a href="#" aria-label="Keyhop" style="width: 56px; height: 36px; display: flex; align-items: center; justify-content: center; color: {{c.ink}}">
+        <svg aria-hidden="true" viewBox="0 0 7 6" width="28" height="24" style="shape-rendering: crispEdges; display: block"><path d="{{logo.k}}" fill="currentColor"></path><path d="{{logo.dot}}" fill="{{c.accent}}"></path></svg>
+      </a>
+      <button type="button" aria-label="Hop, Command K" style="width: 56px; height: 56px; margin: 4px 0 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; cursor: pointer; background: {{c.accent}}; color: {{c.onAccent}}; clip-path: polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))">
+        <svg aria-hidden="true" viewBox="0 0 10 10" width="20" height="20" style="shape-rendering: crispEdges; display: block"><path d="{{icons.hop}}" fill="currentColor"></path></svg>
+        <span style="font: 600 11px/12px 'Pixelify Sans', sans-serif; letter-spacing: .04em">HOP</span>
+      </button>
+      <sc-for list="{{nav}}" as="n" hint-placeholder-count="5">
+        <a href="#" aria-current="{{n.current}}" style="position: relative; width: 56px; height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; text-decoration: none; color: {{n.color}}; background: {{n.bg}}; border-radius: 6px">
+          <span aria-hidden="true" style="position: absolute; left: -8px; top: 15px; width: 4px; height: 24px; background: {{n.marker}}"></span>
+          <svg aria-hidden="true" viewBox="0 0 10 10" width="20" height="20" style="shape-rendering: crispEdges; display: block"><path d="{{n.icon}}" fill="currentColor"></path></svg>
+          <span style="font: 500 10px/12px 'IBM Plex Sans', sans-serif">{{n.label}}</span>
+          <sc-if value="{{n.hasBadge}}" hint-placeholder-val="{{ false }}">
+            <span style="position: absolute; top: 4px; right: 6px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: {{c.warn}}; color: #14162E; font: 600 10px/16px 'Pixelify Sans', sans-serif">{{n.badge}}</span>
+          </sc-if>
+        </a>
+      </sc-for>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 6px">
+      <a href="#" aria-label="Pet: Bulk, 4.2B to Mass" style="width: 56px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: {{c.muted}}; border-radius: 6px; background: {{c.raised}}">
+        <svg aria-hidden="true" viewBox="0 0 16 12" width="32" height="24" style="shape-rendering: crispEdges; display: block"><path d="{{petMini.w}}" fill="#F3EBDD"></path><path d="{{petMini.s}}" fill="#C9BBA3"></path><path d="{{petMini.o}}" fill="#E8875A"></path><path d="{{petMini.k}}" fill="#1B1A2E"></path></svg>
+        <span style="font: 600 10px/12px 'Pixelify Sans', sans-serif">BULK</span>
+      </a>
+      <a href="#" style="width: 56px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; text-decoration: none; color: {{c.muted}}; border-radius: 6px">
+        <svg aria-hidden="true" viewBox="0 0 10 10" width="20" height="20" style="shape-rendering: crispEdges; display: block"><path d="{{icons.settings}}" fill="currentColor"></path></svg>
+        <span style="font: 500 10px/12px 'IBM Plex Sans', sans-serif">Settings</span>
+      </a>
+    </div>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+
+    <section aria-label="Today" style="position: relative; height: 440px; overflow: hidden; background: {{c.band5}}">
+      <svg aria-hidden="true" viewBox="0 0 320 110" preserveAspectRatio="xMidYMax slice" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block; shape-rendering: crispEdges">
+        <rect x="0" y="0" width="320" height="16" fill="{{c.band0}}"></rect>
+        <rect x="0" y="16" width="320" height="14" fill="{{c.band1}}"></rect>
+        <rect x="0" y="30" width="320" height="13" fill="{{c.band2}}"></rect>
+        <rect x="0" y="43" width="320" height="12" fill="{{c.band3}}"></rect>
+        <rect x="0" y="55" width="320" height="11" fill="{{c.band4}}"></rect>
+        <rect x="0" y="66" width="320" height="44" fill="{{c.band5}}"></rect>
+        <path d="{{scene.sparkB}}" fill="{{c.sparkB}}"></path>
+        <path d="{{scene.sparkA}}" fill="{{c.sparkA}}" style="animation: kh-twinkle 4s steps(2) infinite"></path>
+        <path d="{{scene.halo}}" fill="{{c.halo}}" opacity="0.32"></path>
+        <path d="{{scene.sun}}" fill="{{c.sun}}"></path>
+        <path d="{{scene.sunShade}}" fill="#000000" opacity="0.16"></path>
+        <path d="{{scene.far}}" fill="{{c.far}}"></path>
+        <path d="{{scene.mid}}" fill="{{c.mid}}"></path>
+        <path d="{{scene.midTop}}" fill="{{c.midTop}}"></path>
+        <path d="{{scene.near}}" fill="{{c.near}}"></path>
+        <path d="{{scene.nearTop}}" fill="{{c.nearTop}}"></path>
+        <g style="animation: kh-bob 1.2s steps(2) infinite">
+          <path d="{{pet.w}}" fill="#F3EBDD"></path>
+          <path d="{{pet.s}}" fill="#C9BBA3"></path>
+          <path d="{{pet.o}}" fill="#E8875A"></path>
+          <path d="{{pet.k}}" fill="#1B1A2E"></path>
+        </g>
+      </svg>
+
+      <div style="position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; padding: 28px 32px 0">
+        <div style="max-width: 560px">
+          <p style="margin: 0 0 12px; font: 500 12px/16px 'IBM Plex Mono', monospace; letter-spacing: .08em; text-transform: uppercase; color: {{c.muted}}">Tuesday, October 13</p>
+          <h1 style="margin: 0; font: 600 52px/56px 'Pixelify Sans', sans-serif; letter-spacing: -.01em; color: {{c.ink}}">Codex is at 93%.</h1>
+          <p style="margin: 12px 0 0; font: 400 16px/24px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">The 5-hour window runs out around 11:19 AM. There is no other login to hop to.</p>
+        </div>
+        <ul aria-label="At a glance" style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; justify-content: flex-end; max-width: 420px">
+          <sc-for list="{{hud}}" as="h" hint-placeholder-count="3">
+            <li style="display: flex; align-items: center; gap: 8px; padding: 7px 12px 7px 10px; background: {{c.glass}}; border: 1px solid {{c.line2}}; color: {{c.ink}}; font: 500 14px/18px 'Pixelify Sans', sans-serif; clip-path: polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))">
+              <svg aria-hidden="true" viewBox="0 0 8 8" width="16" height="16" style="shape-rendering: crispEdges; display: block"><path d="{{h.icon}}" fill="{{h.iconColor}}"></path></svg>
+              <span>{{h.text}}</span>
+            </li>
+          </sc-for>
+        </ul>
+      </div>
+
+      <form aria-label="Hop" style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(640px, calc(100% - 32px)); box-sizing: border-box; padding: 12px 12px 12px 16px; background: {{c.glass}}; border: 1px solid {{c.line2}}; clip-path: polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))">
+        <label for="b-home-hop" style="display: flex; justify-content: space-between; font: 600 11px/14px 'Pixelify Sans', sans-serif; letter-spacing: .1em; text-transform: uppercase; color: {{c.muted}}"><span>Hop</span><span style="font-family: 'IBM Plex Mono', monospace; letter-spacing: 0">⌘K</span></label>
+        <div style="display: flex; gap: 8px; align-items: center">
+          <input id="b-home-hop" type="text" placeholder="Name a login, or hop to the one with room" style="flex: 1; min-width: 0; height: 44px; padding: 0; background: transparent; border: 0; outline: none; color: {{c.ink}}; font: 400 17px/24px 'IBM Plex Sans', sans-serif">
+          <button type="submit" aria-label="Hop now" style="flex: 0 0 44px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; cursor: pointer; background: {{c.accent}}; color: {{c.onAccent}}; clip-path: polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))">
+            <svg aria-hidden="true" viewBox="0 0 10 10" width="20" height="20" style="shape-rendering: crispEdges; display: block"><path d="{{icons.hop}}" fill="currentColor"></path></svg>
+          </button>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px">
+          <button type="button" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border: 1px solid {{c.line2}}; background: {{c.raised}}; color: {{c.ink}}; font: 500 13px/16px 'IBM Plex Sans', sans-serif; cursor: pointer; border-radius: 4px">
+            <span aria-hidden="true" style="width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; background: #E8875A; color: #14162E; font: 600 8px/8px 'Pixelify Sans', sans-serif">CC</span>Claude Code
+          </button>
+          <button type="button" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border: 1px solid {{c.line2}}; background: {{c.raised}}; color: {{c.ink}}; font: 500 13px/16px 'IBM Plex Sans', sans-serif; cursor: pointer; border-radius: 4px">
+            <span aria-hidden="true" style="width: 8px; height: 8px; background: {{c.roomFill}}"></span>work@studio.dev <span style="font-family: 'IBM Plex Mono', monospace; color: {{c.muted}}">· 41%</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <div style="flex: 1; display: flex; flex-wrap: wrap; gap: 20px; padding: 24px 32px; align-items: flex-start; box-sizing: border-box">
+
+      <section aria-labelledby="b-home-att" style="flex: 1 1 360px; min-width: 0; background: {{c.panel}}; border: 1px solid {{c.line}}; border-radius: 8px">
+        <header style="display: flex; align-items: center; gap: 10px; padding: 14px 16px 12px; border-bottom: 1px solid {{c.line}}">
+          <h2 id="b-home-att" style="margin: 0; font: 600 18px/22px 'Pixelify Sans', sans-serif; color: {{c.ink}}">Needs your attention</h2>
+          <span style="min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: {{c.warn}}; color: #14162E; font: 600 12px/20px 'Pixelify Sans', sans-serif">3</span>
+        </header>
+        <ul style="list-style: none; margin: 0; padding: 0">
+          <sc-for list="{{attention}}" as="a" hint-placeholder-count="3">
+            <li style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-bottom: 1px solid {{c.line}}">
+              <span aria-hidden="true" style="flex: 0 0 8px; height: 8px; margin-top: 6px; background: {{a.tone}}"></span>
+              <div style="flex: 1; min-width: 0">
+                <p style="margin: 0; font: 600 14px/20px 'IBM Plex Sans', sans-serif; color: {{c.ink}}">{{a.title}}</p>
+                <p style="margin: 2px 0 0; font: 400 13px/19px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">{{a.body}}</p>
+              </div>
+              <button type="button" style="flex: 0 0 auto; height: 32px; padding: 0 12px; border: 1px solid {{c.line2}}; background: {{c.raised}}; color: {{c.ink}}; font: 600 13px/16px 'IBM Plex Sans', sans-serif; cursor: pointer; border-radius: 4px">{{a.action}}</button>
+            </li>
+          </sc-for>
+        </ul>
+        <dl style="margin: 0; padding: 14px 16px 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 12px">
+          <sc-for list="{{figures}}" as="f" hint-placeholder-count="6">
+            <div style="min-width: 0">
+              <dt style="font: 400 12px/16px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">{{f.label}}</dt>
+              <dd style="margin: 2px 0 0; font: 600 22px/26px 'Pixelify Sans', sans-serif; color: {{c.ink}}">{{f.value}} <span style="font: 500 12px/16px 'IBM Plex Mono', monospace; color: {{f.noteColor}}">{{f.note}}</span></dd>
+            </div>
+          </sc-for>
+        </dl>
+      </section>
+
+      <section aria-labelledby="b-home-use" style="flex: 1.35 1 440px; min-width: 0; background: {{c.panel}}; border: 1px solid {{c.line}}; border-radius: 8px">
+        <header style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; padding: 14px 16px 12px; border-bottom: 1px solid {{c.line}}">
+          <h2 id="b-home-use" style="margin: 0; font: 600 18px/22px 'Pixelify Sans', sans-serif; color: {{c.ink}}">In use</h2>
+          <span style="font: 400 13px/18px 'IBM Plex Sans', sans-serif; color: {{c.muted}}"><span style="font-family: 'IBM Plex Mono', monospace; color: {{c.ink}}">415%</span> of 800% left in all</span>
+          <a href="#" style="margin-left: auto; font: 600 13px/18px 'IBM Plex Sans', sans-serif; color: {{c.ink}}; text-decoration: none">All limits →</a>
+        </header>
+        <ul style="list-style: none; margin: 0; padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 8px">
+          <sc-for list="{{tools}}" as="t" hint-placeholder-count="9">
+            <li style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: {{c.raised}}; border-radius: 6px; min-width: 0">
+              <div style="position: relative; flex: 0 0 40px; width: 40px; height: 40px">
+                <svg aria-hidden="true" viewBox="0 0 16 16" width="40" height="40" style="shape-rendering: crispEdges; display: block"><path d="{{t.ring.track}}" fill="{{c.track}}"></path><path d="{{t.ring.fill}}" fill="{{t.ringColor}}"></path></svg>
+                <span aria-hidden="true" style="position: absolute; left: 12px; top: 12px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; background: {{t.hue}}; color: #14162E; font: 600 8px/8px 'Pixelify Sans', sans-serif">{{t.badge}}</span>
+              </div>
+              <div style="flex: 1; min-width: 0">
+                <p style="margin: 0; display: flex; justify-content: space-between; gap: 8px; font: 600 13px/18px 'IBM Plex Sans', sans-serif; color: {{c.ink}}"><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.tool}}</span><span style="font: 600 13px/18px 'IBM Plex Mono', monospace; color: {{t.pctColor}}">{{t.pctText}}</span></p>
+                <p style="margin: 1px 0 0; font: 400 12px/16px 'IBM Plex Sans', sans-serif; color: {{c.muted}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.login}}</p>
+              </div>
+            </li>
+          </sc-for>
+        </ul>
+      </section>
+    </div>
+
+    <footer style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; min-height: 34px; padding: 6px 16px; box-sizing: border-box; border-top: 1px solid {{c.line}}; background: {{c.rail}}; font: 500 12px/16px 'IBM Plex Sans', sans-serif; color: {{c.muted}}">
+      <span style="padding: 2px 6px; background: {{c.accentTint}}; color: {{c.ink}}; font: 600 11px/14px 'Pixelify Sans', sans-serif; letter-spacing: .06em">SAMPLE</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 6px; height: 6px; background: {{c.warn}}"></span>2 need a hop</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 6px; height: 6px; background: {{c.danger}}"></span>Codex partial outage</span>
+      <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace">7.6M today</span>
+      <span style="font-family: 'IBM Plex Mono', monospace">12 day streak</span>
+      <button type="button" style="height: 22px; padding: 0 8px; border: 1px solid {{c.line2}}; background: transparent; color: {{c.ink}}; font: 600 11px/14px 'Pixelify Sans', sans-serif; letter-spacing: .06em; cursor: pointer">{{themeLabel}}</button>
+      <span>Limits read 2m ago</span>
+    </footer>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["night","day"],"default":"night"},"accent":{"editor":"color","options":["#FF8A3D","#5BD38A","#FFD24A","#7AA2FF"],"default":"#FF8A3D"},"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  hexA(hex, a) {
+    var h = String(hex || '#FF8A3D').replace('#', '');
+    if (h.length === 3) h = h.split('').map(function (x) { return x + x; }).join('');
+    var n = parseInt(h, 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  palette(theme, accent) {
+    var night = theme !== 'day';
+    var p = night ? {
+      bg: '#0D1024', panel: '#12142A', raised: '#1A1D38', rail: '#0A0C1D',
+      line: 'rgba(160,170,255,.12)', line2: 'rgba(160,170,255,.22)',
+      ink: '#EEF0FF', muted: '#9BA0C8', onAccent: '#14162E',
+      roomFill: '#5BD38A', roomInk: '#5BD38A', warn: '#FFD24A', warnInk: '#FFD24A', danger: '#FF5C7A', dangerInk: '#FF8399',
+      fill: '#C9CCF0', track: '#262A4C',
+      band0: '#090B1C', band1: '#0C0F23', band2: '#10132B', band3: '#151733', band4: '#1A1A3B', band5: '#201E42',
+      sparkA: '#EEF0FF', sparkB: '#7D83B8', far: '#24274D', mid: '#1A1D3D', midTop: '#262A52', near: '#12142A', nearTop: '#2C3060',
+      glass: 'rgba(16,18,40,.88)'
+    } : {
+      bg: '#EEF3FC', panel: '#FFFFFF', raised: '#F3F5FC', rail: '#E6ECF8',
+      line: 'rgba(21,24,51,.10)', line2: 'rgba(21,24,51,.18)',
+      ink: '#151833', muted: '#4F5478', onAccent: '#14162E',
+      roomFill: '#5BD38A', roomInk: '#1C7A45', warn: '#F2B705', warnInk: '#7A5600', danger: '#E0405F', dangerInk: '#B4233F',
+      fill: '#2E3360', track: '#DDE2F2',
+      band0: '#BFD4FF', band1: '#CADBFF', band2: '#D5E2FF', band3: '#E0E8FB', band4: '#EAEDF4', band5: '#F4EFE6',
+      sparkA: '#FFFFFF', sparkB: '#DCE4F5', far: '#BBCDEB', mid: '#9DBE8E', midTop: '#B2D19F', near: '#79A36C', nearTop: '#93BD84',
+      glass: 'rgba(255,255,255,.92)'
+    };
+    p.accent = accent;
+    p.accentTint = this.hexA(accent, night ? 0.18 : 0.28);
+    p.sun = night ? accent : '#FFC93D';
+    p.halo = night ? accent : '#FFE48A';
+    return p;
+  }
+  pix(rows, ox, oy) {
+    var out = {};
+    for (var y = 0; y < rows.length; y++) {
+      var r = rows[y];
+      for (var x = 0; x < r.length; x++) {
+        var ch = r[x];
+        if (ch === '.' || ch === ' ') continue;
+        out[ch] = (out[ch] || '') + 'M' + (ox + x) + ' ' + (oy + y) + 'h1v1h-1z';
+      }
+    }
+    return out;
+  }
+  icon(rows) { return this.pix(rows, 0, 0)['#'] || ''; }
+  rnd(seed) {
+    var s = seed >>> 0;
+    return function () { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+  }
+  layer(W, H, base, amps, freqs, phases, flat) {
+    var hs = [];
+    for (var x = 0; x < W; x++) {
+      var h = base;
+      for (var i = 0; i < amps.length; i++) h += amps[i] * Math.sin(x * freqs[i] + phases[i]);
+      hs.push(Math.round(h));
+    }
+    if (flat) { var fh = hs[flat[0]]; for (var f = flat[0]; f <= flat[1] && f < W; f++) hs[f] = fh; }
+    var body = '', top = '', x0 = 0;
+    for (var x2 = 1; x2 <= W; x2++) {
+      if (x2 === W || hs[x2] !== hs[x0]) {
+        var len = x2 - x0, hh = hs[x0];
+        body += 'M' + x0 + ' ' + (H - hh) + 'h' + len + 'v' + hh + 'h-' + len + 'z';
+        top += 'M' + x0 + ' ' + (H - hh) + 'h' + len + 'v1h-' + len + 'z';
+        x0 = x2;
+      }
+    }
+    return { body: body, top: top, hs: hs };
+  }
+  disc(cx, cy, r) {
+    var d = '', shade = '';
+    for (var dy = -r; dy <= r; dy++) for (var dx = -r; dx <= r; dx++) {
+      if (dx * dx + dy * dy <= r * r + r * 0.6) {
+        var cell = 'M' + (cx + dx) + ' ' + (cy + dy) + 'h1v1h-1z';
+        d += cell;
+        if (dx + dy > r * 0.75) shade += cell;
+      }
+    }
+    return { d: d, shade: shade };
+  }
+  halo(cx, cy, r) {
+    var d = '';
+    for (var dy = -r - 9; dy <= r + 9; dy++) for (var dx = -r - 9; dx <= r + 9; dx++) {
+      var q = Math.sqrt(dx * dx + dy * dy);
+      if (q <= r + 0.5) continue;
+      var x = cx + dx, y = cy + dy;
+      if ((q <= r + 4 && (x + y) % 2 === 0) || (q <= r + 9 && x % 2 === 0 && y % 2 === 0)) d += 'M' + x + ' ' + y + 'h1v1h-1z';
+    }
+    return d;
+  }
+  ring(pct) {
+    var fill = '', track = '';
+    for (var y = 0; y < 16; y++) for (var x = 0; x < 16; x++) {
+      var dx = x + 0.5 - 8, dy = y + 0.5 - 8, q = Math.sqrt(dx * dx + dy * dy);
+      if (q < 5.2 || q > 8) continue;
+      var a = Math.atan2(dx, -dy); if (a < 0) a += Math.PI * 2;
+      var cell = 'M' + x + ' ' + y + 'h1v1h-1z';
+      if (pct !== null && a / (Math.PI * 2) < pct / 100) fill += cell; else track += cell;
+    }
+    return { fill: fill, track: track };
+  }
+  scene(night) {
+    var W = 320, H = 110, R = this.rnd(7), A = '', B = '';
+    if (night) {
+      for (var i = 0; i < 90; i++) {
+        var x = Math.floor(R() * W), y = Math.floor(R() * 64), b = R();
+        if (b < 0.07 && y > 2) A += 'M' + x + ' ' + (y - 1) + 'h1v3h-1z' + 'M' + (x - 1) + ' ' + y + 'h3v1h-3z';
+        else if (b < 0.35) A += 'M' + x + ' ' + y + 'h1v1h-1z';
+        else B += 'M' + x + ' ' + y + 'h1v1h-1z';
+      }
+    } else {
+      var cloud = ['....######......', '..##########....', '.##############.', '################'];
+      var under = ['................', '................', '................', '.##############.'];
+      var spots = [[22, 10], [128, 6], [196, 22], [292, 9]];
+      for (var k = 0; k < spots.length; k++) {
+        A += this.pix(cloud, spots[k][0], spots[k][1])['#'];
+        B += this.pix(under, spots[k][0], spots[k][1] + 1)['#'];
+      }
+    }
+    var sx = night ? 250 : 248, sy = night ? 66 : 30, sr = night ? 10 : 7;
+    var sun = this.disc(sx, sy, sr);
+    var far = this.layer(W, H, 30, [5, 3], [0.045, 0.11], [0.4, 1.7]);
+    var mid = this.layer(W, H, 21, [4, 2], [0.07, 0.17], [2.1, 0.3]);
+    var near = this.layer(W, H, 13, [1.2], [0.05], [0.9], [256, 284]);
+    return { sparkA: A, sparkB: B, sun: sun.d, sunShade: night ? sun.shade : '', halo: this.halo(sx, sy, sr), far: far.body, mid: mid.body, midTop: mid.top, near: near.body, nearTop: near.top, groundAt: near.hs[262] };
+  }
+  renderVals() {
+    var theme = this.props.theme ?? 'night';
+    var accent = this.props.accent ?? '#FF8A3D';
+    var night = theme !== 'day';
+    var c = this.palette(theme, accent);
+    var self = this;
+    var PET = [
+      '...........ww...',
+      '..........wwww..',
+      '..........wkww..',
+      '..........wwwwo.',
+      '..wwwooowwwww...',
+      '.wwwwwoowwwww...',
+      'owwwwwwwwwwww...',
+      '.wwwwwwwwwwww...',
+      '.sssssssssss....',
+      '.ww.ww...ww.ww..',
+      '.ww.ww...ww.ww..',
+      '.ss.ss...ss.ss..'
+    ];
+    var scene = this.scene(night);
+    var pet = this.pix(PET, 262, 110 - scene.groundAt - 12);
+    var I = {
+      home: ['....##....', '...####...', '..######..', '.########.', '##########', '.########.', '.##....##.', '.##.##.##.', '.##.##.##.', '.########.'],
+      limits: ['..........', '.#######..', '.#.....###', '.#.###.###', '.#.###.###', '.#.....###', '.#######..', '..........', '..........', '..........'],
+      usage: ['.......##.', '.......##.', '....##.##.', '....##.##.', '....##.##.', '.##.##.##.', '.##.##.##.', '.##.##.##.', '.##.##.##.', '##########'],
+      insights: ['....##....', '....##....', '.#..##..#.', '..#....#..', '...####...', '##.####.##', '...####...', '..#....#..', '.#..##..#.', '....##....'],
+      community: ['.##....##.', '####..####', '####..####', '.##....##.', '..........', '####..####', '####..####', '####..####', '..........', '..........'],
+      settings: ['....##....', '.#.####.#.', '..######..', '.###..###.', '####..####', '####..####', '.###..###.', '..######..', '.#.####.#.', '....##....'],
+      hop: ['..........', '....#####.', '.......##.', '......#.#.', '.....#..#.', '....#.....', '...#......', '..#.......', '.#........', '..........']
+    };
+    var icons = { hop: this.icon(I.hop), settings: this.icon(I.settings) };
+    var navDefs = [['Home', I.home, ''], ['Limits', I.limits, '2'], ['Usage', I.usage, ''], ['Insights', I.insights, ''], ['Community', I.community, '']];
+    var nav = navDefs.map(function (d, i) {
+      var on = i === 0;
+      return { label: d[0], icon: self.icon(d[1]), badge: d[2], hasBadge: d[2] !== '', current: on ? 'page' : 'false', color: on ? c.ink : c.muted, bg: on ? c.raised : 'transparent', marker: on ? c.accent : 'transparent' };
+    });
+    var flame = this.icon(['...#....', '..##....', '..###...', '.####.#.', '.######.', '########', '###..###', '.##..##.'].map(function (r) { return r.replace(/#/g, '#'); }));
+    var bolt = this.icon(['....###.', '...###..', '..###...', '.######.', '...###..', '..###...', '.##.....', '#.......']);
+    var paw = this.icon(['.#....#.', '###..###', '.#....#.', '...##...', '.######.', '########', '########', '.##..##.']);
+    var hud = [
+      { icon: flame, iconColor: c.accent, text: '12 day streak' },
+      { icon: bolt, iconColor: c.warn, text: '7.6M today' },
+      { icon: paw, iconColor: '#E8875A', text: 'Bulk · 4.2B to Mass' }
+    ];
+    var attention = [
+      { title: 'Codex is at 93% on me@personal.dev', body: '5-hour runs out around 11:19 AM. There is no other login to hop to.', action: 'Add a login', tone: c.danger },
+      { title: 'spare@personal.dev is signed out', body: 'Cursor. Login expired. Switch to it and sign in to Cursor again.', action: 'Switch and sign in', tone: c.danger },
+      { title: 'Codex partial outage', body: "Every account is affected, so hopping won't help.", action: 'Status page', tone: c.warn }
+    ];
+    var figures = [
+      { value: '45M', label: 'Tokens, 7 days', note: '+16%', noteColor: c.roomInk },
+      { value: '$92.59', label: 'At API prices', note: '', noteColor: c.muted },
+      { value: '91%', label: 'From cache', note: '', noteColor: c.muted },
+      { value: '4,870', label: 'Requests', note: '', noteColor: c.muted },
+      { value: '38', label: 'Commits this week', note: '', noteColor: c.muted },
+      { value: '2.4', label: 'Commits per M tokens', note: '#1', noteColor: c.roomInk }
+    ];
+    var toolDefs = [
+      ['Claude Code', 'Personal · 5-hour', 51, 'warn', 'CC', '#E8875A'],
+      ['Cursor', 'me@personal.dev · Auto', 62, 'normal', 'Cu', '#7AA2FF'],
+      ['Codex', 'me@personal.dev · 5-hour', 93, 'danger', 'Cx', '#4FD1B5'],
+      ['Gemini CLI', 'me@personal.dev · Quota', 28, 'normal', 'Ge', '#FFD24A'],
+      ['GitHub Copilot', 'Personal · Premium', 47, 'normal', 'Co', '#B9BEE6'],
+      ['Windsurf', 'me@windsurf.dev · Day', 33, 'normal', 'Ws', '#5BC0EB'],
+      ['Codebuff', 'me@codebuff.dev', 30, 'normal', 'Cb', '#A3E05B'],
+      ['OpenCode', 'Multi-provider', null, 'quiet', 'Oc', '#B48CFF'],
+      ['Pi', 'Multi-provider', null, 'quiet', 'Pi', '#FF8FB4']
+    ];
+    var tools = toolDefs.map(function (d) {
+      var tone = d[3];
+      return {
+        tool: d[0], login: d[1], badge: d[4], hue: d[5], ring: self.ring(d[2]),
+        pctText: d[2] === null ? 'No limit' : d[2] + '%',
+        ringColor: tone === 'danger' ? c.danger : tone === 'warn' ? c.warn : c.fill,
+        pctColor: tone === 'danger' ? c.dangerInk : tone === 'warn' ? c.warnInk : tone === 'quiet' ? c.muted : c.ink
+      };
+    });
+    var LOGO = ['##..##.', '##.##..', '####...', '##.##..', '##..##.', '.......'];
+    var logoK = this.pix(LOGO, 0, 0)['#'];
+    return {
+      c: c, scene: scene, pet: pet, petMini: this.pix(PET, 0, 0), icons: icons, nav: nav, hud: hud,
+      attention: attention, figures: figures, tools: tools,
+      logo: { k: logoK, dot: 'M5 0h2v2h-2z' },
+      themeLabel: night ? 'NIGHT' : 'DAY'
+    };
+  }
+}
+</script>
+</body>
+</html>

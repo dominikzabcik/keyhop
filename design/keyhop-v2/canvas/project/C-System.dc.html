@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Instrument — design system</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0B;font-family:'JetBrains Mono',ui-monospace,monospace}
+a{color:#FFB020}a:hover{color:#FFC95C}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+</style>
+</helmet>
+<div style="width: 1280px; min-height: 1400px; box-sizing: border-box; background: #0A0A0B; color: #E8E6E1; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; line-height: 18px; font-variant-numeric: tabular-nums; display: flex; flex-direction: column">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 24px; border-bottom: 1px solid rgba(255,255,255,.10)">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><rect x="1" y="1" width="4" height="14" fill="#E8E6E1"></rect><rect x="7" y="5" width="4" height="4" fill="#FFB020"></rect><rect x="11" y="1" width="4" height="4" fill="#E8E6E1"></rect><rect x="11" y="11" width="4" height="4" fill="#E8E6E1"></rect></svg>
+      <span style="font-weight: 700; letter-spacing: .12em">KEYHOP</span>
+      <span style="color: #8C8A85">/</span>
+      <span style="color: #8C8A85; letter-spacing: .08em">C · INSTRUMENT · DESIGN SYSTEM</span>
+    </div>
+    <span style="color: #8C8A85; letter-spacing: .08em">TOKENS v0.1 · NIGHT PRIMARY</span>
+  </header>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06)">
+
+    <section style="background: #0A0A0B; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 11px; font-weight: 500; letter-spacing: .08em; color: #8C8A85">01 · TYPE — JETBRAINS MONO, TABULAR</h2>
+      <div style="display: flex; flex-direction: column; gap: 0; border-top: 1px solid rgba(255,255,255,.06)">
+        <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06)">
+          <span style="width: 132px; flex: none; color: #8C8A85; font-size: 11px; letter-spacing: .06em">DISPLAY 64/600</span>
+          <span style="font-size: 64px; line-height: 64px; font-weight: 600; letter-spacing: -.04em">415<span style="color: #8C8A85">%</span></span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06)">
+          <span style="width: 132px; flex: none; color: #8C8A85; font-size: 11px; letter-spacing: .06em">FIGURE 32/600</span>
+          <span style="font-size: 32px; line-height: 36px; font-weight: 600; letter-spacing: -.03em">7.6M <span style="color: #9DFF57; font-size: 14px; letter-spacing: 0">+16%</span></span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06)">
+          <span style="width: 132px; flex: none; color: #8C8A85; font-size: 11px; letter-spacing: .06em">HEADING 16/600</span>
+          <span style="font-size: 16px; line-height: 22px; font-weight: 600">Codex is at 93%.</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06)">
+          <span style="width: 132px; flex: none; color: #8C8A85; font-size: 11px; letter-spacing: .06em">BODY 13/400</span>
+          <span style="font-size: 13px; line-height: 20px">The 5-hour window runs out around 11:19 AM.</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06)">
+          <span style="width: 132px; flex: none; color: #8C8A85; font-size: 11px; letter-spacing: .06em">LABEL 12/500</span>
+          <span style="font-size: 12px; font-weight: 500; color: #8C8A85">5-hour · resets 3h 05m · read 2m ago</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06)">
+          <span style="width: 132px; flex: none; color: #8C8A85; font-size: 11px; letter-spacing: .06em">CAPS 11/500 +.08</span>
+          <span style="font-size: 11px; font-weight: 500; letter-spacing: .08em">IN USE · 11 TOOLS · 415% OF 800% LEFT</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06)">
+          <span style="width: 132px; flex: none; color: #8C8A85; font-size: 11px; letter-spacing: .06em">PROSE 15 CONDENSED</span>
+          <span style="font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 15px; line-height: 22px; color: #C9C7C1">Each login keeps its own limits. This adds up what each one has left, so you can see where there is room before you hop.</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06)">
+          <span style="width: 132px; flex: none; color: #8C8A85; font-size: 11px; letter-spacing: .06em">NUMERALS</span>
+          <span style="font-size: 20px; line-height: 24px; letter-spacing: .02em">0123456789 <span style="color: #8C8A85">% $ M B /h ~ −</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section style="background: #0A0A0B; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 11px; font-weight: 500; letter-spacing: .08em; color: #8C8A85">02 · COLOR — NIGHT / DAY</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.08)">
+        <div style="background: #0A0A0B; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <span style="font-size: 11px; letter-spacing: .08em; color: #8C8A85">NIGHT</span>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #0A0A0B; border: 1px solid rgba(255,255,255,.18)"></span><span style="flex: 1">ground</span><span style="color: #8C8A85">#0A0A0B</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #111113; border: 1px solid rgba(255,255,255,.18)"></span><span style="flex: 1">panel</span><span style="color: #8C8A85">#111113</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #17171A; border: 1px solid rgba(255,255,255,.18)"></span><span style="flex: 1">raised</span><span style="color: #8C8A85">#17171A</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18)"></span><span style="flex: 1">gridline</span><span style="color: #8C8A85">#FFF / 6%</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #E8E6E1"></span><span style="flex: 1">ink</span><span style="color: #8C8A85">#E8E6E1</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #8C8A85"></span><span style="flex: 1">muted</span><span style="color: #8C8A85">#8C8A85</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #FFB020"></span><span style="flex: 1">accent</span><span style="color: #8C8A85">#FFB020</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #3EE6C4"></span><span style="flex: 1">projection</span><span style="color: #8C8A85">#3EE6C4</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #F5C542"></span><span style="flex: 1">warn</span><span style="color: #8C8A85">#F5C542</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #FF5F3D"></span><span style="flex: 1">danger</span><span style="color: #8C8A85">#FF5F3D</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #9DFF57"></span><span style="flex: 1">ok · room</span><span style="color: #8C8A85">#9DFF57</span></div>
+        </div>
+        <div style="background: #F2F1EC; color: #111111; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <span style="font-size: 11px; letter-spacing: .08em; color: #5E5C57">DAY</span>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #F2F1EC; border: 1px solid rgba(0,0,0,.2)"></span><span style="flex: 1">ground</span><span style="color: #5E5C57">#F2F1EC</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #FFFFFF; border: 1px solid rgba(0,0,0,.2)"></span><span style="flex: 1">panel</span><span style="color: #5E5C57">#FFFFFF</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #F7F6F2; border: 1px solid rgba(0,0,0,.2)"></span><span style="flex: 1">raised</span><span style="color: #5E5C57">#F7F6F2</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: rgba(0,0,0,.07); border: 1px solid rgba(0,0,0,.2)"></span><span style="flex: 1">gridline</span><span style="color: #5E5C57">#000 / 7%</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #111111"></span><span style="flex: 1">ink</span><span style="color: #5E5C57">#111111</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #5E5C57"></span><span style="flex: 1">muted</span><span style="color: #5E5C57">#5E5C57</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #FFB020"></span><span style="flex: 1">accent fill · text</span><span style="color: #5E5C57">#FFB020 · #805810</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #0A8F78"></span><span style="flex: 1">projection</span><span style="color: #5E5C57">#0A8F78</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #9A6A00"></span><span style="flex: 1">warn</span><span style="color: #5E5C57">#9A6A00</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #C2381A"></span><span style="flex: 1">danger</span><span style="color: #5E5C57">#C2381A</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #2F7A00"></span><span style="flex: 1">ok · room</span><span style="color: #5E5C57">#2F7A00</span></div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 11px; letter-spacing: .08em; color: #8C8A85">ACCENT OPTIONS</span>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.08)">
+          <div style="background: #0A0A0B; padding: 10px; display: flex; flex-direction: column; gap: 8px"><span style="height: 28px; background: #FFB020"></span><span>phosphor</span><span style="color: #8C8A85">#FFB020</span></div>
+          <div style="background: #0A0A0B; padding: 10px; display: flex; flex-direction: column; gap: 8px"><span style="height: 28px; background: #3EE6C4"></span><span>mint</span><span style="color: #8C8A85">#3EE6C4</span></div>
+          <div style="background: #0A0A0B; padding: 10px; display: flex; flex-direction: column; gap: 8px"><span style="height: 28px; background: #FF5F3D"></span><span>signal</span><span style="color: #8C8A85">#FF5F3D</span></div>
+          <div style="background: #0A0A0B; padding: 10px; display: flex; flex-direction: column; gap: 8px"><span style="height: 28px; background: #9DFF57"></span><span>lime</span><span style="color: #8C8A85">#9DFF57</span></div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 11px; letter-spacing: .08em; color: #8C8A85">SPACE · 4 BASE · RADIUS 0 · 1PX GRIDLINES</span>
+        <div style="display: flex; align-items: flex-end; gap: 16px">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 4px; height: 4px; background: #E8E6E1"></span><span style="color: #8C8A85">4</span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; background: #E8E6E1"></span><span style="color: #8C8A85">8</span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; background: #E8E6E1"></span><span style="color: #8C8A85">12</span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 16px; height: 16px; background: #E8E6E1"></span><span style="color: #8C8A85">16</span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 24px; height: 24px; background: #E8E6E1"></span><span style="color: #8C8A85">24</span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 32px; height: 32px; background: #E8E6E1"></span><span style="color: #8C8A85">32</span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 48px; height: 48px; background: #E8E6E1"></span><span style="color: #8C8A85">48</span></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px; padding-left: 16px">
+            <span style="color: #8C8A85">TOP BAR 44 · PANE HEADER 32 · ROW 36 · STATUS 28</span>
+            <span style="color: #8C8A85">METER 4 TALL · BLOCK 6×10, 2 GAP</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section style="padding: 24px; display: flex; flex-direction: column; gap: 16px; flex: 1">
+    <h2 style="margin: 0; font-size: 11px; font-weight: 500; letter-spacing: .08em; color: #8C8A85">03 · COMPONENTS</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.08)">
+
+      <div style="background: #111113; display: flex; flex-direction: column">
+        <div style="height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em; color: #8C8A85"><span>BUTTONS</span><span>36 TALL</span></div>
+        <div style="padding: 16px 12px; display: flex; flex-wrap: wrap; gap: 8px">
+          <button type="button" style="height: 32px; padding: 0 14px; background: #FFB020; color: #0A0A0B; border: 0; border-radius: 0; font: 600 12px 'JetBrains Mono', monospace; letter-spacing: .06em">SWITCH</button>
+          <button type="button" style="height: 32px; padding: 0 14px; background: transparent; color: #E8E6E1; border: 1px solid rgba(255,255,255,.22); border-radius: 0; font: 500 12px 'JetBrains Mono', monospace; letter-spacing: .06em">+ ADD A LOGIN</button>
+          <button type="button" style="height: 32px; padding: 0 10px; background: transparent; color: #8C8A85; border: 0; border-radius: 0; font: 500 12px 'JetBrains Mono', monospace; letter-spacing: .06em">STATUS PAGE →</button>
+        </div>
+        <div style="height: 32px; display: flex; align-items: center; padding: 0 12px; border-top: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em; color: #8C8A85">TOP-BAR TABS · SEGMENTED</div>
+        <div style="padding: 0 12px; display: flex; gap: 20px; height: 44px; align-items: stretch; border-bottom: 1px solid rgba(255,255,255,.06)">
+          <a href="#" style="display: flex; align-items: center; color: #E8E6E1; text-decoration: none; letter-spacing: .08em; font-weight: 600; box-shadow: inset 0 -2px 0 #FFB020">HOME</a>
+          <a href="#" style="display: flex; align-items: center; color: #8C8A85; text-decoration: none; letter-spacing: .08em">LIMITS <span style="margin-left: 6px; color: #0A0A0B; background: #FFB020; padding: 0 4px; font-size: 10px; line-height: 14px">2</span></a>
+          <a href="#" style="display: flex; align-items: center; color: #8C8A85; text-decoration: none; letter-spacing: .08em">USAGE</a>
+        </div>
+        <div style="padding: 16px 12px; display: flex; gap: 12px; flex-wrap: wrap">
+          <div style="display: inline-flex; border: 1px solid rgba(255,255,255,.14)">
+            <button type="button" style="height: 28px; padding: 0 10px; border: 0; background: transparent; color: #8C8A85; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em">24H</button>
+            <button type="button" style="height: 28px; padding: 0 10px; border: 0; background: #E8E6E1; color: #0A0A0B; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .06em">7D</button>
+          </div>
+          <div style="display: inline-flex; border: 1px solid rgba(255,255,255,.14)">
+            <button type="button" style="height: 28px; padding: 0 10px; border: 0; background: #E8E6E1; color: #0A0A0B; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .06em">REMAINING</button>
+            <button type="button" style="height: 28px; padding: 0 10px; border: 0; background: transparent; color: #8C8A85; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em">DRAIN RATE</button>
+          </div>
+        </div>
+        <div style="height: 32px; display: flex; align-items: center; padding: 0 12px; border-top: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em; color: #8C8A85">CHIPS WITH COUNTS</div>
+        <div style="padding: 16px 12px; display: flex; gap: 6px; flex-wrap: wrap">
+          <button type="button" style="height: 26px; padding: 0 8px; border: 1px solid #E8E6E1; background: #E8E6E1; color: #0A0A0B; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .06em">ALL <span style="opacity: .7">11</span></button>
+          <button type="button" style="height: 26px; padding: 0 8px; border: 1px solid rgba(255,255,255,.14); background: transparent; color: #E8E6E1; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em">CLAUDE CODE <span style="color: #8C8A85">2</span></button>
+          <button type="button" style="height: 26px; padding: 0 8px; border: 1px solid rgba(255,255,255,.14); background: transparent; color: #E8E6E1; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em">CURSOR <span style="color: #8C8A85">2</span></button>
+          <button type="button" style="height: 26px; padding: 0 8px; border: 1px solid rgba(255,255,255,.14); background: transparent; color: #E8E6E1; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em">CODEX <span style="color: #8C8A85">1</span></button>
+        </div>
+      </div>
+
+      <div style="background: #111113; display: flex; flex-direction: column">
+        <div style="height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em; color: #8C8A85"><span>STATUS · BADGES</span><span>●  ○  ▲</span></div>
+        <div style="padding: 16px 12px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; gap: 16px; flex-wrap: wrap">
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; background: #9DFF57"></span>room</span>
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; background: #F5C542"></span>tight</span>
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; background: #FF5F3D"></span>needs a hop</span>
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 5px; height: 5px; border: 1px solid #8C8A85"></span>quiet</span>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap">
+            <span style="padding: 1px 6px; border: 1px solid #E8E6E1; font-size: 10px; letter-spacing: .08em">IN USE</span>
+            <span style="padding: 1px 6px; background: #FF5F3D; color: #0A0A0B; font-size: 10px; font-weight: 600; letter-spacing: .08em">NEEDS A HOP</span>
+            <span style="padding: 1px 6px; border: 1px solid #FF5F3D; color: #FF5F3D; font-size: 10px; letter-spacing: .08em">EXPIRED</span>
+            <span style="padding: 1px 6px; border: 1px solid #9DFF57; color: #9DFF57; font-size: 10px; letter-spacing: .08em">● LIVE</span>
+            <span style="padding: 1px 6px; border: 1px solid rgba(255,255,255,.22); color: #8C8A85; font-size: 10px; letter-spacing: .08em">NO LIMIT</span>
+          </div>
+        </div>
+        <div style="height: 32px; display: flex; align-items: center; padding: 0 12px; border-top: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em; color: #8C8A85">METERS · BAR AND BLOCK</div>
+        <div style="padding: 16px 12px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 64px; color: #8C8A85">WEEKLY</span><span style="flex: 1; height: 4px; background: rgba(255,255,255,.08); position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 41%; background: #E8E6E1"></span><span style="position: absolute; left: 58%; top: -3px; width: 1px; height: 10px; background: #8C8A85"></span></span><span style="width: 36px; text-align: right">41%</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 64px; color: #8C8A85">5-HOUR</span><span style="flex: 1; height: 4px; background: rgba(255,255,255,.08); position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 76%; background: #F5C542"></span></span><span style="width: 36px; text-align: right; color: #F5C542">76%</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 64px; color: #8C8A85">5-HOUR</span><span style="flex: 1; height: 4px; background: rgba(255,255,255,.08); position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 93%; background: #FF5F3D"></span></span><span style="width: 36px; text-align: right; color: #FF5F3D">93%</span></div>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="width: 64px; color: #8C8A85">BLOCK</span>
+            <span style="flex: 1; display: flex; gap: 2px"><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D"></span><span style="flex: 1; height: 10px; background: #FF5F3D; opacity: .55"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span></span>
+            <span style="width: 36px; text-align: right; color: #FF5F3D">93%</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="width: 64px; color: #8C8A85">BLOCK</span>
+            <span style="flex: 1; display: flex; gap: 2px"><span style="flex: 1; height: 10px; background: #E8E6E1"></span><span style="flex: 1; height: 10px; background: #E8E6E1"></span><span style="flex: 1; height: 10px; background: #E8E6E1"></span><span style="flex: 1; height: 10px; background: #E8E6E1"></span><span style="flex: 1; height: 10px; background: #E8E6E1"></span><span style="flex: 1; height: 10px; background: #E8E6E1"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span><span style="flex: 1; height: 10px; background: rgba(255,255,255,.08)"></span></span>
+            <span style="width: 36px; text-align: right">28%</span>
+          </div>
+        </div>
+        <div style="height: 32px; display: flex; align-items: center; padding: 0 12px; border-top: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em; color: #8C8A85">SPARKLINE · 24H</div>
+        <div style="padding: 16px 12px; display: flex; align-items: center; gap: 16px">
+          <svg width="160" height="28" viewBox="0 0 160 28" aria-hidden="true"><polyline points="0,24 10,23 20,22 30,20 40,21 50,18 60,16 70,17 80,13 90,12 100,14 110,9 120,8 130,10 140,6 150,4 160,3" fill="none" stroke="#FF5F3D" stroke-width="1.5"></polyline></svg>
+          <svg width="160" height="28" viewBox="0 0 160 28" aria-hidden="true"><polyline points="0,20 10,19 20,21 30,18 40,18 50,16 60,17 70,15 80,15 90,14 100,16 110,14 120,13 130,13 140,12 150,12 160,11" fill="none" stroke="#E8E6E1" stroke-width="1.5"></polyline></svg>
+        </div>
+      </div>
+
+      <div style="background: #111113; display: flex; flex-direction: column">
+        <div style="height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em; color: #8C8A85"><span>COMMAND FIELD</span><span>⌘K</span></div>
+        <div style="padding: 16px 12px">
+          <label style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border: 1px solid rgba(255,255,255,.18); background: #0A0A0B">
+            <span style="color: #FFB020; font-weight: 600">›</span>
+            <input type="text" aria-label="Hop, run or search" placeholder="hop / run / search" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #E8E6E1; font: 400 12px 'JetBrains Mono', monospace">
+            <span style="width: 7px; height: 14px; background: #FFB020; animation: blink 1.1s steps(1) infinite"></span>
+            <span style="padding: 0 5px; border: 1px solid rgba(255,255,255,.18); color: #8C8A85; font-size: 10px">⌘K</span>
+          </label>
+        </div>
+        <div style="height: 32px; display: flex; align-items: center; padding: 0 12px; border-top: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em; color: #8C8A85">TABLE ROW</div>
+        <div style="overflow-x: auto">
+          <div style="min-width: 360px">
+            <div style="display: grid; grid-template-columns: 1.2fr 1.4fr .8fr .6fr; gap: 8px; padding: 6px 12px; color: #8C8A85; font-size: 10px; letter-spacing: .08em; border-bottom: 1px solid rgba(255,255,255,.06)"><span>TOOL</span><span>LOGIN</span><span>WINDOW</span><span style="text-align: right">USED ↓</span></div>
+            <div style="display: grid; grid-template-columns: 1.2fr 1.4fr .8fr .6fr; gap: 8px; padding: 0 12px; height: 36px; align-items: center; background: rgba(255,95,61,.08); box-shadow: inset 2px 0 0 #FF5F3D"><span style="font-weight: 600">codex</span><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">me@personal.dev</span><span style="color: #8C8A85">5-hour</span><span style="text-align: right; color: #FF5F3D; font-weight: 600">93%</span></div>
+            <div style="display: grid; grid-template-columns: 1.2fr 1.4fr .8fr .6fr; gap: 8px; padding: 0 12px; height: 36px; align-items: center; border-top: 1px solid rgba(255,255,255,.06)"><span style="font-weight: 600">claude-code</span><span>Personal</span><span style="color: #8C8A85">5-hour</span><span style="text-align: right">51%</span></div>
+          </div>
+        </div>
+        <div style="height: 32px; display: flex; align-items: center; padding: 0 12px; border-top: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em; color: #8C8A85">PANE WITH HEADER</div>
+        <div style="padding: 12px">
+          <div style="border: 1px solid rgba(255,255,255,.10); background: #0A0A0B">
+            <div style="height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border-bottom: 1px solid rgba(255,255,255,.08); font-size: 11px; letter-spacing: .08em"><span>ATTENTION <span style="color: #0A0A0B; background: #FF5F3D; padding: 0 4px; margin-left: 4px">3</span></span><button type="button" aria-label="Pane options" style="border: 0; background: transparent; color: #8C8A85; font: 500 12px 'JetBrains Mono', monospace">···</button></div>
+            <div style="padding: 10px; display: flex; gap: 10px"><span style="color: #FF5F3D; font-weight: 700">!</span><span><span style="font-weight: 600">Codex is at 93% on me@personal.dev</span><br><span style="color: #8C8A85">5-hour runs out around 11:19 AM.</span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 11px; letter-spacing: .08em; color: #8C8A85">STATUS LINE · 28 TALL</span>
+      <div style="height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 12px; border: 1px solid rgba(255,255,255,.10); background: #111113; font-size: 11px; letter-spacing: .04em; overflow: hidden; white-space: nowrap">
+        <div style="display: flex; gap: 16px; align-items: center">
+          <span style="background: #FFB020; color: #0A0A0B; padding: 0 5px; font-weight: 600">SAMPLE</span>
+          <span><span style="color: #FF5F3D">●</span> 2 NEED A HOP</span>
+          <span><span style="color: #F5C542">▲</span> CODEX PARTIAL OUTAGE</span>
+        </div>
+        <div style="display: flex; gap: 16px; align-items: center; color: #8C8A85">
+          <span>7.6M TODAY</span><span>12D STREAK</span><span style="color: #E8E6E1">NIGHT</span><span>↻ LIMITS 2M AGO</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

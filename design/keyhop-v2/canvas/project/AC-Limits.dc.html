@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyhop Limits — Observatory</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Instrument+Serif&amp;display=swap">
+<style>
+body{margin:0;font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{font:inherit;cursor:pointer}
+a,button{transition:background-color .2s ease,color .2s ease,transform .2s ease,filter .2s ease}
+aside a:hover,aside button:hover{background-color:rgba(127,127,135,.12)}
+button:hover{filter:brightness(1.1)}
+button:active,aside a:active{transform:scale(.98)}
+a:focus-visible,button:focus-visible{outline:2px solid #B4ABFF;outline-offset:2px}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1180px; background: {{c.side}}; color: {{c.ink}}; font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 22px; font-variant-numeric: tabular-nums">
+
+  <aside style="flex: 1 1 232px; display: flex; flex-direction: column; gap: 2px; padding: 12px 10px; box-sizing: border-box">
+    <button type="button" style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 8px; margin-top: 30px; border: 0; border-radius: 8px; background: transparent; color: {{c.ink}}; text-align: left">
+      <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; background: {{c.accentFill}}; color: {{c.onAccent}}"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg></span>
+      <span style="display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 16px"><span style="font-weight: 600">Keyhop</span><span style="font-size: 12px; color: {{c.muted}}">Personal · 11 logins</span></span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6"></path><path d="M5.5 10L8 12.5 10.5 10"></path></svg>
+    </button>
+    <nav aria-label="Places" style="display: flex; flex-direction: column; gap: 2px; margin-top: 14px">
+      <a href="AC-Home.dc.html" style="display: flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 8px; color: {{c.muted}}">Home</a>
+      <a href="#limits" aria-current="page" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 12px; border-radius: 8px; background: {{c.navActive}}; color: {{c.ink}}; font-weight: 500"><span style="flex: 1">Limits</span><span style="min-width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: {{c.danger}}; color: {{c.onDanger}}; font-size: 12px; font-weight: 600">2</span></a>
+      <a href="#usage" style="display: flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 8px; color: {{c.muted}}">Usage</a>
+      <a href="#insights" style="display: flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 8px; color: {{c.muted}}">Insights</a>
+      <a href="#community" style="display: flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 8px; color: {{c.muted}}">Community</a>
+    </nav>
+    <h2 style="margin: 24px 0 4px; padding: 0 12px; font-size: 13px; font-weight: 500; color: {{c.faint}}">In use</h2>
+    <div style="display: flex; flex-direction: column; gap: 1px">
+      <sc-for list="{{side}}" as="s" hint-placeholder-count="5">
+        <a href="#{{s.tool}}" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 12px; border-radius: 8px; color: {{c.ink}}"><span style="flex: none; width: 8px; height: 8px; border-radius: 4px; background: {{s.dot}}"></span><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.tool}}</span><span style="color: {{s.ink}}">{{s.left}}</span></a>
+      </sc-for>
+      <a href="#more" style="display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; color: {{c.faint}}; font-size: 13px">4 more</a>
+    </div>
+    <div style="flex: 1; min-height: 16px"></div>
+    <a href="#settings" style="display: flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 8px; color: {{c.muted}}">Settings</a>
+  </aside>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; padding: 8px 8px 8px 0; box-sizing: border-box">
+    <main style="flex: 1; min-width: 0; display: flex; flex-direction: column; border-radius: 12px; background: {{c.ground}}; overflow: hidden">
+      <header style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px 0 28px">
+        <h1 style="margin: 0; font-size: 14px; font-weight: 500">Limits</h1>
+        <span style="flex: 1"></span>
+        <span style="font-size: 13px; color: {{c.muted}}">Limits read 2m ago</span>
+        <a href="#settings-appearance" style="height: 32px; display: flex; align-items: center; padding: 0 10px; border-radius: 8px; font-size: 13px; color: {{c.muted}}">{{themeLabel}}</a>
+      </header>
+
+      <div style="display: flex; flex-direction: column; gap: 48px; padding: 4px 28px 48px">
+
+        <nav aria-label="Tools" style="display: flex; flex-wrap: wrap; gap: 6px">
+          <sc-for list="{{tabs}}" as="t" hint-placeholder-count="8">
+            <a href="#{{t.name}}" aria-current="{{t.current}}" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 17px; background: {{t.bg}}; color: {{t.ink}}; font-weight: {{t.weight}}">{{t.name}}<span style="color: {{t.countInk}}">{{t.n}}</span></a>
+          </sc-for>
+        </nav>
+
+        <section aria-labelledby="pool-h" style="display: flex; flex-wrap: wrap; gap: 32px 48px; align-items: stretch">
+          <div style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+            <h2 id="pool-h" style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 60px; line-height: 60px; letter-spacing: -0.025em">415% left</h2>
+            <p style="margin: 0; max-width: 40ch; color: {{c.inkSoft}}">Across your eight logins with limits, out of 800%. Each login keeps its own limits; this adds up what each one has left.</p>
+            <dl style="margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+              <div style="padding: 14px 16px; border-radius: 12px; background: {{c.tile}}"><dt style="color: {{c.muted}}">Draining</dt><dd style="margin: 2px 0 0; font-size: 22px; line-height: 28px; font-weight: 500">80%/h</dd></div>
+              <div style="padding: 14px 16px; border-radius: 12px; background: {{c.tile}}"><dt style="color: {{c.muted}}">Next reset</dt><dd style="margin: 2px 0 0; font-size: 22px; line-height: 28px; font-weight: 500; color: {{c.okInk}}">+35%</dd><dd style="margin: 0; font-size: 13px; color: {{c.muted}}">12:41 PM</dd></div>
+              <div style="padding: 14px 16px; border-radius: 12px; background: {{c.tile}}"><dt style="color: {{c.muted}}">At this pace</dt><dd style="margin: 2px 0 0; font-size: 22px; line-height: 28px; font-weight: 500">7 days</dd></div>
+            </dl>
+          </div>
+
+          <figure style="flex: 2 1 460px; min-width: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; padding: 20px 20px 16px; border-radius: 14px; background: {{c.tile}}">
+            <figcaption style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; color: {{c.muted}}">
+              <span style="color: {{c.ink}}; font-weight: 500; margin-right: auto">What is left, this week and next</span>
+              <span style="display: flex; align-items: center; gap: 8px"><span style="width: 16px; height: 3px; border-radius: 2px; background: {{c.ink}}"></span>Measured</span>
+              <span style="display: flex; align-items: center; gap: 8px"><span style="width: 16px; height: 3px; border-radius: 2px; background: {{c.accentInk}}; opacity: .8"></span>Projected</span>
+              <span style="display: flex; align-items: center; gap: 8px"><span style="width: 3px; height: 12px; border-radius: 2px; background: {{c.ok}}"></span>Reset</span>
+            </figcaption>
+            <div style="flex: 1; min-height: 240px; display: flex; gap: 10px">
+              <div style="display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; font-size: 12px; color: {{c.faint}}; padding-bottom: 22px"><span>800%</span><span>400%</span><span>0%</span></div>
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+                <div style="flex: 1; position: relative">
+                  <div style="position: absolute; left: 30%; top: 0; bottom: 0; width: 2px; border-radius: 1px; background: {{c.nowBand}}"></div>
+                  <span style="position: absolute; left: calc(30% + 10px); top: 0; font-size: 12px; color: {{c.muted}}">Now</span>
+                  <svg viewBox="0 0 1000 400" preserveAspectRatio="none" role="img" aria-label="415% left now; measured over three days and projected for seven, rising at each reset" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible">
+                    <path d="{{area}}" fill="{{c.area}}"></path>
+                    <sc-for list="{{resets}}" as="r" hint-placeholder-count="5"><line x1="{{r.x}}" x2="{{r.x}}" y1="{{r.y1}}" y2="{{r.y2}}" stroke="{{c.ok}}" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"></line></sc-for>
+                    <polyline points="{{measured}}" fill="none" stroke="{{c.ink}}" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></polyline>
+                    <polyline points="{{projected}}" fill="none" stroke="{{c.accentInk}}" stroke-opacity=".85" stroke-width="2.5" stroke-dasharray="1 7" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></polyline>
+                  </svg>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: {{c.faint}}"><sc-for list="{{ticks}}" as="t" hint-placeholder-count="10"><span style="color: {{t.ink}}">{{t.label}}</span></sc-for></div>
+              </div>
+            </div>
+          </figure>
+        </section>
+
+        <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+          <section id="{{g.name}}" aria-label="{{g.name}}" style="display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px">
+              <h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 500">{{g.name}}</h2>
+              <span style="color: {{g.leftInk}}">{{g.left}}</span>
+              <span style="flex: 1"></span>
+              <button type="button" style="height: 32px; padding: 0 14px; border: 0; border-radius: 16px; background: transparent; color: {{c.muted}}; font-size: 13px; font-weight: 500">Add a login</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <sc-for list="{{g.logins}}" as="l" hint-placeholder-count="2">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px 32px; padding: 18px 20px; border-radius: 14px; background: {{l.bg}}">
+                  <div style="flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                    <span style="display: flex; align-items: center; gap: 10px"><span style="flex: none; width: 8px; height: 8px; border-radius: 4px; background: {{l.dot}}"></span><span style="font-weight: 500">{{l.name}}</span><sc-if value="{{l.hasBadge}}" hint-placeholder-val="{{true}}"><span style="font-size: 12px; line-height: 20px; padding: 0 8px; border-radius: 6px; background: {{l.badgeBg}}; color: {{l.badgeInk}}">{{l.badge}}</span></sc-if></span>
+                    <span style="padding-left: 18px; font-size: 13px; color: {{c.muted}}">{{l.sub}}</span>
+                  </div>
+                  <div style="flex: 2 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+                    <sc-for list="{{l.windows}}" as="w" hint-placeholder-count="2">
+                      <div style="display: grid; grid-template-columns: 72px minmax(0, 1fr) 44px 120px; gap: 12px; align-items: center">
+                        <span style="color: {{c.muted}}">{{w.name}}</span>
+                        <span style="height: 6px; border-radius: 3px; background: {{c.track}}; overflow: hidden"><span style="display: block; height: 6px; width: {{w.used}}; border-radius: 3px; background: {{w.bar}}"></span></span>
+                        <span style="text-align: right; color: {{w.ink}}; font-weight: {{w.weight}}">{{w.used}}</span>
+                        <span style="font-size: 13px; color: {{c.faint}}">{{w.reset}}</span>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{l.hasNote}}" hint-placeholder-val="{{false}}"><span style="color: {{c.muted}}">{{l.note}}</span></sc-if>
+                  </div>
+                  <div style="flex: 0 0 160px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px">
+                    <span style="font-size: 13px; color: {{l.foreInk}}">{{l.forecast}}</span>
+                    <sc-if value="{{l.hasAction}}" hint-placeholder-val="{{true}}"><button type="button" style="height: 34px; padding: 0 16px; border: 0; border-radius: 17px; background: {{l.btnBg}}; color: {{l.btnInk}}; font-size: 13px; font-weight: 500">{{l.action}}</button></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+        </sc-for>
+
+        <section id="more" aria-labelledby="more-h" style="display: flex; flex-direction: column; gap: 12px">
+          <h2 id="more-h" style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 500">One login each</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 8px">
+            <sc-for list="{{singles}}" as="s" hint-placeholder-count="4">
+              <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border-radius: 14px; background: {{c.tile}}">
+                <span style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: 500">{{s.tool}}</span><span style="color: {{c.muted}}">{{s.left}}</span></span>
+                <span style="height: 6px; border-radius: 3px; background: {{c.track}}; overflow: hidden"><span style="display: block; height: 6px; width: {{s.used}}; border-radius: 3px; background: {{c.meter}}"></span></span>
+                <span style="font-size: 13px; color: {{c.faint}}">{{s.sub}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin: 0; font-size: 13px; color: {{c.muted}}">OpenCode and Pi measure tokens only, so there is no limit to read. They are counted in Usage.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["night","day"],"default":"night"},"accent":{"editor":"color","options":["#7C6CFF","#FFB020","#3EE6C4","#3B82F6"],"default":"#7C6CFF"},"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+  palette(theme, accent) {
+    const hex = (h) => { const n = parseInt(String(h).replace('#', '').slice(0, 6), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+    const rgba = (h, a) => { const p = hex(h); return 'rgba(' + p[0] + ',' + p[1] + ',' + p[2] + ',' + a + ')'; };
+    const mix = (h, t, w) => { const a = hex(h); const b = hex(t); return 'rgb(' + a.map((v, i) => Math.round(v * (1 - w) + b[i] * w)).join(',') + ')'; };
+    const lum = (h) => { const p = hex(h).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2]; };
+    const night = theme !== 'day';
+    const light = lum(accent) > 0.3;
+    const base = night ? {
+      side: '#18181B', ground: '#141416', tile: '#1B1B1F', raised: '#2A2A30', navActive: 'rgba(255,255,255,0.07)',
+      ink: '#F4F4F5', inkSoft: '#D4D4D8', muted: '#A1A1AA', faint: '#8A8A93', track: 'rgba(255,255,255,0.08)', meter: '#D4D4D8',
+      danger: '#F2555A', dangerInk: '#F6787C', onDanger: '#1A0A0B', warn: '#F5A524', warnInk: '#F7B54A', ok: '#3DD68C', okInk: '#5FE0A3',
+      nowBand: 'rgba(255,255,255,0.10)', area: 'rgba(244,244,245,0.05)'
+    } : {
+      side: '#F4F4F5', ground: '#FFFFFF', tile: '#F6F6F7', raised: '#EFEFF1', navActive: 'rgba(0,0,0,0.06)',
+      ink: '#18181B', inkSoft: '#3F3F46', muted: '#52525B', faint: '#6B6B74', track: 'rgba(0,0,0,0.07)', meter: '#3F3F46',
+      danger: '#D93A3F', dangerInk: '#C2272D', onDanger: '#FFFFFF', warn: '#E3940B', warnInk: '#9A5B00', ok: '#14935A', okInk: '#11804E',
+      nowBand: 'rgba(0,0,0,0.10)', area: 'rgba(24,24,27,0.05)'
+    };
+    return Object.assign({}, base, {
+      accentFill: light ? accent : mix(accent, '#000000', 0.12),
+      onAccent: light ? '#111114' : '#FFFFFF',
+      accentInk: night ? mix(accent, '#FFFFFF', 0.35) : mix(accent, '#000000', 0.4),
+      accentSoft: rgba(accent, night ? 0.18 : 0.12),
+      dangerTile: rgba(base.danger, night ? 0.10 : 0.07),
+      dangerSoft: rgba(base.danger, night ? 0.18 : 0.12)
+    });
+  }
+  renderVals() {
+    const theme = this.props.theme ?? 'night';
+    const c = this.palette(theme, this.props.accent ?? '#7C6CFF');
+    const lvl = (u) => u >= 90 ? 'danger' : u >= 70 ? 'warn' : 'ok';
+    const win = (name, u, reset) => {
+      const l = lvl(u);
+      return { name: name, used: u + '%', reset: reset,
+        bar: l === 'danger' ? c.danger : l === 'warn' ? c.warn : c.meter,
+        ink: l === 'danger' ? c.dangerInk : c.ink, weight: l === 'danger' ? 600 : 400 };
+    };
+    const login = (o) => Object.assign({
+      hasBadge: false, badge: '', badgeBg: 'transparent', badgeInk: c.muted, hasNote: false, note: '', windows: [],
+      forecast: '', foreInk: c.muted, hasAction: false, action: '', btnBg: c.raised, btnInk: c.ink, bg: c.tile, dot: c.ok
+    }, o);
+    const inUse = { hasBadge: true, badge: 'In use', badgeBg: c.accentSoft, badgeInk: c.accentInk };
+    const groups = [
+      { name: 'Codex', left: '7% of 100% left · partial outage', leftInk: c.dangerInk, logins: [
+        login(Object.assign({ name: 'me@personal.dev', sub: 'Plus · read 2m ago', dot: c.danger, bg: c.dangerTile, windows: [win('5-hour', 93, 'runs out 11:19 AM')], forecast: 'No other Codex login', foreInk: c.dangerInk, hasAction: true, action: 'Add a login' }, inUse))
+      ] },
+      { name: 'Claude Code', left: '108% of 200% left · about 28%/h', leftInk: c.muted, logins: [
+        login(Object.assign({ name: 'Personal', sub: 'Max 5x · me@personal.dev', windows: [win('5-hour', 51, 'back in 3h 05m'), win('Weekly', 6, 'back in 6d 19h')], forecast: 'Empty around 12:43 PM' }, inUse)),
+        login({ name: 'work@studio.dev', sub: 'Pro · read 2m ago', windows: [win('5-hour', 12, 'back in 39m'), win('Weekly', 41, 'back in 3d 11h')], forecast: 'Has the most room', foreInk: c.okInk, hasAction: true, action: 'Switch', btnBg: c.accentFill, btnInk: c.onAccent })
+      ] },
+      { name: 'Cursor', left: '38% of 100% left · about 0.2%/h', leftInk: c.muted, logins: [
+        login(Object.assign({ name: 'me@personal.dev', sub: 'Ultra · read 2m ago', windows: [win('Auto', 62, 'back in 13d 4h')] }, inUse)),
+        login({ name: 'spare@personal.dev', sub: 'Pro · login expired', dot: c.danger, hasBadge: true, badge: 'Signed out', badgeBg: c.dangerSoft, badgeInk: c.dangerInk, hasNote: true, note: 'Switch to it and sign in to Cursor again to read its limits.', hasAction: true, action: 'Switch and sign in' })
+      ] }
+    ];
+    const singles = [
+      { tool: 'Copilot', left: '53% left', used: '47%', sub: 'Premium · back in 13d 4h' },
+      { tool: 'Windsurf', left: '67% left', used: '33%', sub: 'Day · back in 14h 16m' },
+      { tool: 'Codebuff', left: '70% left', used: '30%', sub: 'Usage' },
+      { tool: 'Gemini CLI', left: '72% left', used: '28%', sub: 'Quota' }
+    ];
+    const tabsRaw = [['All', '11'], ['Codex', '1'], ['Claude Code', '2'], ['Cursor', '2'], ['Copilot', '1'], ['Windsurf', '1'], ['Codebuff', '1'], ['Gemini CLI', '1']];
+    const tabs = tabsRaw.map((t, i) => ({
+      name: t[0], n: t[1], current: i === 0 ? 'page' : 'false', weight: i === 0 ? 500 : 400,
+      bg: i === 0 ? c.raised : 'transparent', ink: i === 0 ? c.ink : c.muted, countInk: c.faint
+    }));
+    const y = (v) => (400 - v / 800 * 400).toFixed(1);
+    const mPts = [[0, 640], [40, 610], [80, 520], [110, 560], [150, 470], [190, 500], [230, 430], [270, 450], [300, 415]];
+    const pPts = [[300, 415], [330, 395], [330, 430], [400, 360], [400, 470], [520, 330], [520, 420], [640, 300], [640, 380], [780, 250], [780, 330], [1000, 180]];
+    const measured = mPts.map((p) => p[0] + ',' + y(p[1])).join(' ');
+    const projected = pPts.map((p) => p[0] + ',' + y(p[1])).join(' ');
+    const area = 'M0,400 L' + mPts.map((p) => p[0] + ',' + y(p[1])).join(' L') + ' L300,400 Z';
+    const resets = [[330, 395, 430], [400, 360, 470], [520, 330, 420], [640, 300, 380], [780, 250, 330]].map((r) => ({ x: r[0], y1: y(r[1]), y2: y(r[2]) }));
+    const ticks = ['Sun', 'Mon', 'Today', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'].map((d, i) => ({ label: d, ink: i === 2 ? c.ink : c.faint }));
+    const side = [
+      { tool: 'Codex', left: '7% left', dot: c.danger, ink: c.dangerInk },
+      { tool: 'Claude Code', left: '49%', dot: c.ok, ink: c.muted },
+      { tool: 'Cursor', left: '38%', dot: c.ok, ink: c.muted },
+      { tool: 'Copilot', left: '53%', dot: c.ok, ink: c.muted },
+      { tool: 'Gemini CLI', left: '72%', dot: c.ok, ink: c.muted }
+    ];
+    return { c: c, groups: groups, singles: singles, tabs: tabs, measured: measured, projected: projected, area: area, resets: resets, ticks: ticks, side: side, themeLabel: theme === 'day' ? 'Day' : 'Night' };
+  }
+}
+</script>
+</body>
+</html>

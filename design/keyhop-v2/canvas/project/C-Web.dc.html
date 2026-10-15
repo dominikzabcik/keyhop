@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Instrument — keyhop.app</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0B;font-family:'JetBrains Mono',ui-monospace,monospace}
+a{color:#E8E6E1}a:hover{color:#FFFFFF}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+</style>
+</helmet>
+<div style="background: #0A0A0B; color: #E8E6E1; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; overflow: hidden">
+
+  <header style="border-bottom: 1px solid rgba(255,255,255,.10)">
+    <div style="max-width: 1280px; margin: 0 auto; min-height: 56px; padding: 0 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px">
+      <div style="display: flex; align-items: center; gap: 28px; flex-wrap: wrap">
+        <a href="#" style="display: flex; align-items: center; gap: 10px; text-decoration: none">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><rect x="1" y="1" width="4" height="14" fill="#E8E6E1"></rect><rect x="7" y="5" width="4" height="4" fill="{{accent}}"></rect><rect x="11" y="1" width="4" height="4" fill="#E8E6E1"></rect><rect x="11" y="11" width="4" height="4" fill="#E8E6E1"></rect></svg>
+          <span style="font-weight: 700; letter-spacing: .14em">KEYHOP</span>
+        </a>
+        <nav aria-label="Site" style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; letter-spacing: .08em">
+          <a href="#" style="color: #8C8A85; text-decoration: none">PRODUCT</a>
+          <a href="#" style="color: #8C8A85; text-decoration: none">LEADERBOARD</a>
+          <a href="#" style="color: #8C8A85; text-decoration: none">SEASON</a>
+          <a href="#" style="color: #8C8A85; text-decoration: none">DOCS</a>
+          <a href="#" style="color: #8C8A85; text-decoration: none">DOWNLOAD</a>
+        </nav>
+      </div>
+      <div style="display: flex; align-items: center; gap: 16px; font-size: 12px; letter-spacing: .08em">
+        <a href="#" style="color: #8C8A85; text-decoration: none">SIGN IN</a>
+        <a href="#" style="display: inline-flex; align-items: center; height: 32px; padding: 0 14px; background: {{accent}}; color: #0A0A0B; text-decoration: none; font-weight: 700">GET KEYHOP</a>
+      </div>
+    </div>
+  </header>
+
+  <div style="border-bottom: 1px solid rgba(255,255,255,.10); background: #111113; overflow: hidden; white-space: nowrap; height: 30px; display: flex; align-items: center" aria-label="Sample limits">
+    <div style="display: inline-flex; gap: 0; animation: tick 48s linear infinite; font-size: 11px; letter-spacing: .06em">
+      <sc-for list="{{ticker}}" as="t" hint-placeholder-count="16">
+        <span style="padding: 0 18px; border-right: 1px solid rgba(255,255,255,.08)"><span style="color: #8C8A85">{{t.tool}}</span> {{t.login}} <span style="color: {{t.ink}}; font-weight: 600">{{t.used}}</span> <span style="color: {{t.ink}}">{{t.arrow}}</span></span>
+      </sc-for>
+    </div>
+  </div>
+
+  <section style="max-width: 1280px; margin: 0 auto; padding: 96px 24px 72px; display: flex; flex-wrap: wrap; gap: 48px; align-items: center">
+    <div style="flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 28px">
+      <span style="font-size: 11px; letter-spacing: .12em; color: #8C8A85">// FREE AND OPEN SOURCE · MACOS · LINUX · WINDOWS</span>
+      <h1 style="margin: 0; font-size: 64px; line-height: 68px; font-weight: 600; letter-spacing: -.045em">Every account.<br><span style="color: #8C8A85">One hop away.</span><span style="display: inline-block; width: 28px; height: 54px; margin-left: 10px; vertical-align: -6px; background: {{accent}}; animation: blink 1.1s steps(1) infinite"></span></h1>
+      <p style="margin: 0; max-width: 520px; font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 20px; line-height: 30px; color: #C9C7C1">Keyhop watches the limits on every account you own and moves your tools to the one with room, before a limit stops you.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px">
+        <a href="#" style="display: inline-flex; align-items: center; height: 44px; padding: 0 20px; background: {{accent}}; color: #0A0A0B; text-decoration: none; font-weight: 700; letter-spacing: .06em">DOWNLOAD KEYHOP</a>
+        <a href="#" style="display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 20px; border: 1px solid rgba(255,255,255,.22); color: #E8E6E1; text-decoration: none; font-weight: 500; letter-spacing: .06em"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 19c-4 1.5-4-2-6-2.5M15 21v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12 12 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"></path></svg>VIEW ON GITHUB</a>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.10); background: #111113; font-size: 11px; color: #8C8A85; overflow-x: auto; white-space: nowrap">
+        <span style="color: {{accent}}">$</span><span style="color: #E8E6E1">curl -fsSL https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.sh | bash</span>
+      </div>
+    </div>
+
+    <figure style="flex: 1 1 560px; min-width: 0; margin: 0; border: 1px solid rgba(255,255,255,.12); background: #111113">
+      <div style="height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid rgba(255,255,255,.08); font-size: 11px; letter-spacing: .08em; color: #8C8A85">
+        <span style="display: flex; gap: 6px"><span style="width: 8px; height: 8px; border: 1px solid #8C8A85"></span><span style="width: 8px; height: 8px; border: 1px solid #8C8A85"></span><span style="width: 8px; height: 8px; border: 1px solid #8C8A85"></span></span>
+        <span>~ / zsh</span>
+        <span>80×24</span>
+      </div>
+      <pre style="margin: 0; padding: 16px; font: 400 12px/20px 'JetBrains Mono', monospace; color: #E8E6E1; overflow-x: auto"><span style="color: {{accent}}">$</span> keyhop forecast
+<span style="color: #8C8A85">TOOL          LOGIN             WINDOW   USED   RESETS</span>
+claude-code   Personal          5-hour    51%   3h 05m
+claude-code   work@studio.dev   weekly    41%   3d 11h
+cursor        me@personal.dev   auto      62%   13d 4h
+copilot       Personal          premium   47%   13d 4h
+<span style="color: #FF5F3D">codex         me@personal.dev   5-hour    93%   empty ~11:19 AM</span>
+<span style="color: #8C8A85">───────────────────────────────────────────────────────</span>
+pooled        <span style="font-weight: 700">415%</span> of 800% left · <span style="color: {{accent}}">−80%/h</span>
+next reset    <span style="color: #3EE6C4">+35%</span> at 12:41 PM · me@personal.dev
+at this pace  lasts the next 7 days
+
+<span style="color: {{accent}}">$</span> keyhop switch work@studio.dev
+<span style="color: #9DFF57">✓</span> Claude Code now uses work@studio.dev · 5-hour 12%
+<span style="color: {{accent}}">$</span> <span style="display: inline-block; width: 8px; height: 15px; vertical-align: -3px; background: {{accent}}; animation: blink 1.1s steps(1) infinite"></span></pre>
+    </figure>
+  </section>
+
+  <section aria-label="The window" style="max-width: 1280px; margin: 0 auto; padding: 0 24px 96px">
+    <div style="border: 1px solid rgba(255,255,255,.14); background: #0A0A0B; box-shadow: 0 0 0 6px #111113, 0 40px 120px rgba(0,0,0,.6)">
+      <div style="min-height: 40px; display: flex; flex-wrap: wrap; align-items: stretch; background: #111113; border-bottom: 1px solid rgba(255,255,255,.12); font-size: 11px; letter-spacing: .08em">
+        <span style="display: flex; align-items: center; gap: 8px; padding: 0 14px; border-right: 1px solid rgba(255,255,255,.06); font-weight: 700; letter-spacing: .14em">KEYHOP</span>
+        <span style="display: flex; align-items: center; padding: 0 12px; box-shadow: inset 0 -2px 0 {{accent}}; font-weight: 600">HOME</span>
+        <span style="display: flex; align-items: center; padding: 0 12px; color: #8C8A85">LIMITS</span>
+        <span style="display: flex; align-items: center; padding: 0 12px; color: #8C8A85">USAGE</span>
+        <span style="display: flex; align-items: center; padding: 0 12px; color: #8C8A85">INSIGHTS</span>
+        <span style="display: flex; align-items: center; padding: 0 12px; color: #8C8A85">COMMUNITY</span>
+        <span style="flex: 1 1 200px; display: flex; align-items: center; padding: 6px 12px"><span style="flex: 1; display: flex; align-items: center; gap: 8px; height: 26px; padding: 0 8px; border: 1px solid rgba(255,255,255,.12); color: #8C8A85; letter-spacing: 0"><span style="color: {{accent}}">›</span>hop / run / search<span style="margin-left: auto; font-size: 10px">⌘K</span></span></span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 1px; background: rgba(255,255,255,.06)">
+        <div style="flex: 2 1 420px; min-width: 0; background: #0A0A0B">
+          <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #111113; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em; font-weight: 600">ATTENTION <span style="margin-left: 6px; padding: 0 4px; background: #FF5F3D; color: #0A0A0B">3</span></div>
+          <div style="padding: 12px; display: flex; gap: 12px; border-bottom: 1px solid rgba(255,255,255,.06); box-shadow: inset 2px 0 0 #FF5F3D"><span style="color: #FF5F3D; font-weight: 700">!!</span><span><span style="font-weight: 600">Codex is at 93% on me@personal.dev</span><br><span style="color: #8C8A85; font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 14px">5-hour runs out around 11:19 AM. There is no other login to hop to.</span></span></div>
+          <div style="padding: 12px; display: flex; gap: 12px; border-bottom: 1px solid rgba(255,255,255,.06); box-shadow: inset 2px 0 0 #FF5F3D"><span style="color: #FF5F3D; font-weight: 700">!</span><span><span style="font-weight: 600">spare@personal.dev is signed out</span><br><span style="color: #8C8A85; font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 14px">Cursor. Login expired. Switch to it and sign in to Cursor again.</span></span></div>
+          <div style="padding: 12px; display: flex; gap: 12px; box-shadow: inset 2px 0 0 #F5C542"><span style="color: #F5C542; font-weight: 700">▲</span><span><span style="font-weight: 600">Codex partial outage</span><br><span style="color: #8C8A85; font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 14px">Every account is affected, so hopping won’t help.</span></span></div>
+        </div>
+        <div style="flex: 1 1 260px; min-width: 0; background: #0A0A0B">
+          <div style="height: 30px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: #111113; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em"><span style="font-weight: 600">TIGHTEST WINDOW</span><span style="color: #8C8A85">CODEX · PLUS</span></div>
+          <div style="padding: 14px 12px; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 72px; line-height: 66px; font-weight: 600; letter-spacing: -.05em; color: #FF5F3D">93<span style="font-size: 24px; color: #8C8A85">%</span></span>
+            <span style="color: #8C8A85; font-size: 12px">me@personal.dev · 5-hour · empty ~11:19 AM</span>
+            <div style="display: flex; gap: 2px"><sc-for list="{{blocks}}" as="b" hint-placeholder-count="20"><span style="flex: 1; height: 10px; background: {{b.bg}}; opacity: {{b.o}}"></span></sc-for></div>
+          </div>
+        </div>
+        <div style="flex: 1 1 260px; min-width: 0; background: #0A0A0B">
+          <div style="height: 30px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: #111113; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; letter-spacing: .08em"><span style="font-weight: 600">POOLED</span><span style="color: #8C8A85">8 LOGINS</span></div>
+          <div style="padding: 14px 12px; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 44px; line-height: 44px; font-weight: 600; letter-spacing: -.04em">415% <span style="font-size: 16px; color: #8C8A85; letter-spacing: 0">/ 800%</span></span>
+            <svg width="100%" height="56" viewBox="0 0 240 56" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,22 20,26 40,30 52,18 70,24 90,30 104,20 120,28 138,34" fill="none" stroke="{{accent}}" stroke-width="1.5" vector-effect="non-scaling-stroke"></polyline><polyline points="138,34 150,44 156,38 172,42 186,32 204,38 220,30 240,34" fill="none" stroke="#3EE6C4" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"></polyline><line x1="138" y1="0" x2="138" y2="56" stroke="#E8E6E1" stroke-width="1" vector-effect="non-scaling-stroke"></line></svg>
+            <span style="color: #8C8A85; font-size: 12px"><span style="color: {{accent}}">−80%/h</span> · next reset <span style="color: #3EE6C4">+35%</span> 12:41 PM</span>
+          </div>
+        </div>
+      </div>
+      <div style="overflow-x: auto; border-top: 1px solid rgba(255,255,255,.06)">
+        <div style="min-width: 720px">
+          <div style="display: grid; grid-template-columns: 10px 1.1fr 1.4fr .7fr 1.6fr .8fr; gap: 12px; align-items: center; height: 26px; padding: 0 12px; background: #111113; font-size: 10px; letter-spacing: .08em; color: #8C8A85; border-bottom: 1px solid rgba(255,255,255,.06)"><span></span><span>TOOL</span><span>LOGIN</span><span>WINDOW</span><span>USED ↓</span><span>RESETS</span></div>
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: 10px 1.1fr 1.4fr .7fr 1.6fr .8fr; gap: 12px; align-items: center; height: 32px; padding: 0 12px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 12px">
+              <span style="width: 7px; height: 7px; background: {{r.dot}}"></span>
+              <span style="font-weight: 600">{{r.tool}}</span>
+              <span>{{r.login}}</span>
+              <span style="color: #8C8A85">{{r.win}}</span>
+              <span style="display: flex; align-items: center; gap: 8px"><span style="flex: 1; height: 4px; background: rgba(255,255,255,.08); position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{r.w}}; background: {{r.bar}}"></span></span><span style="width: 36px; text-align: right; font-weight: 600; color: {{r.ink}}">{{r.used}}</span></span>
+              <span style="color: #8C8A85">{{r.reset}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="min-height: 26px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px; padding: 0 12px; background: #111113; border-top: 1px solid rgba(255,255,255,.12); font-size: 10px; letter-spacing: .06em">
+        <span><span style="color: #FF5F3D">●</span> 2 NEED A HOP   <span style="color: #F5C542">▲</span> CODEX PARTIAL OUTAGE</span>
+        <span style="color: #8C8A85">7.6M TODAY · 12D STREAK · NIGHT · ↻ LIMITS 2M AGO</span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="What it does" style="max-width: 1280px; margin: 0 auto; padding: 0 24px 96px">
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,.14)">
+      <h2 style="margin: 0; font-size: 28px; line-height: 34px; font-weight: 600; letter-spacing: -.03em">What it does</h2>
+      <span style="font-size: 11px; letter-spacing: .08em; color: #8C8A85">EVERY FEATURE HAS A COMMAND · THE WINDOW AND THE CLI MATCH</span>
+    </div>
+    <sc-for list="{{features}}" as="f" hint-placeholder-count="6">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px 32px; align-items: baseline; padding: 22px 0; border-bottom: 1px solid rgba(255,255,255,.08)">
+        <span style="width: 32px; color: {{accent}}; font-size: 12px">{{f.n}}</span>
+        <h3 style="margin: 0; flex: 0 1 300px; font-size: 15px; line-height: 22px; font-weight: 600; letter-spacing: .02em">{{f.title}}</h3>
+        <p style="margin: 0; flex: 1 1 360px; font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 16px; line-height: 24px; color: #B9B7B1">{{f.body}}</p>
+        <code style="flex: 0 1 300px; font: 400 12px 'JetBrains Mono', monospace; color: #E8E6E1; padding: 4px 8px; border: 1px solid rgba(255,255,255,.10); background: #111113; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="color: {{accent}}">$</span> {{f.cmd}}</code>
+      </div>
+    </sc-for>
+  </section>
+
+  <section aria-label="In numbers" style="border-top: 1px solid rgba(255,255,255,.10); border-bottom: 1px solid rgba(255,255,255,.10); background: #111113">
+    <div style="max-width: 1280px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 1px; background: rgba(255,255,255,.08)">
+      <div style="flex: 1 1 240px; background: #111113; padding: 28px 24px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 44px; line-height: 44px; font-weight: 600; letter-spacing: -.04em">13</span><span style="font-size: 11px; letter-spacing: .08em; color: #8C8A85">TOOLS MEASURED</span></div>
+      <div style="flex: 1 1 240px; background: #111113; padding: 28px 24px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 44px; line-height: 44px; font-weight: 600; letter-spacing: -.04em">2.4<span style="font-size: 18px; color: #8C8A85">/M</span></span><span style="font-size: 11px; letter-spacing: .08em; color: #8C8A85">COMMITS PER MILLION TOKENS RANKS THE BOARD</span></div>
+      <div style="flex: 1 1 240px; background: #111113; padding: 28px 24px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 44px; line-height: 44px; font-weight: 600; letter-spacing: -.04em">90<span style="font-size: 18px; color: #8C8A85">S</span></span><span style="font-size: 11px; letter-spacing: .08em; color: #8C8A85">LIVE TEAM TOTALS · ONLY IF YOU TURN IT ON</span></div>
+      <div style="flex: 1 1 240px; background: #111113; padding: 28px 24px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 44px; line-height: 44px; font-weight: 600; letter-spacing: -.04em; color: {{accent}}">show-data</span><span style="font-size: 11px; letter-spacing: .08em; color: #8C8A85">EVERY PAYLOAD PRINTED BEFORE IT GOES</span></div>
+    </div>
+  </section>
+
+  <section aria-label="Get Keyhop" style="max-width: 1280px; margin: 0 auto; padding: 120px 24px; display: flex; flex-direction: column; align-items: flex-start; gap: 24px">
+    <span style="font-size: 11px; letter-spacing: .12em; color: #8C8A85">// YOUR NEXT LIMIT</span>
+    <h2 style="margin: 0; font-size: 56px; line-height: 60px; font-weight: 600; letter-spacing: -.045em">Hop before the wall.</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px">
+      <a href="#" style="display: inline-flex; align-items: center; height: 44px; padding: 0 20px; background: {{accent}}; color: #0A0A0B; text-decoration: none; font-weight: 700; letter-spacing: .06em">DOWNLOAD KEYHOP</a>
+      <a href="#" style="display: inline-flex; align-items: center; height: 44px; padding: 0 20px; border: 1px solid rgba(255,255,255,.22); color: #E8E6E1; text-decoration: none; letter-spacing: .06em">READ THE DOCS →</a>
+    </div>
+    <span style="font-size: 12px; color: #8C8A85">Free and open source, for macOS, Linux and Windows.</span>
+  </section>
+
+  <footer style="border-top: 1px solid rgba(255,255,255,.10)">
+    <div style="max-width: 1280px; margin: 0 auto; padding: 28px 24px 40px; display: flex; flex-wrap: wrap; gap: 16px 48px; justify-content: space-between; font-size: 12px">
+      <div style="flex: 1 1 520px; display: flex; gap: 14px; color: #8C8A85">
+        <span style="color: #E8E6E1; font-weight: 700; letter-spacing: .14em">KEYHOP</span>
+        <span style="font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 14px; line-height: 20px">The Keyhop app sends tokens, API value, requests and commit counts per day. Commit subjects and current limits go only if you turn them on.</span>
+      </div>
+      <nav aria-label="Footer" style="display: flex; flex-wrap: wrap; gap: 20px; letter-spacing: .08em">
+        <a href="#" style="color: #8C8A85; text-decoration: none">ROADMAP</a>
+        <a href="#" style="color: #8C8A85; text-decoration: none">PRIVACY</a>
+        <a href="#" style="color: #8C8A85; text-decoration: none">TERMS</a>
+        <a href="#" style="color: #8C8A85; text-decoration: none">SECURITY</a>
+        <a href="#" style="color: #8C8A85; text-decoration: none">GITHUB</a>
+      </nav>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","options":["#FFB020","#3EE6C4","#FF5F3D","#9DFF57"],"default":"#FFB020"},"$preview":{"width":1440,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#FFB020';
+    const lv = u => u >= 90 ? '#FF5F3D' : u >= 70 ? '#F5C542' : '#E8E6E1';
+    const items = [
+      ['CLAUDE-CODE', 'Personal', 51], ['CLAUDE-CODE', 'work@studio.dev', 41], ['CURSOR', 'me@personal.dev', 62],
+      ['CODEX', 'me@personal.dev', 93], ['GEMINI-CLI', 'me@personal.dev', 28], ['COPILOT', 'Personal', 47],
+      ['WINDSURF', 'me@windsurf.dev', 33], ['CODEBUFF', 'me@codebuff.dev', 30]
+    ];
+    const one = items.map(t => ({ tool: t[0], login: t[1], used: t[2] + '%', ink: lv(t[2]), arrow: t[2] >= 90 ? '▲▲' : t[2] >= 50 ? '▲' : '·' }));
+    const ticker = one.concat(one);
+    const blocks = Array.from({ length: 20 }, (_, i) => ({ bg: i < 19 ? '#FF5F3D' : 'rgba(255,255,255,.08)', o: i === 18 ? 0.5 : 1 }));
+    const rows = [
+      ['codex', 'me@personal.dev', '5-hour', 93, '~11:19 AM'],
+      ['cursor', 'me@personal.dev', 'auto', 62, '13d 4h'],
+      ['claude-code', 'Personal', '5-hour', 51, '3h 05m'],
+      ['copilot', 'Personal', 'premium', 47, '13d 4h'],
+      ['windsurf', 'me@windsurf.dev', 'day', 33, '14h 16m']
+    ].map(r => ({ tool: r[0], login: r[1], win: r[2], used: r[3] + '%', w: r[3] + '%', reset: r[4], bar: lv(r[3]), ink: r[3] >= 90 ? '#FF5F3D' : '#E8E6E1', dot: r[3] >= 90 ? '#FF5F3D' : '#9DFF57' }));
+    const features = [
+      { n: '01', title: 'WATCH EVERY LIMIT', body: 'Thirteen tools and every login you own: 5-hour, weekly and premium windows, pooled and projected a week ahead.', cmd: 'keyhop forecast' },
+      { n: '02', title: 'HOP BEFORE THE WALL', body: 'Auto-hop moves a tool to the login with room before a limit stops you. ⌘K hops from anywhere in the window.', cmd: 'keyhop switch work@studio.dev' },
+      { n: '03', title: 'COUNT WHAT IT COSTS', body: 'Tokens, API value and cache hit by account, model and project. Counted on your machine; nothing is sent.', cmd: 'keyhop usage --range 30d' },
+      { n: '04', title: 'EFFICIENCY, NOT TOKENMAXXING', body: 'The board ranks commits per million tokens inside free, pro and max divisions, and every upload is verified.', cmd: 'keyhop coach yield' },
+      { n: '05', title: 'TEAMS AND SEASONS', body: 'A team day that moves with the work when you turn live sharing on, and a daily digest to Slack or Discord.', cmd: 'keyhop cloud live on' },
+      { n: '06', title: 'A PET THAT GROWS', body: 'Speck, Hatch, Frame, Bulk, Mass, Monument: one lifetime pet, grown from your synced daily totals.', cmd: 'open https://keyhop.app/u/you/pet.svg' }
+    ];
+    return { accent, ticker, blocks, rows, features };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>keyhop.app — Daylight</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'Instrument Sans',system-ui,sans-serif;background:#F7F7F4}
+a{color:#1f3dd0}a:hover{color:#15140F}
+</style>
+</helmet>
+<div style="background: #F7F7F4; color: #15140F; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 16px; line-height: 26px">
+
+  <header style="border-bottom: 1px solid #E4E3DD">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 32px; box-sizing: border-box; min-height: 68px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 32px">
+      <a href="#top" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #15140F; min-height: 44px">
+        <svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="5" height="16" fill="#15140F"></rect><rect x="9" y="2" width="5" height="5" fill="#15140F"></rect><rect x="13" y="9" width="5" height="5" fill="{{accent}}"></rect><rect x="9" y="13" width="5" height="5" fill="#15140F"></rect></svg>
+        <span style="font-family: 'Newsreader', Georgia, serif; font-size: 25px; font-weight: 600; letter-spacing: -0.015em">Keyhop</span>
+      </a>
+      <nav aria-label="Site" style="display: flex; flex-wrap: wrap; gap: 0 24px; font-size: 15px">
+        <a href="#product" style="display: inline-flex; align-items: center; min-height: 44px; color: #15140F; text-decoration: none">Product</a>
+        <a href="#leaderboard" style="display: inline-flex; align-items: center; min-height: 44px; color: #5D5B53; text-decoration: none">Leaderboard</a>
+        <a href="#season" style="display: inline-flex; align-items: center; min-height: 44px; color: #5D5B53; text-decoration: none">Season</a>
+        <a href="#docs" style="display: inline-flex; align-items: center; min-height: 44px; color: #5D5B53; text-decoration: none">Docs</a>
+        <a href="#download" style="display: inline-flex; align-items: center; min-height: 44px; color: #5D5B53; text-decoration: none">Download</a>
+      </nav>
+      <span style="flex: 1 1 auto"></span>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <a href="#signin" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: #15140F; text-decoration: none; font-size: 15px">Sign in</a>
+        <a href="#download" style="display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 8px; background: #15140F; color: #F7F7F4; text-decoration: none; font-size: 15px; font-weight: 600">Get Keyhop</a>
+      </div>
+    </div>
+  </header>
+
+  <section id="top" style="max-width: 1200px; margin: 0 auto; padding: 72px 32px 48px; box-sizing: border-box">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; color: #5D5B53">
+      <span style="color: {{accent}}">Keyhop 2.0</span>
+      <span style="width: 28px; height: 1px; background: #BDBBB2"></span>
+      <span>Free and open source · macOS, Linux and Windows</span>
+    </div>
+    <h1 style="margin: 22px 0 0; font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 128px; line-height: 116px; letter-spacing: -0.045em; max-width: 11em">Every account. <span style="font-style: italic; color: {{accent}}">One hop away.</span></h1>
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 28px 48px; margin-top: 36px; border-top: 2px solid #15140F; padding-top: 24px">
+      <p style="margin: 0; flex: 1 1 460px; max-width: 30em; font-family: 'Newsreader', Georgia, serif; font-size: 25px; line-height: 35px; color: #2E2D28">Keyhop watches the limits on every account you own and moves your tools to the one with room, before a limit stops you.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px">
+        <a href="#download" style="display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 22px; border-radius: 10px; background: {{accent}}; color: #FFFFFF; text-decoration: none; font-size: 16px; font-weight: 600">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v9M4 7l4 4 4-4M3 14h10"></path></svg>
+          Download Keyhop
+        </a>
+        <a href="https://github.com/dominikzabcik/keyhop" style="display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 20px; border-radius: 10px; border: 1px solid #BDBBB2; background: #FFFFFF; color: #15140F; text-decoration: none; font-size: 16px; font-weight: 600">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 13c-3 1-3-1.5-4.5-2M10 15v-2.5c0-.8.1-1.2-.4-1.7 1.9-.2 3.9-.9 3.9-4.2 0-.9-.3-1.7-.9-2.3.1-.3.4-1.2-.1-2.4 0 0-.7-.2-2.4.9a8 8 0 0 0-4.2 0C4.2 1.7 3.5 1.9 3.5 1.9c-.5 1.2-.2 2.1-.1 2.4-.6.6-.9 1.4-.9 2.3 0 3.3 2 4 3.9 4.2-.5.5-.5 1-.4 1.7V15"></path></svg>
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section id="product" aria-label="The Keyhop window" style="max-width: 1200px; margin: 0 auto; padding: 0 32px 88px; box-sizing: border-box">
+    <div style="background: #FFFFFF; border: 1px solid #E4E3DD; border-radius: 14px; box-shadow: 0 1px 0 rgba(21,20,15,0.04), 0 30px 60px -30px rgba(21,20,15,0.28), 0 12px 24px -12px rgba(21,20,15,0.10); overflow: hidden">
+      <div style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border-bottom: 1px solid #ECEBE5; background: #FBFBF9">
+        <span style="width: 11px; height: 11px; border-radius: 6px; background: #E5E3DC"></span>
+        <span style="width: 11px; height: 11px; border-radius: 6px; background: #E5E3DC"></span>
+        <span style="width: 11px; height: 11px; border-radius: 6px; background: #E5E3DC"></span>
+        <span style="flex: 1 1 auto; text-align: center; font-size: 12px; color: #6E6C64">Keyhop</span>
+        <span style="width: 49px"></span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px; padding: 0 28px; min-height: 48px; border-bottom: 1px solid #ECEBE5; font-size: 13px; color: #5D5B53">
+        <span style="font-family: 'Newsreader', Georgia, serif; font-size: 18px; font-weight: 600; color: #15140F">Keyhop</span>
+        <span style="color: #15140F; font-weight: 600; border-bottom: 2px solid #15140F; padding: 12px 0 10px">Home</span>
+        <span>Limits</span><span>Usage</span><span>Insights</span><span>Community</span>
+        <span style="flex: 1 1 auto"></span>
+        <span style="font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 14px; color: #15140F">Tuesday, October 13</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px 40px; padding: 30px 28px 32px">
+        <div style="flex: 7 1 420px; min-width: 0">
+          <div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; color: #B8301F">Limits · Codex</div>
+          <div style="font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 56px; line-height: 58px; letter-spacing: -0.03em; margin-top: 6px">Codex is at 93%.</div>
+          <div style="font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 18px; line-height: 26px; color: #5D5B53; margin-top: 10px; max-width: 28em">The 5-hour window runs out around 11:19 AM. There is no other login to hop to.</div>
+          <div style="margin-top: 22px; border-top: 2px solid #15140F">
+            <div style="display: grid; grid-template-columns: 120px minmax(0, 1fr) 110px 44px; gap: 10px; align-items: center; min-height: 36px; border-bottom: 1px solid #ECEBE5; font-size: 13px">
+              <span style="font-weight: 600">Claude Code</span><span style="color: #5D5B53">Personal · 5-hour</span><span style="height: 4px; background: #E9E8E2; border-radius: 2px"><span style="display: block; width: 51%; height: 4px; background: #C77700; border-radius: 2px"></span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: right; color: #9A5B00">51%</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 120px minmax(0, 1fr) 110px 44px; gap: 10px; align-items: center; min-height: 36px; border-bottom: 1px solid #ECEBE5; font-size: 13px">
+              <span style="font-weight: 600">Cursor</span><span style="color: #5D5B53">me@personal.dev · Auto</span><span style="height: 4px; background: #E9E8E2; border-radius: 2px"><span style="display: block; width: 62%; height: 4px; background: #15140F; border-radius: 2px"></span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: right">62%</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 120px minmax(0, 1fr) 110px 44px; gap: 10px; align-items: center; min-height: 36px; border-bottom: 1px solid #ECEBE5; font-size: 13px">
+              <span style="font-weight: 600">Codex</span><span style="color: #5D5B53">me@personal.dev · 5-hour</span><span style="height: 4px; background: #E9E8E2; border-radius: 2px"><span style="display: block; width: 93%; height: 4px; background: #D93A2B; border-radius: 2px"></span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: right; color: #B8301F; font-weight: 600">93%</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 120px minmax(0, 1fr) 110px 44px; gap: 10px; align-items: center; min-height: 36px; border-bottom: 1px solid #ECEBE5; font-size: 13px">
+              <span style="font-weight: 600">GitHub Copilot</span><span style="color: #5D5B53">Personal · Premium</span><span style="height: 4px; background: #E9E8E2; border-radius: 2px"><span style="display: block; width: 47%; height: 4px; background: #15140F; border-radius: 2px"></span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: right">47%</span>
+            </div>
+          </div>
+        </div>
+        <div style="flex: 5 1 300px; min-width: 0; border-left: 1px solid #ECEBE5; padding-left: 28px; box-sizing: border-box">
+          <div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; color: #5D5B53">Left across your logins</div>
+          <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px"><span style="font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 76px; line-height: 76px; letter-spacing: -0.04em">415%</span><span style="font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 22px; color: #5D5B53">of 800%</span></div>
+          <div style="font-size: 13px; line-height: 20px; color: #5D5B53; margin-top: 6px">Draining ~80% an hour · next reset <span style="color: #0E7A52; font-weight: 600">+35%</span> at 12:41 PM</div>
+          <svg viewBox="0 0 300 90" width="100%" aria-hidden="true" style="display: block; height: auto; margin-top: 14px">
+            <line x1="0" y1="84" x2="300" y2="84" stroke="#E4E3DD"></line>
+            <polyline points="0,40 12,34 24,46 36,30 48,38 60,26 66,44" fill="none" stroke="#15140F" stroke-width="1.6"></polyline>
+            <polygon points="66,44 80,50 80,38 104,46 118,52 118,40 142,50 160,56 160,30 184,40 206,48 206,36 230,44 252,52 252,26 276,36 300,42 300,84 66,84" fill="{{accentSoft}}"></polygon>
+            <polyline points="66,44 80,50 80,38 104,46 118,52 118,40 142,50 160,56 160,30 184,40 206,48 206,36 230,44 252,52 252,26 276,36 300,42" fill="none" stroke="{{accent}}" stroke-width="1.6" stroke-dasharray="4 3"></polyline>
+            <line x1="66" y1="8" x2="66" y2="84" stroke="#15140F" stroke-width="1"></line>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="what" style="max-width: 1200px; margin: 0 auto; padding: 0 32px 72px; box-sizing: border-box">
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; border-top: 2px solid #15140F; padding-top: 16px">
+      <h2 id="what" style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 48px; line-height: 54px; letter-spacing: -0.025em">What it does, <span style="font-style: italic">in six parts</span></h2>
+      <span style="font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; color: #5D5B53">The app, the CLI and keyhop.app</span>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; column-gap: 56px; margin-top: 12px">
+      <sc-for list="{{features}}" as="f" hint-placeholder-count="6">
+        <article style="flex: 1 1 460px; min-width: 0; display: flex; gap: 24px; padding: 28px 0; border-bottom: 1px solid #E4E3DD">
+          <span style="flex: 0 0 64px; font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 44px; line-height: 44px; color: {{accent}}">{{f.n}}</span>
+          <div style="min-width: 0">
+            <h3 style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 28px; line-height: 34px; letter-spacing: -0.015em">{{f.title}}</h3>
+            <p style="margin: 8px 0 0; font-size: 16px; line-height: 26px; color: #4A4943">{{f.body}}</p>
+            <div style="margin-top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: #6E6C64">{{f.detail}}</div>
+          </div>
+        </article>
+      </sc-for>
+    </div>
+  </section>
+
+  <section aria-label="Efficiency" style="background: #15140F; color: #F2F1EC">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 80px 32px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 32px 64px">
+      <div style="flex: 1 1 380px; min-width: 0">
+        <div style="font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; color: #A3A199">Efficiency, not tokenmaxxing</div>
+        <div style="display: flex; align-items: baseline; gap: 16px; margin-top: 10px; flex-wrap: wrap">
+          <span style="font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 200px; line-height: 170px; letter-spacing: -0.05em; color: {{accentNight}}">2.4</span>
+        </div>
+        <div style="font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 30px; line-height: 38px; margin-top: 12px">commits per million tokens</div>
+      </div>
+      <div style="flex: 1 1 420px; min-width: 0; border-left: 1px solid #3A3934; padding-left: 40px; box-sizing: border-box">
+        <p style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-size: 26px; line-height: 36px">The leaderboard and the season rank what you ship for what you spend, inside divisions for free, pro and max plans.</p>
+        <p style="margin: 18px 0 0; font-size: 15px; line-height: 24px; color: #A3A199">Tokens, API value, requests, commits, lines and cache hit stay as metrics. Every upload is checked on the server: requests must fit the tokens, API value must fit list prices, cache reads must fit the tokens.</p>
+        <a href="#leaderboard" style="display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; min-height: 44px; color: #F2F1EC; font-weight: 600; text-decoration: none; border-bottom: 1px solid #6E6C64">See this week's board →</a>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="pet" style="max-width: 1200px; margin: 0 auto; padding: 80px 32px 40px; box-sizing: border-box">
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; border-top: 2px solid #15140F; padding-top: 16px">
+      <h2 id="pet" style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 48px; line-height: 54px; letter-spacing: -0.025em">A pet that grows <span style="font-style: italic">with you</span></h2>
+      <span style="font-size: 15px; color: #5D5B53; max-width: 30em">One per linked account, for life. Tokens set the stage, your streak the pose, your commits the build.</span>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; margin-top: 28px">
+      <sc-for list="{{stages}}" as="s" hint-placeholder-count="6">
+        <div style="flex: 1 1 150px; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 0 16px 16px 0">
+          <svg width="{{s.w}}" height="{{s.h}}" viewBox="0 0 92 68" aria-hidden="true">
+            <ellipse cx="46" cy="64" rx="34" ry="3" fill="#E9E8E2"></ellipse>
+            <path d="M14 44c0-14 10-22 26-22h14c12 0 20 7 20 18v6c0 6-4 10-10 10H24c-6 0-10-4-10-12z" fill="#F6EEDD" stroke="#15140F" stroke-width="1.8"></path>
+            <path d="M58 22c2-9 8-14 16-14 1 5-1 11-6 15" fill="#F6EEDD" stroke="#15140F" stroke-width="1.8" stroke-linejoin="round"></path>
+            <path d="M30 24c6 4 14 4 20 0v12c-6 3-14 3-20 0z" fill="#E07A3B"></path>
+            <circle cx="66" cy="30" r="2.4" fill="#15140F"></circle>
+            <path d="M22 56v6M34 56v6M54 56v6M66 56v6" stroke="#15140F" stroke-width="2.6" stroke-linecap="round"></path>
+          </svg>
+          <div style="border-top: 1px solid #BDBBB2; padding-top: 8px; width: 100%">
+            <div style="font-family: 'Newsreader', Georgia, serif; font-size: 22px; line-height: 26px; font-weight: 500">{{s.name}}</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6E6C64">{{s.at}}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="download" style="max-width: 1200px; margin: 0 auto; padding: 64px 32px 96px; box-sizing: border-box; text-align: center">
+    <div style="font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; color: #5D5B53">Free, for good</div>
+    <h2 style="margin: 14px auto 0; font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 88px; line-height: 88px; letter-spacing: -0.04em; max-width: 10em">Every account. <span style="font-style: italic; color: {{accent}}">One hop away.</span></h2>
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 32px">
+      <a href="#mac" style="display: inline-flex; align-items: center; height: 52px; padding: 0 22px; border-radius: 10px; background: {{accent}}; color: #FFFFFF; text-decoration: none; font-weight: 600">Download for macOS</a>
+      <a href="#linux" style="display: inline-flex; align-items: center; height: 52px; padding: 0 20px; border-radius: 10px; border: 1px solid #BDBBB2; background: #FFFFFF; color: #15140F; text-decoration: none; font-weight: 600">Linux</a>
+      <a href="#windows" style="display: inline-flex; align-items: center; height: 52px; padding: 0 20px; border-radius: 10px; border: 1px solid #BDBBB2; background: #FFFFFF; color: #15140F; text-decoration: none; font-weight: 600">Windows</a>
+    </div>
+    <div style="margin-top: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #5D5B53">or <span style="color: #15140F">curl -fsSL keyhop.app/install.sh | sh</span></div>
+  </section>
+
+  <footer style="border-top: 1px solid #E4E3DD">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 28px 32px 40px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px 40px; font-size: 13.5px; line-height: 21px; color: #5D5B53">
+      <div style="flex: 1 1 420px; min-width: 0; display: flex; gap: 14px">
+        <span style="font-family: 'Newsreader', Georgia, serif; font-size: 18px; font-weight: 600; color: #15140F">Keyhop</span>
+        <span style="max-width: 36em">The Keyhop app sends tokens, API value, requests and commit counts per day. Commit subjects and current limits go only if you turn them on.</span>
+      </div>
+      <nav aria-label="Footer" style="display: flex; flex-wrap: wrap; gap: 0 22px">
+        <a href="#roadmap" style="display: inline-flex; align-items: center; min-height: 44px; color: #15140F; text-decoration: none">Roadmap</a>
+        <a href="#privacy" style="display: inline-flex; align-items: center; min-height: 44px; color: #15140F; text-decoration: none">Privacy</a>
+        <a href="#terms" style="display: inline-flex; align-items: center; min-height: 44px; color: #15140F; text-decoration: none">Terms</a>
+        <a href="#security" style="display: inline-flex; align-items: center; min-height: 44px; color: #15140F; text-decoration: none">Security</a>
+        <a href="https://github.com/dominikzabcik/keyhop" style="display: inline-flex; align-items: center; min-height: 44px; color: #15140F; text-decoration: none">GitHub</a>
+      </nav>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","options":["#2448F5","#E5482F","#0E8A5F","#111111"],"default":"#2448F5"},"$preview":{"width":1440,"height":2200}}'>
+class Component extends DCLogic {
+  rgb(h) {
+    h = String(h || '#2448F5').replace('#', '');
+    if (h.length === 3) h = h.split('').map(function (x) { return x + x; }).join('');
+    var n = parseInt(h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  mix(a, b, t) {
+    var x = this.rgb(a), y = this.rgb(b);
+    return '#' + x.map(function (v, i) { return Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0'); }).join('');
+  }
+  renderVals() {
+    var raw = this.props.accent ?? '#2448F5';
+    var accent = this.mix(raw, '#000000', 0.12);
+    var rgb = this.rgb(accent);
+    var accentNight = raw.toLowerCase() === '#111111' ? '#F2F1EC' : this.mix(raw, '#FFFFFF', 0.4);
+    var features = [
+      { n: '01', title: 'Watch every limit', body: 'Five-hour, weekly and premium windows for every login you own, across thirteen tools, with a forecast of when each one runs dry.', detail: 'Claude Code · Codex · Cursor · Gemini CLI · Copilot · Windsurf …' },
+      { n: '02', title: 'Hop before the wall', body: 'Switch a tool to the login with room in one keystroke, or let Keyhop hop for you just before a limit hits.', detail: '⌘K  ·  keyhop hop  ·  auto-hop' },
+      { n: '03', title: 'Count what it costs', body: 'Tokens, API value, cache hit and requests per tool and model, read from your own logs. It all stays on your machine.', detail: 'keyhop usage --json' },
+      { n: '04', title: 'Efficiency, not tokenmaxxing', body: 'Commits per million tokens leads the board, inside plan divisions, and every upload is verified on the server.', detail: 'free · pro · max' },
+      { n: '05', title: 'Teams and seasons', body: 'A team day of who shipped what, live sharing if you opt in, and a daily digest to Slack or Discord.', detail: '/t/<team>/day' },
+      { n: '06', title: 'A pet that grows', body: 'One creature per linked account, from Speck to Monument. Your tools paint it, your streak poses it.', detail: 'Speck → Monument' }
+    ];
+    var stages = [
+      { name: 'Speck', at: 'start', w: 28, h: 21 },
+      { name: 'Hatch', at: '1M tokens', w: 40, h: 30 },
+      { name: 'Frame', at: '50M', w: 54, h: 40 },
+      { name: 'Bulk', at: '500M', w: 70, h: 52 },
+      { name: 'Mass', at: '5B', w: 88, h: 65 },
+      { name: 'Monument', at: '25B', w: 110, h: 81 }
+    ];
+    return {
+      accent: accent,
+      accentNight: accentNight,
+      accentSoft: 'rgba(' + rgb.join(',') + ',0.12)',
+      features: features,
+      stages: stages
+    };
+  }
+}
+</script>
+</body>
+</html>

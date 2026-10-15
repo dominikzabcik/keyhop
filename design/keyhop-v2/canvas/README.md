@@ -28,6 +28,11 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
   - `KB-Web` is keyhop.app.
   - `KB-Components` is the component sheet, now with the same spacing.
   - `tools/kb_page.py` builds window pages from KB-Home's shell and `tools/kb_board.py` builds standalone boards. Both read `tools/kb/<page>.html` and `.js`.
+- **Tool marks and a flat shell** (2026-10-15):
+  - The owner wanted tool icons, so every tool on the KB boards now has its mark. Claude, Codex (the OpenAI mark), Gemini, Copilot and Windsurf come from Simple Icons (CC0) and Cursor from Lobe Icons (MIT). OpenCode, Pi and Codebuff have no freely licensed mark, so they get monograms.
+  - The marks are one colour; on Home's tool tiles they take the tool's share colour. The data is `tools/kb/tool-icons.json` and the helper is `tools/kb_icons.py` (`{{ICON:expr:px}}`).
+  - The owner disliked "something inside something". The inset panel is gone, so the content sits flush beside the sidebar.
+  - Tool tiles, pool figures and Needs you are rows split by hairlines instead of boxes inside cards.
 - **Next:** owner feedback on the KB boards, then rewrite `design/keyhop-v2/index.html` and the real window and site tokens to Coss Blue.
 - **Was next once a colour is picked:** apply it to System, Limits, the menu bar popover and keyhop.app (Mac and web in parity), then rewrite `design/keyhop-v2/index.html` and the window and site tokens.
 

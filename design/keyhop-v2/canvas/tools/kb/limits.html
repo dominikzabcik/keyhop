@@ -1,7 +1,7 @@
     <header style="flex: none; display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 16px 0 28px; box-shadow: inset 0 -1px 0 rgba(255,255,255,0.07)">
       <h1 style="margin: 0; font-size: 15px; font-weight: 600">Limits</h1>
       <div role="group" aria-label="Tool" class="glass" style="display: flex; padding: 3px; margin-left: 8px; border-radius: 8px">
-        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><button type="button" aria-pressed="{{t.on}}" style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: {{t.bg}}; color: {{t.ink}}; font-size: 12px; font-weight: {{t.weight}}">{{t.name}}<span style="color: #737373; font-weight: 500">{{t.n}}</span></button></sc-for>
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><button type="button" aria-pressed="{{t.on}}" style="display: flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: {{t.bg}}; color: {{t.ink}}; font-size: 12px; font-weight: {{t.weight}}"><sc-if value="{{t.hasIc}}"><span style="color: #D4D4D4">{{ICON:t.ic:13}}</span></sc-if>{{t.name}}<span style="color: #737373; font-weight: 500">{{t.n}}</span></button></sc-for>
       </div>
       <span style="flex: 1"></span>
       <span style="font-size: 12px; color: {{c.secondary}}">read 2 min ago</span>
@@ -19,9 +19,9 @@
             <span style="color: {{c.secondary}}">left across them all</span>
           </div>
           <p style="margin: 0; max-width: 46ch; color: {{c.secondary}}; line-height: 20px">Each login keeps its own limits. This adds up what each one has left, so 100% is one full login.</p>
-          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <div class="tiles" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-top: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08)">
             <sc-for list="{{stats}}" as="s" hint-placeholder-count="3">
-              <div class="well" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px">
+              <div style="display: flex; flex-direction: column; gap: 6px; padding: 0 16px">
                 <span style="font-size: 12px; font-weight: 500; color: {{c.secondary}}">{{s.name}}</span>
                 <span class="sans" style="font-size: 20px; line-height: 24px; font-weight: 500; color: {{s.ink}}">{{s.value}}</span>
                 <span style="font-size: 11px; color: {{c.tertiary}}">{{s.sub}}</span>
@@ -61,7 +61,8 @@
 
       <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
         <section aria-label="{{g.name}}" style="display: flex; flex-direction: column; gap: 12px">
-          <div style="display: flex; align-items: baseline; gap: 12px; padding: 0 2px">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 0 2px">
+            <span style="width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); color: #E5E5E5">{{ICON:g.ic:16}}</span>
             <h2 class="sans" style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 500; letter-spacing: -0.01em">{{g.name}}</h2>
             <span style="font-size: 12px; color: {{g.leftInk}}">{{g.left}}</span>
             <span style="flex: 1"></span>
@@ -103,7 +104,7 @@
         <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
           <sc-for list="{{singles}}" as="s" hint-placeholder-count="4">
             <div class="card glass" style="display: flex; flex-direction: column; gap: 12px; padding: 18px 20px">
-              <span style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-weight: 600">{{s.tool}}</span><span style="font-size: 12px; color: {{c.secondary}}">{{s.left}}</span></span>
+              <span style="display: flex; justify-content: space-between; align-items: center"><span style="display: flex; align-items: center; gap: 8px; font-weight: 600"><span style="color: #E5E5E5">{{ICON:s.ic:15}}</span>{{s.tool}}</span><span style="font-size: 12px; color: {{c.secondary}}">{{s.left}}</span></span>
               <span style="height: 4px; border-radius: 2px; background: {{c.track}}; overflow: hidden"><span class="grow" style="display: block; height: 4px; width: {{s.used}}; border-radius: 2px; background: rgba(255,255,255,0.78)"></span></span>
               <span style="font-size: 12px; color: {{c.tertiary}}">{{s.sub}}</span>
             </div>

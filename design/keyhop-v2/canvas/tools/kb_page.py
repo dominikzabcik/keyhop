@@ -2,11 +2,13 @@
 # the header and the panel body come from tools/kb/<page>.html, extra values from tools/kb/<page>.js.
 #   python3 tools/kb_page.py limits "#limits" 1500 "Limits"
 import re, sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kb_icons
 page, href, height, title = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4]
 here = os.path.dirname(os.path.abspath(__file__))
 proj = os.path.join(here, '..', 'project')
 src = open(os.path.join(proj, 'KB-Home.dc.html')).read()
-frag = open(os.path.join(here, 'kb', page + '.html')).read()
+frag = kb_icons.expand(open(os.path.join(here, 'kb', page + '.html')).read())
 js = open(os.path.join(here, 'kb', page + '.js')).read()
 
 CUR = ' aria-current="page"'
@@ -21,7 +23,7 @@ else:
 s = src[:nav_start] + nav + src[nav_end:]
 
 # panel: keep the opening div of the inset panel, replace header + body
-p_open = s.index('<div style="position: relative; flex: 1; min-width: 0; margin: 10px')
+p_open = s.index('<div class="main"')
 p_body = s.index('<header', p_open)
 end = s.index('</x-dc>')
 tail = '  </div>\n</div>\n'

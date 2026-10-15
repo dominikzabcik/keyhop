@@ -1,0 +1,135 @@
+<div style="width: 1440px; box-sizing: border-box; padding: 56px 56px 64px; background: #111111; font-family: 'Geist', system-ui, sans-serif; font-size: 13px; line-height: 18px; color: {{c.label}}; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; gap: 56px">
+
+  <header style="display: flex; align-items: flex-end; gap: 24px">
+    <span style="display: flex; flex-direction: column; gap: 8px"><span class="lab">Coss Blue · what Keyhop tells you</span>
+    <h1 class="sans" style="margin: 0; font-weight: 500; font-size: 40px; line-height: 44px; letter-spacing: -0.03em">Notifications, notices and the status bar</h1></span>
+    <p style="margin: 0 0 4px; max-width: 58ch; color: {{c.secondary}}">Three places speak up. Each one shows what is there today, then the proposal. The wording is what the app sends now, tightened where it reads clumsily.</p>
+  </header>
+
+  <section aria-labelledby="sys-title" style="display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: baseline; gap: 14px">
+      <span class="lab" style="color: {{c.accent}}!important">1</span>
+      <h2 id="sys-title" class="sans" style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 500; letter-spacing: -0.02em">macOS notifications</h2>
+      <span style="color: {{c.secondary}}">The banner itself is the system's. Keyhop chooses the words, the buttons and a picture.</span>
+    </div>
+    <div style="display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 18px">
+      <div class="glass" style="display: flex; flex-direction: column; gap: 12px; padding: 22px; background: linear-gradient(160deg, #1B2333, #141821)">
+        <span class="lab">Today</span>
+        <sc-for list="{{oldBanners}}" as="b" hint-placeholder-count="3">
+          <div style="display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; padding: 12px 14px; border-radius: 16px; background: rgba(48,48,52,0.82); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), 0 10px 30px rgba(0,0,0,0.35)">
+            <span style="width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: #2A2A2A; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10); color: #F5F5F5"><svg width="16" height="16" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg></span>
+            <span style="min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 17px"><span style="display: flex; justify-content: space-between; font-weight: 600">{{b.title}}<span style="font-weight: 400; font-size: 11px; color: #8E8E93">now</span></span><span style="color: #D1D1D6">{{b.body}}</span></span>
+          </div>
+        </sc-for>
+        <span style="font-size: 12px; color: {{c.tertiary}}">Long titles wrap, the hop hides behind a hover as “Switch”, and every banner looks the same.</span>
+      </div>
+
+      <div class="glass" style="display: flex; flex-direction: column; gap: 12px; padding: 22px; background: radial-gradient(70% 70% at 80% 100%, rgba(96,165,250,0.16), transparent 70%), linear-gradient(160deg, #1B2333, #141821)">
+        <span class="lab" style="color: #93C5FD!important">Proposed</span>
+        <sc-for list="{{newBanners}}" as="b" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; border-radius: 16px; background: rgba(48,48,52,0.86); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), 0 10px 30px rgba(0,0,0,0.35); overflow: hidden">
+            <div style="display: grid; grid-template-columns: 34px minmax(0, 1fr) 40px; gap: 10px; align-items: center; padding: 12px 14px">
+              <span style="width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: #60A5FA; color: #0A1628"><svg width="16" height="16" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"></rect><rect x="6" y="5" width="3" height="3" fill="currentColor"></rect><rect x="9" y="2" width="3" height="3" fill="currentColor"></rect><rect x="9" y="9" width="3" height="3" fill="currentColor"></rect></svg></span>
+              <span style="min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 17px">
+                <span style="display: flex; justify-content: space-between; gap: 8px; font-weight: 600"><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{b.title}}</span><span style="flex: none; font-weight: 400; font-size: 11px; color: #8E8E93">now</span></span>
+                <span style="font-size: 12px; font-weight: 600; color: {{b.subInk}}">{{b.sub}}</span>
+                <span style="color: #D1D1D6">{{b.body}}</span>
+              </span>
+              <span style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: #1A1A1A; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10); color: {{b.markInk}}">{{ICON:b.ic:20}}</span>
+            </div>
+            <sc-if value="{{b.hasActions}}">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08)">
+                <span style="height: 34px; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #93C5FD">{{b.act1}}</span>
+                <span style="height: 34px; display: flex; align-items: center; justify-content: center; color: #D1D1D6; box-shadow: inset 1px 0 0 rgba(255,255,255,0.08)">{{b.act2}}</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <ul style="margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: {{c.secondary}}">
+          <li>The title names the tool and the state; the account goes to a subtitle, coloured by how urgent it is.</li>
+          <li>The tool's mark rides along as the picture, so you know which tool before you read.</li>
+          <li>“Hop to work@studio.dev” and “Later” are shown as buttons, not hidden behind a single “Switch”.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="win-title" style="display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: baseline; gap: 14px">
+      <span class="lab" style="color: {{c.accent}}!important">2</span>
+      <h2 id="win-title" class="sans" style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 500; letter-spacing: -0.02em">Notices in the window</h2>
+      <span style="color: {{c.secondary}}">Above Home and Limits when something needs you, and a toast after a hop.</span>
+    </div>
+    <div style="display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 18px">
+      <div class="glass" style="display: flex; flex-direction: column; gap: 12px; padding: 22px; background: #161616">
+        <span class="lab">Today</span>
+        <div style="display: flex; flex-direction: column; border-radius: 12px; border: 1px solid rgba(232,165,79,0.26); background: rgba(46,36,20,0.55)">
+          <sc-for list="{{oldNotices}}" as="n" hint-placeholder-count="2">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; box-shadow: {{n.line}}">
+              <span style="color: #E3A64F; font-weight: 700">!</span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><b style="font-weight: 600">{{n.title}}</b><span style="color: {{c.secondary}}">{{n.body}}</span></span>
+              <span style="height: 28px; padding: 0 12px; display: flex; align-items: center; border-radius: 7px; background: #F2F2F2; color: #171717; font-weight: 600; font-size: 12px">{{n.act}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <span style="font-size: 12px; color: {{c.tertiary}}">Every notice is amber, even when only one is urgent, and the stack grows a box inside a box.</span>
+      </div>
+
+      <div class="glass" style="display: flex; flex-direction: column; gap: 16px; padding: 22px; background: #161616">
+        <span class="lab" style="color: #93C5FD!important">Proposed</span>
+        <div class="glass" style="display: flex; flex-direction: column; overflow: hidden">
+          <sc-for list="{{notices}}" as="n" hint-placeholder-count="3">
+            <div style="display: grid; grid-template-columns: 3px 30px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px 18px 14px 0; box-shadow: {{n.line}}">
+              <span style="align-self: stretch; background: {{n.tone}}"></span>
+              <span style="width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); color: #E5E5E5">{{ICON:n.ic:16}}</span>
+              <span style="min-width: 0; display: flex; flex-direction: column; line-height: 18px"><span style="display: flex; align-items: center; gap: 8px"><b style="font-weight: 600">{{n.title}}</b><span style="height: 20px; padding: 0 7px; display: flex; align-items: center; border-radius: 6px; background: {{n.pillBg}}; color: {{n.pillInk}}; font-size: 11px; font-weight: 600">{{n.pill}}</span></span><span style="color: {{c.secondary}}">{{n.body}}</span></span>
+              <span style="display: flex; gap: 8px"><span style="height: 30px; padding: 0 14px; display: flex; align-items: center; border-radius: 8px; background: {{n.btnBg}}; color: {{n.btnInk}}; box-shadow: {{n.btnLine}}; font-weight: 600; font-size: 12px">{{n.act}}</span><span style="height: 30px; padding: 0 10px; display: flex; align-items: center; color: {{c.secondary}}; font-size: 12px">{{n.dismiss}}</span></span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px">
+          <div style="width: 420px; display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 12px; background: #262626; box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 16px 40px rgba(0,0,0,0.5)">
+            <span style="width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; background: rgba(52,211,153,0.16); color: #34D399"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg></span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 17px"><b style="font-weight: 600">Claude Code hopped to work@studio.dev</b><span style="font-size: 12px; color: {{c.secondary}}">5-hour 12% used · weekly 41%</span></span>
+            <span style="height: 28px; padding: 0 12px; display: flex; align-items: center; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12); font-weight: 600; font-size: 12px">Undo</span>
+          </div>
+          <span style="font-size: 12px; color: {{c.tertiary}}">Toast, bottom right, 6 seconds, Undo hops back.</span>
+        </div>
+        <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: {{c.secondary}}">
+          <li>One quiet card. A thin stripe and a pill carry the severity: red for out, amber for outages, blue for a hop on offer.</li>
+          <li>The most urgent comes first, and each has one action plus a quiet Dismiss.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="bar-title" style="display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: baseline; gap: 14px">
+      <span class="lab" style="color: {{c.accent}}!important">3</span>
+      <h2 id="bar-title" class="sans" style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 500; letter-spacing: -0.02em">Status bar</h2>
+      <span style="color: {{c.secondary}}">The strip along the bottom of the window.</span>
+    </div>
+    <div class="glass" style="display: flex; flex-direction: column; gap: 14px; padding: 22px; background: #161616">
+      <span class="lab">Today</span>
+      <div style="display: flex; align-items: center; gap: 14px; height: 26px; padding: 0 12px; border-radius: 6px; background: #121212; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); font-size: 11.5px; color: #A1A1A1; font-family: -apple-system, system-ui, sans-serif">
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 3px; background: #EE7A69"></span>2 need a hop</span><span>Codex partial outage</span><span style="flex: 1"></span><span>7.6M today</span><span>12 day streak</span><span>Night</span><span>↻ Limits read 2 min ago</span>
+      </div>
+      <span class="lab" style="margin-top: 10px; color: #93C5FD!important">Proposed</span>
+      <div style="display: flex; align-items: center; gap: 4px; height: 32px; padding: 0 8px; border-radius: 8px; background: #111111; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10); font-size: 12px; color: {{c.secondary}}">
+        <sc-for list="{{bar}}" as="s" hint-placeholder-count="8">
+          <span style="display: flex; align-items: center; gap: 7px; height: 24px; padding: 0 8px; border-radius: 6px; background: {{s.bg}}; color: {{s.ink}}; flex: {{s.flex}}; font-family: {{s.font}}; font-size: {{s.size}}; letter-spacing: {{s.track}}; text-transform: {{s.case}}"><sc-if value="{{s.hasDot}}"><span class="{{s.cls}}" style="width: 6px; height: 6px; border-radius: 3px; background: {{s.dot}}"></span></sc-if><sc-if value="{{s.hasIc}}"><span style="color: #D4D4D4">{{ICON:s.ic:12}}</span></sc-if>{{s.text}}</span>
+        </sc-for>
+      </div>
+      <div style="display: flex; align-items: center; gap: 4px; height: 32px; padding: 0 8px; border-radius: 8px; background: #111111; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10); font-size: 12px; color: {{c.secondary}}">
+        <sc-for list="{{barCalm}}" as="s" hint-placeholder-count="6">
+          <span style="display: flex; align-items: center; gap: 7px; height: 24px; padding: 0 8px; border-radius: 6px; background: {{s.bg}}; color: {{s.ink}}; flex: {{s.flex}}; font-family: {{s.font}}; font-size: {{s.size}}; letter-spacing: {{s.track}}; text-transform: {{s.case}}"><sc-if value="{{s.hasDot}}"><span class="{{s.cls}}" style="width: 6px; height: 6px; border-radius: 3px; background: {{s.dot}}"></span></sc-if><sc-if value="{{s.hasIc}}"><span style="color: #D4D4D4">{{ICON:s.ic:12}}</span></sc-if>{{s.text}}</span>
+        </sc-for>
+      </div>
+      <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: {{c.secondary}}">
+        <li>Above: two logins need a hop and Codex has an outage. Below: a calm day, when the left side just says Live.</li>
+        <li>Problems sit on the left as tinted chips you can click; the right side is quiet figures in the mono label face.</li>
+        <li>The refresh shows when limits were read, and a thin bar along the top edge fills while they are being read.</li>
+      </ul>
+    </div>
+  </section>
+</div>

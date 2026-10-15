@@ -15,7 +15,7 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
   - Emerald (zinc + green)
   - Ember (warm stone + the pet's orange; "tight" moves to yellow)
   - Cobalt (slate + blue)
-- **devl.dev takes (2026-10-15, new account):** S1 restyled after devl.dev, which is built on coss-ui (cal.com). The four variants are `project/K-<mono|ember|blue|iris>-Home.dc.html` and `-Components`, made by `tools/devl.py`. The comparison page is https://claude.ai/artifact/J7dTXDiZn4qxFtfz4SygT2.
+- **devl.dev takes (2026-10-15, new account):** S1 restyled after devl.dev, which is built on coss-ui (cal.com). The four variants are `project/K-<mono|ember|blue|iris>-Home.dc.html` and `-Components`, made by `tools/devl.py`. The comparison page is https://claude.ai/artifact/GvDoPxEhtAWE5W9kDD3sWF.
   - They share coss-ui's dark neutrals: background #161616, sidebar #111, cards #1A1A1A, borders at 10% white, radius 10 and 12, tracked uppercase labels, sans titles and numbers, amber-500 and red for limits running out, and emerald-400 for money.
   - Mono has a monospace body (Geist Mono) and a white primary. Ember has a monospace body and the pet's orange, with tight limits moving to yellow. Blue has a Geist body and blue-400. Iris has a Geist body and S1's violet on the neutral grounds.
 - **Picked: Coss Blue** (2026-10-15). The owner loved it and asked for more air. `project/KB-Home.dc.html` is the polished Home:
@@ -33,6 +33,11 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
   - The marks are one colour; on Home's tool tiles they take the tool's share colour. The data is `tools/kb/tool-icons.json` and the helper is `tools/kb_icons.py` (`{{ICON:expr:px}}`).
   - The owner disliked "something inside something". The inset panel is gone, so the content sits flush beside the sidebar.
   - Tool tiles, pool figures and Needs you are rows split by hairlines instead of boxes inside cards.
+- **Notifications preview** (2026-10-15). `KB-Notify` sets today against a proposal for each of the three places Keyhop speaks up:
+  - **macOS notifications.** The title names the tool and its state, and a coloured subtitle names the account. The tool's mark is the attachment, and the buttons read "Hop to work@studio.dev" and "Later".
+  - **Window notices.** One quiet card with a severity stripe and a pill, one action and Dismiss on each, and an Undo toast after a hop.
+  - **Status bar.** Problem chips sit on the left and mono figures on the right.
+- The comparison page moved to https://claude.ai/artifact/GvDoPxEhtAWE5W9kDD3sWF after the account switch.
 - **Next:** owner feedback on the KB boards, then rewrite `design/keyhop-v2/index.html` and the real window and site tokens to Coss Blue.
 - **Was next once a colour is picked:** apply it to System, Limits, the menu bar popover and keyhop.app (Mac and web in parity), then rewrite `design/keyhop-v2/index.html` and the window and site tokens.
 

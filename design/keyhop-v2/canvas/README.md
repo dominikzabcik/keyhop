@@ -42,6 +42,9 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
   - **A Polished.** A segmented bar of every tool, the hop offer under its tool, and one footer row.
   - **B Rings.** Six rings and one full-width hop.
   - **C Night field.** The pet's scene as the header, with the pet speaking the suggestion.
+  The owner liked B and C and wanted them combined. `KB-Menubc` has two combinations, built from those pieces by `tools/kb/menubc.html`:
+  - **BC 1** puts the field header over the rings and keeps the hop card.
+  - **BC 2** has the pet offer the hop in its bubble, above the rings.
   Awaiting a pick.
 - **Next:** owner feedback on the KB boards, then rewrite `design/keyhop-v2/index.html` and the real window and site tokens to Coss Blue.
 - **Was next once a colour is picked:** apply it to System, Limits, the menu bar popover and keyhop.app (Mac and web in parity), then rewrite `design/keyhop-v2/index.html` and the window and site tokens.

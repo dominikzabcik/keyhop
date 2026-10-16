@@ -73,7 +73,7 @@ test('home is the total, the pet and what needs you', async ({ app, screen, brow
 test('limits pools every login and projects it', async ({ app, screen, browser }) => {
   await openWindow(app, 'limits');
   await expect(screen.getByRole('heading', 'Limits', { level: 1 })).toBeVisible();
-  await expect(screen.getByText('Left across your own logins', { exact: false })).toBeVisible();
+  await expect(screen.getByText('What your logins have left', { exact: false })).toBeVisible();
   await expect(screen.getByText('Next reset', { exact: false })).toBeVisible();
   await expect(browser.locator('.qchart svg .qline.ahead')).toBeVisible();
   await expect(screen.getByRole('heading', 'Claude Code', { level: 2 })).toBeVisible();

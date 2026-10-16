@@ -886,69 +886,7 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .hwelcome p { margin: 0; max-width: 60ch; }
 @media (max-width: 1080px) { .home-cols { grid-template-columns: minmax(0, 1fr); } }
 
-/* Limits: tool tabs, the pooled quota and its forecast, then every login by tool. */
-.ptabs { display: flex; gap: 6px; flex-wrap: wrap; }
-.ptabs button {
-  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 10px; border-radius: 99px; cursor: pointer;
-  border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 12.5px; font-weight: 540;
-}
-.ptabs button:hover { color: var(--text); background: var(--hover); }
-.ptabs button[aria-pressed="true"] { background: hsl(var(--on) / .10); border-color: var(--border-strong); color: var(--text); }
-.ptabs .mark { width: 13px; height: 13px; }
-.ptabs .n { color: inherit; opacity: .6; font-variant-numeric: tabular-nums; }
-.qcard { overflow: hidden; }
-.qhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px 6px; flex-wrap: wrap; }
-.qbig { display: grid; gap: 4px; }
-.eyebrow { color: var(--muted); font-size: 12.5px; font-weight: 540; }
-.qnum { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.qnum b { font-size: 40px; font-weight: 650; letter-spacing: -.035em; line-height: 1.05; font-variant-numeric: tabular-nums; }
-.qnum.warn b { color: var(--warn-ink); }
-.qnum.bad b { color: var(--bad); }
-.qnum > span { color: var(--subtle); font-size: 18px; font-weight: 520; font-variant-numeric: tabular-nums; }
-.qnum .qrate { margin-left: 6px; padding: 2px 8px; border-radius: 99px; background: hsl(var(--on) / .07); color: var(--muted); font-size: 12.5px; font-weight: 560; }
-.qnote { margin: 0; padding: 0 20px 4px; color: var(--subtle); font-size: 12.5px; }
-.qchart { padding: 6px 20px 0; }
-.qchart .qline { fill: none; stroke: var(--text); stroke-width: 1.8; stroke-linejoin: round; }
-.qchart .qline.ahead { stroke: var(--info); stroke-dasharray: 5 4; }
-.qchart .qarea { fill: hsl(var(--on) / .07); }
-.qchart .qarea.ahead { fill: color-mix(in srgb, var(--info) 9%, transparent); }
-.qchart .qnow { stroke: hsl(var(--on) / .45); stroke-dasharray: 2 3; }
-.qchart .qnow-label { fill: var(--muted); font: 600 11px var(--sans); }
-.qchart .qreset { fill: var(--good); stroke: var(--panel); stroke-width: 2; }
-.qchart .grid.day { stroke: hsl(var(--on) / .04); }
-.qchart .qbar { fill: hsl(var(--on) / .55); }
-.qchart .qbar:hover { fill: var(--text); }
-.qfoot { display: flex; align-items: center; gap: 8px 20px; flex-wrap: wrap; padding: 10px 20px 14px; color: var(--muted); font-size: 12.5px; border-top: 1px solid hsl(var(--on) / .05); }
-.qfact { display: inline-flex; align-items: center; gap: 6px; }
-.qfact b { color: var(--text); font-weight: 600; }
-.qfact.bad, .qfact.bad b { color: var(--bad); }
-.qfact .icon { width: 14px; height: 14px; }
-.qlegend { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; color: var(--subtle); }
-.qlegend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--text); margin-left: 8px; }
-.qlegend i.dash { border-top: 2px dashed var(--info); }
-.lgroup-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-bottom: 1px solid hsl(var(--on) / .05); min-height: 50px; }
-.lgroup-head .mark { width: 16px; height: 16px; }
-.lgroup-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
-.lgroup-head .count { color: var(--subtle); font-size: 12px; font-variant-numeric: tabular-nums; }
-.lgroup-sum { color: var(--muted); font-size: 12.5px; }
-.lgroup-sum b { color: var(--text); font-weight: 600; }
-.lgroup-head .btn { margin-left: auto; }
-.lrow { display: grid; grid-template-columns: minmax(170px, 1.1fr) minmax(220px, 1.7fr) minmax(96px, 128px) minmax(96px, max-content); gap: 6px 18px; align-items: center; }
-.list > .lrow { padding: 12px 12px 12px 16px; }
-.list > .lrow:hover { background: var(--hover); }
-.lrow.active { background: hsl(var(--on) / .018); }
-.lrow .row-actions { flex-wrap: nowrap; }
-.lwins { display: grid; gap: 5px; min-width: 0; }
-.lwin { display: grid; grid-template-columns: 92px minmax(60px, 1fr) 38px 52px; align-items: center; gap: 10px; font-size: 12px; }
-.lwin-name { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lwin-pct { text-align: right; font-variant-numeric: tabular-nums; color: var(--text); font-weight: 560; }
-.lwin-foot { color: var(--subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.lwin .progress { height: 5px; }
-.lnote { margin: 0; color: var(--subtle); font-size: 12.5px; }
-.loutlook { font-size: 12.5px; color: var(--text); font-weight: 560; font-variant-numeric: tabular-nums; }
-.loutlook.warn { color: var(--warn-ink); }
-.loutlook.bad { color: var(--bad); }
-.loutlook.subtle { color: var(--subtle); font-weight: 500; }
+/* Limits: its own sheet, DashboardStylesLimits. Adding another tool stays here. */
 details.setup summary { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; list-style: none; font-weight: 560; }
 details.setup summary::-webkit-details-marker { display: none; }
 details.setup summary .subtle { font-weight: 450; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

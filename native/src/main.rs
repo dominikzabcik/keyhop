@@ -12,6 +12,15 @@ mod theme;
 
 use gpui_kit::*;
 
+const FONTS: [&[u8]; 6] = [
+    include_bytes!("../../Assets/fonts/Geist-Regular.ttf"),
+    include_bytes!("../../Assets/fonts/Geist-Medium.ttf"),
+    include_bytes!("../../Assets/fonts/Geist-SemiBold.ttf"),
+    include_bytes!("../../Assets/fonts/Geist-Bold.ttf"),
+    include_bytes!("../../Assets/fonts/GeistMono-Regular.ttf"),
+    include_bytes!("../../Assets/fonts/GeistMono-Medium.ttf"),
+];
+
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let sample = args.iter().any(|a| a == "--sample");
@@ -30,6 +39,9 @@ fn main() -> anyhow::Result<()> {
 
     gpui_kit::application().run(move |cx| {
         gpui_kit::init(cx);
+        // Geist and Geist Mono, the window's faces (SIL Open Font License, Assets/fonts/OFL.txt).
+        // If they fail to load, the system face stands in.
+        let _ = cx.text_system().add_fonts(FONTS.iter().map(|font| std::borrow::Cow::Borrowed(*font)).collect());
         let bounds = Bounds::centered(None, size(px(1180.), px(780.)), cx);
         let options = WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(bounds)),

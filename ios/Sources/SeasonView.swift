@@ -78,7 +78,7 @@ struct SeasonView: View {
                         // does not survive in a toolbar.
                         Label("More", systemImage: "ellipsis")
                             .labelStyle(.iconOnly)
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.ui(15, .semibold))
                             .foregroundStyle(Brand.muted)
                             .frame(width: 32, height: 32)
                             .contentShape(Rectangle())

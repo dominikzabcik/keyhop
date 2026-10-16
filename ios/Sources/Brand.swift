@@ -1,21 +1,24 @@
 import SwiftUI
 import UIKit
 
-/// The same neutral palette as Keyhop's window and the website. The Mac app's tokens live in an
+/// Coss Blue, the same palette as Keyhop's window and the website. The Mac app's tokens live in an
 /// AppKit file, so the phone keeps its own copy of the few colours it needs rather than importing
 /// a desktop framework.
 enum Brand {
-    static let background = Color(red: 0.090, green: 0.090, blue: 0.090)
-    static let panel = Color(red: 0.106, green: 0.106, blue: 0.106)
-    static let raised = Color(red: 0.135, green: 0.135, blue: 0.135)
-    static let border = Color.white.opacity(0.08)
-    static let text = Color(white: 0.92)
-    static let muted = Color(white: 0.63)
-    static let subtle = Color(white: 0.46)
-    static let good = Color(red: 0.36, green: 0.79, blue: 0.54)
-    /// A limit with nothing left. Warm and held back, the same weight as `good`, never a red alarm.
-    static let spent = Color(red: 0.86, green: 0.62, blue: 0.36)
-    static let wrong = Color(red: 0.93, green: 0.48, blue: 0.41)
+    static let background = Color(red: 0x16 / 255, green: 0x16 / 255, blue: 0x16 / 255)
+    static let panel = Color(red: 0x1A / 255, green: 0x1A / 255, blue: 0x1A / 255)
+    static let raised = Color(red: 0x1F / 255, green: 0x1F / 255, blue: 0x1F / 255)
+    static let border = Color.white.opacity(0.10)
+    static let text = Color(red: 0xF5 / 255, green: 0xF5 / 255, blue: 0xF5 / 255)
+    static let muted = Color(red: 0xA3 / 255, green: 0xA3 / 255, blue: 0xA3 / 255)
+    static let subtle = Color(red: 0x8A / 255, green: 0x8A / 255, blue: 0x8A / 255)
+    /// The one action colour, and the ink on it.
+    static let primary = Color(red: 0x60 / 255, green: 0xA5 / 255, blue: 0xFA / 255)
+    static let onPrimary = Color(red: 0x0A / 255, green: 0x16 / 255, blue: 0x28 / 255)
+    static let good = Color(red: 0x34 / 255, green: 0xD3 / 255, blue: 0x99 / 255)
+    /// A limit with nothing left. Amber, the same weight as `good`, never a red alarm.
+    static let spent = Color(red: 0xF5 / 255, green: 0x9E / 255, blue: 0x0B / 255)
+    static let wrong = Color(red: 0xFF / 255, green: 0x8A / 255, blue: 0x82 / 255)
 
     /// Tier tones, matching the website's: a quiet shift, never a colour badge.
     static func tier(_ key: String) -> Color {
@@ -34,12 +37,22 @@ extension Font {
     /// The app's sizes, scaled with the reader's text size setting. At the default setting every
     /// size is exactly the one the design names; larger settings grow it in step with iOS.
     static func ui(_ size: CGFloat, _ weight: Font.Weight = .regular, _ style: Font.TextStyle = .body) -> Font {
-        let base = UIFont.systemFont(ofSize: size, weight: weight.uiWeight)
+        // Geist, bundled (UIAppFonts); the system face stands in if it ever fails to load.
+        let base = UIFont(name: weight.geist, size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.uiWeight)
         return Font(UIFontMetrics(forTextStyle: style.uiStyle).scaledFont(for: base))
     }
 }
 
 private extension Font.Weight {
+    var geist: String {
+        switch self {
+        case .medium: "Geist-Medium"
+        case .semibold: "Geist-SemiBold"
+        case .bold, .heavy, .black: "Geist-Bold"
+        default: "Geist-Regular"
+        }
+    }
+
     var uiWeight: UIFont.Weight {
         switch self {
         case .medium: .medium
@@ -124,8 +137,8 @@ struct HopMark: View {
 
 /// A button that answers a press in place: it dims, it never moves or grows.
 struct PressStyle: ButtonStyle {
-    var fill: Color = Brand.text
-    var ink: Color = Brand.background
+    var fill: Color = Brand.primary
+    var ink: Color = Brand.onPrimary
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

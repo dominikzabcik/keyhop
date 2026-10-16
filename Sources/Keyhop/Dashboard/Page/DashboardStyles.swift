@@ -4,35 +4,36 @@ import Foundation
 extension DashboardPage {
     static let styles = ##"""
 :root {
-  --bg: hsl(0 0% 9%);
-  --sidebar: hsl(0 0% 7.2%);
-  --panel: hsl(0 0% 10.6%);
-  --raised: hsl(0 0% 13.5%);
+  /* Coss Blue: neutral grounds after coss-ui, one blue for actions, amber only for limits running out. */
+  --bg: #161616;
+  --sidebar: #111111;
+  --panel: #1a1a1a;
+  --raised: #1f1f1f;
   --hover: hsl(var(--on) / .05);
-  --border: hsl(var(--on) / .08);
-  --border-strong: hsl(var(--on) / .14);
-  --text: hsl(0 0% 92%);
-  --muted: hsl(0 0% 63%);
-  --subtle: hsl(0 0% 53%);
+  --border: hsl(var(--on) / .10);
+  --border-strong: hsl(var(--on) / .16);
+  --text: #f5f5f5;
+  --muted: #a3a3a3;
+  --subtle: #8a8a8a;
   --faint: hsl(var(--on) / .08);
-  --primary: hsl(0 0% 95%);
-  --on-primary: hsl(0 0% 9%);
-  --focus: hsl(211 92% 62%);
-  --good: #5CC98A;
-  --warn: #E3A64F;
-  --warn-ink: #f0c27a;
-  --bad: #EE7A69;
-  --info: #7eb0f2;
+  --primary: #60a5fa;
+  --on-primary: #0a1628;
+  --focus: #60a5fa;
+  --good: #34d399;
+  --warn: #f59e0b;
+  --warn-ink: #fbbf24;
+  --bad: #ff8a82;
+  --info: #93c5fd;
   /* The overlay tints: --on is the ink's hue, --off the surface's. Day flips them. */
   --on: 0 0% 100%;
   --off: 0 0% 0%;
-  --bg-base: 0 0% 9%;
-  --side: hsl(0 0% 56%);
+  --bg-base: 0 0% 8.6%;
+  --side: #a3a3a3;
   --overlay: hsl(0 0% 12.5% / .95);
   --scrim: hsl(0 0% 4% / .55);
   --headline-shadow: 0 1px 18px rgba(0, 0, 0, .55);
-  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, Cantarell, "Noto Sans", sans-serif;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, Cantarell, "Noto Sans", sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   color-scheme: dark;
   /* Only the named content surfaces transition. The browser's implicit `root` snapshot includes
      the sidebar and cross-fades its old and new selection states over the moving thumb. */
@@ -41,29 +42,29 @@ extension DashboardPage {
 /* The day field: the same tokens read the other way up. Chosen in Settings, or follows the system. */
 :root[data-theme="day"] {
   color-scheme: light;
-  --bg: #f4f4f1;
-  --sidebar: #efefec;
+  --bg: #fafafa;
+  --sidebar: #f4f4f4;
   --panel: #ffffff;
-  --raised: #f1f1ee;
+  --raised: #f4f4f4;
   --hover: hsl(0 0% 0% / .045);
   --border: hsl(0 0% 0% / .08);
   --border-strong: hsl(0 0% 0% / .14);
-  --text: #1c1c1c;
-  --muted: #5f5f5a;
-  --subtle: #8a8a84;
+  --text: #171717;
+  --muted: #525252;
+  --subtle: #737373;
   --faint: hsl(0 0% 0% / .08);
-  --primary: #1c1c1c;
-  --on-primary: #f4f4f1;
-  --focus: hsl(211 60% 46%);
+  --primary: #2563eb;
+  --on-primary: #ffffff;
+  --focus: #2563eb;
   --good: #1f8a4c;
   --warn: #b86e12;
   --warn-ink: #9a5b0c;
   --bad: #c44b3c;
-  --info: #2f6fbe;
+  --info: #2563eb;
   --on: 0 0% 0%;
   --off: 0 0% 100%;
-  --bg-base: 0 0% 96%;
-  --side: #5c5c57;
+  --bg-base: 0 0% 98%;
+  --side: #525252;
   --overlay: hsl(var(--off) / .96);
   --scrim: hsl(0 0% 0% / .12);
   --headline-shadow: 0 1px 14px rgba(255, 255, 255, .75);
@@ -98,18 +99,18 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .skip-link:focus-visible { transform: translateY(0); }
 
 /* Shell */
-.shell { display: grid; grid-template-columns: 252px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 26px; height: 100vh; }
+.shell { display: grid; grid-template-columns: 256px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 26px; height: 100vh; }
 .sidebar { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; background: var(--sidebar); border-right: 1px solid var(--border); min-height: 0; }
 .brand, .hop-side, .side-label, .side-foot { flex: none; }
-.brand { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 18px; border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 10px; height: 60px; padding: 0 18px; border-bottom: 1px solid var(--border); }
 .brand svg { width: 17px; height: 17px; flex: none; }
-.brand b { font-weight: 650; font-size: 14px; letter-spacing: .01em; }
+.brand b { font-weight: 600; font-size: 14px; letter-spacing: -.01em; }
 .brand .badge { margin-left: auto; }
 .brand .channel-badge { margin-left: 0; color: var(--warn-ink); background: color-mix(in srgb, var(--warn) 16%, transparent); font-size: 10.5px; font-weight: 650; letter-spacing: .02em; }
 /* Keys drawn as keys: a cap with a lip along its bottom edge. */
 kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; background: hsl(var(--on) / .07); box-shadow: inset 0 -1.5px 0 hsl(var(--on) / .09); color: var(--muted); font: 600 11px var(--sans); letter-spacing: .02em; }
 .nav { position: relative; isolation: isolate; display: grid; align-content: start; gap: 2px; padding: 8px 10px 10px; flex: none; }
-.nav-label { margin: 14px 10px 4px; color: var(--subtle); font-size: 12px; font-weight: 560; }
+.nav-label { margin: 18px 10px 6px; color: var(--subtle); font: 500 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; }
 .nav.has-thumb::before { content: ""; position: absolute; z-index: -1; left: 10px; right: 10px; top: 0; height: var(--nav-h); transform: translateY(var(--nav-y)); border-radius: 8px; background: hsl(var(--on) / .08); transition: transform .3s cubic-bezier(.3, .8, .25, 1); }
 .nav.no-slide::before { transition: none; }
 .nav.has-thumb a[aria-current="page"] { background: transparent; }
@@ -153,10 +154,10 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
    only, so it stays smooth. */
 .backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; transition: opacity .4s ease; }
 .backdrop.scoped-out { opacity: 0 !important; }
-.topbar { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; padding: 10px 24px; border-bottom: 1px solid var(--border); flex: none; }
+.topbar { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; padding: 10px 24px; border-bottom: 1px solid var(--border); flex: none; }
 /* Nothing scrolls under the top bar, so over the Field it simply gets out of the way. */
 .has-backdrop .topbar { background: transparent; border-bottom-color: transparent; }
-.topbar h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; }
+.topbar h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.015em; line-height: 1.2; }
 .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
 .hop { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px 0 11px; border: 1px solid hsl(var(--on) / .1); border-radius: 8px; background: hsl(var(--on) / .045); color: var(--text); font-weight: 560; white-space: nowrap; cursor: pointer; transition: background-color .14s ease, border-color .14s ease, transform .08s ease-out; }
 .hop:hover { background: hsl(var(--on) / .08); border-color: hsl(var(--on) / .16); }
@@ -170,7 +171,7 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .lede { margin: 0 0 4px; color: var(--muted); }
 
 /* Components */
-.card { background: var(--panel); border: 1px solid hsl(var(--on) / .06); border-radius: 12px; min-width: 0; box-shadow: inset 0 1px 0 hsl(var(--on) / .045); }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; min-width: 0; }
 /* Over a scene, panels are tinted sheets: the scene reads through them, softened just enough to keep text crisp. */
 .has-backdrop .card { background: hsl(var(--bg-base) / .64); border-color: hsl(var(--on) / .07); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
 /* The scenes are painted for the night. By day a card stays nearly solid over them. */
@@ -210,7 +211,7 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
 .pet-slot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; }
 .pet-slot p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid hsl(var(--on) / .05); min-height: 50px; flex-wrap: wrap; }
-.card-head h2 { margin: 0; font-size: 14px; font-weight: 560; display: flex; align-items: center; gap: 8px; }
+.card-head h2 { margin: 0; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .card-head .hint { color: var(--subtle); font-size: 12.5px; }
 .card-body { padding: 16px; }
 .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -227,7 +228,7 @@ kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; 
   border-radius: 7px; border: 1px solid transparent; cursor: pointer; font-weight: 560; font-size: 13px; white-space: nowrap;
   background: var(--primary); color: var(--on-primary); transition: background .12s ease, border-color .12s ease, color .12s ease;
 }
-.btn:hover { background: hsl(var(--on)); }
+.btn:hover { background: color-mix(in srgb, var(--primary) 86%, hsl(var(--on))); }
 .btn.secondary { background: var(--raised); color: var(--text); border-color: var(--border); }
 .btn.secondary:hover { background: hsl(var(--on) / .12); border-color: var(--border-strong); }
 .btn.ghost { background: transparent; color: var(--muted); }
@@ -247,7 +248,7 @@ a.btn { text-decoration: none; }
   display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 6px;
   background: hsl(var(--on) / .07); color: var(--muted); font-size: 11.5px; font-weight: 560; white-space: nowrap;
 }
-.badge.live { color: hsl(145 28% 72%); background: hsl(145 30% 50% / .1); }
+.badge.live { color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent); }
 .badge.sample { color: var(--warn); background: hsl(36 72% 60% / .1); }
 
 .tabs { position: relative; isolation: isolate; display: inline-flex; padding: 3px; gap: 2px; border-radius: 8px; background: var(--raised); border: 1px solid var(--border); }
@@ -484,7 +485,7 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .tier-gold { --tier: hsl(42 26% 66%); }
 .tier-platinum { --tier: hsl(190 12% 72%); }
 .tier-diamond { --tier: hsl(205 20% 80%); }
-.tier-master { --tier: var(--primary); }
+.tier-master { --tier: var(--text); }
 .season-row { display: flex; align-items: center; gap: 16px; padding: 14px 16px; flex-wrap: wrap; }
 .quest-row { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 4px 18px; align-items: center; padding: 11px 16px; }
 .quest-row + .quest-row { border-top: 1px solid var(--border); }
@@ -637,7 +638,7 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
   background: var(--warn); color: #1c1408; font-size: 11px; font-weight: 650;
   display: inline-flex; align-items: center; justify-content: center;
 }
-.side-label { margin: 12px 16px 4px; color: var(--subtle); font-size: 12px; }
+.side-label { margin: 16px 18px 6px; color: var(--subtle); font: 500 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; }
 .acct-tree { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 8px 8px; display: grid; align-content: start; gap: 1px; }
 .side-login {
   display: flex; align-items: center; gap: 9px; width: 100%; min-height: 40px; padding: 4px 8px; border: 0; border-radius: 8px;
@@ -764,7 +765,7 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
 .section-head h2 { margin: 0; font-size: 16px; font-weight: 620; letter-spacing: -.01em; }
 .hstats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.hstat { display: grid; gap: 4px; padding: 14px 16px 15px; border-radius: 12px; background: var(--panel); border: 1px solid hsl(var(--on) / .06); box-shadow: inset 0 1px 0 hsl(var(--on) / .045); min-width: 0; }
+.hstat { display: grid; gap: 4px; padding: 14px 16px 15px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border); min-width: 0; }
 .hstat-label { color: var(--muted); font-size: 12.5px; }
 .hstat-value { font-size: 26px; font-weight: 640; letter-spacing: -.025em; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .hstat-foot { display: flex; gap: 6px; align-items: baseline; min-width: 0; color: var(--subtle); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -784,7 +785,7 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
   border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 12.5px; font-weight: 540;
 }
 .ptabs button:hover { color: var(--text); background: var(--hover); }
-.ptabs button[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.ptabs button[aria-pressed="true"] { background: hsl(var(--on) / .10); border-color: var(--border-strong); color: var(--text); }
 .ptabs .mark { width: 13px; height: 13px; }
 .ptabs .n { color: inherit; opacity: .6; font-variant-numeric: tabular-nums; }
 .qcard { overflow: hidden; }

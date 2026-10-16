@@ -21,7 +21,7 @@ enum DashboardPage {
     /// contract tests still read the whole page and a section's script stays readable on its own.
     static let template: String = [
         head,
-        "<style>", styles, "</style>",
+        "<style>", fonts, styles, "</style>",
         shell,
         "(() => {",
         scriptCore, scriptChrome, scriptOverview, scriptLimits, scriptUsage, scriptBudgets,

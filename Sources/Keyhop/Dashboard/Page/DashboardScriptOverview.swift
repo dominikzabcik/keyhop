@@ -515,7 +515,7 @@ extension DashboardPage {
       const pet = data.pet;
       const drawn = petSvg(pet);
       const next = pet.next ? `${fmt.tokens(pet.next.tokens)} to ${esc(pet.next.label)}` : "Monument";
-      return `<section class="card pet-card">${drawn.svg}<div><h2>${esc(drawn.caption)}</h2><p>${next}</p></div>${claimKick(currentClaim())}</section>`;
+      return `<section class="card pet-card">${drawn.svg}<div><h2>${esc(drawn.caption)}</h2><p>${next}</p></div></section>`;
     }
     if (isStatic || !data.state?.cloud?.available) return "";
     if (!data.state.cloud.linked) {

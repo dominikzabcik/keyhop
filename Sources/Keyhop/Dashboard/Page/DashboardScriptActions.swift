@@ -101,6 +101,8 @@ extension DashboardPage {
         break;
       }
       case "wallpaper": ui.settingsPane = "general"; go("settings"); break;
+      // The pet keeps quiet about this suggestion until it changes.
+      case "pet-later": ui.petLater = el.dataset.value; render(); break;
       case "home-menu":
         ui.homeMenu = ui.homeMenu === el.dataset.menu ? null : el.dataset.menu;
         render();

@@ -102,13 +102,27 @@ extension DashboardPage {
     return section === "leaderboard" ? cloudOn : cloudOn && !!cloud.linked && !cloud.linking;
   }
 
-  // A place with several sections shows them as tabs beside its title.
+  // A place with several sections opens under its link in the sidebar, one row per section.
   function subnavHTML() {
     const group = groupOf(ui.section);
     const shown = group.sections.filter(sectionShown);
     if (shown.length < 2) return "";
-    return `<div class="tabs subnav" role="group" aria-label="${esc(group.title)}" data-tabs="subnav-${esc(group.id)}">${shown.map((section) =>
-      `<button type="button" data-action="goto" data-section="${section}" aria-pressed="${section === ui.section}">${esc(TITLES[section])}</button>`).join("")}</div>`;
+    return shown.map((section) =>
+      `<button type="button" data-action="goto" data-section="${section}" aria-pressed="${section === ui.section}">${esc(TITLES[section])}</button>`).join("");
+  }
+
+  function placeSubnav() {
+    const nav = $("#nav");
+    if (!nav) return;
+    let list = $("#subnav");
+    const html = subnavHTML();
+    const link = nav.querySelector(`a[data-group="${groupOf(ui.section).id}"]`);
+    for (const a of nav.querySelectorAll("a[data-group]")) a.setAttribute("aria-expanded", String(!!html && a === link));
+    if (!html || !link) { list?.remove(); return; }
+    if (!list) { list = document.createElement("div"); list.id = "subnav"; list.className = "nav-sub"; list.setAttribute("role", "group"); }
+    list.setAttribute("aria-label", groupOf(ui.section).title);
+    if (list.innerHTML !== html) list.innerHTML = html;
+    if (link.nextElementSibling !== list) link.after(list);
   }
 
   function slideNav() {
@@ -284,11 +298,9 @@ extension DashboardPage {
     }
     const page = { overview: overviewPage, limits: limitsPage, accounts: limitsPage, usage: usagePage, budgets: budgetsPage, plans: plansPage, coach: coachPage, leaderboard: leaderboardPage, season: seasonPage, teams: teamsPage, profile: profilePage, settings: settingsPage }[ui.section](tools);
     $("#title").textContent = groupOf(ui.section).title;
-    const subnav = $("#subnav");
-    if (subnav) subnav.innerHTML = subnavHTML();
-    const tabbed = !!subnav?.innerHTML;
-    $("#toolbar").innerHTML = tabbed ? "" : page.toolbar || "";
-    const pageTools = tabbed && page.toolbar ? `<div class="page-tools">${page.toolbar}</div>` : "";
+    placeSubnav();
+    $("#toolbar").innerHTML = page.toolbar || "";
+    const pageTools = "";
     const offline = ui.offline ? `<div class="notice">${icon("alert")}<div><p>${esc(ui.offline)}</p></div></div>` : "";
     parkHero();
     $("#main").innerHTML = ui.section === "overview" ? `<div class="home">${offline}${page.body}</div>` : `<div class="page">${offline}${pageTools}${page.body}</div>`;
@@ -335,6 +347,8 @@ extension DashboardPage {
     const read = state?.status?.refreshedAt;
     const label = step ? `${step.title}${step.count ? ` · ${step.count}` : ""}` : state?.refreshing ? "Starting…" : ui.loadingUsage ? "Reading usage" : read ? `Limits read ${fmt.relative(read)}` : "Limits not read yet";
     $("#read").textContent = label;
+    const top = $("#top-read");
+    if (top) top.textContent = `${fmt.day(new Date(), { weekday: "long", month: "long", day: "numeric" })} · ${step || state?.refreshing || ui.loadingUsage ? label.charAt(0).toLowerCase() + label.slice(1) : read ? `limits read ${fmt.relative(read)}` : "limits not read yet"}`;
     $("#main")?.setAttribute("aria-busy", busyNow ? "true" : "false");
     for (const meter of [$("#foot-meter"), $("#top-meter")]) {
       if (!meter) continue;
@@ -417,12 +431,13 @@ extension DashboardPage {
       mode.innerHTML = isStatic ? `<span class="badge">Saved</span>` : state?.mode === "sample" ? `<span class="badge sample">Sample</span>` : "";
       mode.hidden = !mode.textContent.trim();
     }
-    const refresh = $("#refresh");
-    if (refresh) {
+    for (const refresh of [$("#refresh"), $("#status-read")]) {
+      if (!refresh) continue;
       refresh.disabled = isStatic;
       refresh.classList.toggle("spin", !!state?.refreshing);
       refresh.setAttribute("aria-busy", state?.refreshing ? "true" : "false");
     }
+    placeSubnav();
     renderActivity();
     labelNav();
     slideNav();

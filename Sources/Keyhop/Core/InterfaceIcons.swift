@@ -24,6 +24,14 @@ enum InterfaceIcons {
         ("alert", #"<path d="M8 2.2 14.3 13H1.7z"/><path d="M8 6.5v3"/><path d="M8 11.4v.1"/>"#),
         ("plus", #"<path d="M8 3.5v9M3.5 8h9"/>"#),
         ("more", #"<g stroke-width="2.2"><path d="M3.5 8h.01"/><path d="M8 8h.01"/><path d="M12.5 8h.01"/></g>"#),
+        ("search", #"<circle cx="7" cy="7" r="4.5"/><path d="m10.4 10.4 3.1 3.1"/>"#),
+        // A dial with its needle: how much of a window is left.
+        ("gauge", #"<path d="M2.6 11.5a5.5 5.5 0 1 1 10.8 0"/><path d="M8 9.5 10.6 6.4"/>"#),
+        ("bulb", #"<path d="M5.9 10.5c-.2-.8-.6-1.3-1.1-1.9A4 4 0 1 1 11.2 8.6c-.5.6-.9 1.1-1.1 1.9"/><path d="M6.2 12.5h3.6"/><path d="M6.8 14.3h2.4"/>"#),
+        ("people", #"<circle cx="6" cy="5.2" r="2.4"/><path d="M1.8 13.5c.4-2.4 2-3.7 4.2-3.7s3.8 1.3 4.2 3.7"/><path d="M10.6 3a2.3 2.3 0 0 1 0 4.4"/><path d="M12 9.9c1.2.5 1.9 1.7 2.2 3.6"/>"#),
+        ("chev", #"<path d="M6 4.5 9.5 8 6 11.5"/>"#),
+        ("key", #"<circle cx="5.5" cy="10.5" r="3"/><path d="m7.6 8.4 5.9-5.9"/><path d="m11.3 4.7 1.5 1.5"/>"#),
+        ("check", #"<path d="m3.5 8.4 3 3 6-6.3"/>"#),
         // Keyhop's own: a hop from one key to another, for jumping anywhere in the window.
         ("hop", #"<rect x="1.8" y="9.6" width="4" height="4" rx="1"/><rect x="10.2" y="9.6" width="4" height="4" rx="1"/><path d="M3.8 7.6C4.6 3.6 11.4 3.6 12.2 7.6"/><path d="M10.2 6.6l2 1.1 1.1-2"/>"#),
     ]

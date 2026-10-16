@@ -29,14 +29,59 @@ extension DashboardPage {
     const total = kept.reduce((sum, tool) => sum + tool.accounts.length, 0);
     if (ui.quotaTool !== "all" && !kept.some((tool) => tool.id === ui.quotaTool)) ui.quotaTool = "all";
     const toolTabs = [["all", "All", total], ...kept.map((tool) => [tool.id, tool.name, tool.accounts.length])];
-    const tabsHTML = `<div class="ptabs" role="group" aria-label="Show tool">${toolTabs.map(([id, name, n]) =>
+    // The tool filter leads the top bar, as one segmented control with each tool's mark and count.
+    const toolbar = `<div class="tabs lim-tabs" role="group" aria-label="Show tool" data-tabs="quota-tool">${toolTabs.map(([id, name, n]) =>
       `<button type="button" data-action="quota-tool" data-value="${esc(id)}" aria-pressed="${id === ui.quotaTool}">${id === "all" ? "" : mark(id)}<span>${esc(name)}</span><span class="n">${n}</span></button>`).join("")}</div>`;
-    const toolbar = tabs("quota-hours", Object.entries(QUOTA_SPANS).map(([hours, span]) => [hours, span.label]), String(ui.quotaHours));
     const shown = ui.quotaTool === "all" ? kept : kept.filter((tool) => tool.id === ui.quotaTool);
-    const groups = shown.map((tool) => loginGroup(tool, adding(tool.id))).join("");
+    // A tool with one login and nothing wrong has nothing to hop to, so it is a tile; the rest get a group.
+    const single = (tool) => ui.quotaTool === "all" && tool.accounts.length === 1 && !adding(tool.id)
+      && !tool.accounts[0].error && tool.accounts[0].limits?.length && laneOf(tool.accounts[0]) !== "needs";
+    const measured = shown.filter((tool) => !adding(tool.id) && tool.accounts.length && tool.accounts.every((a) => !a.error && !a.limits?.length));
+    const grouped = shown.filter((tool) => !single(tool) && !(ui.quotaTool === "all" && measured.includes(tool) && tool.accounts.length === 1));
+    const atWall = (tool) => { const active = tool.accounts.find((a) => a.active); return active && laneOf(active) === "needs" && !active.error && !alternative(tool, active) ? 1 : 0; };
+    grouped.sort((a, b) => atWall(b) - atWall(a));
+    const groups = grouped.map((tool) => loginGroup(tool, adding(tool.id))).join("");
+    const singles = shown.filter(single);
     const unset = ui.quotaTool === "all" ? setupCard(tools.filter((tool) => !tool.accounts.length && !adding(tool.id))) : "";
     const empty = !kept.length ? `<section class="card"><p class="empty">No saved logins yet. Add one below and Keyhop keeps it.</p></section>` : "";
-    return { toolbar, body: `${tabsHTML}${quotaCard()}${empty}${groups}${unset}` };
+    return { toolbar, body: `<div class="lim-page">${quotaCard()}${empty}${groups}${singlesBlock(singles, measured)}${unset}</div>` };
+  }
+
+  // Tools with one login each, as tiles, then a word on the tools that have no limit at all.
+  function singlesBlock(tools, measured) {
+    const note = measured.length
+      ? `<p class="lim-foot">${esc(nameList(measured.map((tool) => tool.name)))} ${measured.length === 1 ? "measures" : "measure"} tokens only, so there is no limit to read. ${measured.length === 1 ? "It is" : "They are"} counted in Usage.</p>` : "";
+    if (!tools.length) return note ? `<section class="lim-singles">${note}</section>` : "";
+    const tiles = tools.map((tool) => {
+      const account = tool.accounts[0];
+      const top = tightest(account);
+      const used = top ? top.usedPercent : 0;
+      const left = Math.max(0, Math.round(100 - used));
+      const back = top?.resetsAt ? ` · back in ${fmt.until(top.resetsAt)}` : "";
+      const name = ui.editing === account.id
+        ? `<form class="rename" data-form="rename" data-id="${esc(account.id)}"><input class="field" name="name" value="${esc(account.label || "")}" placeholder="${esc(account.email)}" maxlength="60" aria-label="Name"><button class="btn sm">Save</button><button type="button" class="btn sm ghost" data-action="cancel-edit">Cancel</button></form>`
+        : `<span class="lim-tile-name">${mark(tool.id)}<b>${esc(tool.name)}</b></span><span class="lim-tile-left">${left}% left</span>${tileMenu(account, tool)}`;
+      return `<div class="card lim-tile" role="listitem" title="${esc(account.name)}">
+        <div class="lim-tile-head">${name}</div>
+        ${progress(used, top?.pace, undefined, `limits:${account.id}:tile`)}
+        <span class="lim-tile-sub">${esc(account.name)} · ${esc(top ? windowName(top.label) : "")}${esc(back)}</span>
+      </div>`;
+    }).join("");
+    return `<section class="lim-singles" aria-labelledby="one-h">
+      <div class="lim-group-head"><h2 id="one-h">One login each</h2><span class="lim-sum">nothing to hop to yet</span></div>
+      <div class="lim-tiles" role="list">${tiles}</div>${note}
+    </section>`;
+  }
+
+  // A tile's menu: name the login, or add a second one to hop to.
+  function tileMenu(account, tool) {
+    if (isStatic) return "";
+    const open = ui.menu === account.id;
+    const menu = open ? `<div class="row-menu" role="menu">
+        <button type="button" role="menuitem" data-action="edit" data-id="${esc(account.id)}">Rename</button>
+        <button type="button" role="menuitem" data-action="add" data-tool="${esc(tool.id)}">Add another login</button>
+      </div>` : "";
+    return `<span class="menu-anchor"><button type="button" class="btn sm ghost icon-only" data-action="account-menu" data-id="${esc(account.id)}" aria-haspopup="true" aria-expanded="${open}" aria-label="More for ${esc(account.name)}">${icon("more")}</button>${menu}</span>`;
   }
 
   // MARK: Pooled quota
@@ -55,26 +100,41 @@ extension DashboardPage {
     const share = pool.capacity ? pool.remaining / pool.capacity : 0;
     const tone = share <= 0.15 ? "bad" : share <= 0.35 ? "warn" : "";
     const rate = pool.drainPerHour || 0;
-    const horizonEnd = Date.now() + ui.quotaHours * 3600_000;
-    const runsDry = pool.emptyAt && new Date(pool.emptyAt) <= horizonEnd
-      ? `<span class="qfact bad">${icon("alert")}Runs dry around <b>${esc(when(pool.emptyAt))}</b></span>`
-      : `<span class="qfact">Lasts the next ${esc(span.label)} at this pace</span>`;
-    const reset = pool.nextReset
-      ? `<span class="qfact">Next reset <b class="up">+${Math.round(pool.nextReset.gain)}%</b> · ${esc(when(pool.nextReset.at))} · ${esc(pool.nextReset.account)}</span>` : "";
     const scope = ui.quotaTool === "all" ? `${pool.accounts} login${pool.accounts === 1 ? "" : "s"} with limits` : `${pool.accounts} ${esc(pool.name)} login${pool.accounts === 1 ? "" : "s"}`;
-    return `<section class="card qcard">
-      <div class="qhead">
-        <div class="qbig">
-          <span class="eyebrow">Left across your own logins · ${scope}</span>
-          <div class="qnum ${tone}"><b data-count="${pool.remaining}" data-count-key="quota:${esc(pool.tool)}" data-format="pct">${Math.round(pool.remaining)}%</b><span>/ ${Math.round(pool.capacity)}%</span>
-            <span class="qrate">${rate >= 0.05 ? `~${perHour(rate)}` : "Not draining now"}</span></div>
-        </div>
-        ${tabs("quota-view", [["remaining", "Remaining"], ["drain", "Drain rate"]], ui.quotaView)}
-      </div>
-      <p class="qnote">Each login keeps its own limits. This adds up what each one has left, so you can see where there is room before you hop.</p>
-      <div class="qchart chart">${ui.quotaView === "drain" ? drainChart(pool, span) : quotaChart(pool, span)}</div>
-      <div class="qfoot">${reset}${runsDry}<span class="qlegend"><i class="solid"></i>Measured<i class="dash"></i>Projected</span></div>
+    const rateText = rate >= 10 ? Math.round(rate) : rate.toFixed(1);
+    const empties = pool.emptyAt ? new Date(pool.emptyAt) - Date.now() : null;
+    const pace = empties == null || empties <= 0
+      ? { value: ui.quotaHours > 48 ? "7+ days" : "24+ hours", sub: `before ${pool.accounts === 1 ? "it runs" : "they run"} out`, tone: "" }
+      : { value: empties >= 2 * 86400_000 ? `${Math.round(empties / 86400_000)} days` : fmt.until(pool.emptyAt), sub: `before ${pool.accounts === 1 ? "it runs" : "all run"} out · ${when(pool.emptyAt)}`, tone: empties < 6 * 3600_000 ? "bad" : empties < 24 * 3600_000 ? "warn" : "" };
+    const figure = (name, value, sub, cls = "") => `<div class="lim-fig"><span class="lim-fig-name">${name}</span><b class="${cls}">${value}</b><span class="lim-fig-sub">${sub}</span></div>`;
+    const figures = [
+      figure("Draining", rate >= 0.05 ? `${rateText}%/h` : "Not now", rate >= 0.05 ? `this hour, ${pool.accounts === 1 ? "this login" : "all logins"}` : "nothing is being used"),
+      pool.nextReset
+        ? figure("Next reset", `+${Math.round(pool.nextReset.gain)}%`, `at ${esc(when(pool.nextReset.at))} · ${esc(pool.nextReset.account)}`, "up")
+        : figure("Next reset", "None soon", `within ${esc(span.label)}`),
+      figure("At this pace", esc(pace.value), esc(pace.sub), pace.tone),
+    ].join("");
+    const summary = `<section class="card lim-total" aria-labelledby="lim-total-h">
+      <span class="lim-total-title"><span class="lab">${scope} · out of ${Math.round(pool.capacity)}%</span><h2 id="lim-total-h">What your logins have left</h2></span>
+      <div class="lim-big ${tone}"><b data-count="${pool.remaining}" data-count-key="quota:${esc(pool.tool)}" data-format="pct">${Math.round(pool.remaining)}%</b><span>left across ${pool.accounts === 1 ? "it" : "them all"}</span></div>
+      <p class="lim-note">Each login keeps its own limits. This adds up what each one has left, so 100% is one full login.</p>
+      <div class="lim-figs">${figures}</div>
     </section>`;
+    const title = ui.quotaHours > 48 ? "This week and next" : "Today and tomorrow";
+    const legend = ui.quotaView === "drain" ? `<span><i class="bar"></i>Drain per hour</span>` : `<span><i class="solid"></i>Measured</span><span><i class="dash"></i>Projected</span><span><i class="reset"></i>Reset</span>`;
+    const forecast = `<section class="card qcard" aria-labelledby="lim-fore-h">
+      <div class="lim-fore-head"><h2 id="lim-fore-h">${title}</h2><span class="qlegend">${legend}</span></div>
+      <div class="qchart chart">${ui.quotaView === "drain" ? drainChart(pool, span) : quotaChart(pool, span)}</div>
+      <div class="lim-fore-tools">${tabs("quota-hours", Object.entries(QUOTA_SPANS).map(([hours, s]) => [hours, s.label]), String(ui.quotaHours))}${tabs("quota-view", [["remaining", "Remaining"], ["drain", "Drain rate"]], ui.quotaView)}</div>
+    </section>`;
+    return `<div class="lim-top">${summary}${forecast}</div>`;
+  }
+
+  // The forecast sits beside the summary, so its chart is drawn to that card's width.
+  function forecastWidth() {
+    const main = Math.min(1480, ($("#main")?.clientWidth || 1200) - 56);
+    const wide = !matchMedia("(max-width: 1180px)").matches;
+    return Math.max(420, Math.floor((wide ? (main - 18) * 1.3 / 2.3 : main) - 54));
   }
 
   // Points of a series as [time, value], from its first time and the report's step.
@@ -102,7 +162,7 @@ extension DashboardPage {
   }
 
   function quotaChart(pool, span) {
-    const W = chartWidth("full"), H = 230, L = 48, R = 14, T = 12, B = 26;
+    const W = forecastWidth(), H = 240, L = 48, R = 14, T = 12, B = 26;
     const now = new Date(data.quota.forecastStart).getTime();
     const from = now - span.past * 3600_000, to = now + ui.quotaHours * 3600_000;
     const top = Math.max(100, pool.capacity);
@@ -123,10 +183,12 @@ extension DashboardPage {
     const aheadLine = ahead.length > 1 ? path(ahead) : "";
     const aheadArea = aheadLine ? `${aheadLine}L${x(ahead[ahead.length - 1][0]).toFixed(1)},${y(0).toFixed(1)}L${x(ahead[0][0]).toFixed(1)},${y(0).toFixed(1)}Z` : "";
     // Where the projection steps up is a reset; a small mark says so.
-    let resets = "";
+    // Resets close together read as one, so only the first in any three hours is marked.
+    let resets = "", lastReset = -Infinity;
     for (let i = 1; i < ahead.length; i++) {
       const gain = ahead[i][1] - ahead[i - 1][1];
-      if (gain >= Math.max(10, top * 0.05)) resets += `<circle class="qreset" cx="${x(ahead[i][0]).toFixed(1)}" cy="${y(ahead[i][1]).toFixed(1)}" r="3"/>`;
+      if (gain >= Math.max(10, top * 0.05) && ahead[i][0] - lastReset >= 3 * 3600_000) {
+        lastReset = ahead[i][0]; const rx = x(ahead[i][0]).toFixed(1); resets += `<line class="qreset" x1="${rx}" x2="${rx}" y1="${y(ahead[i - 1][1]).toFixed(1)}" y2="${y(ahead[i][1]).toFixed(1)}"/>`; }
     }
     const nowX = x(now).toFixed(1);
     const marker = `<line class="qnow" x1="${nowX}" x2="${nowX}" y1="${T - 4}" y2="${H - B}"/><text class="qnow-label" x="${nowX}" y="${T + 6}" dx="5">Now</text>`;
@@ -152,7 +214,7 @@ extension DashboardPage {
   }
 
   function drainChart(pool, span) {
-    const W = chartWidth("full"), H = 230, L = 48, R = 14, T = 12, B = 26;
+    const W = forecastWidth(), H = 240, L = 48, R = 14, T = 12, B = 26;
     const now = new Date(data.quota.forecastStart).getTime();
     const from = now - Math.max(span.past, ui.quotaHours === 24 ? 24 : 168) * 3600_000;
     const points = seriesPoints(data.quota.pastStart, pool.drain || []).filter(([t, v]) => v != null && t >= from && t <= now);
@@ -189,16 +251,23 @@ extension DashboardPage {
   function loginGroup(tool, adding) {
     const pool = quotaPool(tool.id);
     const order = (account) => (account.active ? -1 : 0) * 1000 + (account.error ? 500 : 0) + maxUsed(account);
-    const rows = tool.accounts.slice().sort((a, b) => order(a) - order(b)).map((account) => loginRow(account, tool)).join("");
-    const waiting = adding ? `<div class="row waiting-row"><div class="waiting"><span class="pulse"><i></i><i></i><i></i></span><span>Waiting for a new ${esc(tool.name)} login ${waited(tool.id)}<br><small>${esc(tool.signInHint)} Keyhop saves it the moment it appears.</small></span></div>
+    const active = tool.accounts.find((account) => account.active);
+    const best = active ? alternative(tool, active) : null;
+    const rows = tool.accounts.slice().sort((a, b) => order(a) - order(b)).map((account) => loginRow(account, tool, best)).join("");
+    const waiting = adding ? `<div class="lim-row waiting-row"><div class="waiting"><span class="pulse"><i></i><i></i><i></i></span><span>Waiting for a new ${esc(tool.name)} login ${waited(tool.id)}<br><small>${esc(tool.signInHint)} Keyhop saves it the moment it appears.</small></span></div>
         ${isStatic ? "" : `<button class="btn sm ghost" data-action="add-stop" data-tool="${esc(tool.id)}">Stop waiting</button>`}</div>` : "";
-    const summary = pool && pool.accounts
-      ? `<span class="lgroup-sum"><b>${Math.round(pool.remaining)}%</b> of ${Math.round(pool.capacity)}% left${pool.drainPerHour >= 0.05 ? ` · ~${perHour(pool.drainPerHour)}` : ""}</span>`
-      : tool.accounts.some((account) => account.limits?.length) ? "" : `<span class="lgroup-sum">No limit to read</span>`;
-    return `<section class="card lgroup" aria-label="${esc(tool.name)}">
-      <header class="lgroup-head">${mark(tool.id)}<h2>${esc(tool.name)}</h2><span class="count">${tool.accounts.length}</span>${summary}
-        ${isStatic ? "" : `<button class="btn sm ghost" data-action="add" data-tool="${esc(tool.id)}" ${adding ? "disabled" : ""}>${icon("plus")}Add account</button>`}</header>
-      <div class="list">${waiting}${rows}</div>
+    const wall = active && !active.error && laneOf(active) === "needs" && !best;
+    const service = serviceFor(tool.id);
+    const parts = [];
+    if (pool && pool.accounts) parts.push(`${Math.round(pool.remaining)}% of ${Math.round(pool.capacity)}% left`);
+    else if (!tool.accounts.some((account) => account.limits?.length)) parts.push("No limit to read");
+    if (service) parts.push(serviceShort[service.level]);
+    else if (pool && pool.drainPerHour >= 0.05) parts.push(`about ${pool.drainPerHour >= 10 ? Math.round(pool.drainPerHour) : pool.drainPerHour.toFixed(1)}%/h`);
+    const summary = parts.length ? `<span class="lim-sum${wall || service ? " bad" : ""}">${esc(parts.join(" · "))}</span>` : "";
+    return `<section class="lim-group" aria-label="${esc(tool.name)}">
+      <header class="lim-group-head"><span class="tile-mark">${mark(tool.id)}</span><h2>${esc(tool.name)}</h2>${summary}
+        ${isStatic ? "" : `<button class="btn sm secondary" data-action="add" data-tool="${esc(tool.id)}" ${adding ? "disabled" : ""}>Add account</button>`}</header>
+      <div class="card lim-list">${waiting}${rows}</div>
     </section>`;
   }
 
@@ -214,42 +283,51 @@ extension DashboardPage {
     }
     const empty = forecast?.emptyAt || tightest(account)?.runsOutAt;
     if (empty && new Date(empty) - Date.now() < 7 * 86400_000) {
-      return { text: `Empty ~${when(empty)}`, tone: new Date(empty) - Date.now() < 6 * 3600_000 ? "warn" : "" };
+      return { text: `Empty around ${when(empty)}`, tone: new Date(empty) - Date.now() < 6 * 3600_000 ? "warn" : "" };
     }
     if (forecast && forecast.drainPerHour >= 0.05) return { text: `~${perHour(forecast.drainPerHour)}`, tone: "" };
     return { text: account.active ? "Idle" : "Resting", tone: "subtle" };
   }
 
   function windowBars(account, tool) {
+    if (account.error) return `<p class="lnote">Switch to it and sign in to ${esc(tool.name)} again to read its limits.</p>`;
     const limits = (account.limits || []).slice(0, 3);
-    if (!limits.length) return `<p class="lnote">${esc(account.error ? "" : tool.limitsNote || "No limit to read.")}</p>`;
-    return limits.map((limit) => `<div class="lwin">
+    if (!limits.length) return `<p class="lnote">${esc(tool.limitsNote || "No limit to read.")}</p>`;
+    return limits.map((limit) => {
+      const used = Math.round(limit.usedPercent);
+      const foot = runsOutSoon(limit) ? `runs out ${fmt.clock(limit.runsOutAt)}` : limit.resetsAt ? `back in ${fmt.until(limit.resetsAt)}` : "";
+      return `<div class="lwin">
         <span class="lwin-name">${esc(windowName(limit.label))}</span>
         ${progress(limit.usedPercent, limit.pace, undefined, `limits:${account.id}:${limit.label}`)}
-        <span class="lwin-pct">${Math.round(limit.usedPercent)}%</span>
-        <span class="lwin-foot">${limit.resetsAt ? esc(fmt.until(limit.resetsAt)) : ""}</span>
-      </div>`).join("");
+        <span class="lwin-pct${used >= 90 ? " bad" : ""}">${used}%</span>
+        <span class="lwin-foot">${esc(foot)}</span>
+      </div>`;
+    }).join("");
   }
 
   // One saved login: who it is, its windows, what happens next, and what you can do with it.
-  function loginRow(account, tool) {
+  function loginRow(account, tool, best) {
     const lane = laneOf(account);
     const editing = ui.editing === account.id;
-    const outlook = loginOutlook(account);
-    const meta = [account.plan, account.label ? account.email : "", account.limitsReadAt ? `read ${fmt.relative(account.limitsReadAt)}` : ""].filter(Boolean).join(" · ");
+    const wall = account.active && !account.error && lane === "needs" && !best;
+    let outlook = loginOutlook(account);
+    if (wall) outlook = { text: `No other ${tool.name} login`, tone: "bad" };
+    else if (best && best.id === account.id && outlook.tone !== "bad") outlook = { text: "Has the most room", tone: "good" };
+    const meta = [account.plan, account.label ? account.email : "", account.error ? "login expired" : account.limitsReadAt ? `read ${fmt.relative(account.limitsReadAt)}` : ""].filter(Boolean).join(" · ");
+    const pill = account.error ? `<span class="lim-pill bad">Signed out</span>` : account.active ? `<span class="lim-pill in-use" style="view-transition-name:in-use-${esc(tool.id)}">In use</span>` : "";
+    const dotTone = account.error || wall ? "bad" : lane === "needs" || lane === "hot" ? "warn" : "good";
     const who = editing
       ? `<form class="rename" data-form="rename" data-id="${esc(account.id)}"><input class="field" name="name" value="${esc(account.label || "")}" placeholder="${esc(account.email)}" maxlength="60" aria-label="Name"><button class="btn sm">Save</button><button type="button" class="btn sm ghost" data-action="cancel-edit">Cancel</button></form>`
-      : `<div class="account-name"><b class="${lane === "needs" ? "warn" : ""}">${esc(account.name)}</b>${account.active ? `<span class="in-use" style="view-transition-name:in-use-${esc(tool.id)}">In use</span>` : ""}</div>
-         <div class="account-line">${esc(account.error || meta)}</div>`;
-    return `<div class="row lrow${account.active ? " active" : ""}" style="view-transition-name:acct-${esc(account.id)}">
-      <div class="account-id">${dot(lane)}<div class="account-copy">${who}</div></div>
+      : `<div class="lim-name"><i class="lim-dot ${dotTone}" aria-hidden="true"></i><b>${esc(account.name)}</b>${pill}</div>
+         <div class="lim-meta" title="${esc(account.error || "")}">${esc(meta)}</div>`;
+    return `<div class="lim-row${wall ? " wall" : ""}${account.active ? " active" : ""}" style="view-transition-name:acct-${esc(account.id)}">
+      <div class="lim-who">${who}</div>
       <div class="lwins">${windowBars(account, tool)}</div>
-      <div class="loutlook ${outlook.tone}">${esc(outlook.text)}</div>
-      <div class="row-actions">${loginActions(account, editing)}</div>
+      <div class="lim-side"><span class="loutlook ${outlook.tone}">${esc(outlook.text)}</span><div class="row-actions">${loginActions(account, editing, tool, wall, best)}</div></div>
     </div>`;
   }
 
-  function loginActions(account, editing) {
+  function loginActions(account, editing, tool, wall, best) {
     if (isStatic || editing) return "";
     if (ui.confirming === account.id) {
       return `<span class="subtle" style="font-size:12.5px">Delete this saved login?</span><button class="btn sm secondary danger" data-action="remove" data-id="${esc(account.id)}">Remove</button><button class="btn sm ghost" data-action="cancel-remove">Keep</button>`;
@@ -259,14 +337,17 @@ extension DashboardPage {
         <button type="button" role="menuitem" data-action="edit" data-id="${esc(account.id)}">Rename</button>
         ${account.active ? "" : `<button type="button" role="menuitem" class="danger" data-action="confirm-remove" data-id="${esc(account.id)}">Remove saved login</button>`}
       </div>` : "";
-    return `${account.active ? "" : `<button class="btn sm secondary" data-action="switch" data-id="${esc(account.id)}">${account.error ? "Switch and sign in" : "Switch"}</button>`}
+    const hop = best && best.id === account.id && !account.error;
+    const main = wall ? `<button class="btn sm secondary" data-action="add" data-tool="${esc(tool.id)}">Add account</button>`
+      : account.active ? "" : `<button class="btn sm ${hop ? "" : "secondary"}" data-action="switch" data-id="${esc(account.id)}">${account.error ? "Switch and sign in" : hop ? "Hop here" : "Switch"}</button>`;
+    return `${main}
       <span class="menu-anchor"><button type="button" class="btn sm ghost icon-only" data-action="account-menu" data-id="${esc(account.id)}" aria-haspopup="true" aria-expanded="${open}" aria-label="More for ${esc(account.name)}">${icon("more")}</button>${menu}</span>`;
   }
 
   // Tools with no saved login, folded away so they don't crowd the ones in use.
   function setupCard(tools) {
     if (!tools.length) return "";
-    const rows = tools.map((tool) => `<div class="row setup-row"><div class="account-id">${mark(tool.id)}<div class="account-copy"><div class="account-name"><b>${esc(tool.name)}</b></div><div class="account-line">${esc(tool.signInHint)}</div></div></div>
+    const rows = tools.map((tool) => `<div class="row setup-row"><div class="account-id"><span class="tile-mark">${mark(tool.id)}</span><div class="account-copy"><div class="account-name"><b>${esc(tool.name)}</b></div><div class="account-line">${esc(tool.signInHint)}</div></div></div>
       ${isStatic ? "" : `<button class="btn sm ghost" data-action="add" data-tool="${esc(tool.id)}">${icon("plus")}Add account</button>`}</div>`).join("");
     return `<details class="card setup"><summary>${icon("plus")}<span>Add another tool</span><span class="subtle">${esc(nameList(tools.map((tool) => tool.name)))}</span></summary><div class="list">${rows}</div></details>`;
   }

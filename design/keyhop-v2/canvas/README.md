@@ -46,7 +46,12 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
   - **BC 1** puts the field header over the rings and keeps the hop card.
   - **BC 2** has the pet offer the hop in its bubble, above the rings.
 - **Picked: BC 1** (2026-10-16). `KB-Menu` is now BC 1 (560×660): the night field with the pooled figure and the pet, six rings, the hop card, the Codex warning and Open, Refresh and Quit in one row. `KB-Menus` and `KB-Menubc` stay as the record.
-- **Next:** owner feedback on the KB boards, then rewrite `design/keyhop-v2/index.html` and the real window and site tokens to Coss Blue.
+- **Shipped to the product** (2026-10-16). Coss Blue and Geist now dress the real surfaces:
+  - the Mac window (`Dashboard/Page/DashboardStyles.swift`, Geist embedded in `DashboardFonts.swift`);
+  - keyhop.app on `main` (`cloud/src/ui.ts`, fonts served by `cloud/src/fonts.ts`);
+  - the menu bar panel, rebuilt as BC 1 in `UI/MenuView.swift`, and the SwiftUI tokens in `UI/Brand.swift`;
+  - the iPhone app and the GPUI window, from the TrueType faces in `Assets/fonts`.
+- **Next:** rewrite `design/keyhop-v2/index.html` to Coss Blue.
 - **Was next once a colour is picked:** apply it to System, Limits, the menu bar popover and keyhop.app (Mac and web in parity), then rewrite `design/keyhop-v2/index.html` and the window and site tokens.
 
 ## How we got there (rows on the canvas, oldest at the bottom)

@@ -285,13 +285,13 @@ jobs:
             image: fedora:latest
             runner: ubuntu-24.04
             artifact: linux-x86_64
-            install: dnf install -y artifacts/*.rpm
+            install: dnf install -y --setopt=install_weak_deps=False --setopt=minrate=100k --setopt=timeout=30 --setopt=retries=6 artifacts/*.rpm
             tray: true
           - name: Fedora aarch64 (RPM)
             image: fedora:latest
             runner: ubuntu-24.04-arm
             artifact: linux-aarch64
-            install: dnf install -y artifacts/*.rpm
+            install: dnf install -y --setopt=install_weak_deps=False --setopt=minrate=100k --setopt=timeout=30 --setopt=retries=6 artifacts/*.rpm
             tray: true
           - name: Ubuntu 24.04 (DEB)
             image: ubuntu:24.04

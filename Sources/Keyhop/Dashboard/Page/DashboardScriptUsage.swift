@@ -60,8 +60,8 @@ extension DashboardPage {
       : (usage.tools || []).map((tool) => ({ id: tool.id, name: tool.name, color: tool.color, figures: tool.figures, tool: tool.id,
           models: usage.models.filter((m) => m.tool === tool.id).length }));
     parts.sort((a, b) => value(b) - value(a));
-    // One tool's models share its colour, so each steps a shade lighter by rank to stay apart.
-    if (narrowed) parts.forEach((x, i) => { x.color = shade(x.color, Math.min(0.6, i * 0.2)); });
+    // The same blue as Home, lightest for the largest share, whether the parts are tools or one tool's models.
+    parts.forEach((x, i) => { x.color = SHARE_BLUES[Math.min(i, SHARE_BLUES.length - 1)]; });
     const sum = parts.reduce((s, x) => s + value(x), 0) || 1;
     const share = (x) => (value(x) / sum) * 100;
     const pct = (x) => { const v = share(x); return v > 0 && v < 1 ? "<1%" : `${Math.round(v)}%`; };
@@ -82,8 +82,9 @@ extension DashboardPage {
         : `<div class="tile"${tipFor(x)}>${inner}</div>`;
     }).join("");
     const title = `${tokens ? "Tokens" : "API value"}, ${esc((usage.title || "").toLowerCase() === "today" ? "today" : usage.title)}${narrowed ? ` · ${esc(toolName(ui.tool))}` : ""}`;
+    const eyebrow = `${esc(fmt.day(new Date(), { weekday: "short", month: "short", day: "numeric" }))} · ${esc(usage.title || "")}`;
     return `<section class="card total-card">
-      <div class="total-head"><span>${title}</span>${narrowed && !isStatic ? `<button type="button" class="btn sm ghost" data-action="filter-tool" data-value="all">All tools</button>` : `<span class="total-change">${change}<span class="subtle">${before}</span></span>`}</div>
+      <div class="total-head"><span class="total-title"><span class="lab">${eyebrow}</span><h2>${title}</h2></span>${narrowed && !isStatic ? `<button type="button" class="btn sm secondary" data-action="filter-tool" data-value="all">All tools</button>` : `<span class="total-change">${change}<span class="subtle">${before}</span></span>`}</div>
       <div class="total-figure" data-count="${tokens ? t.tokens : (t.cost || 0).toFixed(2)}" data-count-key="total:${esc(ui.metric)}" data-format="${tokens ? "count" : "usdExact"}" data-count-intro>${exact}</div>
       <p class="total-facts">${facts.map(esc).join(" · ")}</p>
       ${parts.length ? bar : ""}
@@ -293,7 +294,7 @@ extension DashboardPage {
   function heatCard(usage) {
     const s = usage.streak;
     return `<section class="card">
-      <div class="card-head"><h2>Activity</h2><span class="scale">Less <i style="background:hsl(var(--on) / .05)"></i><i style="background:hsl(var(--on) / .18)"></i><i style="background:hsl(var(--on) / .36)"></i><i style="background:hsl(var(--on) / .6)"></i><i style="background:hsl(var(--on) / .9)"></i> More</span></div>
+      <div class="card-head"><h2>Activity</h2><span class="scale">Less <i class="hcell l0"></i><i class="hcell l1"></i><i class="hcell l2"></i><i class="hcell l3"></i><i class="hcell l4"></i> More</span></div>
       <div class="card-body chart">${heatmap(usage.heatmap)}</div>
       <div class="facts">
         <div><b>${s.current}</b><span>day streak</span></div>

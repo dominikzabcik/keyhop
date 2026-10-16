@@ -85,7 +85,7 @@ extension DashboardPage {
     if (points.length) {
       const path = points.map((p, k) => `${k ? "L" : "M"}${x(p.i).toFixed(1)},${y(p.total).toFixed(1)}`).join("");
       const last = points[points.length - 1];
-      line = `<path d="${path}L${x(last.i).toFixed(1)},${y(0).toFixed(1)}L${x(points[0].i).toFixed(1)},${y(0).toFixed(1)}Z" style="fill:hsl(var(--on) / .05)"/><path d="${path}" fill="none" stroke="hsl(0 0% 92%)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(last.i).toFixed(1)}" cy="${y(last.total).toFixed(1)}" r="3.5" fill="hsl(0 0% 92%)"/>`;
+      line = `<path d="${path}L${x(last.i).toFixed(1)},${y(0).toFixed(1)}L${x(points[0].i).toFixed(1)},${y(0).toFixed(1)}Z" style="fill:color-mix(in srgb, var(--primary) 12%, transparent)"/><path d="${path}" fill="none" style="stroke:var(--primary)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(last.i).toFixed(1)}" cy="${y(last.total).toFixed(1)}" r="3.5" style="fill:var(--primary)"/>`;
     }
     const elapsed = periodProgress("month").elapsed;
     return `<section class="card">

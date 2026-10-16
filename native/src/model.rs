@@ -263,3 +263,142 @@ pub fn columns(quota: &crate::api::Quota, pool: &crate::api::Pool, from: i64, to
         })
         .collect()
 }
+
+/// Home's tools share one blue, lightest for the largest share (KB-Home).
+pub const SHARE_BLUES: [u32; 6] = [0xa8cefc, 0x80b7fb, 0x60a5fa, 0x4d84c8, 0x3d6aa0, 0x2e4f78];
+
+/// The pet's stages and the lifetime tokens each starts at.
+pub const PET_STAGES: [(&str, &str, u64); 6] = [
+    ("speck", "Speck", 0),
+    ("hatch", "Hatch", 1_000_000),
+    ("frame", "Frame", 50_000_000),
+    ("bulk", "Bulk", 500_000_000),
+    ("mass", "Mass", 5_000_000_000),
+    ("monument", "Monument", 25_000_000_000),
+];
+
+/// Where the pet is between its stage and the next: 0 at the stage's start, 1 at the next one.
+pub fn stage_progress(pet: &crate::api::Pet) -> (usize, f32) {
+    let at = PET_STAGES.iter().position(|(id, _, _)| *id == pet.stage).unwrap_or(0);
+    let Some(next) = &pet.next else { return (at, 1.0) };
+    let from = PET_STAGES[at].2 as f64;
+    let to = (pet.tokens + next.tokens) as f64;
+    let share = if to > from { (pet.tokens as f64 - from) / (to - from) } else { 1.0 };
+    (at, share.clamp(0.0, 1.0) as f32)
+}
+
+/// One bar of Tokens per day: its day, its tokens, and whether it is from the span before the range.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DayBar {
+    pub day: String,
+    pub tokens: u64,
+    pub before: bool,
+}
+
+/// The range's steps, summed over every series; a week also brings the 7 days before it, dimmed.
+pub fn trend(usage: &crate::api::Usage, week: bool) -> Vec<DayBar> {
+    let mut bars: Vec<DayBar> = usage
+        .buckets
+        .iter()
+        .map(|b| DayBar { day: b.start.get(0..10).unwrap_or_default().to_string(), tokens: b.values.values().map(|v| v.tokens).sum(), before: false })
+        .collect();
+    if week {
+        let first = usage.start.get(0..10).unwrap_or_default();
+        if let Some(at) = usage.heatmap.iter().position(|d| d.day == first) {
+            let before: Vec<DayBar> = usage.heatmap[at.saturating_sub(7)..at].iter().map(|d| DayBar { day: d.day.clone(), tokens: d.tokens, before: true }).collect();
+            bars.splice(0..0, before);
+        }
+    }
+    bars
+}
+
+/// The heatmap's level for each day: 0 for none, 1–4 by quartile of the active days.
+pub fn heat_levels(days: &[crate::api::HeatDay]) -> Vec<u8> {
+    let mut active: Vec<u64> = days.iter().map(|d| d.tokens).filter(|&t| t > 0).collect();
+    active.sort_unstable();
+    let q = |x: f64| active.get(((x * active.len() as f64) as usize).min(active.len().saturating_sub(1))).copied().unwrap_or(0);
+    let cuts = [q(0.25), q(0.5), q(0.75)];
+    days.iter()
+        .map(|d| match d.tokens {
+            0 => 0,
+            t if t <= cuts[0] => 1,
+            t if t <= cuts[1] => 2,
+            t if t <= cuts[2] => 3,
+            _ => 4,
+        })
+        .collect()
+}
+
+/// A count with thousands separators: 44,958,228.
+pub fn count(value: u64) -> String {
+    let digits = value.to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// "#F3EAD8" as a colour value.
+pub fn hex(color: &str) -> u32 {
+    u32::from_str_radix(color.trim_start_matches('#').get(0..6).unwrap_or("ffffff"), 16).unwrap_or(0xffffff)
+}
+
+/// How long ago, the way the window says it: "2m ago".
+pub fn ago(iso: &str) -> String {
+    let Some(at) = epoch(iso) else { return String::new() };
+    let s = (now() - at).max(0);
+    match s {
+        0..60 => "just now".into(),
+        60..3_600 => format!("{}m ago", s / 60),
+        3_600..86_400 => format!("{}h ago", s / 3_600),
+        _ => format!("{}d ago", s / 86_400),
+    }
+}
+
+/// A day ("2026-10-13") as the axis says it: "Oct 13".
+pub fn short_day(day: &str) -> String {
+    const MONTHS: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    let month = day.get(5..7).and_then(|m| m.parse::<usize>().ok()).unwrap_or(1);
+    let date = day.get(8..10).and_then(|d| d.parse::<u32>().ok()).unwrap_or(1);
+    format!("{} {date}", MONTHS[(month.max(1) - 1).min(11)])
+}
+
+#[cfg(test)]
+mod home_tests {
+    use super::*;
+    use crate::api::{Bucket, BucketValue, HeatDay, Pet, PetNext, Usage};
+
+    #[test]
+    fn the_pet_sits_between_its_stage_and_the_next() {
+        let pet = Pet { stage: "bulk".into(), tokens: 800_000_000, next: Some(PetNext { label: "Mass".into(), tokens: 4_200_000_000 }), ..Default::default() };
+        let (at, share) = stage_progress(&pet);
+        assert_eq!(at, 3);
+        assert!((share - 0.0667).abs() < 0.001);
+    }
+
+    #[test]
+    fn a_week_brings_the_seven_days_before_it() {
+        let heatmap: Vec<HeatDay> = (1..=14).map(|d| HeatDay { day: format!("2026-10-{d:02}"), tokens: d }).collect();
+        let buckets = (8..=14).map(|d| Bucket { start: format!("2026-10-{d:02}T00:00:00Z"), values: [("a".to_string(), BucketValue { tokens: d * 10 })].into() }).collect();
+        let usage = Usage { start: "2026-10-08T00:00:00Z".into(), heatmap, buckets, ..Default::default() };
+        let bars = trend(&usage, true);
+        assert_eq!(bars.len(), 14);
+        assert!(bars[0].before && bars[0].tokens == 1);
+        assert!(!bars[13].before && bars[13].tokens == 140);
+    }
+
+    #[test]
+    fn counts_levels_and_days_read_like_the_window() {
+        assert_eq!(count(44_958_228), "44,958,228");
+        assert_eq!(count(999), "999");
+        let days: Vec<HeatDay> = [0, 1, 2, 3, 4].iter().map(|&t| HeatDay { day: String::new(), tokens: t }).collect();
+        // The same cuts as the HTML window: the quartiles of the active days, taken by index.
+        assert_eq!(heat_levels(&days), vec![0, 1, 1, 2, 3]);
+        assert_eq!(hex("#F3EAD8"), 0xf3ead8);
+        assert_eq!(short_day("2026-10-13"), "Oct 13");
+    }
+}

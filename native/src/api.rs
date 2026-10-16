@@ -61,6 +61,21 @@ impl Client {
         Ok(self.get("/api/quota")?.into_json()?)
     }
 
+    /// The usage document for a range ("today", "week", "month", "all"), every tool together.
+    pub fn usage(&self, range: &str) -> Result<Usage> {
+        Ok(self.get(&format!("/api/usage?range={range}&tool=all"))?.into_json()?)
+    }
+
+    /// The linked account's pet, drawn from synced totals.
+    pub fn pet(&self) -> Result<Pet> {
+        Ok(self.get("/api/cloud/pet")?.into_json()?)
+    }
+
+    /// The HTML window's address for a section, for the places this window doesn't draw yet.
+    pub fn page(&self, section: &str) -> String {
+        format!("{}/#s={section}&k={}", self.base, self.key)
+    }
+
     pub fn set_theme(&self, theme: &str) -> Result<()> {
         self.post("/api/appearance", serde_json::json!({ "theme": theme }))?;
         Ok(())
@@ -152,6 +167,122 @@ pub struct State {
     pub mode: String,
     pub version: String,
     pub refreshing: bool,
+    pub cloud: Cloud,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Cloud {
+    pub available: bool,
+    pub linked: bool,
+    pub login: Option<String>,
+}
+
+/// `GET /api/usage`: tokens and API value for a range, by tool, model and step.
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Usage {
+    pub title: String,
+    pub start: String,
+    pub end: String,
+    pub bucket: String,
+    pub compared: bool,
+    pub total: Figures,
+    pub previous: Figures,
+    pub cache_savings: f64,
+    pub tools: Vec<UsageTool>,
+    pub models: Vec<UsageModel>,
+    pub buckets: Vec<Bucket>,
+    pub heatmap: Vec<HeatDay>,
+    pub streak: Streak,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Figures {
+    pub tokens: u64,
+    pub cost: f64,
+    pub requests: u64,
+    pub input: u64,
+    pub cache_read: u64,
+    pub cache_write: u64,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct UsageTool {
+    pub id: String,
+    pub name: String,
+    pub figures: Figures,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct UsageModel {
+    pub tool: String,
+    pub model: String,
+    pub figures: Figures,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Bucket {
+    pub start: String,
+    pub values: std::collections::HashMap<String, BucketValue>,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct BucketValue {
+    pub tokens: u64,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct HeatDay {
+    pub day: String,
+    pub tokens: u64,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Streak {
+    pub current: u32,
+    pub longest: u32,
+    pub active_days: u32,
+}
+
+/// `GET /api/cloud/pet`: the stage and the shapes to paint, in the pet's own units.
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Pet {
+    pub stage: String,
+    pub stage_name: String,
+    pub lineage_name: Option<String>,
+    pub tokens: u64,
+    pub next: Option<PetNext>,
+    pub streak: u32,
+    pub width: f32,
+    pub height: f32,
+    pub shapes: Vec<Shape>,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct PetNext {
+    pub label: String,
+    pub tokens: u64,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Shape {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+    pub fill: String,
+    pub opacity: f32,
 }
 
 #[derive(Deserialize, Clone, Default, Debug)]

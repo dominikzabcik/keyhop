@@ -41,6 +41,7 @@ struct TrayStatus: Decodable {
         let title: String
         let body: String
         let switchTo: UUID?
+        let subtitle: String?
     }
 
     struct Budget: Decodable {

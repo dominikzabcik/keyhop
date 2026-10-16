@@ -442,7 +442,7 @@ final class TrayApp {
             guard let self else { return }
             if self.busy == "Reading limits…" { self.busy = nil }
             for alert in self.status?.alerts ?? [] {
-                self.notify(alert.title, alert.body, switchTo: alert.switchTo)
+                self.notify(alert.title, [alert.subtitle, alert.body].compactMap { $0 }.joined(separator: "\n"), switchTo: alert.switchTo)
             }
         }
     }

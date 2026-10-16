@@ -74,7 +74,9 @@ final class AlertRulesTests: XCTestCase {
                                          forecasts: [:], budgets: [], budgetSpend: [:], now: now)
         XCTAssertEqual(alerts.count, 1)
         XCTAssertEqual(alerts.first?.switchTo, roomy.id)
-        XCTAssertTrue(alerts.first?.title.contains("95%") ?? false)
+        XCTAssertEqual(alerts.first?.title, "Claude Code is nearly out")
+        XCTAssertEqual(alerts.first?.subtitle, "a@x.dev · 5-hour at 95%")
+        XCTAssertEqual(alerts.first?.switchName, "c@x.dev")
     }
 
     func testAutoHopPicksTheLimitAlertsRecommendedAccount() {

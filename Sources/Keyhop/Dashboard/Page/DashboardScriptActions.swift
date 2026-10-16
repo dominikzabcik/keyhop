@@ -29,6 +29,25 @@ extension DashboardPage {
     }
   }
 
+  // A hop says where it went and what that login has, and offers the way back for a few seconds.
+  async function hopTo(button, id) {
+    const tools = data.state?.status.tools || [];
+    const tool = tools.find((item) => item.accounts.some((account) => account.id === id));
+    const from = tool?.accounts.find((account) => account.active && account.id !== id) || null;
+    await act(button, () => api("/api/switch", { id }), "Switching", true);
+    const now = (data.state?.status.tools || []).find((item) => item.id === tool?.id);
+    const to = now?.accounts.find((account) => account.id === id);
+    if (!to?.active) return;
+    const windows = (to.limits || []).map((limit) => `${windowName(limit.label).toLowerCase()} ${Math.round(limit.usedPercent)}%`).join(" · ");
+    const node = $("#toast");
+    node.classList.remove("error");
+    node.innerHTML = `<span class="toast-check" aria-hidden="true">${icon("check")}</span><span class="toast-copy"><b>${esc(now.name)} hopped to ${esc(to.name)}</b>${windows ? `<small>${esc(windows)} used</small>` : ""}</span>${from && !isStatic ? `<button class="btn sm secondary" type="button" data-action="switch" data-id="${esc(from.id)}">Undo</button>` : ""}`;
+    node.classList.add("rich");
+    node.classList.remove("away");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { node.classList.add("away"); node.classList.remove("rich"); }, 6000);
+  }
+
   async function showDay() {
     ui.boardView = "day";
     ui.boardDate = "";
@@ -127,7 +146,7 @@ extension DashboardPage {
         if (data.state?.refreshing) break;
         act(null, () => { data.state.refreshing = true; renderActivity(); return api("/api/refresh", {}); });
         break;
-      case "switch": act(el, () => api("/api/switch", { id }), "Switching", true); break;
+      case "switch": hopTo(el, id); break;
       case "account-menu": ui.menu = ui.menu === id ? null : id; ui.confirming = null; render(); break;
       case "add": act(el, () => api("/api/add", { tool: el.dataset.tool }), "Signing out"); break;
       case "add-stop": act(el, () => api("/api/add/stop", { tool: el.dataset.tool }), "Stopping"); break;

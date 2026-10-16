@@ -3,10 +3,19 @@ import Foundation
 struct AlertCandidate: Codable, Equatable, Sendable {
     /// Stable per limit window or budget period, so each alert is raised once.
     let key: String
+    /// Names the tool and its state: "Codex is nearly out".
     let title: String
     let body: String
     /// The saved account a Switch button should move the tool to.
     let switchTo: UUID?
+    /// The account and the figure, shown under the title: "me@personal.dev · 5-hour at 93%".
+    var subtitle: String? = nil
+    /// The tool the alert is about, so the notification can carry its mark.
+    var tool: String? = nil
+    /// How urgent: "out" (at the wall), "warn" (running low), "hop" (a hop on offer) or "done" (a hop made).
+    var tone: String? = nil
+    /// The account a Hop button names, for its label.
+    var switchName: String? = nil
 }
 
 /// When to warn: a limit nearly used up or on track to run out before it resets, and budgets at
@@ -53,14 +62,21 @@ enum AlertRules {
                     now: now
                 ).flatMap { $0.room >= 20 ? $0 : nil }
 
+                // KB-Notify: the title names the tool and its state, the subtitle the account and the
+                // figure, and the body what to do about it.
+                let used = Int(window.usedPercent.rounded())
                 let title = nearlyOut
-                    ? "\(provider.name) \(window.label.lowercased()) limit at \(Int(window.usedPercent.rounded()))%"
-                    : "\(provider.name) \(window.label.lowercased()) limit runs out around \(eta!.formatted(date: .omitted, time: .shortened))"
-                let body = alternative.map { "\(account.displayName) is close to its limit. \($0.name) has \(Int($0.room.rounded()))% left." }
-                    ?? "\(account.displayName) is close to its limit, and no other saved \(provider.name) account has room."
+                    ? "\(provider.name) is nearly out"
+                    : "\(provider.name) runs out around \(eta!.formatted(date: .omitted, time: .shortened))"
+                let subtitle = "\(account.displayName) · \(windowWord(window.label)) at \(used)%"
+                let body = alternative.map { "\($0.name) has \(Int($0.room.rounded()))% left. Hop now and keep going." }
+                    ?? "No other \(provider.name) login has room. Add one to hop next time."
                 let windowID = window.resetsAt.map { String(Int($0.timeIntervalSince1970 / 3600)) } ?? "open"
                 alerts.append(AlertCandidate(key: "limit:\(id.uuidString):\(window.label):\(windowID):\(nearlyOut ? "90" : "pace")",
-                                             title: title, body: body, switchTo: alternative?.account))
+                                             title: title, body: body, switchTo: alternative?.account,
+                                             subtitle: subtitle, tool: provider.rawValue,
+                                             tone: alternative == nil ? "out" : nearlyOut ? "warn" : "hop",
+                                             switchName: alternative?.name))
             }
         }
 
@@ -80,10 +96,23 @@ enum AlertRules {
                 title: threshold >= 1
                     ? "\(name) \(verb) over \(whose) \(budget.period.adjective) budget"
                     : "\(name) \(used) 80% of \(whose) \(budget.period.adjective) budget",
-                body: "\(Numbers.usd(spent)) of \(Numbers.usd(budget.amount)).",
-                switchTo: nil
+                body: threshold >= 1 ? "Over by \(Numbers.usd(spent - budget.amount))." : "Keyhop tells you again at 100%.",
+                switchTo: nil,
+                subtitle: "\(Numbers.usd(spent)) of \(Numbers.usd(budget.amount))",
+                tone: threshold >= 1 ? "out" : "warn"
             ))
         }
         return alerts
+    }
+
+    /// A window's name as the notification says it: "5-hour", "weekly".
+    static func windowWord(_ label: String) -> String {
+        switch label {
+        case "5h": "5-hour"
+        case "Week": "weekly"
+        case "Opus": "Opus weekly"
+        case "Sonnet": "Sonnet weekly"
+        default: label.lowercased()
+        }
     }
 }

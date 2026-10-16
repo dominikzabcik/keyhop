@@ -629,6 +629,12 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 }
 .toast.away { transform: translateY(12px); opacity: 0; pointer-events: none; }
 .toast.error { border-color: hsl(8 80% 67% / .45); }
+.toast.rich { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.toast-check { flex: none; width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+.toast-check .icon { width: 13px; height: 13px; stroke-width: 2; }
+.toast-copy { flex: 1; min-width: 0; display: grid; line-height: 17px; }
+.toast-copy b { font-weight: 600; }
+.toast-copy small { color: var(--muted); font-size: 12px; }
 
 /* The sidebar after coss-ui: the workspace, a search to hop, the places, then each limit live. */
 .brand { height: auto; padding: 12px 12px 4px; border-bottom: 0; gap: 10px; }

@@ -177,14 +177,20 @@ final class UsageTracker: ObservableObject {
            let hop = AlertRules.autoHop(from: alerts, accounts: store.accounts), !autoHopped.contains(hop.key) {
             autoHopped.insert(hop.key)
             if autoHopped.count > 200 { autoHopped.removeAll() }
+            // The warning it replaces says which login was close, and how close.
+            let warning = alerts.first { $0.key == hop.key }?.subtitle
             alerts.removeAll { $0.key == hop.key }
             store.switchTo(hop.to)
             Alerts.shared.post(key: "autohop:\(hop.key)",
-                               title: "Hopped \(hop.to.provider.name) to \(hop.to.displayName)",
-                               body: "The limit was close, so Keyhop moved over while there was room.")
+                               title: "\(hop.to.provider.name) hopped to \(hop.to.displayName)",
+                               body: "It moved while there was room. Open Keyhop to hop back.",
+                               subtitle: warning.map { "Smart Hop · \($0)" } ?? "Smart Hop",
+                               tool: hop.to.provider.rawValue)
         }
         for alert in alerts {
-            Alerts.shared.post(key: alert.key, title: alert.title, body: alert.body, switchTo: alert.switchTo)
+            Alerts.shared.post(key: alert.key, title: alert.title, body: alert.body, switchTo: alert.switchTo,
+                               subtitle: alert.subtitle, tool: alert.tool, switchName: alert.switchName,
+                               offerAdd: alert.key.hasPrefix("limit:") && alert.switchTo == nil)
         }
     }
 

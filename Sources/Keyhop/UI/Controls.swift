@@ -1,7 +1,7 @@
 #if os(macOS)
 import SwiftUI
 
-/// The dashboard's buttons: primary is near-white, secondary sits on a raised surface, ghost has no
+/// The dashboard's buttons: primary is the one blue, secondary sits on a raised surface, ghost has no
 /// chrome until hovered. A tiny, interruptible press confirms contact unless Reduce Motion is on.
 struct AppButtonStyle: ButtonStyle {
     enum Kind { case primary, secondary, ghost }
@@ -26,7 +26,7 @@ struct AppButtonStyle: ButtonStyle {
             let shape = RoundedRectangle(cornerRadius: 7, style: .continuous)
             let hot = hovering && isEnabled
             configuration.label
-                .font(.system(size: style.size == .small ? 12.5 : 13, weight: .medium))
+                .font(Brand.sans(style.size == .small ? 12.5 : 13, weight: .medium))
                 .lineLimit(1)
                 .foregroundStyle(foreground(hot))
                 .padding(.horizontal, style.size == .small ? 10 : 14)
@@ -60,7 +60,7 @@ struct AppButtonStyle: ButtonStyle {
 
         private func fill(_ hot: Bool) -> Color {
             switch style.kind {
-            case .primary: hot ? .white : Brand.primary
+            case .primary: hot ? Brand.primaryHover : Brand.primary
             case .secondary: hot ? Brand.raisedHover : Brand.raised
             case .ghost: hot ? Brand.hover : .clear
             }

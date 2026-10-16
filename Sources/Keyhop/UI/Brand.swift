@@ -1,46 +1,72 @@
 #if os(macOS)
 import AppKit
+import CoreText
 import SwiftUI
 
 /// The dashboard's design tokens, so the menu, the welcome window and Keyhop's window read as one
-/// app: near-black neutral surfaces, white at low opacity for edges and hover, and three colors
-/// that only ever mean a state.
+/// app: Coss Blue's neutral surfaces, white at low opacity for edges and hover, one blue for
+/// actions, and colors that otherwise only ever mean a state.
 enum Brand {
-    static let background = Color(white: 0.09)
-    static let sidebar = Color(white: 0.072)
-    static let panel = Color(white: 0.118)
-    static let raised = Color(white: 0.135)
-    static let raisedHover = Color(white: 0.16)
+    static let background = Color(hex: "#161616")
+    static let sidebar = Color(hex: "#111111")
+    static let panel = Color(hex: "#1A1A1A")
+    static let raised = Color(hex: "#1F1F1F")
+    static let raisedHover = Color(hex: "#262626")
     static let hover = Color.white.opacity(0.05)
     static let selected = Color.white.opacity(0.1)
-    static let border = Color.white.opacity(0.08)
-    static let borderStrong = Color.white.opacity(0.14)
+    static let border = Color.white.opacity(0.10)
+    static let borderStrong = Color.white.opacity(0.16)
     static let faint = Color.white.opacity(0.08)
-    static let text = Color(white: 0.92)
-    static let muted = Color(white: 0.63)
-    static let subtle = Color(white: 0.46)
-    static let primary = Color(white: 0.95)
-    static let onPrimary = Color(white: 0.09)
-    static let good = Color(hex: "#5CC98A")
-    static let warn = Color(hex: "#E3A64F")
-    static let bad = Color(hex: "#EE7A69")
-    static let info = Color(hex: "#7EB0F2")
+    static let text = Color(hex: "#F5F5F5")
+    static let muted = Color(hex: "#A3A3A3")
+    static let subtle = Color(hex: "#8A8A8A")
+    static let primary = Color(hex: "#60A5FA")
+    static let primaryHover = Color(hex: "#7DB6FB")
+    static let onPrimary = Color(hex: "#0A1628")
+    static let good = Color(hex: "#34D399")
+    static let warn = Color(hex: "#F59E0B")
+    /// Red as text; `red` is the same state as a fill or a ring.
+    static let bad = Color(hex: "#FF8A82")
+    static let red = Color(hex: "#FB414A")
+    static let info = Color(hex: "#93C5FD")
 
-    static let backgroundColor = NSColor(srgbRed: 0.09, green: 0.09, blue: 0.09, alpha: 1)
+    static let backgroundColor = NSColor(srgbRed: 0x16 / 255, green: 0x16 / 255, blue: 0x16 / 255, alpha: 1)
+
+    /// Geist, the window's face. Registered once at launch from the fonts the window's page embeds;
+    /// until then, or if that fails, SwiftUI falls back to the system face.
+    static func sans(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .custom("Geist", size: size).weight(weight)
+    }
 
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight, design: .monospaced)
+        .custom("Geist Mono", size: size).weight(weight)
     }
 
-    /// Figures: the system face at medium weight with digits of one width, so a number that
-    /// changes never shifts what stands beside it.
+    /// Figures: Geist a step heavier with digits of one width, so a number that changes never
+    /// shifts what stands beside it.
     static func figure(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .semibold).monospacedDigit()
+        sans(size, weight: .semibold).monospacedDigit()
     }
 
-    /// Names and headings: the system face, a step heavier than the text around it.
+    /// Names and headings: Geist, a step heavier than the text around it.
     static func heading(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .semibold)
+        sans(size, weight: .semibold)
+    }
+
+    /// Hands Geist and Geist Mono to Core Text for this process, from the base64 fonts in the
+    /// window's stylesheet, so the app carries one copy of each.
+    static func registerFonts() {
+        var rest = Substring(DashboardPage.fonts)
+        while let start = rest.range(of: "base64,") {
+            rest = rest[start.upperBound...]
+            guard let end = rest.firstIndex(of: ")") else { break }
+            if let data = Data(base64Encoded: String(rest[..<end])),
+               let provider = CGDataProvider(data: data as CFData),
+               let font = CGFont(provider) {
+                CTFontManagerRegisterGraphicsFont(font, nil)
+            }
+            rest = rest[end...]
+        }
     }
 }
 
@@ -84,8 +110,8 @@ struct Badge: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 11.5, weight: .medium))
-            .foregroundStyle(live ? Color(red: 0.66, green: 0.82, blue: 0.72) : Brand.muted)
+            .font(Brand.sans(11.5, weight: .medium))
+            .foregroundStyle(live ? Brand.good : Brand.muted)
             .padding(.horizontal, 8)
             .frame(height: 20)
             .background(RoundedRectangle(cornerRadius: 6, style: .continuous)

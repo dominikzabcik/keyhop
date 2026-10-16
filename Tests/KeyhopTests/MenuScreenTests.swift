@@ -26,7 +26,7 @@ final class MenuScreenTests: XCTestCase {
     }
 
     /// Renders a screen at the menu's real width and reads every word on it.
-    private func words<V: View>(of view: V, width: CGFloat = 520) throws -> [String] {
+    private func words<V: View>(of view: V, width: CGFloat = 360) throws -> [String] {
         let renderer = ImageRenderer(content: view.frame(width: width).environment(\.colorScheme, .dark))
         renderer.scale = 2
         guard let image = renderer.cgImage else { throw XCTSkip("This machine can't render SwiftUI offscreen.") }
@@ -63,26 +63,30 @@ final class MenuScreenTests: XCTestCase {
             .environment(\.staticSnapshot, true)
     }
 
-    /// Everything the panel promises about the account in use has to be on the panel.
-    func testTheMenuShowsTheAccountInUseItsLimitsAndTheWayIn() throws {
+    /// The field says what is left across your logins, and the footer is the way in and out.
+    func testTheMenuShowsWhatIsLeftAndTheWayIn() throws {
         let said = try words(of: menu()).joined(separator: " | ")
-        XCTAssertTrue(said.contains("Claude"), "the tool is never named: \(said)")
-        XCTAssertTrue(said.contains("Personal"), "the account in use is never named: \(said)")
-        XCTAssertTrue(said.contains("In use"), "nothing says which account is in use: \(said)")
-        XCTAssertTrue(said.contains("5h") || said.contains("Week"), "no limit is shown: \(said)")
+        XCTAssertTrue(said.contains("left"), "nothing says what is left: \(said)")
         XCTAssertTrue(said.contains("%"), "no limit reading is shown: \(said)")
-        XCTAssertTrue(said.contains("Open Keyhop"), "there is no way into the window: \(said)")
-        XCTAssertTrue(said.contains("Add"), "there is no way to add an account: \(said)")
+        XCTAssertTrue(said.contains("tokens today"), "today's tokens are missing: \(said)")
+        XCTAssertTrue(said.contains("Open"), "there is no way into the window: \(said)")
+        XCTAssertTrue(said.contains("More"), "there is no way to settings, adding a login or Quit: \(said)")
     }
 
-    /// Every switchable tool draws its own panel, and every panel keeps its footer. Measured-only
-    /// tools have no logins, so they never get a panel of their own.
-    func testEveryToolsPanelNamesItself() throws {
-        for tool in Provider.switchable {
-            let said = try words(of: menu(tab: tool)).joined(separator: " | ")
-            XCTAssertTrue(said.contains(tool.shortName) || said.contains(tool.name),
-                          "\(tool.name)'s panel never names it: \(said)")
-            XCTAssertTrue(said.contains("Open Keyhop"), "\(tool.name): the footer is missing: \(said)")
+    /// Every tool with a limit to read gets a ring, and the ring names it.
+    func testEveryToolWithALimitHasARing() throws {
+        let store = AccountStore(preview: (), focus: .claude)
+        let view = MenuView()
+            .environmentObject(store)
+            .environmentObject(UsageTracker(preview: store))
+            .environment(\.staticSnapshot, true)
+        let said = try words(of: view).joined(separator: " | ")
+        let tools = Provider.allCases.filter { tool in
+            store.accounts(for: tool).contains { !(store.usage[$0.id]?.windows.isEmpty ?? true) }
+        }
+        XCTAssertFalse(tools.isEmpty, "the sample has no limits to draw")
+        for tool in tools {
+            XCTAssertTrue(said.contains(tool.shortName) || said.contains(tool.name), "\(tool.name) has no ring: \(said)")
         }
     }
 

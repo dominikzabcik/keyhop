@@ -90,11 +90,11 @@ struct WelcomeView: View {
                 .padding(.top, 58)
 
             Text("Keyhop")
-                .font(.system(size: 26, weight: .semibold))
+                .font(Brand.sans(26, weight: .semibold))
                 .foregroundStyle(Brand.text)
                 .padding(.top, 24)
             Text("Your AI accounts, one click apart.")
-                .font(.system(size: 13.5))
+                .font(Brand.sans(13.5))
                 .foregroundStyle(Brand.muted)
                 .padding(.top, 4)
 
@@ -109,7 +109,7 @@ struct WelcomeView: View {
                 if let summary {
                     if !shown.isEmpty { RowDivider() }
                     Text(summary)
-                        .font(.system(size: 12))
+                        .font(Brand.sans(12))
                         .foregroundStyle(Brand.subtle)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -126,7 +126,7 @@ struct WelcomeView: View {
             if !canMove {
                 Toggle("Open Keyhop at login", isOn: $openAtLogin)
                     .toggleStyle(CheckboxStyle())
-                    .font(.system(size: 12.5))
+                    .font(Brand.sans(12.5))
                     .foregroundStyle(Brand.muted)
                     .padding(.bottom, 14)
             }
@@ -139,7 +139,7 @@ struct WelcomeView: View {
             .padding(.horizontal, 32)
 
             Text(problem ?? footnote)
-                .font(.system(size: 11.5))
+                .font(Brand.sans(11.5))
                 .foregroundStyle(problem == nil ? Brand.subtle : Brand.bad)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -161,7 +161,7 @@ struct WelcomeView: View {
                 .padding(.top, 34)
 
             Text("What else Keyhop does")
-                .font(.system(size: 20, weight: .semibold))
+                .font(Brand.sans(20, weight: .semibold))
                 .foregroundStyle(Brand.text)
                 .padding(.top, 14)
 
@@ -173,10 +173,10 @@ struct WelcomeView: View {
                             .padding(.top, 1)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(capability.title)
-                                .font(.system(size: 13, weight: .medium))
+                                .font(Brand.sans(13, weight: .medium))
                                 .foregroundStyle(Brand.text)
                             Text(capability.detail)
-                                .font(.system(size: 12))
+                                .font(Brand.sans(12))
                                 .foregroundStyle(Brand.muted)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -207,7 +207,7 @@ struct WelcomeView: View {
             .padding(.top, 6)
 
             Text("Signing in is optional. Keyhop sends daily totals, nothing else.")
-                .font(.system(size: 11.5))
+                .font(Brand.sans(11.5))
                 .foregroundStyle(Brand.subtle)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -273,11 +273,11 @@ private struct DetectionRow: View {
             ProviderMark(provider: provider, tint: Brand.text)
                 .frame(width: 16, height: 16)
             Text(provider.name)
-                .font(.system(size: 13, weight: .medium))
+                .font(Brand.sans(13, weight: .medium))
                 .foregroundStyle(Brand.text)
             Spacer(minLength: 16)
             Text(status)
-                .font(.system(size: 12))
+                .font(Brand.sans(12))
                 .foregroundStyle(saved.isEmpty ? Brand.subtle : Brand.muted)
                 .lineLimit(1)
                 .truncationMode(.middle)

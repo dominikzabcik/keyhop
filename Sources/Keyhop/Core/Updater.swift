@@ -157,10 +157,10 @@ struct UpdateLine: View {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Keyhop \(release.version) is out")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(Brand.sans(13, weight: .semibold))
                         .foregroundStyle(Brand.text)
                     Text(caption)
-                        .font(.system(size: 11.5))
+                        .font(Brand.sans(11.5))
                         .foregroundStyle(Brand.muted)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -186,10 +186,10 @@ struct UpdateLine: View {
                     .controlSize(.small)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Checking for Updates…")
-                        .font(.system(size: 12.5, weight: .semibold))
+                        .font(Brand.sans(12.5, weight: .semibold))
                         .foregroundStyle(Brand.text)
                     Text("Limit refresh continues separately.")
-                        .font(.system(size: 11.5))
+                        .font(Brand.sans(11.5))
                         .foregroundStyle(Brand.muted)
                 }
                 Spacer(minLength: 0)
@@ -203,7 +203,7 @@ struct UpdateLine: View {
                 Icon("alert", size: 14)
                     .foregroundStyle(Brand.warn)
                 Text(message)
-                    .font(.system(size: 12))
+                    .font(Brand.sans(12))
                     .foregroundStyle(Brand.muted)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)

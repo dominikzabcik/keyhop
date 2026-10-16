@@ -2,20 +2,41 @@
 import ServiceManagement
 import SwiftUI
 
-/// The menu bar panel: today's figure, the hop sentence, and the same login card as Overview.
+/// The menu bar panel, the Coss Blue board "BC 1": the night field with what is left across your
+/// logins and the pet, a ring per tool, the hop when one helps, the one thing that needs you, and
+/// Open, Refresh and More along the bottom. A ring opens that tool's logins, to switch or rename.
 struct MenuView: View {
     @EnvironmentObject private var store: AccountStore
-    @State private var renaming: UUID?
+    @EnvironmentObject private var tracker: UsageTracker
     @State private var pet: CloudPet?
+    @State private var opened: Provider?
+    @State private var renaming: UUID?
 
     var body: some View {
+        let facts = MenuFacts.make(store: store, tracker: tracker)
         VStack(alignment: .leading, spacing: 0) {
-            MenuBoard(renaming: $renaming)
+            MenuField(facts: facts, pet: pet)
 
-            if let pet {
-                MenuPet(pet: pet)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
+            if let adding = store.addingFor {
+                AddingPanel(provider: adding)
+                    .padding([.horizontal, .top], 12)
+            }
+
+            if facts.rings.isEmpty {
+                EmptyLine()
+            } else {
+                MenuRings(rings: facts.rings, opened: $opened)
+                if let opened, facts.rings.contains(where: { $0.provider == opened }) {
+                    MenuLogins(provider: opened, facts: facts, renaming: $renaming)
+                }
+            }
+
+            if let hop = facts.hop {
+                HopCard(hop: hop)
+            }
+
+            if let warning = facts.warning {
+                WarningLine(warning: warning)
             }
 
             if let notice = store.notice {
@@ -26,8 +47,8 @@ struct MenuView: View {
 
             MenuFooter()
         }
-        .frame(width: 520)
-        .background(Brand.background)
+        .frame(width: 360)
+        .background(Brand.panel)
         .environment(\.colorScheme, .dark)
         .task { await loadPet() }
     }
@@ -44,281 +65,293 @@ struct MenuView: View {
     }
 }
 
-private struct MenuPet: View {
-    let pet: CloudPet
+// MARK: Field
+
+/// The pet's night as a short header: the stage and how many logins, what is left across them,
+/// and when the next window comes back.
+private struct MenuField: View {
+    @EnvironmentObject private var store: AccountStore
+    @EnvironmentObject private var tracker: UsageTracker
+    let facts: MenuFacts
+    let pet: CloudPet?
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(pet.caption)
-                .foregroundStyle(Brand.muted)
-            Spacer(minLength: 8)
-            if let next = pet.next {
-                Text("\(Numbers.tokens(next.tokens)) to \(next.label)")
+        ZStack(alignment: .topLeading) {
+            FieldScene()
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(Brand.mono(11, weight: .medium))
+                    .tracking(1.6)
+                    .textCase(.uppercase)
+                    .foregroundStyle(Brand.muted)
+                    .lineLimit(1)
+                Button {
+                    AppWindow.show(section: "limits")
+                } label: {
+                    Text(headline)
+                        .font(Brand.sans(30, weight: .medium))
+                        .tracking(-0.9)
+                        .foregroundStyle(Brand.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
+                .buttonStyle(.plain)
+                .help("Open Limits: what is left, how fast it goes, and when it comes back")
+                Text(facts.resetLine ?? facts.sub)
+                    .font(Brand.sans(12))
+                    .foregroundStyle(Brand.muted)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(tokensLine)
+                    .font(Brand.sans(11.5))
                     .foregroundStyle(Brand.subtle)
+                    .lineLimit(1)
+                    .padding(.top, 2)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.trailing, 70)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .font(.system(size: 12))
-        .padding(.horizontal, 16)
-        .padding(.bottom, 10)
-        .accessibilityElement(children: .combine)
+        .overlay(alignment: .bottomTrailing) {
+            FieldPet(pet: pet)
+                .padding(.trailing, 24)
+                .padding(.bottom, 10)
+        }
+        .frame(height: 132)
+        .clipped()
+        .accessibilityElement(children: .contain)
+    }
+
+    private var label: String {
+        let logins = store.accounts.count
+        let count = logins == 1 ? "1 login" : "\(logins) logins"
+        guard let pet else { return count }
+        return "\(pet.stageName) · \(count)"
+    }
+
+    private var headline: String {
+        guard let pooled = facts.pooled else { return facts.title }
+        return "\(pooled.remaining)% left"
+    }
+
+    private var tokensLine: String {
+        let tokens = "\(Numbers.tokens(facts.tokens)) tokens today"
+        return facts.cost > 0 ? "\(tokens) · \(Numbers.usd(facts.cost))" : tokens
     }
 }
 
-// MARK: Board
+/// Stars, two hills and a blue glow where the pet stands, drawn from the board's 360 by 132 scene.
+private struct FieldScene: View {
+    var body: some View {
+        Canvas { context, size in
+            let bounds = Path(CGRect(origin: .zero, size: size))
+            context.fill(bounds, with: .color(Color(hex: "#13151A")))
+            context.fill(bounds, with: .radialGradient(
+                Gradient(colors: [Brand.primary.opacity(0.32), Brand.primary.opacity(0)]),
+                center: CGPoint(x: size.width * 0.75, y: size.height),
+                startRadius: 0, endRadius: size.width * 0.62))
+            let sx = size.width / 360
+            let sy = size.height / 132
+            for star in Self.stars {
+                let rect = CGRect(x: star.x * sx, y: star.y * sy, width: star.r, height: star.r)
+                context.fill(Path(rect), with: .color(.white.opacity(0.35)))
+            }
+            context.fill(hill(from: (0, 108), [(60, 96, 130, 100, 190, 104), (250, 108, 310, 94, 360, 98)], sx: sx, sy: sy, size: size),
+                         with: .color(Color(hex: "#1C1F26")))
+            context.fill(hill(from: (0, 122), [(90, 114, 190, 116, 270, 120), (320, 122, 345, 121, 360, 120)], sx: sx, sy: sy, size: size),
+                         with: .color(Color(hex: "#171A20")))
+        }
+        .accessibilityHidden(true)
+    }
 
-/// Today's total, the same sentence as Overview, and every login in the window's groups.
-private struct MenuBoard: View {
-    @EnvironmentObject private var store: AccountStore
-    @EnvironmentObject private var tracker: UsageTracker
+    private struct Star {
+        let x: CGFloat
+        let y: CGFloat
+        let r: CGFloat
+    }
+
+    /// The same seeded scatter as the board, so the sky doesn't change between openings.
+    private static let stars: [Star] = {
+        var seed = 11
+        func next() -> CGFloat {
+            seed = (seed * 9301 + 49297) % 233280
+            return CGFloat(seed) / 233280
+        }
+        var stars: [Star] = []
+        for _ in 0..<26 {
+            let x = (next() * 360).rounded()
+            let y = (next() * 110).rounded()
+            stars.append(Star(x: x, y: y, r: next() > 0.85 ? 2 : 1.2))
+        }
+        return stars
+    }()
+
+    /// A hill: from a start point along cubic curves (two controls, then the end), closed along the bottom.
+    private func hill(from start: (CGFloat, CGFloat), _ curves: [(CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat)],
+                      sx: CGFloat, sy: CGFloat, size: CGSize) -> Path {
+        Path { path in
+            path.move(to: CGPoint(x: start.0 * sx, y: start.1 * sy))
+            for curve in curves {
+                path.addCurve(to: CGPoint(x: curve.4 * sx, y: curve.5 * sy),
+                              control1: CGPoint(x: curve.0 * sx, y: curve.1 * sy),
+                              control2: CGPoint(x: curve.2 * sx, y: curve.3 * sy))
+            }
+            path.addLine(to: CGPoint(x: size.width, y: size.height))
+            path.addLine(to: CGPoint(x: 0, y: size.height))
+            path.closeSubpath()
+        }
+    }
+}
+
+/// The account's pet, painted from the shapes the website computes, hopping on the spot. Without a
+/// linked account the field shows Keyhop's mark instead.
+private struct FieldPet: View {
+    let pet: CloudPet?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.staticSnapshot) private var staticSnapshot
-    @Binding var renaming: UUID?
-    @State private var showAdd = false
 
     var body: some View {
-        let facts = MenuFacts.make(store: store, tracker: tracker)
-        VStack(alignment: .leading, spacing: 0) {
-            header(facts)
-            if staticSnapshot {
-                rows(facts)
-            } else {
-                FittingScroll(maxHeight: listCap) { rows(facts) }
+        VStack(spacing: 1) {
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion || staticSnapshot)) { context in
+                sprite.offset(y: reduceMotion || staticSnapshot ? 0 : Self.lift(context.date))
             }
+            Ellipse()
+                .fill(Color.black.opacity(0.45))
+                .frame(width: 36, height: 6)
         }
-    }
-
-    /// The card stays a card. Extra logins scroll inside it.
-    private var listCap: CGFloat { 380 }
-
-    private func rows(_ facts: MenuFacts) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
-        let active = facts.rows.filter { $0.lane == .active }
-        let quiet = Provider.allCases.filter { provider in
-            facts.rows.contains { $0.account.provider == provider && $0.lane == .quiet }
-        }
-        return VStack(alignment: .leading, spacing: 0) {
-            if let adding = store.addingFor {
-                AddingPanel(provider: adding)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 8)
-            }
-            lane("Needs a hop", facts.rows.filter { $0.lane == .needs }, facts: facts)
-            lane("In use", Array(active.prefix(4)), facts: facts)
-            if active.count > 4 {
-                Button("\(active.count - 4) more in use") { AppWindow.show() }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(Brand.muted)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 6)
-            }
-            lane("Room", facts.rows.filter { $0.lane == .room }, facts: facts)
-            if !quiet.isEmpty {
-                Text("Quiet")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Brand.subtle)
-                    .padding(.horizontal, 12)
-                    .padding(.top, 8)
-                    .padding(.bottom, 2)
-                Text(Self.quietLine(quiet.map(\.name)))
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(Brand.subtle)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 8)
-            }
-            if !facts.unset.isEmpty {
-                Text("Not set up: \(facts.unset.map(\.name).joined(separator: ", ")).")
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(Brand.subtle)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 12)
-                    .padding(.top, quiet.isEmpty ? 8 : 0)
-                    .padding(.bottom, 8)
-            }
-            addRow
-        }
-        .padding(.bottom, 4)
-        .background(shape.fill(Color.white.opacity(0.03)))
-        .overlay(shape.strokeBorder(Brand.border))
-        .padding(.horizontal, 12)
-        .padding(.bottom, 12)
-    }
-
-    private static func quietLine(_ names: [String]) -> String {
-        let list: String
-        if names.count < 2 {
-            list = names.joined()
-        } else if names.count == 2 {
-            list = "\(names[0]) and \(names[1])"
-        } else {
-            list = "\(names.dropLast().joined(separator: ", ")) and \(names[names.count - 1])"
-        }
-        return "\(list) \(names.count == 1 ? "has" : "have") no limit to read."
-    }
-
-    private func header(_ facts: MenuFacts) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Tokens today")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Brand.subtle)
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(Numbers.tokens(facts.tokens))
-                        .font(.system(size: 34, weight: .semibold))
-                        .foregroundStyle(Brand.text)
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
-                    if facts.cost > 0 {
-                        Text(Numbers.usd(facts.cost))
-                            .font(.system(size: 13))
-                            .foregroundStyle(Brand.muted)
-                    }
-                }
-            }
-            if !facts.shares.isEmpty {
-                shareBar(facts.shares)
-                HStack(spacing: 14) {
-                    ForEach(facts.shares.prefix(4)) { share in
-                        HStack(spacing: 5) {
-                            Circle().fill(share.color).frame(width: 6, height: 6)
-                            Text(share.provider.shortName)
-                                .foregroundStyle(Brand.text)
-                            Text("\(share.percent)%")
-                                .foregroundStyle(Brand.subtle)
-                        }
-                        .font(.system(size: 11.5))
-                    }
-                }
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                Text(facts.title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Brand.text)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(facts.sub)
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(Brand.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let pooled = facts.pooled {
-                    Button {
-                        AppWindow.show(section: "limits")
-                    } label: {
-                        Text("\(pooled.remaining)% of \(pooled.capacity)% left across your logins")
-                            .font(.system(size: 12.5))
-                            .foregroundStyle(Brand.muted)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Open Limits: what is left, how fast it goes, and when it comes back")
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func shareBar(_ shares: [MenuShare]) -> some View {
-        GeometryReader { geo in
-            let gaps = CGFloat(max(shares.count - 1, 0)) * 3
-            let usable = max(0, geo.size.width - gaps)
-            let widths = shareWidths(shares, usable: usable)
-            HStack(spacing: 3) {
-                ForEach(Array(shares.enumerated()), id: \.element.id) { index, share in
-                    Capsule()
-                        .fill(share.color)
-                        .frame(width: widths[index])
-                }
-            }
-        }
-        .frame(height: 8)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Share of today's tokens")
-    }
-
-    /// A tiny share still gets a visible mark, and the marks still add up to the bar.
-    private func shareWidths(_ shares: [MenuShare], usable: CGFloat) -> [CGFloat] {
-        let raw = shares.map { max(CGFloat(4), usable * CGFloat($0.fraction)) }
-        let sum = raw.reduce(0, +)
-        guard sum > usable, sum > 0 else { return raw }
-        let scale = usable / sum
-        return raw.map { $0 * scale }
+        .accessibilityLabel(pet.map { "Your pet, \($0.caption)" } ?? "Keyhop")
     }
 
     @ViewBuilder
-    private func lane(_ title: String, _ rows: [MenuRow], facts: MenuFacts) -> some View {
-        if !rows.isEmpty {
-            Text(title)
-                .font(.system(size: 12))
-                .foregroundStyle(Brand.subtle)
-                .padding(.horizontal, 12)
-                .padding(.top, 8)
-                .padding(.bottom, 2)
-            ForEach(rows) { row in
-                MenuLoginRow(row: row, hop: row.account.id == facts.hopID, renaming: $renaming)
+    private var sprite: some View {
+        if let pet, pet.width > 0, pet.height > 0 {
+            let height: CGFloat = 52
+            let width = height * CGFloat(pet.width) / CGFloat(pet.height)
+            Canvas { context, size in
+                let scale = size.height / CGFloat(pet.height)
+                for shape in pet.shapes {
+                    let rect = CGRect(x: CGFloat(shape.x) * scale, y: CGFloat(shape.y) * scale,
+                                      width: CGFloat(shape.w) * scale, height: CGFloat(shape.h) * scale)
+                    context.fill(Path(rect), with: .color(Color(red: shape.red, green: shape.green, blue: shape.blue).opacity(shape.opacity)))
+                }
             }
+            .frame(width: width, height: height)
+        } else {
+            PixelMark(tint: Brand.text.opacity(0.8))
+                .frame(width: 30, height: 30)
+                .padding(.bottom, 4)
         }
     }
 
-    private var addRow: some View {
+    /// The board's hop: still for most of 2.4 seconds, then up about eleven points and down.
+    private static func lift(_ date: Date) -> CGFloat {
+        let phase = date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 2.4) / 2.4
+        guard phase > 0.6 else { return 0 }
+        return -11 * CGFloat(sin(.pi * (phase - 0.6) / 0.4))
+    }
+}
+
+// MARK: Rings
+
+/// One ring per tool with a limit: what its login in use has left, red when it is nearly out and
+/// amber when it is getting there.
+private struct MenuRings: View {
+    let rings: [MenuRing]
+    @Binding var opened: Provider?
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
+            ForEach(rings) { ring in
+                Button {
+                    withAnimation(.easeOut(duration: 0.15)) { opened = opened == ring.provider ? nil : ring.provider }
+                } label: {
+                    RingTile(ring: ring, open: opened == ring.provider)
+                }
+                .buttonStyle(.plain)
+                .help("\(ring.provider.name): \(ring.left)% left on \(ring.login). Show its logins")
+                .accessibilityLabel("\(ring.provider.name), \(ring.left)% left on \(ring.login)")
+                .accessibilityHint("Shows its logins")
+            }
+        }
+        .padding(12)
+    }
+}
+
+private struct RingTile: View {
+    let ring: MenuRing
+    let open: Bool
+    @State private var hovering = false
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        VStack(spacing: 8) {
+            ZStack {
+                Circle().stroke(Color.white.opacity(0.08), lineWidth: 4)
+                Circle()
+                    .trim(from: 0, to: CGFloat(ring.left) / 100)
+                    .stroke(ring.tone.ring, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Image(nsImage: Marks.image(for: ring.provider))
+                    .renderingMode(.template)
+                    .resizable()
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(Color(white: 0.9))
+            }
+            .frame(width: 48, height: 48)
+            VStack(spacing: 0) {
+                Text("\(ring.left)%")
+                    .font(Brand.figure(15))
+                    .foregroundStyle(ring.tone.ink)
+                Text(ring.provider.shortName)
+                    .font(Brand.sans(11.5))
+                    .foregroundStyle(Brand.muted)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
+        .background(shape.fill(ring.tone == .out ? Brand.red.opacity(0.07) : Color.white.opacity(hovering || open ? 0.05 : 0.025)))
+        .overlay(shape.strokeBorder(ring.tone == .out ? Brand.red.opacity(0.28) : Color.white.opacity(open ? 0.16 : 0.06)))
+        .contentShape(shape)
+        .onHover { hovering = $0 }
+    }
+}
+
+/// The opened ring's logins: press one to switch to it; rename or remove from its context menu.
+private struct MenuLogins: View {
+    @EnvironmentObject private var store: AccountStore
+    let provider: Provider
+    let facts: MenuFacts
+    @Binding var renaming: UUID?
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
         VStack(alignment: .leading, spacing: 0) {
-            Button { showAdd.toggle() } label: {
+            ForEach(facts.rows.filter { $0.account.provider == provider }) { row in
+                MenuLoginRow(row: row, hop: row.account.id == facts.hop?.to.id, renaming: $renaming)
+            }
+            Button { store.beginAdd(provider) } label: {
                 HStack(spacing: 8) {
                     Icon("plus", size: 13)
-                    Text("Add account")
+                    Text("Add a \(provider.shortName) login")
                     Spacer()
                 }
-                .font(.system(size: 12.5, weight: .medium))
-                .foregroundStyle(Brand.muted)
+                .font(Brand.sans(12.5, weight: .medium))
                 .padding(.horizontal, 8)
-                .padding(.vertical, 10)
+                .frame(minHeight: 32)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowButtonStyle(quiet: true, radius: 8))
-            .disabled(store.addingFor != nil || store.switching != nil)
-            if showAdd {
-                ForEach(Provider.switchable) { provider in
-                    Button { showAdd = false; store.beginAdd(provider) } label: {
-                        Text(provider.name)
-                            .font(.system(size: 12.5))
-                            .foregroundStyle(Brand.text)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 28)
-                            .padding(.vertical, 6)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowButtonStyle(radius: 8))
-                }
-            }
+            .disabled(store.addingFor != nil || store.switching != nil || !Provider.switchable.contains(provider))
         }
-        .padding(.top, 4)
-    }
-}
-
-/// A list that stays as short as its rows, and scrolls once it would run off the screen.
-private struct FittingScroll<Content: View>: View {
-    var maxHeight: CGFloat
-    @ViewBuilder var content: () -> Content
-    @State private var contentHeight: CGFloat = 0
-
-    var body: some View {
-        ScrollView {
-            content()
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear.preference(key: MenuListHeightKey.self, value: proxy.size.height)
-                    }
-                }
-        }
-        .scrollBounceBehavior(.basedOnSize)
-        .frame(height: contentHeight > 0 ? min(contentHeight, maxHeight) : nil)
-        .onPreferenceChange(MenuListHeightKey.self) { contentHeight = $0 }
-    }
-}
-
-private struct MenuListHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
+        .padding(4)
+        .background(shape.fill(Color.white.opacity(0.025)))
+        .overlay(shape.strokeBorder(Brand.border))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
     }
 }
 
@@ -360,52 +393,47 @@ private struct MenuLoginRow: View {
         let snapshot = store.usage[account.id]
         let failed = snapshot?.error != nil && (snapshot?.windows.isEmpty ?? true)
         return HStack(spacing: 8) {
-            MenuDot(lane: row.lane)
-            EditableName(account: account, font: .system(size: 13, weight: .medium), renaming: $renaming)
-                .foregroundStyle(row.lane == .needs ? Brand.warn : Brand.text)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .frame(minWidth: 0, maxWidth: 156, alignment: .leading)
-            Text(meta(snapshot))
-                .font(.system(size: 12.5))
-                .foregroundStyle(failed ? Brand.bad : Brand.muted)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-            if on, row.lane != .active {
-                Text("In use")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Brand.text)
-                    .padding(.horizontal, 6)
-                    .frame(height: 18)
-                    .fixedSize()
-                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.white.opacity(0.1)))
+            Circle()
+                .fill(on ? Brand.primary : .clear)
+                .overlay(Circle().strokeBorder(on ? .clear : Brand.subtle, lineWidth: 1.5))
+                .frame(width: 7, height: 7)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 0) {
+                EditableName(account: account, font: Brand.sans(13, weight: .medium), renaming: $renaming)
+                    .foregroundStyle(row.lane == .needs ? Brand.warn : Brand.text)
+                Text(meta(snapshot))
+                    .font(Brand.sans(11.5))
+                    .foregroundStyle(failed ? Brand.bad : Brand.muted)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             if store.switching == account.id {
                 ProgressView().controlSize(.small)
             } else if hop {
                 Text("Hop")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Brand.sans(12, weight: .semibold))
                     .foregroundStyle(Brand.onPrimary)
                     .padding(.horizontal, 8)
                     .frame(height: 22)
                     .fixedSize()
                     .background(Capsule().fill(Brand.primary))
             } else if let used = row.used {
-                Text("\(Int(used.rounded()))%")
-                    .font(Brand.figure(12.5))
+                Text("\(max(0, 100 - Int(used.rounded())))% left")
+                    .font(Brand.figure(12))
                     .foregroundStyle(row.lane == .needs ? Brand.warn : Brand.subtle)
                     .fixedSize()
             }
         }
         .padding(.horizontal, 8)
-        .frame(minHeight: 32)
+        .padding(.vertical, 5)
+        .frame(minHeight: 36)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func meta(_ snapshot: UsageSnapshot?) -> String {
         if snapshot?.error != nil, snapshot?.windows.isEmpty ?? true { return "Login expired" }
-        var parts = [row.account.provider.shortName]
+        var parts: [String] = []
         if let plan = row.account.plan { parts.append(plan) }
         if let window = row.tightest {
             parts.append(window.label)
@@ -414,16 +442,149 @@ private struct MenuLoginRow: View {
                 parts.append("runs out \(eta.formatted(date: .omitted, time: .shortened))")
             }
         }
-        return parts.joined(separator: " · ")
+        return parts.isEmpty ? row.account.provider.name : parts.joined(separator: " · ")
     }
 }
 
-private struct MenuShare: Identifiable {
+// MARK: Hop and warning
+
+/// The one hop that helps most, as one full-width button.
+private struct HopCard: View {
+    @EnvironmentObject private var store: AccountStore
+    let hop: MenuHop
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(nsImage: Marks.image(for: hop.tool))
+                    .renderingMode(.template)
+                    .resizable()
+                    .frame(width: 16, height: 16)
+                    .foregroundStyle(Color(white: 0.9))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("\(hop.tool.name) is at \(hop.fromUsed)%")
+                        .font(Brand.sans(13, weight: .semibold))
+                        .foregroundStyle(Brand.text)
+                    Text("\(hop.to.displayName) has \(max(0, 100 - hop.toUsed))% left")
+                        .font(Brand.sans(12))
+                        .foregroundStyle(Brand.muted)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            Button {
+                store.switchTo(hop.to)
+            } label: {
+                if store.switching == hop.to.id {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Text("Hop to \(hop.to.displayName)")
+                        .truncationMode(.middle)
+                }
+            }
+            .buttonStyle(AppButtonStyle(kind: .primary, size: .regular, fullWidth: true))
+            .disabled(store.switching != nil)
+        }
+        .padding(14)
+        .background {
+            ZStack {
+                shape.fill(Color(hex: "#13151A"))
+                shape.fill(RadialGradient(colors: [Brand.primary.opacity(0.2), .clear],
+                                          center: .bottomTrailing, startRadius: 0, endRadius: 260))
+            }
+        }
+        .overlay(shape.strokeBorder(Brand.primary.opacity(0.25)))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
+    }
+}
+
+/// The login that needs you and can't be helped by a hop: what is wrong, and the one thing to do.
+private struct WarningLine: View {
+    @EnvironmentObject private var store: AccountStore
+    let warning: MenuWarning
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle().fill(Brand.red).frame(width: 6, height: 6).accessibilityHidden(true)
+            Text(warning.text)
+                .font(Brand.sans(12))
+                .foregroundStyle(Brand.bad)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 8)
+            Button(warning.action.title) {
+                switch warning.action {
+                case .add: store.beginAdd(warning.account.provider)
+                case .open: AppWindow.show(section: "limits")
+                }
+            }
+            .buttonStyle(.plain)
+            .font(Brand.sans(12, weight: .semibold))
+            .foregroundStyle(Brand.text)
+            .disabled(warning.action == .add && store.addingFor != nil)
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 12)
+    }
+}
+
+/// Before the first login: what to do, said once.
+private struct EmptyLine: View {
+    var body: some View {
+        Text("No limits to read yet. Add a login from More, and Keyhop keeps it.")
+            .font(Brand.sans(12.5))
+            .foregroundStyle(Brand.muted)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(16)
+    }
+}
+
+// MARK: Facts
+
+private struct MenuRing: Identifiable {
+    enum Tone { case out, low, fine
+        var ring: Color {
+            switch self {
+            case .out: Brand.red
+            case .low: Brand.warn
+            case .fine: Color(white: 0.9)
+            }
+        }
+        var ink: Color {
+            switch self {
+            case .out: Brand.bad
+            case .low, .fine: Brand.text
+            }
+        }
+    }
+
     let provider: Provider
-    let fraction: Double
-    let percent: Int
-    let color: Color
+    let login: String
+    let left: Int
+    var tone: Tone { left <= 15 ? .out : left <= 40 ? .low : .fine }
     var id: String { provider.rawValue }
+}
+
+private struct MenuHop {
+    let tool: Provider
+    let from: Account
+    let to: Account
+    let fromUsed: Int
+    let toUsed: Int
+}
+
+private struct MenuWarning {
+    enum Action: Equatable {
+        case add, open
+        var title: String { self == .add ? "Add" : "Limits" }
+    }
+
+    let account: Account
+    let text: String
+    let action: Action
 }
 
 private struct MenuRow: Identifiable {
@@ -431,42 +592,38 @@ private struct MenuRow: Identifiable {
     let lane: MenuLane
     let used: Double?
     let tightest: UsageWindow?
-    let today: Int
     var id: UUID { account.id }
 }
 
 @MainActor
 private struct MenuFacts {
     let rows: [MenuRow]
-    let unset: [Provider]
-    let hopID: UUID?
+    let rings: [MenuRing]
+    let hop: MenuHop?
+    let warning: MenuWarning?
     let title: String
     let sub: String
     let tokens: Int
     let cost: Double
-    let shares: [MenuShare]
     /// Every login with a limit, pooled: what is left across them and what a full set would be,
     /// the window's Limits rule (100 less each login's tightest window; a signed-out login is
     /// not counted). Nil when no login has a limit to read.
     let pooled: (remaining: Int, capacity: Int)?
+    /// The soonest window to come back and what it gives the pool, as Limits says it.
+    let resetLine: String?
 
     static func make(store: AccountStore, tracker: UsageTracker, now: Date = Date()) -> MenuFacts {
         let rows = store.accounts.map { account -> MenuRow in
-            let snapshot = store.usage[account.id]
-            let windows = snapshot?.windows ?? []
-            let tightest = windows.max { $0.usedPercent < $1.usedPercent }
+            let windows = store.usage[account.id]?.windows ?? []
             let active = store.active[account.provider] == account.id
             return MenuRow(
                 account: account,
                 lane: MenuStatus.lane(account, active: active, usage: store.usage, forecasts: tracker.forecasts, now: now),
                 used: windows.map(\.usedPercent).max(),
-                tightest: tightest,
-                today: tracker.today[account.id]?.tokens.total ?? 0
+                tightest: windows.max { $0.usedPercent < $1.usedPercent }
             )
         }.sorted { ($0.used ?? -1) > ($1.used ?? -1) }
 
-        let present = Set(store.accounts.map(\.provider))
-        let unset = Provider.switchable.filter { !present.contains($0) }
         let hop = bestHop(store: store)
         let sentence = headline(rows: rows, hop: hop, empty: store.accounts.isEmpty)
         // The engine's total, so measured-only tools without accounts count too.
@@ -479,28 +636,59 @@ private struct MenuFacts {
             capacity: counted.count * 100
         )
         return MenuFacts(
-            rows: rows, unset: unset, hopID: hop?.to.id, title: sentence.0, sub: sentence.1,
-            tokens: total.tokens.total, cost: total.cost, shares: shares(store: store, tracker: tracker), pooled: pooled
+            rows: rows, rings: rings(rows: rows, store: store), hop: hop,
+            warning: warning(rows: rows, hop: hop, store: store, tracker: tracker, now: now),
+            title: sentence.0, sub: sentence.1, tokens: total.tokens.total, cost: total.cost,
+            pooled: pooled, resetLine: resetLine(counted, store: store, now: now)
         )
     }
 
-    private static func shares(store: AccountStore, tracker: UsageTracker) -> [MenuShare] {
-        // Per tool rather than per account, so measured-only tools show in the bar too.
-        let totals = Provider.allCases.map { provider -> (Provider, Int) in
-            (provider, tracker.todayByProvider[provider]?.tokens.total ?? 0)
-        }.filter { $0.1 > 0 }.sorted { $0.1 > $1.1 }
-        let sum = totals.reduce(0) { $0 + $1.1 }
-        guard sum > 0 else { return [] }
-        return totals.map { provider, tokens in
-            let fraction = Double(tokens) / Double(sum)
-            let percent = max(fraction > 0 && fraction < 0.01 ? 1 : Int((fraction * 100).rounded()), fraction > 0 ? 1 : 0)
-            let hex = DashboardUsage.toolColors[provider.rawValue] ?? "#6E7A52"
-            return MenuShare(provider: provider, fraction: fraction, percent: percent, color: Color(hex: hex))
+    /// Per tool, the login in use, or the roomiest one when none is.
+    private static func rings(rows: [MenuRow], store: AccountStore) -> [MenuRing] {
+        Provider.allCases.compactMap { provider in
+            let mine = rows.filter { $0.account.provider == provider && $0.used != nil }
+            guard !mine.isEmpty else { return nil }
+            let pick = mine.first { store.active[provider] == $0.account.id } ?? mine.min { ($0.used ?? 0) < ($1.used ?? 0) }!
+            let left = max(0, 100 - Int(min(100, pick.used ?? 0).rounded()))
+            return MenuRing(provider: provider, login: pick.account.displayName, left: left)
         }
     }
 
-    private static func bestHop(store: AccountStore) -> (tool: Provider, from: Account, to: Account, gap: Double)? {
-        var best: (tool: Provider, from: Account, to: Account, gap: Double)?
+    private static func resetLine(_ counted: [MenuRow], store: AccountStore, now: Date) -> String? {
+        var best: (at: Date, gain: Int)?
+        for row in counted {
+            let windows = store.usage[row.account.id]?.windows ?? []
+            guard let tightest = row.tightest, let at = tightest.resetsAt, at > now else { continue }
+            let rest = windows.filter { $0.label != tightest.label }.map(\.usedPercent).max() ?? 0
+            let gain = Int((min(100, tightest.usedPercent) - min(100, rest)).rounded())
+            guard gain >= 1 else { continue }
+            if best == nil || at < best!.at { best = (at, gain) }
+        }
+        guard let best else { return nil }
+        return "Next reset +\(best.gain)% at \(best.at.formatted(date: .omitted, time: .shortened))"
+    }
+
+    private static func warning(rows: [MenuRow], hop: MenuHop?, store: AccountStore, tracker: UsageTracker, now: Date) -> MenuWarning? {
+        guard let row = rows.first(where: { $0.lane == .needs && $0.account.id != hop?.from.id && $0.account.provider != hop?.tool }) else { return nil }
+        let account = row.account
+        let tool = account.provider.shortName
+        if store.usage[account.id]?.error != nil, store.usage[account.id]?.windows.isEmpty ?? true {
+            return MenuWarning(account: account, text: "\(tool) on \(account.displayName) is signed out", action: .open)
+        }
+        var when = "is at \(Int((row.used ?? 0).rounded()))%"
+        if let window = row.tightest, let eta = tracker.forecasts[AlertRules.forecastKey(account.id, window.label)], eta > now,
+           window.resetsAt.map({ eta < $0 }) ?? true {
+            when = "runs out at \(eta.formatted(date: .omitted, time: .shortened))"
+        }
+        let others = rows.filter { $0.account.provider == account.provider && $0.account.id != account.id }
+        if others.isEmpty {
+            return MenuWarning(account: account, text: "\(tool) \(when) · no other login", action: Provider.switchable.contains(account.provider) ? .add : .open)
+        }
+        return MenuWarning(account: account, text: "\(tool) \(when) · no login with room", action: .open)
+    }
+
+    private static func bestHop(store: AccountStore) -> MenuHop? {
+        var best: (hop: MenuHop, gap: Double)?
         for tool in Provider.allCases {
             let accounts = store.accounts(for: tool)
             guard let activeID = store.active[tool], let current = accounts.first(where: { $0.id == activeID }),
@@ -510,23 +698,22 @@ private struct MenuFacts {
                 .min { (used($0, store: store) ?? 101) < (used($1, store: store) ?? 101) }
             guard let pick, let pickUsed = used(pick, store: store), pickUsed + 15 < currentUsed else { continue }
             let gap = currentUsed - pickUsed
-            if best == nil || gap > best!.gap { best = (tool, current, pick, gap) }
+            if best == nil || gap > best!.gap {
+                best = (MenuHop(tool: tool, from: current, to: pick,
+                                fromUsed: Int(currentUsed.rounded()), toUsed: Int(pickUsed.rounded())), gap)
+            }
         }
-        return best
+        return best?.hop
     }
 
     private static func used(_ account: Account, store: AccountStore) -> Double? {
         store.usage[account.id]?.windows.map(\.usedPercent).max()
     }
 
-    private static func headline(rows: [MenuRow], hop: (tool: Provider, from: Account, to: Account, gap: Double)?, empty: Bool) -> (String, String) {
+    private static func headline(rows: [MenuRow], hop: MenuHop?, empty: Bool) -> (String, String) {
         if let hop {
-            let fromUsed = Int((usedPercent(hop.from, rows: rows) ?? 0).rounded())
-            let toUsed = Int((usedPercent(hop.to, rows: rows) ?? 0).rounded())
-            return (
-                "\(hop.tool.shortName) still has room.",
-                "\(Self.brief(hop.from)) is in use at \(fromUsed)%. \(Self.brief(hop.to)) is at \(toUsed)%."
-            )
+            return ("\(hop.tool.shortName) still has room.",
+                    "\(Self.brief(hop.from)) is in use at \(hop.fromUsed)%. \(Self.brief(hop.to)) is at \(hop.toUsed)%.")
         }
         if let wall = rows.first(where: { $0.lane == .needs }) {
             let n = Int((wall.used ?? 0).rounded())
@@ -538,10 +725,6 @@ private struct MenuFacts {
         }
         if empty { return ("Add a login.", "No saved accounts yet. Sign in once and Keyhop keeps the login.") }
         return ("Every login in use has room.", "Nothing is close to a limit.")
-    }
-
-    private static func usedPercent(_ account: Account, rows: [MenuRow]) -> Double? {
-        rows.first { $0.account.id == account.id }?.used
     }
 
     /// Two logins often share a name. The domain is what tells them apart.
@@ -575,38 +758,6 @@ private enum MenuStatus {
     }
 }
 
-private struct MenuDot: View {
-    let lane: MenuLane
-
-    var body: some View {
-        Circle()
-            .fill(fill)
-            .overlay {
-                if let stroke {
-                    Circle().strokeBorder(stroke, lineWidth: 1.5)
-                }
-            }
-            .frame(width: 7, height: 7)
-            .accessibilityHidden(true)
-    }
-
-    private var fill: Color {
-        switch lane {
-        case .needs: Brand.warn
-        case .room: Brand.good
-        case .active, .quiet: .clear
-        }
-    }
-
-    private var stroke: Color? {
-        switch lane {
-        case .active: Brand.info
-        case .quiet: Brand.subtle
-        case .needs, .room: nil
-        }
-    }
-}
-
 private struct AddingPanel: View {
     @EnvironmentObject private var store: AccountStore
     let provider: Provider
@@ -617,10 +768,10 @@ private struct AddingPanel: View {
                 .frame(width: 34, height: 34)
                 .padding(.bottom, 4)
             Text("Waiting for a new \(provider.name) login")
-                .font(.system(size: 14, weight: .semibold))
+                .font(Brand.sans(14, weight: .semibold))
                 .foregroundStyle(Brand.text)
             Text(LocalizedStringKey(provider.signInHint))
-                .font(.system(size: 12))
+                .font(Brand.sans(12))
                 .foregroundStyle(Brand.muted)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -634,6 +785,7 @@ private struct AddingPanel: View {
         .card()
     }
 }
+
 private struct EditableName: View {
     @EnvironmentObject private var store: AccountStore
     let account: Account
@@ -677,7 +829,7 @@ private struct NoticeLine: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         Text(LocalizedStringKey(text))
-            .font(.system(size: 12))
+            .font(Brand.sans(12))
             .foregroundStyle(Brand.text)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -696,6 +848,8 @@ private struct NoticeLine: View {
     }
 }
 
+/// Open, Refresh and More, three equal cells split by hairlines. More holds the settings, adding a
+/// login and Quit.
 private struct MenuFooter: View {
     @EnvironmentObject private var store: AccountStore
     @EnvironmentObject private var tracker: UsageTracker
@@ -708,43 +862,42 @@ private struct MenuFooter: View {
     @Environment(\.staticSnapshot) private var staticSnapshot
 
     var body: some View {
-        HStack(spacing: 6) {
-            Button("Open Keyhop") { AppWindow.show() }
-                .buttonStyle(AppButtonStyle(kind: .primary, size: .small))
-                .help("Open Keyhop's window")
-
-            Spacer(minLength: 8)
-
-            TimelineView(.periodic(from: .now, by: store.isRefreshing || tracker.isUpdating ? 0.25 : 30)) { context in
-                Text(updatedText(context.date))
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(Brand.subtle)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .accessibilityLabel(updatedAccessibilityText(context.date))
+        HStack(spacing: 0) {
+            Button { AppWindow.show() } label: {
+                cell { Text("Open"); key("⌘O") }
             }
+            .buttonStyle(RowButtonStyle())
+            .keyboardShortcut("o")
+            .help("Open Keyhop's window")
+
+            Divider().frame(height: 40).overlay(Brand.border)
 
             Button { store.refresh() } label: {
-                TimelineView(.animation(paused: !store.isRefreshing)) { context in
-                    Icon("refresh", size: 13)
-                        .rotationEffect(.degrees(store.isRefreshing ? context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360 : 0))
+                cell {
+                    TimelineView(.animation(paused: !store.isRefreshing)) { context in
+                        Icon("refresh", size: 12)
+                            .rotationEffect(.degrees(store.isRefreshing ? context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360 : 0))
+                    }
+                    TimelineView(.periodic(from: .now, by: store.isRefreshing || tracker.isUpdating ? 0.25 : 30)) { context in
+                        Text(updatedText(context.date))
+                            .lineLimit(1)
+                            .accessibilityLabel(updatedAccessibilityText(context.date))
+                    }
                 }
             }
-            .buttonStyle(AppButtonStyle(kind: .ghost, size: .small))
+            .buttonStyle(RowButtonStyle())
+            .keyboardShortcut("r")
             .help("Refresh usage")
-            .accessibilityLabel(store.isRefreshing ? "Refreshing" : "Refresh usage")
+
+            Divider().frame(height: 40).overlay(Brand.border)
 
             if staticSnapshot {
-                Icon("more", size: 14)
-                    .foregroundStyle(Brand.muted)
-                    .frame(width: 28, height: 28)
+                cell { Text("More"); key("⌘Q") }
             } else {
                 moreMenu
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Brand.sidebar)
+        .frame(height: 40)
         .overlay(alignment: .top) {
             if store.isRefreshing || tracker.isUpdating {
                 WorkMeter(box: store.progress)
@@ -762,44 +915,67 @@ private struct MenuFooter: View {
         }
     }
 
+    private func cell<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        HStack(spacing: 7) { content() }
+            .font(Brand.sans(12))
+            .foregroundStyle(Color(white: 0.9))
+            .frame(maxWidth: .infinity, minHeight: 40)
+            .contentShape(Rectangle())
+    }
+
+    private func key(_ text: String) -> some View {
+        Text(text)
+            .font(Brand.mono(10.5))
+            .foregroundStyle(Brand.subtle)
+    }
+
     private var moreMenu: some View {
-            Menu {
-                Text("Keyhop \(Updater.currentVersion)\(AppVersion.isPrerelease ? " · Beta" : "")")
-                Button("Open Keyhop") { AppWindow.show() }
-                Button("Check for Updates…") { Task { await updater.check(userInitiated: true) } }
-                Picker("Update Channel", selection: Binding(get: { updater.channel }, set: { updater.choose($0) })) {
-                    ForEach(UpdateChannel.allCases, id: \.self) { channel in
-                        Text(channel.title).tag(channel)
-                    }
+        Menu {
+            Text("Keyhop \(Updater.currentVersion)\(AppVersion.isPrerelease ? " · Beta" : "")")
+            Button("Open Keyhop") { AppWindow.show() }
+            Menu("Add Account") {
+                ForEach(Provider.switchable) { provider in
+                    Button(provider.name) { store.beginAdd(provider) }
                 }
-                Divider()
-                Toggle("Check usage every 5 minutes", isOn: $autoRefresh)
-                Toggle("Hop before a limit automatically", isOn: $autoHop)
-                    .disabled(!autoRefresh)
-                Toggle("Check for updates automatically", isOn: $checkForUpdates)
-                Toggle("Install updates automatically", isOn: $autoInstallUpdates)
-                    .disabled(!checkForUpdates)
-                Toggle("Open at login", isOn: $launchAtLogin)
-                Divider()
-                Button("Quit Keyhop") { NSApp.terminate(nil) }
-            } label: {
-                Icon("more", size: 14)
-                    .foregroundStyle(Brand.muted)
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .frame(width: 28, height: 28)
-            .help("More")
-            .accessibilityLabel("More")
+            .disabled(store.addingFor != nil || store.switching != nil)
+            Button("Check for Updates…") { Task { await updater.check(userInitiated: true) } }
+            Picker("Update Channel", selection: Binding(get: { updater.channel }, set: { updater.choose($0) })) {
+                ForEach(UpdateChannel.allCases, id: \.self) { channel in
+                    Text(channel.title).tag(channel)
+                }
+            }
+            Divider()
+            Toggle("Check usage every 5 minutes", isOn: $autoRefresh)
+            Toggle("Hop before a limit automatically", isOn: $autoHop)
+                .disabled(!autoRefresh)
+            Toggle("Check for updates automatically", isOn: $checkForUpdates)
+            Toggle("Install updates automatically", isOn: $autoInstallUpdates)
+                .disabled(!checkForUpdates)
+            Toggle("Open at login", isOn: $launchAtLogin)
+            Divider()
+            Button("Quit Keyhop") { NSApp.terminate(nil) }
+                .keyboardShortcut("q")
+        } label: {
+            Text("More")
+                .font(Brand.sans(12))
+                .foregroundStyle(Color(white: 0.9))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .frame(maxWidth: .infinity, minHeight: 40)
+        .help("Settings, adding a login, and Quit")
+        .accessibilityLabel("More")
     }
 
     private func updatedText(_ now: Date) -> String {
         if let step = store.progress.value { return step.brief }
-        if store.isRefreshing { return "Refreshing limits…" }
-        if tracker.isUpdating { return "Reading usage…" }
-        guard let last = store.lastRefresh else { return "Not refreshed" }
+        if store.isRefreshing { return "Refreshing" }
+        if tracker.isUpdating { return "Reading" }
+        guard let last = store.lastRefresh else { return "Refresh" }
         let minutes = Int(now.timeIntervalSince(last) / 60)
-        return minutes < 1 ? "Updated now" : "Updated \(minutes)m ago"
+        return minutes < 1 ? "Now" : "\(minutes)m ago"
     }
 
     private func updatedAccessibilityText(_ now: Date) -> String {
@@ -826,12 +1002,12 @@ private struct WorkMeter: View {
                 ZStack(alignment: .leading) {
                     Rectangle().fill(Brand.border)
                     if let fraction = box.value?.fraction {
-                        Capsule().fill(Brand.text)
+                        Capsule().fill(Brand.primary)
                             .frame(width: max(2, width * fraction))
                             .animation(.easeOut(duration: 0.3), value: fraction)
                     } else {
                         let phase = reduceMotion ? 0.5 : context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.3) / 1.3
-                        Capsule().fill(Brand.text)
+                        Capsule().fill(Brand.primary)
                             .frame(width: width * 0.28)
                             .offset(x: -width * 0.28 + phase * width * 1.28)
                     }

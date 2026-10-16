@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Started at login, or relaunched after an automatic update: stay in the menu bar. Opened
         // any other way (Finder, Launchpad, Spotlight, the Dock), open Keyhop's window.
+        Brand.registerFonts()
         let quiet = Self.launchedAtLogin || CommandLine.arguments.contains(Updater.relaunchFlag)
         Task { @MainActor in
             Alerts.shared.configure()

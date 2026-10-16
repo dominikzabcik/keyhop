@@ -236,7 +236,7 @@ describe("leaderboards", () => {
     const page = await call("/");
     expect(page.status).toBe(200);
     const body = await page.text();
-    expect(body).toContain("Every account.");
+    expect(body).toContain("Every login, one hop away.");
     expect(body).toContain("Download Keyhop");
     expect(body).toContain("Your work never leaves your computer.");
     expect(body).toContain('id="product"');

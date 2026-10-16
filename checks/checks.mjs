@@ -108,7 +108,8 @@ export function faults({ screen, width, reading, status, consoleErrors, failedRe
   }
 
   for (const phrase of screen.mustSay ?? []) {
-    if (!reading.text.includes(phrase)) fault("missing-text", `never says "${phrase}"`);
+    // Read as written, not as drawn: an eyebrow label is uppercased by its style only.
+    if (!reading.text.toLowerCase().includes(phrase.toLowerCase())) fault("missing-text", `never says "${phrase}"`);
   }
 
   for (const phrase of NEVER_SAY) {

@@ -107,8 +107,10 @@ export function faults({ screen, width, reading, status, consoleErrors, failedRe
     fault("request", `${request.path} answered ${request.status}`);
   }
 
+  // The text as read, which carries CSS case: card labels are set in capitals, and still say the words.
+  const said = reading.text.toLowerCase();
   for (const phrase of screen.mustSay ?? []) {
-    if (!reading.text.includes(phrase)) fault("missing-text", `never says "${phrase}"`);
+    if (!said.includes(phrase.toLowerCase())) fault("missing-text", `never says "${phrase}"`);
   }
 
   for (const phrase of NEVER_SAY) {

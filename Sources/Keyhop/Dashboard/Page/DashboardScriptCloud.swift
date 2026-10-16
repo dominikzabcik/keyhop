@@ -171,9 +171,9 @@ extension DashboardPage {
     const tabs = seasons.length > 1
       ? `<div class="tabs">${seasons.map((item) => `<button type="button" data-action="board-season" data-value="${esc(item.id)}" aria-pressed="${item.id === season.season}">${esc(item.label)}</button>`).join("")}</div>`
       : "";
-    return `<section class="card season-row">
-      ${tierTag(you ? you.tier : { key: "bronze", name: "Bronze", division: 3 })}
-      <div class="grow"><b>${esc(season.label)} · ${esc(left)}</b><p>${place}${note}</p>${tabs}</div>
+    return `<section class="card season-row" aria-labelledby="season-h">
+      <div class="grow"><span class="lab">Season · ${esc(left)}</span><h2 id="season-h">${esc(season.label)}</h2><p>${place}${note}</p>${tabs}</div>
+      <div class="season-tier">${tierTag(you ? you.tier : { key: "bronze", name: "Bronze", division: 3 })}</div>
     </section>`;
   }
 
@@ -246,7 +246,7 @@ extension DashboardPage {
       <button class="btn sm ghost" type="button" data-action="board-pick" data-value="${esc(team.slug)}">Open</button></div>`).join("");
     return `<section class="card"><div class="card-head"><h2>Your teams</h2>${teams.length ? `<span class="hint">${teams.length}</span>` : ""}</div>
       ${rows ? `<div class="list">${rows}</div>` : `<p class="empty">You aren't on a team yet. Create one, or paste an invite from a teammate.</p>`}
-      <div class="card-body">
+      <div class="card-body team-forms">
         <form class="form" data-form="team-create"><label>New team<input class="field" name="name" maxlength="40" placeholder="Studio" autocomplete="off"></label><button class="btn sm">Create team</button></form>
         <form class="form" data-form="team-join"><label>Invite link or code<input class="field" name="code" placeholder="https://keyhop.app/invite/…" autocomplete="off"></label><button class="btn sm secondary">Join team</button></form>
         <p class="empty-inline subtle"><a href="${esc(website)}/teams" target="_blank" rel="noopener">The same teams are on the website</a></p>
@@ -356,14 +356,14 @@ extension DashboardPage {
     const ahead = me && me.rank > 1 ? entries[me.rank - 2] : null;
     const gap = ahead ? value({ efficiency: ahead.efficiency != null && me.efficiency != null ? ahead.efficiency - me.efficiency : null, cacheHit: ahead.cacheHit != null && me.cacheHit != null ? ahead.cacheHit - me.cacheHit : null, tokens: ahead.tokens - me.tokens, cost: ahead.cost - me.cost, requests: ahead.requests - me.requests, commits: (ahead.commits || 0) - (me.commits || 0), insertions: (ahead.insertions || 0) - (me.insertions || 0), deletions: (ahead.deletions || 0) - (me.deletions || 0) }) : null;
     const onTeam = scope !== "the global board";
-    const stats = `<div class="stats three">
-      <div class="card stat"><div class="label">Your rank</div><div class="value">${me ? `#${me.rank}` : "Unranked"}</div>
+    const stats = `<section class="card stat-strip" aria-label="Where you stand">
+      <div class="stat"><div class="label">Your rank</div><div class="value">${me ? `#${me.rank}` : "Unranked"}</div>
         <div class="foot">${me ? `of ${entries.length} on ${esc(scope)}` : cloud.isPublic || onTeam ? "Nothing synced for this period" : "Private profiles rank only on teams"}</div></div>
-      <div class="card stat"><div class="label">You</div><div class="value">${me ? esc(value(me)) : "0"}</div>
+      <div class="stat"><div class="label">You</div><div class="value">${me ? esc(value(me)) : "0"}</div>
         <div class="foot">${me ? `${me.activeDays} active ${me.activeDays === 1 ? "day" : "days"}` : "&nbsp;"}</div></div>
-      <div class="card stat"><div class="label">${ahead ? `To catch @${esc(ahead.login)}` : "Ahead of you"}</div><div class="value">${gap ? esc(gap) : me ? "Nobody" : "&nbsp;"}</div>
+      <div class="stat"><div class="label">${ahead ? `To catch @${esc(ahead.login)}` : "Ahead of you"}</div><div class="value">${gap ? esc(gap) : me ? "Nobody" : "&nbsp;"}</div>
         <div class="foot">${ahead ? `They're #${ahead.rank}` : me ? "You lead this board" : "&nbsp;"}</div></div>
-    </div>`;
+    </section>`;
     const podium = entries.length ? `<div class="podium">${entries.slice(0, 3).map((e) => `<div class="card podium-card${e.isYou ? " you" : ""}">
         <span class="place mono">#${e.rank}</span>${person(e, 36)}<div class="podium-value">${esc(value(e))}</div>${mix(e)}</div>`).join("")}</div>` : "";
     const heading = { efficiency: "Commits per M tokens", cache: "Cache hit", tokens: "Tokens", cost: "API value", requests: "Requests", commits: "Commits", lines: "Lines" }[ui.boardMetric];
@@ -376,9 +376,13 @@ extension DashboardPage {
   }
 
   function periodChoices() {
-    return boardChoice("board-period", [["today", "Today"], ["week", "7 days"], ["month", "30 days"], ["all", "All time"]], ui.boardPeriod)
-      + boardChoice("board-metric", [["efficiency", "Efficiency"], ["cache", "Cache hit"], ["tokens", "Tokens"], ["cost", "API value"], ["requests", "Requests"], ["commits", "Commits"], ["lines", "Lines"]], ui.boardMetric)
-      + boardChoice("board-division", [["", "Everyone"], ["free", "Free"], ["pro", "Pro"], ["max", "Max"]], ui.boardDivision);
+    return boardChoice("board-period", [["today", "Today"], ["week", "7 days"], ["month", "30 days"], ["all", "All time"]], ui.boardPeriod);
+  }
+
+  // What the board ranks by and who it ranks: a row of its own above the board, since the top bar
+  // has room only for the period.
+  function boardFilters() {
+    return `<div class="filter-row">${boardChoice("board-metric", [["efficiency", "Efficiency"], ["cache", "Cache hit"], ["tokens", "Tokens"], ["cost", "API value"], ["requests", "Requests"], ["commits", "Commits"], ["lines", "Lines"]], ui.boardMetric)}${boardChoice("board-division", [["", "Everyone"], ["free", "Free"], ["pro", "Pro"], ["max", "Max"]], ui.boardDivision)}</div>`;
   }
 
   function boardProblem() {
@@ -389,10 +393,10 @@ extension DashboardPage {
     const cloud = data.state.cloud;
     if (!cloud.linked || cloud.linking) return { body: cloudCard(cloud) };
     const toolbar = periodChoices();
-    if (data.boardError) return { toolbar, body: boardProblem() };
-    if (!data.board || data.board.team) return { toolbar, body: busy("Reading the leaderboard", "lede") };
+    if (data.boardError) return { toolbar, body: boardFilters() + boardProblem() };
+    if (!data.board || data.board.team) return { toolbar, body: boardFilters() + busy("Reading the leaderboard", "lede") };
     const note = cloud.isPublic ? "" : `<p class="empty-inline subtle">Your profile is private. Make it public in Settings, Cloud, to join the global board.</p>`;
-    return { toolbar, body: ranksBody(data.board.board.entries, "the global board") + note };
+    return { toolbar, body: boardFilters() + ranksBody(data.board.board.entries, "the global board") + note };
   }
 
   function seasonPage() {
@@ -431,9 +435,9 @@ extension DashboardPage {
     if (mode === "ranks") {
       const toolbar = `${teamMenu()}${view}${periodChoices()}`;
       const name = knownTeams().find((team) => team.slug === ui.boardTeam)?.name || "your team";
-      if (data.boardError) return { toolbar, body: boardProblem() };
-      if (!data.board || data.board.team !== ui.boardTeam) return { toolbar, body: busy("Reading the board", "lede") };
-      return { toolbar, body: ranksBody(data.board.board.entries, name) };
+      if (data.boardError) return { toolbar, body: boardFilters() + boardProblem() };
+      if (!data.board || data.board.team !== ui.boardTeam) return { toolbar, body: boardFilters() + busy("Reading the board", "lede") };
+      return { toolbar, body: boardFilters() + ranksBody(data.board.board.entries, name) };
     }
     return dayView(`${teamMenu()}${view}`);
   }

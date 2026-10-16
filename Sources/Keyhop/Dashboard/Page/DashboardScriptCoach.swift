@@ -16,13 +16,15 @@ extension DashboardPage {
     const report = data.coach;
     if (!report) return { body: `<section class="card"><p class="empty" data-loading="Reading the last thirty days">${loadingInner("Reading the last thirty days")}</p></section>` };
     const o = report.optimize, c = report.compare, y = report.yield;
-    const findings = o.findings.map((f) => `<p class="coach-finding ${esc(f.kind)}">${esc(f.text)}</p>`).join("");
+    // A finding that costs money reads amber; a quiet one says so in grey.
+    const glyph = { cache: "alert", premium: "alert", session: "alert" };
+    const findings = o.findings.map((f) => `<div class="coach-finding ${esc(f.kind)}" role="listitem"><span class="arow-glyph" aria-hidden="true">${icon(glyph[f.kind] || "check")}</span><p>${esc(f.text)}</p></div>`).join("");
     const tools = o.tools.length ? `<table class="table"><thead><tr><th>Tool</th><th class="right">API value</th><th class="right">Cache hit</th><th class="right">Premium models</th></tr></thead>
       <tbody>${o.tools.map((t) => `<tr><td><span class="cell-name">${mark(t.tool)}<span>${esc(t.toolName)}</span></span></td><td class="right mono">${fmt.usd(t.apiValue)}</td><td class="right mono">${t.cacheHit == null ? "n/a" : `${Math.round(t.cacheHit)}%`}</td><td class="right mono">${Math.round(t.premiumShare)}%</td></tr>`).join("")}</tbody></table>` : "";
     const sessions = o.sessions.length ? `<table class="table"><thead><tr><th>Heaviest sessions</th><th class="right">Minutes</th><th class="right">API value</th><th class="right">Of the period</th></tr></thead>
       <tbody>${o.sessions.map((s) => `<tr><td><span class="cell-name">${mark(s.tool)}<span>${esc(s.model)} · ${esc(fmt.day(s.from))}</span></span></td><td class="right mono">${s.minutes}</td><td class="right mono">${fmt.usd(s.apiValue)}</td><td class="right mono">${Math.round(s.share)}%</td></tr>`).join("")}</tbody></table>` : "";
     const optimize = `<section class="card"><div class="card-head"><h2>Optimize</h2><span class="hint">Last ${report.days} days</span></div>
-      <div class="card-body">${findings}</div>${tools}${sessions}</section>`;
+      <div class="coach-findings" role="list">${findings}</div>${tools}${sessions}</section>`;
     const compare = `<section class="card"><div class="card-head"><h2>Compare</h2><span class="hint">Against the ${report.days} days before</span></div>
       <div class="card-body coach-deltas">${deltaCell(c.tokens, fmt.tokens)}${deltaCell(c.apiValue, fmt.usd)}${deltaCell(c.requests, fmt.count)}${deltaCell(c.cacheHit, (v) => `${Math.round(v)}%`)}</div>
       ${c.tools.length ? `<table class="table"><thead><tr><th>Tool</th><th class="right">Now</th><th class="right">Before</th><th class="right">Change</th></tr></thead><tbody>${c.tools.map((d) => `<tr><td>${esc(d.label)}</td><td class="right mono">${fmt.usd(d.now)}</td><td class="right mono">${fmt.usd(d.before)}</td><td class="right mono">${d.change == null ? "new" : `${d.change > 0 ? "+" : ""}${Math.round(d.change)}%`}</td></tr>`).join("")}</tbody></table>` : ""}

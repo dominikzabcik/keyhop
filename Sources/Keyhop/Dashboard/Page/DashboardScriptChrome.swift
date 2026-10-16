@@ -299,7 +299,9 @@ extension DashboardPage {
     const page = { overview: overviewPage, limits: limitsPage, accounts: limitsPage, usage: usagePage, budgets: budgetsPage, plans: plansPage, coach: coachPage, leaderboard: leaderboardPage, season: seasonPage, teams: teamsPage, profile: profilePage, settings: settingsPage }[ui.section](tools);
     $("#title").textContent = groupOf(ui.section).title;
     placeSubnav();
-    $("#toolbar").innerHTML = page.toolbar || "";
+    // The top bar's controls are only redrawn when they change, so a press is never lost to a redraw.
+    const toolbar = $("#toolbar"), controls = page.toolbar || "";
+    if (toolbar.dataset.drawn !== controls) { toolbar.innerHTML = controls; toolbar.dataset.drawn = controls; }
     const pageTools = "";
     const offline = ui.offline ? `<div class="notice">${icon("alert")}<div><p>${esc(ui.offline)}</p></div></div>` : "";
     parkHero();

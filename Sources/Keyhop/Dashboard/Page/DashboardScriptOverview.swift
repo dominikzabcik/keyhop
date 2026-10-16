@@ -314,7 +314,7 @@ extension DashboardPage {
     const now = new Date();
     const label = { today: "Today", week: "7 days", month: "This month", all: "All time" }[range] || usage.title;
     const title = { today: "Today, so far", week: "The last 7 days", month: "This month, so far", all: "Everything so far" }[range] || usage.title;
-    const span = { today: "yesterday", week: "the 7 days before", month: "last month by now" }[range] || "the period before";
+    const span = { today: "yesterday", week: "the 7 days before", month: "the month before" }[range] || "the period before";
     let change = "";
     if (compared && p?.tokens) {
       const pct = Math.round(((t.tokens - p.tokens) / p.tokens) * 100);

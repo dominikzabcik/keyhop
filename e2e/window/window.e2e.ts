@@ -12,7 +12,7 @@ test('the sidebar lists its five places from the top', async ({ app, browser }) 
   const layout = await browser.evaluate(() => {
     const nav = document.querySelector('#nav');
     if (!nav) return null;
-    const items = [...nav.children].filter((el) => !(el as HTMLElement).hidden);
+    const items = [...nav.querySelectorAll(':scope > a')].filter((el) => !(el as HTMLElement).hidden);
     const boxes = items.map((el) => {
       const box = el.getBoundingClientRect();
       const clone = el.cloneNode(true) as HTMLElement;
@@ -28,19 +28,19 @@ test('the sidebar lists its five places from the top', async ({ app, browser }) 
     return {
       names: boxes.map((box) => box.name),
       maxGap,
-      treeHeight: treeBox?.height ?? 0,
+      limits: tree?.querySelectorAll('.side-login').length ?? 0,
       settingsBelow: !!treeBox && !!settingsBox && settingsBox.top >= treeBox.bottom - 1,
     };
   });
 
   expect(layout?.names).toEqual(['Home', 'Limits', 'Usage', 'Insights', 'Community']);
   expect(layout?.maxGap ?? 999).toBeLessThan(12);
-  // The logins in use take the leftover height. Settings sits under them.
-  expect(layout?.treeHeight ?? 0).toBeGreaterThan(24);
+  // Each tool with a limit shows what is left of it. The account and Settings sit under them.
+  expect(layout?.limits ?? 0).toBeGreaterThan(3);
   expect(layout?.settingsBelow).toBe(true);
 });
 
-test('a place with several sections shows them as tabs and remembers the last one', async ({ app, screen, browser }) => {
+test('a place with several sections opens them under its link and remembers the last one', async ({ app, screen, browser }) => {
   await openWindow(app, 'plans');
   await expect(screen.getByRole('heading', 'Insights', { level: 1 })).toBeVisible();
   await expect(browser.locator('#subnav [data-section="plans"]')).toHaveAttribute('aria-pressed', 'true');
@@ -52,23 +52,21 @@ test('a place with several sections shows them as tabs and remembers the last on
   await expect(browser.locator('#subnav [data-section="budgets"]')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('home is today: the wallpaper, what needs you and the week', async ({ app, screen, browser }) => {
+test('home is the total, the pet and what needs you', async ({ app, screen, browser }) => {
   await openWindow(app, 'overview');
   await expect(screen.getByRole('heading', 'Home', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'The last 7 days')).toBeVisible();
+  await expect(screen.getByRole('heading', 'Tokens per day')).toBeVisible();
+  await expect(screen.getByRole('heading', 'Top models')).toBeVisible();
+  await expect(screen.getByRole('heading', 'Activity')).toBeVisible();
   await expect(screen.getByRole('heading', 'Needs your attention')).toBeVisible();
-  await expect(screen.getByRole('heading', 'In use')).toBeVisible();
-  await expect(screen.getByRole('heading', 'Overview')).toBeVisible();
-  await expect(screen.getByText('Current streak')).toBeVisible();
   // Work is counted in the sample, so the figures carry commits and the leaderboard's measure.
   await expect(screen.getByText('per M tokens', { exact: false }).first()).toBeVisible();
-  // The wallpaper is one element, carried into Home's hero on every draw.
-  await expect.poll(() => browser.evaluate(() => {
-    const art = document.querySelector('.hero #hero-art') as HTMLElement | null;
-    return !!art && !art.hidden && art.getBoundingClientRect().height > 100;
-  })).toBe(true);
-  await screen.getByRole('button', { name: '30 days', exact: true }).tap();
-  await expect(screen.getByRole('button', { name: '30 days', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(screen.getByText('vs the 30 days before').first()).toBeVisible();
+  // The linked sample has a pet: its stages run along the bottom of its night.
+  await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.hpet .hstage').length)).toBe(6);
+  await screen.getByRole('button', { name: 'Month', exact: true }).tap();
+  await expect(screen.getByRole('button', { name: 'Month', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(screen.getByRole('heading', 'This month, so far')).toBeVisible();
   await assertReadable(browser);
 });
 
@@ -196,7 +194,7 @@ test('the sidebar stays packed in the smallest window', async ({ app, browser })
 
 test('Hop lists the sections a linked account can open', async ({ app, screen }) => {
   await openWindow(app, 'overview');
-  await screen.getByRole('button', 'Hop', { exact: true }).tap();
+  await screen.getByRole('button', 'Hop to a login…', { exact: true }).tap();
   await expect(screen.getByRole('dialog', 'Hop')).toBeVisible();
   for (const name of ['Home', 'Coach', 'Plans', 'Leaderboard', 'Season', 'Teams', 'Profile', 'Settings']) {
     await expect(screen.getByRole('option', name, { exact: false })).toBeVisible();
@@ -228,11 +226,11 @@ test('the status bar turns the field from night to day and back', async ({ app, 
   await expect.poll(field).toBe('night');
   await screen.getByRole('button', { name: 'Night', exact: true }).click();
   await expect.poll(field).toBe('day');
-  await expect(screen.getByRole('button', { name: 'Day', exact: true })).toBeVisible();
+  await expect(browser.locator('#status-theme')).toHaveText(/day/i);
   // The choice is saved, so another open of the window is still by day.
   await openWindow(app, 'usage');
   await expect.poll(field).toBe('day');
   await assertReadable(browser);
-  await screen.getByRole('button', { name: 'Day', exact: true }).click();
+  await browser.locator('#status-theme').click();
   await expect.poll(field).toBe('night');
 });

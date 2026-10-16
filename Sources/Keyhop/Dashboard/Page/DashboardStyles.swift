@@ -693,8 +693,13 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 /* The top bar: the place's name and its controls, then when limits were read and a way to read them now. */
 .topbar { padding: 0 16px 0 28px; height: 60px; min-height: 60px; }
 .topbar h1 { font-size: 15px; }
-.top-title { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.top-title .toolbar { justify-content: flex-start; }
+.top-title { flex: 1; display: flex; align-items: center; gap: 14px; min-width: 0; }
+.top-title h1 { flex: none; }
+/* A page with many controls lets them scroll sideways rather than push the read time away. */
+.top-title .toolbar { justify-content: flex-start; flex-wrap: nowrap; min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: -2px; }
+.top-title .toolbar::-webkit-scrollbar { display: none; }
+.top-actions { flex: none; }
+@media (max-width: 1240px) { .top-read { display: none; } }
 .top-read { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .icon-btn { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--muted); cursor: pointer; }
 .icon-btn:hover { color: var(--text); border-color: var(--border-strong); }
@@ -821,6 +826,7 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .hpet-track > span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width .6s ease; }
 .hpet-stage { flex: 1; min-height: 190px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 12px 28px 26px 24px; }
 .hpet-bubble { max-width: 240px; margin-bottom: 64px; padding: 10px 12px; border-radius: 8px 8px 2px 8px; background: #f5f5f5; color: #1d1d1f; line-height: 17px; box-shadow: 0 10px 28px rgba(0, 0, 10, .45); display: grid; gap: 2px; }
+:root[data-theme="day"] .hpet-bubble { background: #fff; box-shadow: 0 10px 28px rgba(20, 30, 60, .16), 0 0 0 1px rgba(0, 0, 0, .06); }
 .hpet-bubble b { font-weight: 600; }
 .hpet-bubble > span { color: #48484a; }
 .hpet-bubble .hpet-acts { display: flex; gap: 6px; margin-top: 8px; }

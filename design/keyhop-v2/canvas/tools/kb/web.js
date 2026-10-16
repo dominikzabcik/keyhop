@@ -25,8 +25,8 @@
       ['Count the commits I wrote myself.', 'Merge commits are left out, and each day is rewritten on sync, so a rebase counts once.', 0],
       ['Rank me by commits per million tokens.', 'The season compares people on your plan, past a floor of one million tokens.', 0]]
       .map((t, i) => ({ ic: ic(['claude', 'cursor', 'codex', 'gemini', 'opencode', 'pi', 'copilot', 'windsurf', 'codebuff'][i]), name: t[0], desc: t[1], on: t[2] ? 'true' : 'false', track: t[2] ? accent : '#2E2E2E', x: t[2] ? '21px' : '3px', line: i ? 'inset 0 1px 0 rgba(255,255,255,0.06)' : 'none' }));
-    const board = [['1', 'MK', 'mkovar', 'Monument · 41-day streak', '18.4', '2.1B', '38,640'], ['2', 'AL', 'alina-dev', 'Mass · 12-day streak', '16.9', '940M', '15,886'],
-      ['3', 'DZ', 'you', 'Bulk · 12-day streak', '15.2', '800M', '12,160'], ['4', 'JP', 'jpetr', 'Bulk · 3-day streak', '13.7', '620M', '8,494'], ['5', 'RS', 'rsato', 'Frame · 9-day streak', '12.1', '48M', '581']]
+    const board = [['1', 'S1', 'sample-one', 'Monument · 41-day streak', '18.4', '2.1B', '38,640'], ['2', 'S2', 'sample-two', 'Mass · 12-day streak', '16.9', '940M', '15,886'],
+      ['3', 'YO', 'you', 'Bulk · 12-day streak', '15.2', '800M', '12,160'], ['4', 'S4', 'sample-four', 'Bulk · 3-day streak', '13.7', '620M', '8,494'], ['5', 'S5', 'sample-five', 'Frame · 9-day streak', '12.1', '48M', '581']]
       .map((b, i) => ({ n: b[0], ini: b[1], who: b[2], pet: b[3], eff: b[4], tokens: b[5], commits: b[6],
         bg: b[2] === 'you' ? rgba(accent, 0.07) : 'transparent', ink: b[2] === 'you' ? '#93C5FD' : c.label,
         av: b[2] === 'you' ? rgba(accent, 0.25) : 'rgba(255,255,255,0.08)', line: i ? 'inset 0 1px 0 rgba(255,255,255,0.06)' : 'none' }));

@@ -6,54 +6,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Keyhop</title>
 <style>
+  /* Coss Blue, the tokens the window and keyhop.app ship. Geist from the repo's own copy. */
+  @font-face { font-family: "Geist"; font-weight: 400; src: url(../../Assets/fonts/Geist-Regular.ttf); }
+  @font-face { font-family: "Geist"; font-weight: 500; src: url(../../Assets/fonts/Geist-Medium.ttf); }
+  @font-face { font-family: "Geist"; font-weight: 600; src: url(../../Assets/fonts/Geist-SemiBold.ttf); }
+  @font-face { font-family: "Geist"; font-weight: 700; src: url(../../Assets/fonts/Geist-Bold.ttf); }
+  @font-face { font-family: "Geist Mono"; font-weight: 400; src: url(../../Assets/fonts/GeistMono-Regular.ttf); }
+  @font-face { font-family: "Geist Mono"; font-weight: 500; src: url(../../Assets/fonts/GeistMono-Medium.ttf); }
   :root {
     color-scheme: dark;
-    --bg: #101010;
-    --sidebar: #141414;
-    --card: #1b1b1b;
+    --bg: #161616;
+    --sidebar: #111111;
+    --card: #1a1a1a;
     --search: rgba(255, 255, 255, .045);
-    --text: #ececec;
-    --muted: #9a9a9a;
-    --subtle: #6f6f6f;
-    --side: #8d8d8d;
-    --border: rgba(255, 255, 255, .08);
+    --text: #f5f5f5;
+    --muted: #a3a3a3;
+    --subtle: #8a8a8a;
+    --side: #a3a3a3;
+    --border: rgba(255, 255, 255, .10);
     --accent: rgba(255, 255, 255, .06);
     --accent-2: rgba(255, 255, 255, .1);
     --track: rgba(255, 255, 255, .08);
-    --ink: #f2f2f2;
+    --ink: #f5f5f5;
+    --primary: #60a5fa;
+    --on-primary: #0a1628;
     --pace: rgba(255, 255, 255, .72);
     --kbd: rgba(255, 255, 255, .04);
-    --warn: #e3a64f;
-    --warn-ink: #f0c27a;
-    --good: #5cc98a;
-    --bad: #ee7a69;
-    --info: #7eb0f2;
+    --warn: #f59e0b;
+    --warn-ink: #fbbf24;
+    --good: #34d399;
+    --bad: #ff8a82;
+    --info: #93c5fd;
     --shadow: 0 18px 50px rgba(0, 0, 0, .35);
     --veil: radial-gradient(ellipse 72% 58% at 50% 42%, rgba(0, 0, 0, .38), transparent 70%);
     --headline-shadow: 0 1px 18px rgba(0, 0, 0, .55);
   }
   [data-theme="day"] {
     color-scheme: light;
-    --bg: #f4f4f1;
-    --sidebar: #efefec;
+    --bg: #fafafa;
+    --sidebar: #f4f4f4;
     --card: #fff;
     --search: #fff;
-    --text: #1c1c1c;
-    --muted: #5f5f5a;
-    --subtle: #8a8a84;
-    --side: #5c5c57;
+    --text: #171717;
+    --muted: #525252;
+    --subtle: #737373;
+    --side: #525252;
     --border: rgba(0, 0, 0, .08);
     --accent: rgba(0, 0, 0, .045);
     --accent-2: rgba(0, 0, 0, .08);
     --track: rgba(0, 0, 0, .08);
-    --ink: #1c1c1c;
+    --ink: #171717;
+    --primary: #2563eb;
+    --on-primary: #fff;
     --pace: rgba(0, 0, 0, .45);
     --kbd: #fff;
     --warn: #b86e12;
     --warn-ink: #9a5b0c;
     --good: #1f8a4c;
     --bad: #c44b3c;
-    --info: #2f6fbe;
+    --info: #2563eb;
     --shadow: 0 16px 40px rgba(40, 36, 28, .12);
     --veil: radial-gradient(ellipse 70% 56% at 50% 42%, rgba(255, 255, 255, .42), transparent 68%);
     --headline-shadow: 0 1px 14px rgba(255, 255, 255, .75);
@@ -64,7 +75,7 @@
   body {
     background: var(--sidebar);
     color: var(--text);
-    font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 13px/1.45 "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     user-select: none;
   }
@@ -138,7 +149,7 @@
   kbd {
     display: inline-flex; align-items: center; height: 18px; padding: 0 5px;
     border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px;
-    background: var(--kbd); color: var(--subtle); font: 11px/1 ui-sans-serif, system-ui, sans-serif;
+    background: var(--kbd); color: var(--subtle); font: 11px/1 "Geist", ui-sans-serif, system-ui, sans-serif;
   }
   .nav { display: grid; gap: 1px; padding: 4px 0 8px; }
   .nav-item, .foot-btn { height: 30px; padding: 0 8px; }
@@ -210,7 +221,7 @@
   .chip:hover, .text-btn:hover, .mini:hover { background: var(--accent); color: var(--text); }
   .go {
     margin-left: auto; width: 28px; height: 28px; border-radius: 8px;
-    background: var(--text); color: var(--bg); display: grid; place-items: center;
+    background: var(--primary); color: var(--on-primary); display: grid; place-items: center;
   }
   .go:hover { filter: brightness(1.05); }
   .go:active, .chip:active, .text-btn:active { transform: scale(.97); }
@@ -257,7 +268,7 @@
   .quiet-line { margin: 0 0 10px; color: var(--subtle); font-size: 12.5px; }
   .hop-link {
     margin-left: auto; flex: none; height: 24px; padding: 0 8px; border-radius: 6px;
-    border: 0; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 620;
+    border: 0; background: var(--primary); color: var(--on-primary); font-size: 12px; font-weight: 620;
   }
 
   .page-head {
@@ -335,7 +346,7 @@
   .usage-figure .lbl { color: var(--muted); font-size: 12.5px; display: flex; justify-content: space-between; }
   .usage-figure .num { margin: 4px 0 0; font-size: 32px; font-weight: 620; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
   .chart { display: block; width: 100%; height: auto; }
-  .chart .axis { fill: var(--subtle); font: 11px ui-monospace, "SF Mono", Menlo, monospace; }
+  .chart .axis { fill: var(--subtle); font: 11px "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace; }
   .legend { display: flex; gap: 14px; padding: 0 16px 14px; color: var(--muted); font-size: 12px; list-style: none; margin: 0; }
   .legend li { display: flex; align-items: center; gap: 6px; }
   .sw { width: 8px; height: 8px; border-radius: 2px; }

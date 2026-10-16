@@ -51,7 +51,8 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
   - keyhop.app on `main` (`cloud/src/ui.ts`, fonts served by `cloud/src/fonts.ts`);
   - the menu bar panel, rebuilt as BC 1 in `UI/MenuView.swift`, and the SwiftUI tokens in `UI/Brand.swift`;
   - the iPhone app and the GPUI window, from the TrueType faces in `Assets/fonts`.
-- **Next:** rewrite `design/keyhop-v2/index.html` to Coss Blue.
+- `design/keyhop-v2/index.html` (the older sketch) now has the same tokens and Geist from `Assets/fonts`.
+- `KB-Components` has the tool marks too. On `KB-Web` the leaderboard is marked as sample data, with sample handles; the hero figures (9 tools, 6 with a full token history, no login leaves your computer, one click from the alert) were checked against the product.
 - **Was next once a colour is picked:** apply it to System, Limits, the menu bar popover and keyhop.app (Mac and web in parity), then rewrite `design/keyhop-v2/index.html` and the window and site tokens.
 
 ## How we got there (rows on the canvas, oldest at the bottom)

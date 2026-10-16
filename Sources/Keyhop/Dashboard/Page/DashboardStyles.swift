@@ -643,7 +643,7 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .brand-copy { flex: 1; min-width: 0; display: grid; line-height: 16px; }
 .brand-copy b { font-size: 13px; font-weight: 600; }
 .brand-copy small { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mac-window .brand { padding-left: 12px; padding-top: 40px; }
+.mac-window .brand { padding-left: 12px; padding-top: 36px; }
 .hop-side { width: calc(100% - 24px); height: 34px; margin: 10px 12px 0; justify-content: flex-start; background: transparent; border-color: var(--border-strong); color: var(--muted); font-weight: 450; }
 .hop-side:hover { color: var(--text); }
 .hop-side kbd { margin-left: auto; }

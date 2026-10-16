@@ -323,6 +323,21 @@ describe("public site", () => {
     expect(await security.text()).toContain("Contact: https://github.com/dominikzabcik/keyhop/security/advisories/new");
   });
 
+  it("serves the Geist faces from its own origin, cached for good", async () => {
+    for (const name of ["geist-1.7.2.woff2", "geist-mono-1.7.2.woff2"]) {
+      const font = await call(`/fonts/${name}`);
+      expect(font.status).toBe(200);
+      expect(font.headers.get("content-type")).toBe("font/woff2");
+      expect(font.headers.get("cache-control")).toContain("immutable");
+      const bytes = new Uint8Array(await font.arrayBuffer());
+      expect(String.fromCharCode(...bytes.slice(0, 4))).toBe("wOF2");
+    }
+    expect((await call("/fonts/other.woff2")).status).toBe(404);
+    const page = await call("/");
+    expect(page.headers.get("content-security-policy")).toContain("font-src 'self'");
+    expect(await page.text()).toContain("/fonts/geist-1.7.2.woff2");
+  });
+
   it("keeps sign-in and error pages out of search results", async () => {
     for (const path of ["/login?next=/settings", "/does-not-exist"]) {
       const page = await call(path);

@@ -12,3 +12,8 @@ scripts/update-pricing.py.
 
 Linux and Windows builds include SQLite (https://sqlite.org), which is in the
 public domain, in Sources/CSQLite.
+
+The window and keyhop.app use the Geist and Geist Mono typefaces
+(https://vercel.com/font), Copyright (c) 2023 Vercel, in collaboration with
+basement.studio, licensed under the SIL Open Font License 1.1
+(https://openfontlicense.org). keyhop.app serves them from cloud/src/fonts.ts.

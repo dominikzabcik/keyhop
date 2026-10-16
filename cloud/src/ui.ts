@@ -2,6 +2,7 @@ import { html, raw } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
 import { MEASURED_TOOLS, type Tool, TOOLS, TOOL_NAMES, type User, addDays, shownTools } from "./env";
 import { BACKDROP_SCRIPT } from "./backdrop";
+import { FONT_CSS } from "./fonts";
 import type { Metric, Totals } from "./stats";
 
 export type Html = HtmlEscapedString | Promise<HtmlEscapedString>;
@@ -48,34 +49,35 @@ const FAVICON =
 // The dashboard's tokens and components, so the website and the app read as one product.
 const CSS = `
 :root {
-  --bg: hsl(0 0% 9%); --panel: hsl(0 0% 10.6%); --raised: hsl(0 0% 13.5%); --hover: hsl(var(--on) / .05);
-  --border: hsl(var(--on) / .08); --border-strong: hsl(var(--on) / .14); --faint: hsl(var(--on) / .08);
-  --text: hsl(0 0% 92%); --muted: hsl(0 0% 63%); --subtle: hsl(0 0% 46%); --primary: hsl(0 0% 95%); --on-primary: hsl(0 0% 9%);
-  --focus: hsl(211 92% 62%); --good: #5CC98A; --warn: #E3A64F; --warn-ink: #f0c27a; --bad: #EE7A69; --info: #7eb0f2;
+  /* Coss Blue: neutral grounds after coss-ui, one blue for actions, amber only for limits running out. */
+  --bg: #161616; --panel: #1a1a1a; --raised: #1f1f1f; --hover: hsl(var(--on) / .05);
+  --border: hsl(var(--on) / .10); --border-strong: hsl(var(--on) / .16); --faint: hsl(var(--on) / .08);
+  --text: #f5f5f5; --muted: #a3a3a3; --subtle: #8a8a8a; --primary: #60a5fa; --on-primary: #0a1628;
+  --focus: #60a5fa; --good: #34d399; --warn: #f59e0b; --warn-ink: #fbbf24; --bad: #ff8a82; --info: #93c5fd;
   /* The overlay tints: --on is the ink's hue, --off the surface's. The day field flips them. */
-  --on: 0 0% 100%; --off: 0 0% 0%; --bg-base: 0 0% 9%; --side: hsl(0 0% 56%); --overlay: hsl(0 0% 12.5% / .95);
-  --headline-shadow: 0 1px 18px hsl(0 0% 9% / .95), 0 0 2px hsl(0 0% 9% / .8);
-  --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, Cantarell, "Noto Sans", sans-serif;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --on: 0 0% 100%; --off: 0 0% 0%; --bg-base: 0 0% 8.6%; --side: #a3a3a3; --overlay: hsl(0 0% 12.5% / .95);
+  --headline-shadow: 0 1px 18px hsl(0 0% 8.6% / .95), 0 0 2px hsl(0 0% 8.6% / .8);
+  --sans: "Geist", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, Cantarell, "Noto Sans", sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   color-scheme: dark;
 }
 /* The day field, the same one the app has: chosen with the header's switch, or the system's setting. */
 @media (prefers-color-scheme: light) { :root:not([data-theme="night"]) {
   color-scheme: light;
-  --bg: #f4f4f1; --panel: #ffffff; --raised: #f1f1ee; --hover: hsl(0 0% 0% / .045);
+  --bg: #fafafa; --panel: #ffffff; --raised: #f4f4f4; --hover: hsl(0 0% 0% / .045);
   --border: hsl(0 0% 0% / .08); --border-strong: hsl(0 0% 0% / .14); --faint: hsl(0 0% 0% / .08);
-  --text: #1c1c1c; --muted: #5f5f5a; --subtle: #8a8a84; --primary: #1c1c1c; --on-primary: #f4f4f1;
-  --focus: hsl(211 60% 46%); --good: #1f8a4c; --warn: #b86e12; --warn-ink: #9a5b0c; --bad: #c44b3c; --info: #2f6fbe;
-  --on: 0 0% 0%; --off: 0 0% 100%; --bg-base: 0 0% 96%; --side: #5c5c57; --overlay: hsl(var(--off) / .96);
+  --text: #171717; --muted: #525252; --subtle: #737373; --primary: #2563eb; --on-primary: #ffffff;
+  --focus: #2563eb; --good: #1f8a4c; --warn: #b86e12; --warn-ink: #9a5b0c; --bad: #c44b3c; --info: #2563eb;
+  --on: 0 0% 0%; --off: 0 0% 100%; --bg-base: 0 0% 98%; --side: #525252; --overlay: hsl(var(--off) / .96);
   --headline-shadow: 0 1px 14px rgba(255, 255, 255, .75);
 } }
 :root[data-theme="day"] {
   color-scheme: light;
-  --bg: #f4f4f1; --panel: #ffffff; --raised: #f1f1ee; --hover: hsl(0 0% 0% / .045);
+  --bg: #fafafa; --panel: #ffffff; --raised: #f4f4f4; --hover: hsl(0 0% 0% / .045);
   --border: hsl(0 0% 0% / .08); --border-strong: hsl(0 0% 0% / .14); --faint: hsl(0 0% 0% / .08);
-  --text: #1c1c1c; --muted: #5f5f5a; --subtle: #8a8a84; --primary: #1c1c1c; --on-primary: #f4f4f1;
-  --focus: hsl(211 60% 46%); --good: #1f8a4c; --warn: #b86e12; --warn-ink: #9a5b0c; --bad: #c44b3c; --info: #2f6fbe;
-  --on: 0 0% 0%; --off: 0 0% 100%; --bg-base: 0 0% 96%; --side: #5c5c57; --overlay: hsl(var(--off) / .96);
+  --text: #171717; --muted: #525252; --subtle: #737373; --primary: #2563eb; --on-primary: #ffffff;
+  --focus: #2563eb; --good: #1f8a4c; --warn: #b86e12; --warn-ink: #9a5b0c; --bad: #c44b3c; --info: #2563eb;
+  --on: 0 0% 0%; --off: 0 0% 100%; --bg-base: 0 0% 98%; --side: #525252; --overlay: hsl(var(--off) / .96);
   --headline-shadow: 0 1px 14px rgba(255, 255, 255, .75);
 }
 * { box-sizing: border-box; }
@@ -157,7 +159,7 @@ h1 { margin: 0; font-size: 22px; font-weight: 640; letter-spacing: -.01em; line-
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 7px; border: 1px solid transparent;
   background: var(--primary); color: var(--on-primary); font-weight: 560; font-size: 13.5px; text-decoration: none; cursor: pointer; white-space: nowrap;
   transition: background .12s ease, border-color .12s ease, color .12s ease; }
-.btn:hover { background: #fff; }
+.btn:hover { background: color-mix(in srgb, var(--primary) 86%, hsl(var(--on))); }
 .btn.secondary { background: var(--raised); color: var(--text); border-color: var(--border); }
 .btn.secondary:hover { background: hsl(var(--on) / .12); border-color: var(--border-strong); }
 .btn.ghost { background: transparent; color: var(--muted); }
@@ -565,8 +567,9 @@ export function layout(options: {
 <meta name="twitter:image" content="${socialImage}">
 <meta name="twitter:image:alt" content="Keyhop logo on a dark background">
 <link rel="icon" href="${raw(FAVICON)}">
+<link rel="preload" href="/fonts/geist-1.7.2.woff2" as="font" type="font/woff2" crossorigin>
 <script nonce="${options.nonce}">(function () { try { var field = localStorage.getItem("keyhop-field"); if (field === "day" || field === "night") document.documentElement.setAttribute("data-theme", field); } catch (error) {} })();</script>
-<style>${raw(CSS)}${raw(options.css ?? "")}</style>
+<style>${raw(FONT_CSS)}${raw(CSS)}${raw(options.css ?? "")}</style>
 ${schema ? html`<script type="application/ld+json" nonce="${options.nonce}">${raw(schema)}</script>` : ""}
 </head>
 <body class="${mode}">

@@ -45,7 +45,7 @@ This is a full copy of the claude.ai design canvas the V2 look was worked out on
   The owner liked B and C and wanted them combined. `KB-Menubc` has two combinations, built from those pieces by `tools/kb/menubc.html`:
   - **BC 1** puts the field header over the rings and keeps the hop card.
   - **BC 2** has the pet offer the hop in its bubble, above the rings.
-  Awaiting a pick.
+- **Picked: BC 1** (2026-10-16). `KB-Menu` is now BC 1 (560×660): the night field with the pooled figure and the pet, six rings, the hop card, the Codex warning and Open, Refresh and Quit in one row. `KB-Menus` and `KB-Menubc` stay as the record.
 - **Next:** owner feedback on the KB boards, then rewrite `design/keyhop-v2/index.html` and the real window and site tokens to Coss Blue.
 - **Was next once a colour is picked:** apply it to System, Limits, the menu bar popover and keyhop.app (Mac and web in parity), then rewrite `design/keyhop-v2/index.html` and the window and site tokens.
 

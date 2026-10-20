@@ -14,10 +14,10 @@ struct CLIState: Codable {
 
     static var url: URL { Platform.dataDirectory.appendingPathComponent("cli-state.json") }
 
-    static func load() -> CLIState {
+    static func load(from file: URL = url) -> CLIState {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode(CLIState.self, from: Data(contentsOf: url))) ?? CLIState()
+        return (try? decoder.decode(CLIState.self, from: Data(contentsOf: file))) ?? CLIState()
     }
 
     func save() {

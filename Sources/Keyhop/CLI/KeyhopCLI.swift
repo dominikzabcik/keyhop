@@ -5,7 +5,7 @@ import Foundation
 enum KeyhopCLI {
     static let commands: Set<String> = [
         "status", "refresh", "recommend", "switch", "run", "add", "rename", "remove", "usage", "plans", "forecast", "coach", "merge", "dashboard", "insights", "budget",
-        "cloud", "work", "mcp", "update", "doctor", "services", "reset", "version", "help", "--help", "-h", "--version",
+        "cloud", "work", "browser", "mcp", "update", "doctor", "services", "reset", "version", "help", "--help", "-h", "--version",
     ]
 
     static func handles(_ word: String) -> Bool {
@@ -50,6 +50,7 @@ enum KeyhopCLI {
             case "budget": try await Commands.budget(&args)
             case "cloud": try await Commands.cloud(&args)
             case "work": try await Commands.work(&args)
+            case "browser": try await Commands.browser(&args)
             case "mcp": try await MCPServer.run(&args)
             case "update": try await Commands.update(&args)
             case "doctor": try await Commands.doctor(&args)
@@ -115,6 +116,11 @@ enum KeyhopCLI {
       work scan [--days N] [--json]        Show what would be sent, without sending it
       work index [--again] [--json]        Read every repository now, and say how far it got
       work sync [--json]                   Send commit counts now (also runs hourly after a refresh)
+
+    Browser
+      browser install                      Set up the Chrome extension: claude.ai and chatgpt.com follow each hop
+      browser status [--json]              Where the extension is, which browsers know it, and the site logins kept
+      browser remove                       Take the extension's files and its host registration away
 
     Agents
       mcp                                  Serve read-only status, usage and Smart Hop tools over stdio

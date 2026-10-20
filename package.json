@@ -2,6 +2,7 @@
   "name": "keyhop",
   "private": true,
   "scripts": {
+    "test:extension": "node e2e/browser/extension.mjs",
     "test:e2e": "E2E_TELEMETRY_DISABLED=1 e2e run --reporter list,junit --output .e2e/window && E2E_TELEMETRY_DISABLED=1 e2e run --config e2e.site.config.ts --reporter list,junit --output .e2e/site"
   },
   "devDependencies": {

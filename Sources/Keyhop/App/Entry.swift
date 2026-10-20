@@ -8,6 +8,8 @@ import SwiftUI
 enum Entry {
     static func main() {
         let arguments = Array(CommandLine.arguments.dropFirst())
+        // Chrome starts the native messaging host with the extension's origin as its argument.
+        if arguments.first?.hasPrefix("chrome-extension://") == true { BrowserHost.runAndExit() }
         #if os(macOS)
         UserDefaults.standard.register(defaults: ["autoRefresh": true, "checkForUpdates": true, "autoInstallUpdates": true])
         // Linked onto PATH as `keyhop` (by the installer or the Homebrew cask), the binary is the

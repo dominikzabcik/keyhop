@@ -12,6 +12,8 @@ actor Vault {
     }
 
     nonisolated var storeName: String { store.name }
+    /// Site logins for the browser extension share the store, under their own keys.
+    nonisolated var webStore: any SecretStore { store }
 
     func read(_ id: UUID) -> Secret? {
         if let cached = cache[id] { return cached }
@@ -37,6 +39,7 @@ actor Vault {
 
     func delete(_ id: UUID) {
         store.delete(id.uuidString)
+        store.delete("web-\(id.uuidString)")
         cache[id] = nil
     }
 }

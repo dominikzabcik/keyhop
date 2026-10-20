@@ -530,6 +530,7 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .pill { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: hsl(var(--on) / .07); color: var(--muted); font-size: 11.5px; font-weight: 560; white-space: nowrap; }
 .pill.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 16%, transparent); }
 .pill.warn { color: var(--warn-ink); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.pill.good { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
 .outbound { border-top: 1px solid var(--border); }
 .outbound summary { display: flex; gap: 12px; align-items: center; padding: 10px 0; cursor: pointer; list-style: none; }
 .outbound summary::-webkit-details-marker { display: none; }

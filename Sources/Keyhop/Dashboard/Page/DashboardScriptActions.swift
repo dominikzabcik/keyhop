@@ -198,6 +198,11 @@ extension DashboardPage {
       case "cancel-budget": ui.budgetEdit = null; render(); break;
       case "delete-budget": act(el, () => api("/api/budget", { scope: el.dataset.scope === "all" ? "all" : el.dataset.scope.replace("account:", ""), amount: null })); break;
       case "check-update": await loadUpdate(true); break;
+      case "copy":
+        try { await navigator.clipboard.writeText(el.dataset.value); toast("Copied."); } catch { toast(el.dataset.value); }
+        break;
+      case "browser-install": await act(el, () => api("/api/browser/install", {}), "Setting up"); break;
+      case "browser-remove": await act(el, () => api("/api/browser/remove", {}), "Removing"); break;
       case "install-update": act(el, () => api("/api/update", {}), "Installing"); break;
       case "cloud-link": act(el, () => api("/api/cloud/link", {}), "Opening GitHub"); break;
       case "cloud-sync": act(el, () => api("/api/cloud/sync", {}), "Syncing"); break;

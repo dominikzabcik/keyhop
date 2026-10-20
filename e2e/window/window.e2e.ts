@@ -242,3 +242,13 @@ test('the status bar turns the field from night to day and back', async ({ app, 
   await browser.locator('#status-theme').click();
   await expect.poll(field).toBe('night');
 });
+
+test('settings sets up the browser extension and says whether it is connected', async ({ app, screen, browser }) => {
+  await openWindow(app, 'settings');
+  await browser.locator('[data-action="settings-pane"][data-value="browser"]').tap();
+  await expect(screen.getByRole('heading', 'Chrome extension', { level: 2 })).toBeVisible();
+  await expect(screen.getByText('Connected', { exact: false }).first()).toBeVisible();
+  await expect(screen.getByText('Site logins kept', { exact: false })).toBeVisible();
+  await expect(screen.getByRole('button', 'Set up again')).toBeVisible();
+  await assertReadable(browser);
+});

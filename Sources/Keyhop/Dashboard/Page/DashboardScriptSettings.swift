@@ -31,15 +31,38 @@ extension DashboardPage {
     const panes = {
       general: `<div class="settings-intro"><h2>Window Appearance</h2><p>Choose how Keyhop sits alongside the rest of your Mac.</p></div>${isStatic ? "" : appearanceCard()}`,
       activity: `<div class="settings-intro"><h2>Activity</h2><p>Control what Keyhop reads locally and see where each tool is signed in.</p></div>${isStatic ? "" : workCard(state.work)}<section class="card"><div class="card-head"><h2>Tools on This Mac</h2></div>${tools}</section>`,
+      browser: `<div class="settings-intro"><h2>Browser</h2><p>claude.ai and chatgpt.com follow each hop of Claude Code and Codex.</p></div>${browserCard(data.browser)}`,
       cloud: `<div class="settings-intro"><h2>Keyhop Cloud</h2><p>The link, what this computer sends, and who else can read it.</p></div>${cloudCard(state.cloud)}`,
       app: `<div class="settings-intro"><h2>App & Privacy</h2><p>Version ${esc(state.version)} on ${esc(state.platform)}. Updates and limit refreshes stay independent.</p></div>${helpCard()}<section class="card"><div class="card-head"><h2>Updates</h2>${isPrerelease(state.version) ? `<span class="pill warn">Beta build</span>` : ""}</div><div class="card-body">${updateRow}</div>${isStatic ? "" : channelRow(update)}</section>${privacy}`,
     };
     if (ui.settingsPane === "cloud" && (isStatic || !state.cloud?.available)) ui.settingsPane = "general";
     const choices = [["general", "settings", "Appearance"], ["activity", "usage", "Activity"]];
+    if (!isStatic) choices.push(["browser", "hop", "Browser"]);
     if (!isStatic && state.cloud?.available) choices.push(["cloud", "leaderboard", "Cloud"]);
     choices.push(["app", "update", "App & Privacy"]);
     const nav = choices.map(([value, glyph, label]) => `<button type="button" data-action="settings-pane" data-value="${value}" aria-current="${value === ui.settingsPane ? "page" : "false"}">${icon(glyph)}<span>${label}</span></button>`).join("");
     return { body: `<div class="settings-shell"><nav class="card settings-nav" aria-label="Settings categories">${nav}</nav><div class="settings-pane">${panes[ui.settingsPane]}</div></div>` };
+  }
+
+  // The Chrome extension: where its folder is, whether a browser has loaded it, and the site logins
+  // it has kept. Loading an unpacked extension is the one step Keyhop can't do for you.
+  function browserCard(report) {
+    if (!report) return `<section class="card">${data.browserError ? `<p class="empty">${esc(data.browserError)}</p>` : busy("Looking for browsers", "empty")}</section>`;
+    const registered = report.browsers.filter((browser) => browser.registered).map((browser) => browser.name);
+    if (!report.installed) {
+      return `<section class="card"><div class="card-head"><h2>Chrome extension</h2></div><div class="list">
+        <div class="row setting-row"><div><b>Not set up</b><p>Keyhop writes the extension to a folder and lets Chrome, Edge, Brave and Arc talk to it. Site logins stay in ${esc(data.doctor?.secretStore || "Keyhop's vault")}, not in the browser.</p></div><button class="btn sm" data-action="browser-install">Set up</button></div>
+      </div></section>`;
+    }
+    const heard = report.lastSeen ? `Connected ${esc(ago(report.lastSeen))}` : "Not loaded yet";
+    const steps = report.lastSeen ? "" : `<div class="row setting-row"><div><b>Load it once</b><p>Open <span class="mono">chrome://extensions</span>, turn on Developer mode, click Load unpacked and choose the folder below.</p></div><button class="btn sm secondary" data-action="copy" data-value="${esc(report.extensionFolder)}">Copy folder</button></div>`;
+    return `<section class="card"><div class="card-head"><h2>Chrome extension</h2><span class="pill ${report.lastSeen ? "good" : "warn"}">${heard}</span></div><div class="list">
+      ${steps}
+      <div class="row kv"><span>Folder</span><span class="mono">${esc(report.extensionFolder)}</span></div>
+      <div class="row kv"><span>Browsers</span><span>${esc(registered.length ? registered.join(", ") : "None registered")}</span></div>
+      <div class="row kv"><span>Site logins kept</span><span>${report.webLogins.length}</span></div>
+      <div class="row setting-row"><div><b>After an update</b><p>Set it up again, then reload the extension in <span class="mono">chrome://extensions</span>.</p></div><div class="row-actions"><button class="btn sm secondary" data-action="browser-install">Set up again</button><button class="btn sm ghost danger" data-action="browser-remove">Remove</button></div></div>
+    </div></section>`;
   }
 
   const isPrerelease = (version) => String(version || "").includes("-");

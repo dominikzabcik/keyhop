@@ -881,6 +881,16 @@ actor DashboardSession {
                 let word = request.query["tool"] ?? "all"
                 let tool = word == "all" ? nil : try Commands.tool(word)
                 return .json(try await usage(range: range, tool: tool, readLogs: true))
+            case ("GET", "/api/browser"):
+                return .json(try await browserReport())
+            case ("POST", "/api/browser/install"):
+                try refuseInSample()
+                try BrowserSetup.install()
+                return .json(DashboardAction(message: "The extension is ready to load.", note: nil))
+            case ("POST", "/api/browser/remove"):
+                try refuseInSample()
+                BrowserSetup.remove()
+                return .json(DashboardAction(message: "Removed the extension's files. Remove it from chrome://extensions too.", note: nil))
             case ("GET", "/api/services"):
                 return .json(try await services())
             case ("GET", "/api/doctor"):
@@ -1070,6 +1080,16 @@ actor DashboardSession {
         } catch {
             throw UsageError("That request was incomplete.")
         }
+    }
+
+    private func browserReport() async throws -> BrowserSetup.Report {
+        if sample {
+            let browsers = [BrowserSetup.Browser(name: "Google Chrome", root: "~/Library/Application Support/Google/Chrome", found: true, registered: true)]
+            return BrowserSetup.Report(extensionFolder: "~/Library/Application Support/Keyhop/Chrome Extension", extensionID: BrowserExtensionFiles.id,
+                                       installed: true, browsers: browsers, lastSeen: Date().addingTimeInterval(-40), extensionVersion: "1.0.0", webLogins: ["a", "b"])
+        }
+        let workspace = try openWorkspace()
+        return await BrowserSetup.report(vault: workspace.service.vault, accounts: await workspace.service.accounts)
     }
 
     private func refuseInSample() throws {

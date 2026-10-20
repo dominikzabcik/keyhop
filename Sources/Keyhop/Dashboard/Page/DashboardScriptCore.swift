@@ -267,6 +267,8 @@ extension DashboardPage {
       }
       if (ui.section === "settings" && !isStatic) {
         const doctor = api("/api/doctor");
+        api("/api/browser").then((report) => { data.browser = report; data.browserError = null; }, (error) => { data.browserError = error.message; })
+          .finally(() => { if (ui.section === "settings" && !editing()) render(); });
         loadUpdate();
         data.doctor = await doctor;
         if (data.state?.cloud?.linked) {

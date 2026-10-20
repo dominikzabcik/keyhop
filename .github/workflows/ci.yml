@@ -204,6 +204,11 @@ jobs:
       - name: Walk the window, the website and the commands with e2e
         run: npm run test:e2e
 
+      # The Chrome extension against the built native host: a hop to a login the site has never
+      # seen asks to sign in, and hopping back and forth after that needs none.
+      - name: Hop the browser extension
+        run: npm run test:extension
+
       - uses: actions/upload-artifact@v7
         if: always()
         with:

@@ -926,6 +926,7 @@ actor DashboardSession {
             }
             overview = try await Commands.currentOverview(workspace)
         }
+        if !sample { messages += await (try? openWorkspace())?.service.takeNotes() ?? [] }
         let pending = messages
         messages.removeAll()
         return DashboardState(mode: sample ? "sample" : "live", version: AppVersion.current, platform: Platform.name,

@@ -122,6 +122,32 @@ final class AccountServiceTests: XCTestCase {
         XCTAssertEqual(AccountService.loadAccounts(from: directory).map(\.id), [ada])
     }
 
+    func testAnOldLoginWrittenBackRightAfterAHopIsMovedAgainOnce() async throws {
+        let tool = FakeTool(["user": "ada", "token": "a1"])
+        let service = service(tool)
+        let ada = try savedID(await service.syncLive(.codex))
+        tool.login = ["user": "bob", "token": "b1"]
+        let bob = try savedID(await service.syncLive(.codex))
+        try await service.switchTo(ada)
+
+        // An open session started on Bob saves its refreshed token over the hop.
+        tool.login = ["user": "bob", "token": "b2"]
+        let outcome = await service.syncLive(.codex)
+        XCTAssertEqual(outcome, .current(ada))
+        XCTAssertEqual(tool.login?["user"], "ada")
+        let kept = await service.secret(for: bob)
+        XCTAssertEqual(kept?["token"], "b2")
+        let notes = await service.takeNotes()
+        XCTAssertEqual(notes.count, 1)
+        let again = await service.takeNotes()
+        XCTAssertTrue(again.isEmpty)
+
+        // Only once: a second write-back is taken as meant.
+        tool.login = ["user": "bob", "token": "b3"]
+        let second = await service.syncLive(.codex)
+        XCTAssertEqual(second, .current(bob))
+    }
+
     func testSwitchingSavesTheRotatedLoginBeforeReplacingIt() async throws {
         let tool = FakeTool(["user": "ada", "token": "a1"])
         let service = service(tool)

@@ -18,6 +18,9 @@ actor AccountService {
     private let adapters: [Provider: any ProviderAdapter]
     private let metaURL: URL
     private let onActiveChange: @Sendable (Provider, UUID?) -> Void
+    /// The last hop per tool, so a login something else puts back soon after can be noticed.
+    private var lastHop: [Provider: (from: UUID, to: UUID, at: Date)] = [:]
+    private var notes: [String] = []
 
     init(directory: URL = Platform.dataDirectory,
          adapters: [Provider: any ProviderAdapter] = Adapters.all,
@@ -48,6 +51,12 @@ actor AccountService {
     /// only have come from that account.
     var soleAccounts: [Provider: UUID] {
         Dictionary(grouping: accounts, by: \.provider).compactMapValues { $0.count == 1 ? $0[0].id : nil }
+    }
+
+    /// What happened on its own since the last look, for the app and the window to say.
+    func takeNotes() -> [String] {
+        defer { notes.removeAll() }
+        return notes
     }
 
     func secret(for id: UUID) async -> Secret? {
@@ -81,6 +90,18 @@ actor AccountService {
                     accounts[index].email = live.email
                 }
                 if let plan = live.plan { accounts[index].plan = plan }
+            }
+            // An open session that saves its token after a hop writes the old login back. Its fresh
+            // token is kept above; the hop is put back once and the person is told.
+            if let hop = lastHop[provider], hop.from == known.id, active[provider] == hop.to,
+               Date().timeIntervalSince(hop.at) < 15 * 60 {
+                lastHop[provider] = nil
+                if let secret = await vault.read(hop.to), (try? await adapter.apply(secret)) != nil {
+                    let name = account(hop.to)?.displayName ?? "the new login"
+                    notes.append("An open \(provider.name) session put \(known.displayName) back. Keyhop moved it to \(name) again; restart that session to keep it there.")
+                    saveMeta()
+                    return .current(hop.to)
+                }
             }
             setActive(provider, known.id)
             saveMeta()
@@ -140,10 +161,13 @@ actor AccountService {
         guard let secret = await vault.read(id) else {
             throw KeyhopError("The saved login for \(account.email) is missing from \(vault.storeName).")
         }
+        let previous = active[provider]
+        lastHop[provider] = nil
         try await adapter.apply(secret)
         switch await syncLive(provider) {
         case .current(let active) where active == id,
              .saved(let active) where active == id:
+            if let previous { lastHop[provider] = (previous, id, Date()) }
             return account
         case .failed(let message):
             throw KeyhopError("The login was applied, but Keyhop couldn't confirm the switch. \(message)")

@@ -25,6 +25,9 @@ struct ClaudeAdapter: ProviderAdapter {
         if account["accountUuid"] as? String != profile.accountUUID {
             account = ["accountUuid": profile.accountUUID, "emailAddress": profile.email]
             if let org = profile.orgUUID { account["organizationUuid"] = org }
+            // An open session can save ~/.claude.json with the account it started on, so Claude
+            // Code shows the old email over the new login. Put the summary back in step.
+            if configAccount != nil { try? Self.updateConfig { $0["oauthAccount"] = account } }
         }
         return LiveLogin(
             identity: profile.identity,

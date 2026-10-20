@@ -79,11 +79,7 @@ enum Provider: String, Codable, CaseIterable, Identifiable {
 
     var switchNote: String? {
         switch self {
-        #if os(macOS)
-        case .claude: "Claude Code rereads its login every 30 seconds, so open sessions move to this account shortly. If one doesn't, restart it with `claude --continue`."
-        #else
-        case .claude: "New Claude Code sessions use this account. If an open session stays on the old one, restart it with `claude --continue`."
-        #endif
+        case .claude: "New Claude Code sessions use this account. An open session moves when it next rereads its login; run `/usage` in it to move it now."
         case .codex: "New Codex sessions use this account. Running ones stay on the old login, so reopen them with `codex resume --last`."
         case .gemini: "New Gemini CLI sessions use this account. Restart a running session to move it to the new login."
         case .opencode: "New OpenCode sessions use this profile. Restart a running session to move it to the new logins."

@@ -143,6 +143,7 @@ final class AccountStore: ObservableObject {
                 progress.set(WorkProgress(step: .logins, done: index, total: tools.count, detail: provider.name))
                 await report(await service.syncLive(provider), for: provider)
             }
+            if let note = await service.takeNotes().last { notice = note }
             usage = await service.fetchUsage(previous: usage, progress: progress.handler)
             progress.set(nil)
             await mirror()

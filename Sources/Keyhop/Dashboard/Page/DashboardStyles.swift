@@ -749,6 +749,16 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
    night, activity and what needs you on the right. */
 .home-cols { max-width: 1480px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 18px; align-items: start; }
 .home-col { display: grid; gap: 18px; min-width: 0; }
+.skel { display: block; border-radius: 6px; background: hsl(var(--on) / .07); }
+@media (prefers-reduced-motion: no-preference) { .skel { animation: skel 1.4s ease-in-out infinite; } }
+@keyframes skel { 50% { background: hsl(var(--on) / .12); } }
+.skel-card.htotal { gap: 14px; }
+.skel-wait .loading { margin: 0; padding: 0; text-align: left; }
+.skel-bars { flex: 1; display: flex; align-items: flex-end; gap: 8px; padding: 14px 26px 20px; }
+.skel-bars .skel { flex: 1; max-width: 34px; border-radius: 3px; }
+.skel-rows { display: grid; gap: 14px; padding: 6px 22px 22px; }
+.skel-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: center; }
+.boot-skel { padding: 20px 24px 28px; }
 .main:has(.home-cols) { padding: 20px 24px 28px; }
 .htotal { display: grid; gap: 20px; padding: 24px 26px 26px; }
 .htotal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -774,13 +784,17 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .hchart { flex: 1; min-height: 0; display: flex; gap: 10px; padding: 14px 26px 20px; }
 .haxis { display: flex; flex-direction: column; justify-content: space-between; padding-bottom: 22px; font-size: 11px; color: var(--subtle); text-align: right; font-variant-numeric: tabular-nums; }
 .hplot { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.hbars { position: relative; flex: 1; min-height: 0; display: flex; align-items: flex-end; justify-content: space-between; gap: clamp(2px, .7vw, 10px); background: linear-gradient(hsl(var(--on) / .05), hsl(var(--on) / .05)) top / 100% 1px no-repeat, linear-gradient(hsl(var(--on) / .05), hsl(var(--on) / .05)) center / 100% 1px no-repeat; }
-.hbar { flex: 1; max-width: 34px; border-radius: 3px 3px 1px 1px; background: hsl(var(--on) / .55); transform-origin: 50% 100%; }
+.hbars { position: relative; flex: 1; min-height: 0; display: flex; align-items: stretch; background: linear-gradient(hsl(var(--on) / .05), hsl(var(--on) / .05)) top / 100% 1px no-repeat, linear-gradient(hsl(var(--on) / .05), hsl(var(--on) / .05)) center / 100% 1px no-repeat; }
+.hcol { flex: 1; min-width: 0; display: flex; align-items: flex-end; justify-content: center; padding: 0 clamp(1px, .35vw, 5px); }
+.hbar { width: 100%; max-width: 34px; border-radius: 3px 3px 1px 1px; background: hsl(var(--on) / .55); transform-origin: 50% 100%; }
 .hbar.before { background: hsl(var(--on) / .16); }
 .hbar.now { background: var(--primary); }
+.hbar.later { background: hsl(var(--on) / .08); }
 @media (prefers-reduced-motion: no-preference) { .hbar { animation: rise .9s cubic-bezier(.2, .8, .2, 1) both; } }
 @keyframes rise { from { transform: scaleY(0); } }
-.hticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--subtle); }
+.hticks { position: relative; height: 14px; font-size: 11px; color: var(--subtle); }
+.hticks span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.hticks span:first-child { transform: none; left: 0 !important; }
 .hticks .on { color: var(--text); }
 .hlegend { display: inline-flex; gap: 14px; }
 .hlegend span { display: inline-flex; align-items: center; gap: 6px; }
@@ -860,8 +874,8 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .hheat-foot .scale { display: inline-flex; align-items: center; gap: 4px; }
 .hheat-foot .scale .hcell { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
-.alist { display: grid; padding: 4px 20px 12px; }
-.arow { display: flex; align-items: center; gap: 12px; padding: 12px 4px; }
+.alist { display: grid; grid-template-columns: minmax(0, 1fr); padding: 4px 20px 12px; }
+.arow { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 4px; }
 .arow + .arow { border-top: 1px solid hsl(var(--on) / .07); }
 .arow-glyph { flex: none; width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; background: hsl(var(--on) / .07); color: var(--muted); }
 .arow-glyph .icon { width: 14px; height: 14px; stroke-width: 1.9; }

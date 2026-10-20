@@ -114,7 +114,7 @@ final class AlertRulesTests: XCTestCase {
         XCTAssertFalse(recommendation?.active ?? true)
     }
 
-    func testEarlyForecastsStayQuiet() {
+    func testForecastsAloneNeverWarn() {
         let inUse = account("a@x.dev")
         let forecasts = [AlertRules.forecastKey(inUse.id, "5h"): now.addingTimeInterval(1800)]
         let early = AlertRules.evaluate(accounts: [inUse], active: [.claude: inUse.id], usage: [inUse.id: reading(30)],
@@ -122,7 +122,7 @@ final class AlertRulesTests: XCTestCase {
         XCTAssertTrue(early.isEmpty)
         let later = AlertRules.evaluate(accounts: [inUse], active: [.claude: inUse.id], usage: [inUse.id: reading(60)],
                                         forecasts: forecasts, budgets: [], budgetSpend: [:], now: now)
-        XCTAssertEqual(later.count, 1)
+        XCTAssertTrue(later.isEmpty)
     }
 
     func testBudgetsWarnAtEightyAndOneHundredPercent() {

@@ -24,25 +24,18 @@ extension DashboardPage {
     return limits.reduce((a, b) => (b.usedPercent > a.usedPercent ? b : a));
   }
 
-  function runsOutSoon(limit) {
-    if (!limit?.runsOutAt) return false;
-    const eta = new Date(limit.runsOutAt);
-    if (!(eta > Date.now())) return false;
-    if (limit.resetsAt && eta >= new Date(limit.resetsAt)) return false;
-    return true;
-  }
+  // Keyhop shows what is, not guesses about when a limit will run out.
+  const runsOutSoon = () => false;
 
-  // needs: an error, a window at 85%, or one that runs out before it resets.
-  // quiet: nothing to read. active: the login in use, still under that line.
+  // needs: the login in use is signed out or has 15% or less left on its tightest window.
+  // hot: any other login that low. quiet: nothing to read. active: the login in use, with room.
   function laneOf(account) {
-    if (account.error) return "needs";
-    const limits = account.limits || [];
-    if (!limits.length) return "quiet";
-    const used = maxUsed(account);
-    if (used >= 85 || limits.some(runsOutSoon)) return "needs";
+    if (account.error) return account.active ? "needs" : "hot";
+    const left = leftOf(account);
+    if (left == null) return "quiet";
+    if (left <= 15) return account.active ? "needs" : "hot";
     if (account.active) return "active";
-    if (used >= 60) return "hot";
-    return "room";
+    return left <= 40 ? "hot" : "room";
   }
 
   function worstLane(tool) {
@@ -63,20 +56,18 @@ extension DashboardPage {
     return score(b) - score(a);
   }
 
+  // The hop most worth making now: a tool whose login in use needs one and has somewhere to go.
   function bestHop(tools) {
     let best = null;
     for (const tool of tools) {
       const active = tool.accounts.find((a) => a.active);
+      if (!active || laneOf(active) !== "needs" || active.error) continue;
       const alt = alternative(tool, active);
-      if (!active || !alt) continue;
-      const gap = maxUsed(active) - maxUsed(alt);
+      if (!alt) continue;
+      const gap = leftOf(alt) - (leftOf(active) ?? 0);
       if (!best || gap > best.gap) best = { tool, from: active, to: alt, gap };
     }
     return best;
-  }
-
-  function stuckAccounts(tools) {
-    return accountRows(tools).filter((row) => laneOf(row.account) === "needs" && !alternative(row.tool, row.account));
   }
 
   function serviceFor(toolId) {
@@ -93,7 +84,7 @@ extension DashboardPage {
   const chev = () => `<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4.5 10 8 6 11.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const dot = (kind) => `<i class="ldot ${kind}" aria-hidden="true"></i>`;
 
-  // The sidebar's glance: each tool's login in use, its tightest window and what is left of it.
+  // The sidebar's glance: each tool's login in use and what is left on its tightest window.
   // Tools without a limit to read are counted in Usage, so they are not listed here.
   function treeHTML(tools) {
     return tools.filter((tool) => tool.accounts.length || (data.state.adding || []).includes(tool.id)).map((tool) => {
@@ -101,31 +92,15 @@ extension DashboardPage {
       const waiting = (data.state.adding || []).includes(tool.id);
       const top = account ? tightest(account) : null;
       if (!top && !waiting && !account?.error) return "";
-      const lane = account ? laneOf(account) : "quiet";
-      const left = top ? Math.max(0, Math.round(100 - top.usedPercent)) : null;
+      const left = account ? leftOf(account) : null;
       const label = top ? `${tool.name} · ${windowName(top.label).replace("-hour", "h").replace("Weekly", "week")}` : tool.name;
-      const when = waiting ? waited(tool.id) : account?.error ? `<span class="side-when bad">signed out</span>`
-        : top && runsOutSoon(top) ? `<span class="side-when">~${esc(fmt.clock(top.runsOutAt))}</span>`
-        : top?.resetsAt ? `<span class="side-when">${esc(fmt.until(top.resetsAt))}</span>` : "";
+      const side = waiting ? waited(tool.id) : account?.error ? `<span class="side-when bad">Signed out</span>` : "";
       const tone = account?.error || (left != null && left <= 15) ? "bad" : left != null && left <= 40 ? "warn" : "";
-      return `<button class="side-login ${lane} ${tone}" type="button" data-action="side-tool" data-value="${esc(tool.id)}" aria-pressed="${ui.section === "limits" && ui.quotaTool === tool.id}" title="${esc(tool.name)}${account ? ` · ${esc(account.name)}` : ""}${left != null ? ` · ${left}% left` : ""}">
-        <span class="side-top">${mark(tool.id)}<span class="nm">${esc(label)}</span>${when}${left != null ? `<span class="side-pct">${left}%</span>` : ""}</span>
+      return `<button class="side-login ${tone}" type="button" data-action="side-tool" data-value="${esc(tool.id)}" aria-pressed="${ui.section === "limits" && ui.quotaTool === tool.id}" title="${esc(tool.name)}${account ? ` · ${esc(account.name)}` : ""}${left != null ? ` · ${left}% left` : ""}">
+        <span class="side-top">${mark(tool.id)}<span class="nm">${esc(label)}</span>${side}${left != null ? `<span class="side-pct">${left}%</span>` : ""}</span>
         ${left != null ? `<span class="side-bar"><span style="width:${left}%" data-grow="side:${esc(tool.id)}"></span></span>` : ""}
       </button>`;
     }).join("");
-  }
-
-  function petFootHTML() {
-    const claim = currentClaim();
-    const kick = claim && !claim.claimed && claim.active && claim.today
-      ? `<button class="btn sm" type="button" data-action="streak-claim">Claim</button>` : "";
-    if (!data.pet && !kick) return "";
-    const title = data.pet
-      ? (data.pet.lineageName ? `${data.pet.stageName} · ${data.pet.lineageName}` : data.pet.stageName)
-      : "Streak";
-    const note = data.pet && data.pet.next ? `${fmt.tokens(data.pet.next.tokens)} to ${data.pet.next.label}`
-      : data.pet ? "Monument" : (claim && claim.today ? claim.today.name : "");
-    return `<span><b>${esc(title)}</b>${note ? `<small>${esc(note)}</small>` : ""}</span>${kick}`;
   }
 
   let treeStamp = "";
@@ -135,7 +110,8 @@ extension DashboardPage {
     const title = $("#title");
     if (title) title.hidden = false;
     const tools = data.state?.status?.tools || [];
-    const needs = tools.reduce((sum, tool) => sum + tool.accounts.filter((account) => laneOf(account) === "needs").length, 0);
+    // One count everywhere: what Home's Needs you lists about logins.
+    const needs = data.state ? attentionItems(tools).filter((item) => item.login).length : 0;
     const badge = $("#limits-count");
     if (badge) {
       badge.hidden = needs === 0;
@@ -160,7 +136,7 @@ extension DashboardPage {
     if (avatar) avatar.textContent = login ? login.slice(0, 2).toUpperCase() : "K";
     const name = $("#side-name"), sub = $("#side-sub");
     if (name) name.textContent = login ? `@${login}` : "Settings";
-    if (sub) sub.textContent = login ? "Settings · linked with GitHub" : "This computer";
+    if (sub) sub.textContent = "Settings";
     const live = $("#side-live");
     const read = data.state?.status?.refreshedAt;
     if (live) {
@@ -173,34 +149,16 @@ extension DashboardPage {
     syncField();
   }
 
+  // The status bar holds only what is wrong, and the field's switch. Figures live on their pages.
   function renderStatus(needs) {
-    const status = data.state?.status;
-    const todayBtn = $("#status-today");
-    if (todayBtn) todayBtn.textContent = status ? `${fmt.tokens(status.today.tokens)} today` : "";
     const themeBtn = $("#status-theme");
     if (themeBtn) themeBtn.textContent = ui.theme === "day" ? "Day" : "Night";
-    const streakEl = $("#status-streak");
-    const streak = (data.usage["week:all"] || data.usage["today:all"])?.streak;
-    if (streakEl) {
-      streakEl.hidden = !streak;
-      if (streak) streakEl.textContent = `${streak.current} day streak`;
-    }
     const needsBtn = $("#status-needs");
     const clear = $("#status-clear");
     if (needsBtn && clear) {
-      if (!data.state) {
-        needsBtn.hidden = true;
-        clear.hidden = true;
-      } else if (needs > 0) {
-        needsBtn.hidden = false;
-        needsBtn.innerHTML = `<i aria-hidden="true"></i>${needs} need${needs === 1 ? "s" : ""} a hop`;
-        clear.hidden = true;
-      } else {
-        needsBtn.hidden = true;
-        clear.hidden = false;
-      }
-      const live = $("#status-live");
-      if (live) live.hidden = !data.state || needs > 0 || isStatic;
+      needsBtn.hidden = !data.state || needs === 0;
+      clear.hidden = !data.state || needs > 0;
+      if (needs) needsBtn.innerHTML = `<i aria-hidden="true"></i>${needs} need${needs === 1 ? "s" : ""} you`;
     }
     const out = $("#status-outage");
     const troubled = (data.services || []).find((service) => serviceShort[service.level]);
@@ -214,45 +172,11 @@ extension DashboardPage {
     }
   }
 
+  // What the pet says: the hop worth making, if there is one. A login with nowhere to go is in Needs you.
   function homeHeadline(tools) {
     const hop = bestHop(tools);
-    const wall = stuckAccounts(tools).find((row) => !row.account.error) || null;
-    const outage = (wall && serviceFor(wall.tool.id)) || (data.services || []).find((service) => servicePhrase[service.level]) || null;
-    const note = outage ? outageSentence(outage) : "";
-    if (hop) {
-      const wallNote = wall ? `${wall.tool.name} is at ${Math.round(maxUsed(wall.account))}% and has no other login.` : "";
-      return {
-        title: `${hop.to.name} still has room.`,
-        sub: `${hop.tool.name} ${hop.from.name} is in use at ${Math.round(maxUsed(hop.from))}%. ${hop.to.name} is at ${Math.round(maxUsed(hop.to))}%.`,
-        note: note || wallNote,
-        target: hop.to.id,
-      };
-    }
-    if (wall) {
-      const top = tightest(wall.account);
-      const when = top && runsOutSoon(top)
-        ? `The ${windowName(top.label).toLowerCase()} window runs out around ${fmt.clock(top.runsOutAt)}. `
-        : "";
-      return {
-        title: `${wall.tool.name} is at ${Math.round(maxUsed(wall.account))}%.`,
-        sub: `${when}There is no other login to hop to.`,
-        note,
-        target: null,
-      };
-    }
-    return { title: "Every login in use has room.", sub: "Nothing is close to a limit.", note, target: null };
-  }
-
-  function ensureHomePick(tools) {
-    const tool = tools.find((item) => item.id === ui.homeTool);
-    if (tool && tool.accounts.some((account) => account.id === ui.homeAccount)) return;
-    const hop = bestHop(tools);
-    if (hop) { ui.homeTool = hop.tool.id; ui.homeAccount = hop.to.id; return; }
-    const withAccounts = tools.find((item) => item.accounts.length) || tools[0];
-    ui.homeTool = withAccounts?.id || "";
-    const list = withAccounts?.accounts || [];
-    const room = list.filter((account) => !account.error).sort((a, b) => maxUsed(a) - maxUsed(b))[0];
-    ui.homeAccount = (room || list[0])?.id || "";
+    if (hop) return { title: `${hop.tool.name} has ${leftOf(hop.from)}% left.`, sub: `${hop.to.name} has ${leftOf(hop.to)}%.`, target: hop.to.id };
+    return null;
   }
 
   function nameList(names) {
@@ -260,47 +184,46 @@ extension DashboardPage {
     return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   }
 
-  // Home's list of what wants a decision now: a login at its wall, one signed out, an outage, a budget.
+  // Home's list of what wants a decision now: a login in use that is low, a saved login that is
+  // signed out, an outage, a budget. Each has one action.
   function attentionItems(tools) {
     const items = [];
-    for (const row of accountRows(tools).sort(byPressure)) {
-      const { tool, account } = row;
-      if (account.error) {
-        items.push({ tone: "bad", glyph: "key", title: `${account.name} is signed out`, text: `${tool.name}. ${account.error}`,
-          action: isStatic || account.active ? `<button class="btn sm secondary" type="button" data-action="goto" data-section="limits">Open</button>`
-            : `<button class="btn sm" type="button" data-action="switch" data-id="${esc(account.id)}">Switch and sign in</button>` });
-        continue;
+    for (const tool of tools) {
+      const active = tool.accounts.find((account) => account.active);
+      if (active && !active.error && laneOf(active) === "needs") {
+        const alt = alternative(tool, active);
+        const top = tightest(active);
+        items.push({ login: true, tone: alt ? "hop" : "bad", mark: tool.id,
+          title: `${tool.name} has ${leftOf(active)}% left`,
+          text: alt ? `${active.name} is low. ${alt.name} has ${leftOf(alt)}%.` : `${active.name}${top?.resetsAt ? `, back in ${fmt.until(top.resetsAt)}` : ""}. No other login has room.`,
+          action: isStatic ? "" : alt ? `<button class="btn sm" type="button" data-action="switch" data-id="${esc(alt.id)}">Hop</button>`
+            : `<button class="btn sm secondary" type="button" data-action="add" data-tool="${esc(tool.id)}">Add login</button>` });
       }
-      if (!account.active || laneOf(account) !== "needs") continue;
-      const top = tightest(account);
-      const alt = alternative(tool, account);
-      const timing = top && runsOutSoon(top) ? `${windowName(top.label)} runs out around ${fmt.clock(top.runsOutAt)}.`
-        : top?.resetsAt ? `${windowName(top.label)} resets in ${fmt.until(top.resetsAt)}.` : "";
-      items.push({ tone: alt ? "hop" : "bad", glyph: alt ? "hop" : "plus", title: `${tool.name} is at ${Math.round(maxUsed(account))}% on ${account.name}`,
-        text: `${timing}${alt ? ` ${alt.name} is at ${Math.round(maxUsed(alt))}%.` : " There is no other login to hop to."}`.trim(),
-        action: isStatic ? "" : alt ? `<button class="btn sm" type="button" data-action="switch" data-id="${esc(alt.id)}">Hop to ${esc(alt.name)}</button>`
-          : `<button class="btn sm secondary" type="button" data-action="add" data-tool="${esc(tool.id)}">Add a login</button>` });
+      for (const account of tool.accounts.filter((item) => item.error)) {
+        items.push({ login: true, tone: "bad", glyph: "key", title: `${account.name} is signed out`, text: `${tool.name}. Sign in again to use it.`,
+          action: isStatic ? "" : account.active ? `<button class="btn sm secondary" type="button" data-action="goto" data-section="limits">Open</button>`
+            : `<button class="btn sm secondary" type="button" data-action="switch" data-id="${esc(account.id)}">Sign in</button>` });
+      }
     }
     for (const service of data.services || []) {
       if (!servicePhrase[service.level]) continue;
       const incident = service.incidents && service.incidents[0];
-      items.push({ tone: service.level === "maintenance" ? "" : "warn", glyph: "alert", mark: service.tool, title: `${toolName(service.tool)} ${serviceShort[service.level]}`,
+      items.push({ tone: service.level === "maintenance" ? "" : "warn", mark: service.tool, title: `${toolName(service.tool)} ${serviceShort[service.level]}`,
         text: incident?.title || outageSentence(service),
-        action: incident?.link || service.page ? `<a class="btn sm ghost" href="${esc(incident?.link || service.page)}" target="_blank" rel="noopener">Status page</a>` : "" });
+        action: incident?.link || service.page ? `<a class="btn sm ghost" href="${esc(incident?.link || service.page)}" target="_blank" rel="noopener">Status</a>` : "" });
     }
-    for (const alert of (data.state.status.alerts || []).filter((item) => /budget/i.test(item.title))) {
-      items.push({ tone: "warn", glyph: "budgets", title: alert.title, text: alert.body, action: `<button class="btn sm ghost" type="button" data-action="goto" data-section="budgets">Budgets</button>` });
+    for (const alert of (data.state.status.alerts || []).filter((item) => item.key?.startsWith("budget:"))) {
+      items.push({ tone: "warn", glyph: "budgets", title: alert.title, text: alert.subtitle || alert.body, action: `<button class="btn sm ghost" type="button" data-action="goto" data-section="budgets">Budgets</button>` });
     }
     return items;
   }
 
   function attentionCard(tools) {
     const items = attentionItems(tools);
-    const urgent = items.filter((item) => item.tone === "bad" || item.tone === "hop").length;
     const rows = items.map((item) => `<div class="arow ${item.tone || "quiet"}" role="listitem"><span class="arow-glyph" aria-hidden="true">${item.mark ? mark(item.mark) : icon(item.glyph || "alert")}</span><div class="arow-copy"><b>${esc(item.title)}</b>${item.text ? `<p>${esc(item.text)}</p>` : ""}</div>${item.action || ""}</div>`).join("");
     return `<section class="card attention" aria-labelledby="needs-h">
-      <div class="card-head"><h2 id="needs-h">Needs your attention</h2>${items.length ? `<span class="count${urgent ? " hot" : ""}">${items.length}</span>` : ""}</div>
-      ${rows ? `<div class="alist" role="list">${rows}</div>` : `<p class="aclear">${icon("check")}Nothing needs you. Every login in use has room.</p>`}
+      <div class="card-head"><h2 id="needs-h">Needs you</h2></div>
+      ${rows ? `<div class="alist" role="list">${rows}</div>` : `<p class="aclear">${icon("check")}Nothing needs you.</p>`}
     </section>`;
   }
 
@@ -316,7 +239,8 @@ extension DashboardPage {
     const title = { today: "Today, so far", week: "The last 7 days", month: "This month, so far", all: "Everything so far" }[range] || usage.title;
     const span = { today: "yesterday", week: "the 7 days before", month: "the month before" }[range] || "the period before";
     let change = "";
-    if (compared && p?.tokens) {
+    // Only whole spans are compared: a day or a month so far against a whole one says nothing.
+    if (range === "week" && compared && p?.tokens) {
       const pct = Math.round(((t.tokens - p.tokens) / p.tokens) * 100);
       change = Math.abs(pct) >= 900 ? "" : `<span class="hchange ${pct >= 0 ? "up" : "down"}">${pct >= 0 ? "↑" : "↓"} ${Math.abs(pct)}% on ${esc(span)}</span>`;
     }
@@ -326,24 +250,11 @@ extension DashboardPage {
     const bar = shares.map((x, i) => `<span style="flex-grow:${(x.share * 1000).toFixed(0)};background:${x.color}" data-grow="home-mix:${esc(x.tool.id)}" data-grow-prop="flexGrow" title="${esc(x.tool.name)} · ${Math.round(x.share * 100)}%"></span>`).join("");
     const pct = (share) => share > 0 && share < .01 ? "<1%" : `${Math.round(share * 100)}%`;
     const tiles = shares.slice(0, 6).map((x) => `<div class="htile"><span class="htile-name">${esc(x.tool.name)}</span><span class="htile-pct"><span style="color:${x.color}">${mark(x.tool.id)}</span>${pct(x.share)}</span><span class="htile-foot">${fmt.tokens(x.tool.figures.tokens)} tokens</span></div>`).join("");
-    // The figures behind the number: requests, the cache and, where it is counted, the work done.
-    const side = t.input + t.cacheRead + t.cacheWrite + (t.cacheWrite1h || 0);
-    const hit = side ? t.cacheRead / side : null;
-    const work = data.workDays?.enabled ? data.workDays.days : null;
-    const from = localDay(new Date(usage.start)), last = localDay(new Date(new Date(usage.end).getTime() - 1));
-    const commits = (work || []).filter((d) => d.day >= from && d.day <= last).reduce((n, d) => n + d.commits, 0);
-    const efficiency = work && t.tokens >= 1e6 ? commits / (t.tokens / 1e6) : null;
-    const facts = [
-      `${fmt.count(t.requests)} requests`,
-      hit != null ? `${Math.round(hit * 100)}% from cache${usage.cacheSavings > 0 ? `, ${fmt.usd(usage.cacheSavings)} saved` : ""}` : "",
-      work ? `${fmt.count(commits)} commits${efficiency != null ? ` · ${efficiency >= 10 ? Math.round(efficiency) : efficiency.toFixed(1)} per M tokens` : ""}` : "",
-    ].filter(Boolean).map((fact) => `<span>${esc(fact)}</span>`).join("");
     return `<section class="card htotal" aria-labelledby="total-h">
-      <div class="htotal-head"><span class="htotal-title"><span class="lab">${esc(fmt.day(now, { weekday: "short", month: "short", day: "numeric" }))} · ${esc(label)}</span><h2 id="total-h">${esc(title)}</h2></span>${change}</div>
+      <div class="htotal-head"><span class="htotal-title"><span class="lab">${esc(range === "today" ? fmt.day(now, { weekday: "long", month: "long", day: "numeric" }) : label)}</span><h2 id="total-h">${esc(title)}</h2></span>${change}</div>
       <div class="htotal-figure"><b class="hbig" data-count="${t.tokens}" data-count-key="home:tokens:${range}" data-format="count" data-count-intro>${fmt.count(t.tokens)}</b><span class="hvalue"><b class="money" data-count="${t.cost}" data-count-key="home:cost:${range}" data-format="usdExact">${FORMATS.usdExact(t.cost)}</b><span>tokens · value at API prices</span></span></div>
       ${bar ? `<div class="hmix" role="img" aria-label="Share of tokens by tool">${bar}</div>` : ""}
       ${tiles ? `<div class="htiles">${tiles}</div>` : ""}
-      ${facts ? `<div class="hfacts">${facts}</div>` : ""}
     </section>`;
   }
 
@@ -361,19 +272,28 @@ extension DashboardPage {
       bars = [...before.map((d) => ({ start: d.day + "T00:00:00", tokens: d.tokens, before: true })), ...bars];
     }
     if (!bars.length) return "";
-    bars[bars.length - 1].now = true;
+    // The bucket holding this moment is now; later ones are still to come.
+    const at = Date.now();
+    let current = bars.findIndex((b, i) => !b.before && new Date(b.start).getTime() <= at && (i === bars.length - 1 || new Date(bars[i + 1].start).getTime() > at));
+    if (current < 0) current = bars.length - 1;
+    bars[current].now = true;
+    bars.forEach((b, i) => { b.later = i > current; });
     const peak = Math.max(...bars.map((b) => b.tokens), 1);
     const step = Math.pow(10, Math.floor(Math.log10(peak)));
     const top = Math.ceil(peak / step) * step;
     const label = (bucket) => unit === "hour" ? fmt.day(bucket.start, { hour: "numeric" }) : unit === "month" ? fmt.day(bucket.start, { month: "short", year: "2-digit" }) : fmt.day(bucket.start, { month: "short", day: "numeric" });
-    const cols = bars.map((b, i) => `<span class="hbar${b.before ? " before" : ""}${b.now ? " now" : ""}" style="height:${Math.max(b.tokens ? 2 : 0, (b.tokens / top) * 100).toFixed(1)}%"${tipAttr(label(b), [["Tokens", fmt.tokens(b.tokens)]])}></span>`).join("");
+    const cols = bars.map((b, i) => `<span class="hcol"${tipAttr(label(b), [["Tokens", fmt.tokens(b.tokens)]])}><span class="hbar${b.before ? " before" : ""}${b.now ? " now" : ""}${b.later ? " later" : ""}" style="height:${Math.max(b.tokens ? 2 : 0, (b.tokens / top) * 100).toFixed(1)}%"></span></span>`).join("");
     const nowLabel = { hour: "Now", day: "Today", week: "This week", month: "This month" }[unit];
+    // Ticks sit under the bar they name: the first, the middle and the current one.
+    const place = (i) => `left:${(((i + .5) / bars.length) * 100).toFixed(2)}%`;
+    const mid = Math.floor(current / 2);
+    const ticks = [[0, label(bars[0])], ...(mid > 0 && current - mid > 1 ? [[mid, label(bars[mid])]] : []), ...(current > 0 ? [[current, nowLabel]] : [])]
+      .map(([i, text]) => `<span${i === current ? ' class="on"' : ""} style="${place(i)}">${esc(i === current && current === 0 ? nowLabel : text)}</span>`).join("");
     const legend = range === "week" ? `<span class="hlegend"><span><i class="before"></i>7 days before</span><span><i></i>Last 7 days</span></span>` : "";
-    const today = data.state?.status?.today?.tokens;
     return `<section class="card htrend" aria-labelledby="trend-h">
-      <div class="card-head"><h2 id="trend-h">Tokens per ${unit}</h2><span class="hint">${legend}${today != null ? `<span>today <b>${fmt.tokens(today)}</b></span>` : ""}</span></div>
+      <div class="card-head"><h2 id="trend-h">Tokens per ${unit}</h2><span class="hint">${legend}</span></div>
       <div class="hchart"><div class="haxis"><span>${fmt.tokens(top)}</span><span>${fmt.tokens(top / 2)}</span><span>0</span></div>
-        <div class="hplot"><div class="hbars">${cols}</div><div class="hticks"><span>${esc(label(bars[0]))}</span><span>${esc(label(bars[Math.floor(bars.length / 2)]))}</span><span class="on">${nowLabel}</span></div></div></div>
+        <div class="hplot"><div class="hbars">${cols}</div><div class="hticks">${ticks}</div></div></div>
     </section>`;
   }
 
@@ -415,7 +335,7 @@ extension DashboardPage {
     } else if (!isStatic && data.state?.cloud?.available && !data.state.cloud.linked) {
       progressRow = `<div class="hpet-progress"><div><span>Link with GitHub and your pet hatches from the usage you already sync.</span></div></div>`;
     }
-    const later = ui.petLater === head.title;
+    const later = !head || ui.petLater === head.title;
     const bubble = later ? "" : `<div class="hpet-bubble" role="status"><b>${esc(head.title)}</b>${head.sub ? `<span>${esc(head.sub)}</span>` : ""}${!isStatic && head.target ? `<span class="hpet-acts"><button class="btn sm" type="button" data-action="switch" data-id="${esc(head.target)}">Hop</button><button class="btn sm quiet" type="button" data-action="pet-later" data-value="${esc(head.title)}">Later</button></span>` : ""}${!pet && !isStatic && data.state?.cloud?.available && !data.state.cloud.linked ? `<span class="hpet-acts"><button class="btn sm" type="button" data-action="cloud-link">Link with GitHub</button></span>` : ""}</div>`;
     const figure = drawn ? `<div class="hpet-figure">${drawn.svg}<span class="hpet-shadow"></span></div>` : `<div class="hpet-figure egg" aria-hidden="true"><span class="hpet-egg"></span><span class="hpet-shadow"></span></div>`;
     const stages = PET_STAGES.map(([id, name], i) => {
@@ -452,31 +372,13 @@ extension DashboardPage {
     </section>`;
   }
 
-  function homeHop(query) {
-    if (isStatic) { toast("This is a saved page, so it can't switch logins."); return; }
-    const tools = data.state?.status.tools || [];
-    const words = String(query || "").trim().toLowerCase();
-    let target = null;
-    if (words) {
-      const hits = [];
-      for (const tool of tools) for (const account of tool.accounts) {
-        if (`${account.name} ${account.email || ""} ${tool.name}`.toLowerCase().includes(words)) hits.push({ tool, account });
-      }
-      target = hits.find((hit) => !hit.account.active && !hit.account.error) || hits[0] || null;
-    } else {
-      for (const tool of tools) {
-        const account = tool.accounts.find((item) => item.id === ui.homeAccount);
-        if (account) target = { tool, account };
-      }
-    }
-    if (!target) { toast(words ? "No login matches that." : "Name a saved login.", true); return; }
-    if (target.account.error) { toast(target.account.error, true); go("limits"); return; }
-    if (target.account.active) { toast(`${target.tool.name} is already on ${target.account.name}.`); return; }
-    ui.homeQuery = "";
-    ui.homeTool = target.tool.id;
-    ui.homeAccount = target.account.id;
-    fieldDash = still.matches ? 0 : 6;
-    act(null, () => api("/api/switch", { id: target.account.id }), "Switching", true);
+  function homeSkeleton() {
+    const line = (w, h = 12) => `<span class="skel" style="width:${w};height:${h}px"></span>`;
+    const bars = Array.from({ length: 14 }, (_, i) => `<span class="skel" style="height:${18 + ((i * 37) % 60)}%"></span>`).join("");
+    const rows = Array.from({ length: 4 }, () => `<div class="skel-row">${line("22px", 22)}${line("38%")}${line("100%", 6)}</div>`).join("");
+    return `<section class="card htotal skel-card">${line("110px", 10)}${line("190px", 22)}${line("240px", 44)}<div class="skel-wait">${loading("Reading usage")}</div></section>
+      <section class="card htrend skel-card"><div class="card-head">${line("120px", 14)}</div><div class="skel-bars">${bars}</div></section>
+      <section class="card hmodels skel-card"><div class="card-head">${line("100px", 14)}</div><div class="skel-rows">${rows}</div></section>`;
   }
 
   function overviewPage(tools) {
@@ -488,7 +390,8 @@ extension DashboardPage {
     }
     const usage = data.usage[`${ui.homeRange}:all`];
     const error = data.usageErrors[`${ui.homeRange}:all`];
-    const waiting = `<section class="card">${error ? `<p class="empty">${esc(error)}</p>` : loading("Reading usage", "empty")}</section>`;
+    // Until the first figures arrive, Home keeps its shape: the cards are there, only empty.
+    const waiting = error ? `<section class="card"><p class="empty">${esc(error)}</p></section>` : homeSkeleton();
     const left = usage ? `${homeTotal(usage)}${homeTrend(usage)}${homeModels(usage)}` : waiting;
     const activity = usage ? homeActivity(usage) : "";
     return { toolbar: picker, body: `<div class="home-cols"><div class="home-col">${left}</div><div class="home-col">${homePet(tools)}${activity}${attentionCard(tools)}</div></div>` };

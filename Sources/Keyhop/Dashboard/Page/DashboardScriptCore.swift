@@ -40,8 +40,8 @@ extension DashboardPage {
     boardPeriod: "week", boardMetric: "efficiency", boardDivision: "", boardTeam: "", boardView: "ranks", boardDate: "", boardSeason: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
     settingsPane: "general", checkingUpdate: false,
-    homeMenu: null, homeTool: "", homeAccount: "", homeQuery: "", homeRange: "week", treeOpen: {},
-    quotaTool: "all", quotaHours: 168, quotaView: "remaining", lastIn: {},
+    homeMenu: null, homeTool: "", homeAccount: "", homeQuery: "", homeRange: "today", treeOpen: {},
+    quotaTool: "all", lastIn: {},
     pending: new Map(), loadingUsage: 0,
     // The field in force: "night" or "day". Empty until the saved choice has been applied.
     theme: "",
@@ -114,6 +114,10 @@ extension DashboardPage {
   }
   const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
   const maxUsed = (account) => Math.max(0, ...(account.limits || []).map((l) => l.usedPercent));
+  // What a login has left on its tightest window, as Keyhop reads it (its `room`), or null when
+  // there is no limit to read.
+  const leftOf = (account) => !account?.limits?.length ? null
+    : Math.round(Math.max(0, Math.min(100, account.room ?? (100 - maxUsed(account)))));
   const toolName = (id) => (data.state?.status.tools.find((t) => t.id === id) || {}).name || id;
 
   // MARK: Data
@@ -206,13 +210,6 @@ extension DashboardPage {
     catch { data.quests = null; }
   }
 
-  // The pooled limits: what is left across every login, how fast it goes, and where it is headed.
-  async function loadQuota() {
-    if (isStatic) { data.quota = boot?.quota || null; return; }
-    try { data.quota = await api("/api/quota"); data.quotaError = null; }
-    catch (error) { data.quotaError = error.message; }
-  }
-
   let workDaysLoading = false;
   function loadWorkDays() {
     if (workDaysLoading) return;
@@ -226,11 +223,9 @@ extension DashboardPage {
   async function loadSection() {
     try {
       if (ui.section === "overview" || ui.section === "limits") loadServices();
-      if (ui.section === "limits") await loadQuota();
       if (ui.section === "overview") {
         const jobs = [loadUsage("today"), loadUsage("week")];
         if (!["today", "week"].includes(ui.homeRange)) jobs.push(loadUsage(ui.homeRange));
-        if (!isStatic) jobs.push(loadQuota());
         // Commits come from every repository's log, which can take a while the first time, so
         // Home draws without them and fills them in when they arrive.
         if (!isStatic) loadWorkDays();

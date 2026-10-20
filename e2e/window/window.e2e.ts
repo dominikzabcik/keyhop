@@ -55,40 +55,48 @@ test('a place with several sections opens them under its link and remembers the 
 test('home is the total, the pet and what needs you', async ({ app, screen, browser }) => {
   await openWindow(app, 'overview');
   await expect(screen.getByRole('heading', 'Home', { level: 1 })).toBeVisible();
-  await expect(screen.getByRole('heading', 'The last 7 days')).toBeVisible();
-  await expect(screen.getByRole('heading', 'Tokens per day')).toBeVisible();
+  // Home opens on today: its hours, with the current one marked.
+  await expect(screen.getByRole('heading', 'Today, so far')).toBeVisible();
+  await expect(screen.getByRole('heading', 'Tokens per hour')).toBeVisible();
+  await expect(browser.locator('.htrend .hbar.now')).toHaveCount(1);
   await expect(screen.getByRole('heading', 'Top models')).toBeVisible();
   await expect(screen.getByRole('heading', 'Activity')).toBeVisible();
-  await expect(screen.getByRole('heading', 'Needs your attention')).toBeVisible();
-  // Work is counted in the sample, so the figures carry commits and the leaderboard's measure.
-  await expect(screen.getByText('per M tokens', { exact: false }).first()).toBeVisible();
+  await expect(screen.getByRole('heading', 'Needs you')).toBeVisible();
+  // The sidebar, the status bar and Needs you count the same logins.
+  const listed = await browser.evaluate(() => document.querySelectorAll('.attention .arow').length);
+  const chip = await browser.evaluate(() => document.querySelector('#status-needs')?.hidden ? 0 : parseInt(document.querySelector('#status-needs')?.textContent || '0', 10));
+  expect(chip).toBeLessThanOrEqual(listed);
   // The linked sample has a pet: its stages run along the bottom of its night.
   await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.hpet .hstage').length)).toBe(6);
   await screen.getByRole('button', { name: 'Month', exact: true }).tap();
   await expect(screen.getByRole('button', { name: 'Month', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByRole('heading', 'This month, so far')).toBeVisible();
+  await screen.getByRole('button', { name: 'Week', exact: true }).tap();
+  await expect(screen.getByRole('heading', 'Tokens per day')).toBeVisible();
   await assertReadable(browser);
 });
 
-test('limits pools every login and projects it', async ({ app, screen, browser }) => {
+test('limits lists each login with what it has used, and no guesses', async ({ app, screen, browser }) => {
   await openWindow(app, 'limits');
   await expect(screen.getByRole('heading', 'Limits', { level: 1 })).toBeVisible();
-  await expect(screen.getByText('What your logins have left', { exact: false })).toBeVisible();
-  await expect(screen.getByText('Next reset', { exact: false })).toBeVisible();
-  await expect(browser.locator('.qchart svg .qline.ahead')).toBeVisible();
   await expect(screen.getByRole('heading', 'Claude Code', { level: 2 })).toBeVisible();
+  await expect(screen.getByText('In use', { exact: true }).first()).toBeVisible();
+  await expect(screen.getByText('resets in', { exact: false }).first()).toBeVisible();
+  // Keyhop shows what the tools report, never when a limit might run out.
+  for (const guess of ['runs out', 'Empty around', 'At this pace', 'Projected']) {
+    await expect(screen.getByText(guess, { exact: false })).toHaveCount(0);
+  }
   await browser.locator('[data-action="quota-tool"][data-value="codex"]').tap();
-  await expect(screen.getByText('Codex login', { exact: false }).first()).toBeVisible();
-  await screen.getByRole('button', { name: 'Drain rate', exact: true }).tap();
-  await expect(browser.locator('.qchart svg .qbar').first()).toBeVisible();
+  await expect(screen.getByRole('heading', 'Codex', { level: 2 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Claude Code', { level: 2 })).toHaveCount(0);
   await assertReadable(browser);
 });
 
 test('an old link to accounts opens limits, which can add another login', async ({ app, screen, browser }) => {
   await openWindow(app, 'accounts');
   await expect(screen.getByRole('heading', 'Limits', { level: 1 })).toBeVisible();
-  await expect.poll(() => screen.getByRole('button', 'Add account').count()).toBeGreaterThan(0);
-  await expect(screen.getByRole('button', 'Switch and sign in').first()).toBeVisible();
+  await expect.poll(() => screen.getByRole('button', 'Add login').count()).toBeGreaterThan(0);
+  await expect(screen.getByRole('button', 'Sign in').first()).toBeVisible();
   await assertReadable(browser);
 });
 

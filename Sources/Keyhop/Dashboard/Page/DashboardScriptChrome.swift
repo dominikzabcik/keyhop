@@ -350,7 +350,8 @@ extension DashboardPage {
     const label = step ? `${step.title}${step.count ? ` · ${step.count}` : ""}` : state?.refreshing ? "Starting…" : ui.loadingUsage ? "Reading usage" : read ? `Limits read ${fmt.relative(read)}` : "Limits not read yet";
     $("#read").textContent = label;
     const top = $("#top-read");
-    if (top) top.textContent = `${fmt.day(new Date(), { weekday: "long", month: "long", day: "numeric" })} · ${step || state?.refreshing || ui.loadingUsage ? label.charAt(0).toLowerCase() + label.slice(1) : read ? `limits read ${fmt.relative(read)}` : "limits not read yet"}`;
+    // The top bar names a read only while one runs; the status bar always says when the last was.
+    if (top) top.textContent = busyNow ? label : "";
     $("#main")?.setAttribute("aria-busy", busyNow ? "true" : "false");
     for (const meter of [$("#foot-meter"), $("#top-meter")]) {
       if (!meter) continue;
@@ -455,14 +456,13 @@ extension DashboardPage {
   function progress(percent, pace, tone, grow) {
     const width = Math.min(100, Math.max(0, percent));
     // "plain" is for rankings, where a full bar means the largest, not a limit running out.
-    const state = tone === "plain" ? "" : tone || (width >= 90 ? "bad" : pace != null && width > pace * 100 + 6 ? "warn" : "");
-    return `<div class="progress ${state}"><span style="width:${width.toFixed(1)}%"${grow ? ` data-grow="${esc(ui.section + ":" + grow)}"` : ""}></span>${pace != null ? `<i style="left:${Math.min(100, pace * 100).toFixed(1)}%" title="Time passed"></i>` : ""}</div>`;
+    // A limit reads by how full it is, nothing more: amber from 75%, red from 90%.
+    void pace;
+    const state = tone === "plain" ? "" : tone || (width >= 90 ? "bad" : width >= 75 ? "warn" : "");
+    return `<div class="progress ${state}"><span style="width:${width.toFixed(1)}%"${grow ? ` data-grow="${esc(ui.section + ":" + grow)}"` : ""}></span></div>`;
   }
 
   function limitFoot(limit) {
-    if (limit.runsOutAt && new Date(limit.runsOutAt) > Date.now() && (!limit.resetsAt || new Date(limit.runsOutAt) < new Date(limit.resetsAt))) {
-      return `Runs out ~${fmt.clock(limit.runsOutAt)}`;
-    }
     return limit.resetsAt ? `Resets in ${fmt.until(limit.resetsAt)}` : "";
   }
 
@@ -476,10 +476,16 @@ extension DashboardPage {
     return best;
   }
 
+  // Where a tool would hop: Keyhop's own Smart Hop pick, the same one the menu and the
+  // notifications offer, when it is another login with clearly more room.
   function alternative(tool, current) {
-    const pick = tool.accounts.filter((a) => !a.active && a.limits?.length).sort((a, b) => maxUsed(a) - maxUsed(b))[0];
-    return pick && (!current || maxUsed(pick) + 15 < maxUsed(current)) ? pick : null;
+    const rec = (data.state?.status?.recommendations || []).find((item) => item.tool === tool.id);
+    const pick = rec && !rec.active ? tool.accounts.find((account) => account.id === rec.account) : null;
+    if (!pick || pick.error || rec.room < 20) return null;
+    const here = current ? leftOf(current) : null;
+    return here == null || rec.room > here + 10 ? pick : null;
   }
+
 
 """##
 }

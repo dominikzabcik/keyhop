@@ -39,7 +39,7 @@ extension DashboardPage {
     <div class="backdrop" id="backdrop" aria-hidden="true"></div>
     <div class="hero-art" id="hero-art" hidden aria-hidden="true"><canvas id="field"></canvas><div class="hero-scene" id="hero-scene"></div></div>
     <header class="topbar"><div class="top-title"><h1 id="title">Home</h1><div class="toolbar" id="toolbar"></div></div><div class="top-actions"><span class="top-read" id="top-read"></span><button type="button" class="icon-btn" id="refresh" data-action="refresh" aria-label="Read limits and usage now"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button></div><div class="meter" id="top-meter" role="progressbar" aria-label="Keyhop is reading" aria-hidden="true"><span></span></div></header>
-    <main class="main" id="main" tabindex="-1" aria-busy="true"><div class="page"><p class="lede busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span>Reading your accounts…</p></div></main>
+    <main class="main" id="main" tabindex="-1" aria-busy="true"><div class="home-cols boot-skel" role="status" aria-label="Reading your accounts"><div class="home-col"><section class="card htotal skel-card"><span class="skel" style="width:110px;height:10px"></span><span class="skel" style="width:190px;height:22px"></span><span class="skel" style="width:240px;height:44px"></span></section><section class="card htrend skel-card"></section></div><div class="home-col"><section class="card skel-card" style="height:300px"></section><section class="card skel-card" style="height:160px"></section></div></div></main>
   </div>
   <footer class="statusbar">
     <span id="mode" hidden></span>
@@ -48,8 +48,6 @@ extension DashboardPage {
     <span class="status-quiet" id="status-clear" hidden>Limits clear</span>
     <a class="chip warn" id="status-outage" href="#" target="_blank" rel="noopener" hidden></a>
     <span class="status-grow"></span>
-    <button type="button" class="status-fig" id="status-today" data-action="goto" data-section="usage"></button>
-    <button type="button" class="status-fig" id="status-streak" data-action="goto" data-section="usage" hidden></button>
     <button type="button" class="status-fig" id="status-theme" data-action="theme-toggle" title="Switch the field between night and day">Night</button>
     <button type="button" class="status-btn" id="status-read" data-action="refresh"><span id="read">Limits not read yet</span></button>
     <span class="meter" id="foot-meter" hidden><span></span></span>

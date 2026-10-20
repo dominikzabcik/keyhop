@@ -110,8 +110,6 @@ extension DashboardPage {
         if (ui.section === "limits") transition(render); else go("limits");
         break;
       }
-      case "quota-hours": ui.quotaHours = +el.dataset.value; render(); break;
-      case "quota-view": ui.quotaView = el.dataset.value; render(); break;
       case "home-range": {
         ui.homeRange = el.dataset.value;
         render();
@@ -364,7 +362,6 @@ extension DashboardPage {
   document.addEventListener("submit", (event) => {
     const form = event.target;
     event.preventDefault();
-    if (form.dataset.form === "home-hop") { homeHop(form.elements.query.value); return; }
     const button = form.querySelector("button:not([type=button])");
     if (form.dataset.form === "rename") {
       const id = form.dataset.id, name = form.elements.name.value;

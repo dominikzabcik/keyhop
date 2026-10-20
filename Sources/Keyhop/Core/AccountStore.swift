@@ -184,7 +184,10 @@ final class AccountStore: ObservableObject {
     // MARK: Switching
 
     func switchTo(_ account: Account) {
-        guard let service, switching == nil, addingFor == nil, active[account.provider] != account.id else { return }
+        guard let service, active[account.provider] != account.id else { return }
+        // A press that can't run says why instead of doing nothing.
+        if switching != nil { notice = "Keyhop is still switching. Try again in a moment."; return }
+        if let adding = addingFor { notice = "Keyhop is waiting for a new \(adding.name) login. Stop waiting first."; return }
         switching = account.id
         Task {
             await refreshTask?.value

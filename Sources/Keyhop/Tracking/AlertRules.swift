@@ -18,7 +18,7 @@ struct AlertCandidate: Codable, Equatable, Sendable {
     var switchName: String? = nil
 }
 
-/// When to warn: a limit nearly used up or on track to run out before it resets, and budgets at
+/// When to warn: a limit nearly used up, and budgets at
 /// 80% and 100%. The macOS app posts these itself; the Linux tray gets them from `keyhop refresh`.
 enum AlertRules {
     static func forecastKey(_ account: UUID, _ label: String) -> String {
@@ -45,10 +45,8 @@ enum AlertRules {
             guard let id = active[provider], let account = accounts.first(where: { $0.id == id }),
                   let snapshot = usage[id], snapshot.error == nil else { continue }
             for window in snapshot.windows {
-                let eta = forecasts[forecastKey(id, window.label)]
-                let nearlyOut = window.usedPercent >= 90
-                // Early in a window a few samples can project a run-out that never happens.
-                guard nearlyOut || (eta != nil && window.usedPercent >= 50) else { continue }
+                // Only what is measured: a window at 90% or more. No guesses about when one runs out.
+                guard window.usedPercent >= 90 else { continue }
 
                 let alternative = SmartHop.recommendation(
                     for: provider,
@@ -65,17 +63,15 @@ enum AlertRules {
                 // KB-Notify: the title names the tool and its state, the subtitle the account and the
                 // figure, and the body what to do about it.
                 let used = Int(window.usedPercent.rounded())
-                let title = nearlyOut
-                    ? "\(provider.name) is nearly out"
-                    : "\(provider.name) runs out around \(eta!.formatted(date: .omitted, time: .shortened))"
+                let title = "\(provider.name) is nearly out"
                 let subtitle = "\(account.displayName) · \(windowWord(window.label)) at \(used)%"
                 let body = alternative.map { "\($0.name) has \(Int($0.room.rounded()))% left. Hop now and keep going." }
                     ?? "No other \(provider.name) login has room. Add one to hop next time."
                 let windowID = window.resetsAt.map { String(Int($0.timeIntervalSince1970 / 3600)) } ?? "open"
-                alerts.append(AlertCandidate(key: "limit:\(id.uuidString):\(window.label):\(windowID):\(nearlyOut ? "90" : "pace")",
+                alerts.append(AlertCandidate(key: "limit:\(id.uuidString):\(window.label):\(windowID):90",
                                              title: title, body: body, switchTo: alternative?.account,
                                              subtitle: subtitle, tool: provider.rawValue,
-                                             tone: alternative == nil ? "out" : nearlyOut ? "warn" : "hop",
+                                             tone: alternative == nil ? "out" : "warn",
                                              switchName: alternative?.name))
             }
         }

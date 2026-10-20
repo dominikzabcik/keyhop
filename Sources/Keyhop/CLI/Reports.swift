@@ -376,9 +376,7 @@ enum Reports {
                 for window in snapshot?.windows ?? [] {
                     let percent = String(format: "%3d%%", Int(window.usedPercent.rounded()))
                     var line = "      \(window.label.padding(toLength: 6, withPad: " ", startingAt: 0)) \(percent)  \(bar(window.usedPercent))"
-                    if inUse, let eta = overview.forecasts[AlertRules.forecastKey(account.id, window.label)], eta > now {
-                        line += "  runs out around \(eta.formatted(date: .omitted, time: .shortened))"
-                    } else if window.resetsAt != nil {
+                    if window.resetsAt != nil {
                         line += "  resets in \(window.resetText(at: now))"
                     }
                     lines.append(line)

@@ -5,7 +5,7 @@ extension DashboardPage {
     static let stylesLimits = ##"""
 /* Limits after KB-Limits: the pooled figure beside its forecast, then each tool's logins as hairline rows. */
 .main:has(.lim-page) { padding: 24px 28px 32px; }
-.lim-page { max-width: 1480px; margin: 0 auto; display: grid; gap: 32px; }
+.lim-page { width: 100%; max-width: 1480px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
 /* Many tools make a long filter: it keeps one line and scrolls sideways rather than wrapping. */
 .top-title:has(.lim-tabs) { flex: 1 1 auto; }
 .top-title .toolbar:has(.lim-tabs) { min-width: 0; flex-wrap: nowrap; }
@@ -72,7 +72,7 @@ extension DashboardPage {
 .lim-sum.bad { color: var(--bad); }
 .lim-group-head .btn { margin-left: auto; flex: none; }
 .lim-list { overflow: visible; }
-.lim-row { display: grid; grid-template-columns: minmax(180px, 250px) minmax(0, 1fr) minmax(170px, 230px); gap: 24px; align-items: center; min-height: 76px; padding: 16px 22px; }
+.lim-row { display: grid; grid-template-columns: minmax(170px, 240px) minmax(0, 1fr) 132px; gap: 24px; align-items: center; min-height: 76px; padding: 16px 22px; }
 .lim-row + .lim-row { border-top: 1px solid hsl(var(--on) / .07); }
 .lim-row:first-child { border-radius: 12px 12px 0 0; }
 .lim-row:last-child { border-radius: 0 0 12px 12px; }
@@ -87,18 +87,19 @@ extension DashboardPage {
 .lim-dot.bad { background: var(--red, #fb414a); }
 .lim-pill { flex: none; display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; font-size: 11px; font-weight: 600; }
 .lim-pill.in-use { background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--info); }
+.lim-pill.good { background: color-mix(in srgb, var(--good, #22c55e) 14%, transparent); color: var(--good); }
 .lim-pill.bad { background: color-mix(in srgb, var(--red, #fb414a) 16%, transparent); color: var(--bad); }
 .lim-meta { padding-left: 14px; font-size: 12px; color: var(--subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lim-who .rename { display: flex; gap: 6px; align-items: center; }
 .lim-who .rename .field { height: 28px; }
 .lwins { display: grid; gap: 10px; min-width: 0; }
-.lwin { display: grid; grid-template-columns: 64px minmax(0, 1fr) 44px 120px; gap: 14px; align-items: center; font-size: 12px; }
+.lwin { display: grid; grid-template-columns: 58px minmax(60px, 1fr) 68px 104px; gap: 14px; align-items: center; font-size: 12px; }
 .lwin-name { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lwin .progress { height: 4px; }
 .lwin .progress > span { background: hsl(var(--on) / .78); }
 .lwin .progress.warn > span { background: var(--warn); }
 .lwin .progress.bad > span { background: var(--red, #fb414a); }
-.lwin-pct { text-align: right; font-size: 13px; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
+.lwin-pct { white-space: nowrap; text-align: right; font-size: 13px; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
 .lwin-pct.bad { color: var(--bad); font-weight: 600; }
 .lwin-foot { color: var(--subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .lnote { margin: 0; color: var(--muted); font-size: 13px; }
@@ -141,7 +142,7 @@ extension DashboardPage {
   .main:has(.lim-page) { padding: 16px; }
   .lim-figs { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .lim-fig { padding: 0; border-left: 0; }
-  .lwin { grid-template-columns: 56px minmax(0, 1fr) 40px; }
+  .lwin { grid-template-columns: 56px minmax(0, 1fr) 64px; }
   .lwin-foot { display: none; }
   .lim-group-head { flex-wrap: wrap; }
 }

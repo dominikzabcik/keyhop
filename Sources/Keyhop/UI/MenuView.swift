@@ -437,10 +437,6 @@ private struct MenuLoginRow: View {
         if let plan = row.account.plan { parts.append(plan) }
         if let window = row.tightest {
             parts.append(window.label)
-            if let eta = tracker.forecasts[AlertRules.forecastKey(row.account.id, window.label)], eta > Date(),
-               window.resetsAt.map({ eta < $0 }) ?? true {
-                parts.append("runs out \(eta.formatted(date: .omitted, time: .shortened))")
-            }
         }
         return parts.isEmpty ? row.account.provider.name : parts.joined(separator: " · ")
     }
@@ -675,11 +671,7 @@ private struct MenuFacts {
         if store.usage[account.id]?.error != nil, store.usage[account.id]?.windows.isEmpty ?? true {
             return MenuWarning(account: account, text: "\(tool) on \(account.displayName) is signed out", action: .open)
         }
-        var when = "is at \(Int((row.used ?? 0).rounded()))%"
-        if let window = row.tightest, let eta = tracker.forecasts[AlertRules.forecastKey(account.id, window.label)], eta > now,
-           window.resetsAt.map({ eta < $0 }) ?? true {
-            when = "runs out at \(eta.formatted(date: .omitted, time: .shortened))"
-        }
+        let when = "is at \(Int((row.used ?? 0).rounded()))%"
         let others = rows.filter { $0.account.provider == account.provider && $0.account.id != account.id }
         if others.isEmpty {
             return MenuWarning(account: account, text: "\(tool) \(when) · no other login", action: Provider.switchable.contains(account.provider) ? .add : .open)
@@ -736,7 +728,7 @@ private struct MenuFacts {
     }
 }
 
-/// The same reading as the window: a login at 85%, one that runs out before it resets, or an error.
+/// The same reading as the window: a login at 85% or more, or one signed out.
 private enum MenuLane {
     case needs, active, room, quiet
 }
@@ -747,14 +739,7 @@ private enum MenuStatus {
         if usage[account.id]?.error != nil, windows.isEmpty { return .needs }
         if windows.isEmpty { return .quiet }
         if windows.contains(where: { $0.usedPercent >= 85 }) { return .needs }
-        if windows.contains(where: { runsOut($0, account: account, forecasts: forecasts, now: now) }) { return .needs }
         return active ? .active : .room
-    }
-
-    private static func runsOut(_ window: UsageWindow, account: Account, forecasts: [String: Date], now: Date) -> Bool {
-        guard let eta = forecasts[AlertRules.forecastKey(account.id, window.label)], eta > now else { return false }
-        if let reset = window.resetsAt, eta >= reset { return false }
-        return true
     }
 }
 

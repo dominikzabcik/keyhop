@@ -63,7 +63,7 @@ struct CursorAdapter: ProviderAdapter {
 
     func apply(_ secret: Secret) async throws {
         guard let access = secret["cursorAuth/accessToken"], let refresh = secret["cursorAuth/refreshToken"] else {
-            throw KeyhopError("Saved Cursor login is damaged")
+            throw KeyhopError("Saved Cursor login is damaged", signedOut: true)
         }
         if let authInfo = JSON.object(secret["cliAuthInfo"]) {
             try updateCLIConfig { $0["authInfo"] = authInfo }
@@ -123,10 +123,10 @@ struct CursorAdapter: ProviderAdapter {
 
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
         guard let token = secret["cursorAuth/accessToken"], let subject = JWT.claims(token)?["sub"] as? String else {
-            throw KeyhopError("Saved Cursor login is damaged")
+            throw KeyhopError("Saved Cursor login is damaged", signedOut: true)
         }
         if let expiry = JWT.expiry(token), expiry < Date() {
-            throw KeyhopError("Login expired. Switch to it and sign in to Cursor again.")
+            throw KeyhopError("Login expired. Switch to it and sign in to Cursor again.", signedOut: true)
         }
         let (data, status) = try await HTTP.get("https://cursor.com/api/usage-summary", headers: [
             "Cookie": "WorkosCursorSessionToken=\(Self.cookieSubject(subject))%3A%3A\(token)",
@@ -135,7 +135,7 @@ struct CursorAdapter: ProviderAdapter {
         ])
         switch status {
         case 200: break
-        case 401, 403: throw KeyhopError("Cursor rejected this login. Sign in again.")
+        case 401, 403: throw KeyhopError("Cursor rejected this login. Sign in again.", signedOut: true)
         default: throw KeyhopError("Cursor usage returned \(status)")
         }
         guard let body = JSON.object(data) else { throw KeyhopError("Unreadable Cursor usage response") }
@@ -146,7 +146,7 @@ struct CursorAdapter: ProviderAdapter {
     /// so this is where its token counts come from.
     func usageExport(_ secret: Secret, account: UUID) async throws -> [UsageRecord] {
         guard let token = secret["cursorAuth/accessToken"], let subject = JWT.claims(token)?["sub"] as? String else {
-            throw KeyhopError("Saved Cursor login is damaged")
+            throw KeyhopError("Saved Cursor login is damaged", signedOut: true)
         }
         let (data, status) = try await HTTP.get("https://cursor.com/api/dashboard/export-usage-events-csv?strategy=tokens", headers: [
             "Cookie": "WorkosCursorSessionToken=\(Self.cookieSubject(subject))%3A%3A\(token)",

@@ -36,18 +36,31 @@ struct CodexAdapter: ProviderAdapter {
     }
 
     func apply(_ secret: Secret) async throws {
-        guard let auth = secret["auth"], JSON.object(auth) != nil else { throw KeyhopError("Saved Codex login is damaged") }
+        guard let auth = secret["auth"], JSON.object(auth) != nil else { throw KeyhopError("Saved Codex login is damaged", signedOut: true) }
         try Files.writeAtomically(Data(auth.utf8), to: authURL)
     }
 
     /// Puts a saved login into a Codex home of Keyhop's own, for `keyhop run`, with the person's
     /// config seeded from the usual home once.
     static func place(_ secret: Secret, in folder: URL) throws {
-        guard let auth = secret["auth"], JSON.object(auth) != nil else { throw KeyhopError("Saved Codex login is damaged") }
+        guard let auth = secret["auth"], JSON.object(auth) != nil else { throw KeyhopError("Saved Codex login is damaged", signedOut: true) }
         let file = folder.appendingPathComponent("auth.json")
         try Files.writeAtomically(Data(auth.utf8), to: file)
         try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
         RunDirectories.seed("config.toml", from: homeDirectory(environment: [:], home: Files.home).appendingPathComponent("config.toml"), into: folder)
+    }
+
+    /// The login as Codex last left it in a `keyhop run` home, when that is this same account and
+    /// newer than `saved`: Codex refreshes it there, which retires the saved copy.
+    static func folderCopy(in folder: URL, newerThan saved: Secret) -> Secret? {
+        guard let data = try? Data(contentsOf: folder.appendingPathComponent("auth.json")),
+              let tokens = JSON.object(data)?["tokens"] as? [String: Any],
+              let savedTokens = JSON.object(saved["auth"])?["tokens"] as? [String: Any],
+              tokens["refresh_token"] as? String != savedTokens["refresh_token"] as? String else { return nil }
+        if let there = tokens["account_id"] as? String, let here = savedTokens["account_id"] as? String, there != here { return nil }
+        let expiry = { (tokens: [String: Any]) in JWT.expiry(tokens["access_token"] as? String) ?? .distantPast }
+        guard expiry(tokens) > expiry(savedTokens) else { return nil }
+        return ["auth": String(decoding: data, as: UTF8.self)]
     }
 
     func signOutLocally() async throws {
@@ -61,19 +74,20 @@ struct CodexAdapter: ProviderAdapter {
         guard var root = JSON.object(secret["auth"]),
               var tokens = root["tokens"] as? [String: Any],
               var access = tokens["access_token"] as? String else {
-            throw KeyhopError("No ChatGPT login saved")
+            throw KeyhopError("No ChatGPT login saved", signedOut: true)
         }
 
         if let expiry = JWT.expiry(access), expiry < Date().addingTimeInterval(300) {
             guard allowRefresh else { throw LimitsWaitForTool(tool: "Codex") }
-            guard let refresh = tokens["refresh_token"] as? String else { throw KeyhopError("Login expired. Sign in again.") }
+            guard let refresh = tokens["refresh_token"] as? String else { throw KeyhopError("Login expired. Sign in again.", signedOut: true) }
             let (data, status) = try await HTTP.postJSON("https://auth.openai.com/oauth/token", body: [
                 "client_id": Self.clientID,
                 "grant_type": "refresh_token",
                 "refresh_token": refresh,
             ])
             guard status == 200, let body = JSON.object(data), let newAccess = body["access_token"] as? String else {
-                throw KeyhopError(status == 401 ? "Login expired. Sign in again." : "Token refresh failed (\(status))")
+                throw KeyhopError(status == 400 || status == 401 ? "Login expired. Sign in again." : "Token refresh failed (\(status))",
+                                  signedOut: status == 400 || status == 401)
             }
             tokens["access_token"] = newAccess
             if let v = body["refresh_token"] as? String { tokens["refresh_token"] = v }
@@ -89,7 +103,7 @@ struct CodexAdapter: ProviderAdapter {
         let (data, status) = try await HTTP.get("https://chatgpt.com/backend-api/wham/usage", headers: headers)
         switch status {
         case 200: break
-        case 401, 403: throw KeyhopError("ChatGPT rejected this login")
+        case 401, 403: throw KeyhopError("ChatGPT rejected this login", signedOut: true)
         default: throw KeyhopError("Codex usage returned \(status)")
         }
         guard let body = JSON.object(data) else { throw KeyhopError("Unreadable Codex usage response") }

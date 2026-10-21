@@ -323,7 +323,11 @@ pub struct Account {
     pub email: String,
     pub plan: Option<String>,
     pub active: bool,
+    /// Set only when the tool turned the login down.
     pub error: Option<String>,
+    /// The last reading failed for another reason; the limits are the last good ones.
+    pub read_error: Option<String>,
+    pub limits_read_at: Option<String>,
     pub limits: Vec<Limit>,
     pub today: Totals,
 }

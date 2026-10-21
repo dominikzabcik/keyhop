@@ -66,7 +66,11 @@ struct StatusDocument: Encodable {
         let active: Bool
         let limits: [Limit]
         let limitsReadAt: Date?
+        /// Set only when the tool turned the login down: it has to be signed in again.
         let error: String?
+        /// The last reading failed for another reason (the network, a busy server); the limits
+        /// shown are the last good ones.
+        let readError: String?
         /// Room left on the tightest limit, in percent.
         let room: Double?
         let today: SpendDocument?
@@ -125,7 +129,8 @@ struct StatusDocument: Encodable {
                                   pace: window.pace(at: now))
                         },
                         limitsReadAt: snapshot?.fetchedAt,
-                        error: snapshot?.error,
+                        error: snapshot?.signedOut == true ? snapshot?.error : nil,
+                        readError: snapshot?.signedOut == true ? nil : snapshot?.error,
                         room: windows.map { 100 - $0.usedPercent }.min(),
                         today: overview.today[account.id].map(SpendDocument.init),
                         budget: overview.budgets.first { $0.scope == scope }.map {

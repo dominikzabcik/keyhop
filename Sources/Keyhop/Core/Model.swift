@@ -124,6 +124,9 @@ struct Account: Codable, Identifiable, Equatable {
     var label: String?
     var plan: String?
     var addedAt: Date
+    /// When Keyhop first saw another login in this one's place. A session started before then may
+    /// still hold this login's token, so Keyhop leaves the token alone while one runs.
+    var leftAt: Date? = nil
 
     var displayName: String {
         if let label, !label.isEmpty { return label }
@@ -189,10 +192,18 @@ struct UsageSnapshot: Codable, Equatable {
     var windows: [UsageWindow] = []
     var error: String?
     var fetchedAt: Date?
+    /// The error is the tool turning the login down, not a reading that failed this time.
+    var signedOut: Bool? = nil
 }
 
 struct KeyhopError: LocalizedError {
     let message: String
-    init(_ message: String) { self.message = message }
+    /// The tool turned the saved login down, so it has to be signed in again. Any other failure
+    /// (the network, a busy server) leaves the login as it was.
+    var signedOut = false
+    init(_ message: String, signedOut: Bool = false) {
+        self.message = message
+        self.signedOut = signedOut
+    }
     var errorDescription: String? { message }
 }

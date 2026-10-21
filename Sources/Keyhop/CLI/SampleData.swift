@@ -51,7 +51,7 @@ enum SampleData {
             accounts[0].id: UsageSnapshot(windows: [window("5h", 51, 11_160, 18000), window("Week", 6, 590_000, 604_800)], fetchedAt: read),
             accounts[1].id: UsageSnapshot(windows: [window("5h", 12, 2_400, 18000), window("Week", 41, 300_000, 604_800)], fetchedAt: read),
             accounts[2].id: UsageSnapshot(windows: [window("Auto", 62, 1_140_000, 2_592_000), window("API", 39, 1_140_000, 2_592_000)], fetchedAt: read),
-            accounts[3].id: UsageSnapshot(error: "Login expired. Switch to it and sign in to Cursor again."),
+            accounts[3].id: UsageSnapshot(error: "Login expired. Switch to it and sign in to Cursor again.", signedOut: true),
             accounts[4].id: UsageSnapshot(windows: [window("5h", 93, 6_440, 18000), window("Week", 62, 421_000, 604_800)], fetchedAt: read),
             accounts[5].id: UsageSnapshot(windows: [window("Quota", 28, 51_400, 86400)], fetchedAt: read),
             accounts[8].id: UsageSnapshot(windows: [window("Premium", 47, 1_140_000, 2_592_000)], fetchedAt: read),

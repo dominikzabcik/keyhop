@@ -63,7 +63,7 @@ struct WindsurfAdapter: ProviderAdapter {
     func apply(_ secret: Secret) async throws {
         guard let raw = secret["credentials"], let root = JSON.object(raw),
               (root[Self.apiKey] as? String)?.isEmpty == false else {
-            throw KeyhopError("Saved Windsurf login is damaged")
+            throw KeyhopError("Saved Windsurf login is damaged", signedOut: true)
         }
         try FileManager.default.createDirectory(at: credentialsURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Files.writeAtomically(Data(raw.utf8), to: credentialsURL)
@@ -81,7 +81,7 @@ struct WindsurfAdapter: ProviderAdapter {
     }
 
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
-        guard secret[Self.apiKey]?.isEmpty == false else { throw KeyhopError("Saved Windsurf login is damaged") }
+        guard secret[Self.apiKey]?.isEmpty == false else { throw KeyhopError("Saved Windsurf login is damaged", signedOut: true) }
         // The SQLite cache belongs to the profile currently open in Windsurf. Reusing it for an
         // inactive saved profile would be worse than no data, so keep its last reading with an error.
         guard !allowRefresh else { throw KeyhopError("Switch to this Windsurf profile to refresh its limits.") }

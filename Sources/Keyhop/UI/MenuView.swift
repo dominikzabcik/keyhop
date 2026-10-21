@@ -391,7 +391,7 @@ private struct MenuLoginRow: View {
     private func face(on: Bool) -> some View {
         let account = row.account
         let snapshot = store.usage[account.id]
-        let failed = snapshot?.error != nil && (snapshot?.windows.isEmpty ?? true)
+        let failed = snapshot?.signedOut == true
         return HStack(spacing: 8) {
             Circle()
                 .fill(on ? Brand.primary : .clear)
@@ -432,7 +432,7 @@ private struct MenuLoginRow: View {
     }
 
     private func meta(_ snapshot: UsageSnapshot?) -> String {
-        if snapshot?.error != nil, snapshot?.windows.isEmpty ?? true { return "Login expired" }
+        if snapshot?.signedOut == true { return "Signed out" }
         var parts: [String] = []
         if let plan = row.account.plan { parts.append(plan) }
         if let window = row.tightest {
@@ -668,7 +668,7 @@ private struct MenuFacts {
         guard let row = rows.first(where: { $0.lane == .needs && $0.account.id != hop?.from.id && $0.account.provider != hop?.tool }) else { return nil }
         let account = row.account
         let tool = account.provider.shortName
-        if store.usage[account.id]?.error != nil, store.usage[account.id]?.windows.isEmpty ?? true {
+        if store.usage[account.id]?.signedOut == true {
             return MenuWarning(account: account, text: "\(tool) on \(account.displayName) is signed out", action: .open)
         }
         let when = "is at \(Int((row.used ?? 0).rounded()))%"
@@ -736,7 +736,7 @@ private enum MenuLane {
 private enum MenuStatus {
     static func lane(_ account: Account, active: Bool, usage: [UUID: UsageSnapshot], forecasts: [String: Date], now: Date = Date()) -> MenuLane {
         let windows = usage[account.id]?.windows ?? []
-        if usage[account.id]?.error != nil, windows.isEmpty { return .needs }
+        if usage[account.id]?.signedOut == true { return .needs }
         if windows.isEmpty { return .quiet }
         if windows.contains(where: { $0.usedPercent >= 85 }) { return .needs }
         return active ? .active : .room

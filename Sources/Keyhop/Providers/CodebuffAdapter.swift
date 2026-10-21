@@ -52,7 +52,7 @@ struct CodebuffAdapter: ProviderAdapter {
     func apply(_ secret: Secret) async throws {
         guard let raw = secret["profile"], let profile = JSON.object(raw),
               let token = profile["authToken"] as? String, !token.isEmpty else {
-            throw KeyhopError("Saved Codebuff login is damaged")
+            throw KeyhopError("Saved Codebuff login is damaged", signedOut: true)
         }
         var root = Self.readRoot(credentialsURL) ?? [:]
         root["default"] = profile
@@ -79,7 +79,7 @@ struct CodebuffAdapter: ProviderAdapter {
                     persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
         guard let profile = secret["profile"].flatMap(JSON.object),
               let token = profile["authToken"] as? String, !token.isEmpty else {
-            throw KeyhopError("Saved Codebuff login is damaged")
+            throw KeyhopError("Saved Codebuff login is damaged", signedOut: true)
         }
 
         var usageRequest = URLRequest(url: URL(string: "https://codebuff.com/api/v1/usage")!, timeoutInterval: 20)
@@ -90,7 +90,7 @@ struct CodebuffAdapter: ProviderAdapter {
         usageRequest.httpBody = try JSONSerialization.data(withJSONObject: ["fingerprintId": "keyhop-usage"])
         let (usageData, usageStatus) = try await send(usageRequest)
         if usageStatus == 401 || usageStatus == 403 {
-            throw KeyhopError("Codebuff rejected this saved login. Switch to it and run `codebuff login` again.")
+            throw KeyhopError("Codebuff rejected this saved login. Switch to it and run `codebuff login` again.", signedOut: true)
         }
         guard usageStatus == 200, let usage = JSON.object(usageData) else {
             throw KeyhopError("Codebuff couldn't return usage (HTTP \(usageStatus)).")

@@ -253,16 +253,18 @@ enum Commands {
         guard RunDirectories.supports(account.provider), let key = RunDirectories.environmentKey(account.provider) else {
             throw UsageError("keyhop run works for Claude Code and Codex, the tools that take their config folder from the environment. \(account.provider.name) doesn't.")
         }
-        guard let secret = await workspace.service.secret(for: account.id) else {
-            throw KeyhopError("The saved login for \(account.displayName) is missing from the secret store.")
-        }
-        let folder = try RunDirectories.prepare(account: account, secret: secret)
+        let folder = try await workspace.service.prepareRun(account.id)
         guard let path = Shell.which(executable) ?? (FileManager.default.isExecutableFile(atPath: executable) ? executable : nil) else {
             throw UsageError("\(executable) isn't on your PATH.")
         }
         var environment = ProcessInfo.processInfo.environment
-        environment[key] = folder.path
-        FileHandle.standardError.write(Data("keyhop: \(executable) runs as \(account.displayName) (\(key)=\(folder.path))\n".utf8))
+        if let folder {
+            environment[key] = folder.path
+            FileHandle.standardError.write(Data("keyhop: \(executable) runs as \(account.displayName) (\(key)=\(folder.path))\n".utf8))
+        } else {
+            // The login in use already lives in the usual folder; a second copy would sign it out.
+            FileHandle.standardError.write(Data("keyhop: \(executable) runs as \(account.displayName), the login in use, from its usual folder\n".utf8))
+        }
         let status = try Shell.runInteractive(path, Array(command.dropFirst()), environment: environment)
         exit(status)
     }

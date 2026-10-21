@@ -50,6 +50,7 @@ extension DashboardPage {
   function windowBars(account, tool) {
     if (account.error) return `<p class="lnote">Signed out. Sign in to ${esc(tool.name)} again to read its limits.</p>`;
     const limits = (account.limits || []).slice(0, 3);
+    if (!limits.length && account.readError) return `<p class="lnote">Couldn't read the limits just now. Keyhop tries again on the next refresh.</p>`;
     if (!limits.length) return `<p class="lnote">${esc(tool.limitsNote || "No limit to read.")}</p>`;
     return limits.map((limit) => {
       const used = Math.round(limit.usedPercent);
@@ -66,7 +67,9 @@ extension DashboardPage {
   function loginRow(account, tool, best) {
     const lane = laneOf(account);
     const editing = ui.editing === account.id;
-    const meta = [account.plan, account.label ? account.email : "", !account.error && account.limitsReadAt ? `read ${fmt.relative(account.limitsReadAt)}` : ""].filter(Boolean).join(" · ");
+    // A failed reading keeps the last good one, and says how old it is.
+    const read = account.error || !account.limitsReadAt ? "" : `${account.readError ? "last read" : "read"} ${fmt.relative(account.limitsReadAt)}`;
+    const meta = [account.plan, account.label ? account.email : "", read].filter(Boolean).join(" · ");
     const pill = account.error ? `<span class="lim-pill bad">Signed out</span>`
       : account.active ? `<span class="lim-pill in-use" style="view-transition-name:in-use-${esc(tool.id)}">In use</span>`
       : best && best.id === account.id ? `<span class="lim-pill good">Most room</span>` : "";
@@ -74,7 +77,7 @@ extension DashboardPage {
     const who = editing
       ? `<form class="rename" data-form="rename" data-id="${esc(account.id)}"><input class="field" name="name" value="${esc(account.label || "")}" placeholder="${esc(account.email)}" maxlength="60" aria-label="Name"><button class="btn sm">Save</button><button type="button" class="btn sm ghost" data-action="cancel-edit">Cancel</button></form>`
       : `<div class="lim-name"><i class="lim-dot ${dotTone}" aria-hidden="true"></i><b>${esc(account.name)}</b>${pill}</div>
-         <div class="lim-meta" title="${esc(account.error || "")}">${esc(meta)}</div>`;
+         <div class="lim-meta" title="${esc(account.error || account.readError || "")}">${esc(meta)}</div>`;
     return `<div class="lim-row${account.active ? " active" : ""}" style="view-transition-name:acct-${esc(account.id)}">
       <div class="lim-who">${who}</div>
       <div class="lwins">${windowBars(account, tool)}</div>

@@ -85,7 +85,7 @@ final class AccountStore: ObservableObject {
             claudeMain.id: UsageSnapshot(windows: [window("5h", 51, 11_160, 18000), window("Week", 6, 590_000, 604_800)], fetchedAt: now),
             claudeWork.id: UsageSnapshot(windows: [window("5h", 92, 2_400, 18000), window("Week", 41, 300_000, 604_800)], fetchedAt: now),
             cursorMain.id: UsageSnapshot(windows: [window("Auto", 62, 1_140_000, 2_592_000), window("API", 39, 1_140_000, 2_592_000)], fetchedAt: now),
-            cursorSpare.id: UsageSnapshot(error: "Login expired. Switch to it and sign in to Cursor again."),
+            cursorSpare.id: UsageSnapshot(error: "Login expired. Switch to it and sign in to Cursor again.", signedOut: true),
             codexMain.id: UsageSnapshot(windows: [window("5h", 100, 16_440, 18000), window("Week", 62, 421_000, 604_800)], fetchedAt: now),
             geminiMain.id: UsageSnapshot(windows: [], fetchedAt: now),
         ]

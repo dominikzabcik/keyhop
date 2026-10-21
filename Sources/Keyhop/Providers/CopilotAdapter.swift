@@ -108,7 +108,7 @@ struct CopilotAdapter: ProviderAdapter {
 
     func apply(_ secret: Secret) async throws {
         guard let login = secret["login"], Self.isGitHubLogin(login), let token = secret["token"], !token.isEmpty else {
-            throw KeyhopError("Saved Copilot login is damaged")
+            throw KeyhopError("Saved Copilot login is damaged", signedOut: true)
         }
         // Already held by gh: switching is enough, and re-adding the token would rotate nothing.
         if try savedToken(for: login) == token {
@@ -153,7 +153,7 @@ struct CopilotAdapter: ProviderAdapter {
     }
 
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
-        guard let token = secret["token"], !token.isEmpty else { throw KeyhopError("Saved Copilot login is damaged") }
+        guard let token = secret["token"], !token.isEmpty else { throw KeyhopError("Saved Copilot login is damaged", signedOut: true) }
         var urlRequest = URLRequest(url: URL(string: "https://api.github.com/copilot_internal/user")!, timeoutInterval: 20)
         // Keyhop says who it is. Checked against GitHub: the endpoint answers a gh token with these
         // headers exactly as it does for an editor, so there is no reason to pose as one.
@@ -167,7 +167,7 @@ struct CopilotAdapter: ProviderAdapter {
             response = try await HTTP.send(urlRequest)
         }
         let (data, status) = response
-        if status == 401 || status == 403 { throw KeyhopError("GitHub rejected this saved Copilot login. Switch to it and sign in again.") }
+        if status == 401 || status == 403 { throw KeyhopError("GitHub rejected this saved Copilot login. Switch to it and sign in again.", signedOut: true) }
         guard status == 200, let body = JSON.object(data) else {
             throw KeyhopError("GitHub couldn't return Copilot quota (HTTP \(status)).")
         }

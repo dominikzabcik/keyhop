@@ -314,7 +314,8 @@ final class RefreshRuleTests: XCTestCase {
     private func twoLogins(sessionRunning: Bool) async throws -> (AccountService, FakeTool, UUID, UUID) {
         let tool = FakeTool(["user": "bob"]), allowed = FakeTool(nil)
         let service = AccountService(directory: directory, adapters: [.codex: RefreshWatchingAdapter(tool: tool, allowed: allowed)],
-                                     vault: Vault(store: MemorySecretStore()), sessionsRunning: { _ in sessionRunning })
+                                     vault: Vault(store: MemorySecretStore()),
+                                     sessions: { _ in sessionRunning ? [ToolSession(pid: 1, place: .usual, startedAt: .distantPast, directory: nil)] : [] })
         guard case .saved(let bob) = await service.syncLive(.codex) else { throw KeyhopError("bob") }
         tool.login = ["user": "ada"]
         guard case .saved(let ada) = await service.syncLive(.codex) else { throw KeyhopError("ada") }
@@ -337,6 +338,126 @@ final class RefreshRuleTests: XCTestCase {
         XCTAssertEqual(usage[bob]?.windows, earlier.windows)
         XCTAssertEqual(usage[bob]?.fetchedAt, earlier.fetchedAt)
         XCTAssertNil(usage[bob]?.error, "a token past its hour is not a signed-out login")
+    }
+
+    func testASessionStartedAfterTheLoginWasLeftDoesNotHoldIt() async throws {
+        let tool = FakeTool(["user": "bob"]), allowed = FakeTool(nil)
+        let later = Date().addingTimeInterval(60)
+        let service = AccountService(directory: directory, adapters: [.codex: RefreshWatchingAdapter(tool: tool, allowed: allowed)],
+                                     vault: Vault(store: MemorySecretStore()),
+                                     sessions: { _ in [ToolSession(pid: 1, place: .usual, startedAt: later, directory: nil)] })
+        guard case .saved = await service.syncLive(.codex) else { throw KeyhopError("bob") }
+        tool.login = ["user": "ada"]
+        guard case .saved = await service.syncLive(.codex) else { throw KeyhopError("ada") }
+        let bob = await service.accounts.first { $0.email.hasPrefix("bob") }
+        XCTAssertNotNil(bob?.leftAt, "the hop away from bob is noted")
+        _ = await service.fetchUsage(previous: [:])
+        XCTAssertEqual(allowed.login, ["ada": "no", "bob": "yes"])
+    }
+
+    func testWhichSessionsMayHoldALogin() {
+        let left = Date(timeIntervalSince1970: 1_800_000_000)
+        let account = Account(id: UUID(), provider: .claude, identity: "a", email: "a@x.dev", label: nil, plan: nil, addedAt: left, leftAt: left)
+        func session(_ place: ToolSession.Place, _ offset: TimeInterval?) -> ToolSession {
+            ToolSession(pid: 1, place: place, startedAt: offset.map { left.addingTimeInterval($0) }, directory: nil)
+        }
+        XCTAssertTrue(ToolSessions.holds(session(.usual, -60), account, hasOwnFolder: false))
+        XCTAssertFalse(ToolSessions.holds(session(.usual, 60), account, hasOwnFolder: false))
+        XCTAssertTrue(ToolSessions.holds(session(.usual, nil), account, hasOwnFolder: false), "an unknown start counts as early")
+        XCTAssertTrue(ToolSessions.holds(session(.own(account.id), 60), account, hasOwnFolder: true))
+        XCTAssertFalse(ToolSessions.holds(session(.own(UUID()), -60), account, hasOwnFolder: true))
+        XCTAssertTrue(ToolSessions.holds(session(.unknown, 60), account, hasOwnFolder: true))
+        XCTAssertFalse(ToolSessions.holds(session(.unknown, 60), account, hasOwnFolder: false))
+        var never = account
+        never.leftAt = nil
+        XCTAssertTrue(ToolSessions.holds(session(.usual, 3600), never, hasOwnFolder: false), "a login never seen leaving may be held")
+    }
+
+    func testProcessAgesAreRead() {
+        XCTAssertEqual(ToolSessions.age("05:09"), 309)
+        XCTAssertEqual(ToolSessions.age("01:00:00"), 3600)
+        XCTAssertEqual(ToolSessions.age("2-03:00:01"), 2 * 86400 + 10801)
+        XCTAssertNil(ToolSessions.age("soon"))
+    }
+
+    func testNotedClaudeSessionsCountOnlyWhileTheirProcessRuns() throws {
+        let folder = directory.appendingPathComponent("sessions", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let me = getpid()
+        try Data(#"{"pid":\#(me),"startedAt":1800000000000,"cwd":"/work"}"#.utf8).write(to: folder.appendingPathComponent("\(me).json"))
+        try Data(#"{"pid":2147483000,"startedAt":1800000000000}"#.utf8).write(to: folder.appendingPathComponent("2147483000.json"))
+        let found = ToolSessions.noted(in: folder, place: .usual)
+        XCTAssertEqual(found, [ToolSession(pid: me, place: .usual, startedAt: Date(timeIntervalSince1970: 1_800_000_000), directory: "/work")])
+    }
+
+    func testTheCopyAToolRefreshedInTheLoginsOwnFolderWins() async throws {
+        let vault = Vault(store: MemorySecretStore())
+        let account = Account(id: UUID(), provider: .claude, identity: "u|o", email: "a@x.dev", label: nil, plan: nil, addedAt: Date())
+        let saved: Secret = ["oauth": #"{"accessToken":"old","refreshToken":"r1","expiresAt":1000}"#, "account": #"{"accountUuid":"u"}"#]
+        _ = await vault.write(saved, for: account.id)
+        let folder = RunDirectories.folder(provider: .claude, account: account.id, base: directory.appendingPathComponent("run"))
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data(#"{"claudeAiOauth":{"accessToken":"new","refreshToken":"r2","expiresAt":2000}}"#.utf8).write(to: folder.appendingPathComponent(".credentials.json"))
+
+        let fresh = await AccountService.freshest(account, vault: vault, directory: directory)
+        XCTAssertEqual(JSON.object(fresh?["oauth"])?["refreshToken"] as? String, "r2")
+        let kept = await vault.read(account.id)
+        XCTAssertEqual(JSON.object(kept?["oauth"])?["refreshToken"] as? String, "r2", "the newer copy becomes the saved one")
+
+        // A sign-in inside the folder as someone else is not this login's copy.
+        try Data(#"{"claudeAiOauth":{"accessToken":"other","refreshToken":"r3","expiresAt":3000}}"#.utf8).write(to: folder.appendingPathComponent(".credentials.json"))
+        try Data(#"{"oauthAccount":{"accountUuid":"someone-else"}}"#.utf8).write(to: folder.appendingPathComponent(".claude.json"))
+        let still = await AccountService.freshest(account, vault: vault, directory: directory)
+        XCTAssertEqual(JSON.object(still?["oauth"])?["refreshToken"] as? String, "r2")
+    }
+
+    func testAHopToALoginRunningInItsOwnTerminalIsRefused() async throws {
+        let tool = FakeTool(["user": "bob"]), allowed = FakeTool(nil)
+        let target = UUIDBox()
+        let service = AccountService(directory: directory, adapters: [.codex: RefreshWatchingAdapter(tool: tool, allowed: allowed)],
+                                     vault: Vault(store: MemorySecretStore()),
+                                     sessions: { _ in target.id.map { [ToolSession(pid: 1, place: .own($0), startedAt: nil, directory: "/work")] } ?? [] })
+        guard case .saved(let bob) = await service.syncLive(.codex) else { throw KeyhopError("bob") }
+        tool.login = ["user": "ada"]
+        guard case .saved(let ada) = await service.syncLive(.codex) else { throw KeyhopError("ada") }
+        target.id = bob
+        do {
+            try await service.switchTo(bob)
+            XCTFail("the hop should be refused")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("its own terminal"), error.localizedDescription)
+        }
+        XCTAssertEqual(tool.login?["user"], "ada")
+        let runHere = try await service.prepareRun(ada)
+        XCTAssertNil(runHere, "the login in use runs from its usual folder")
+    }
+
+    func testOnlyATurnedDownLoginIsSignedOutAndAFailedReadingKeepsTheLastOne() async throws {
+        struct Failing: ProviderAdapter {
+            let provider: Provider = .cursor
+            let tool: FakeTool
+            func readLive() async throws -> LiveLogin? {
+                guard let secret = tool.login, let user = secret["user"] else { return nil }
+                return LiveLogin(identity: user, email: "\(user)@example.com", plan: nil, secret: secret)
+            }
+            func apply(_ secret: Secret) async throws { tool.login = secret }
+            func signOutLocally() async throws { tool.login = nil }
+            func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
+                if secret["user"] == "ada" { throw KeyhopError("Cursor rejected this login. Sign in again.", signedOut: true) }
+                throw URLError(.timedOut)
+            }
+        }
+        let tool = FakeTool(["user": "bob"])
+        let service = AccountService(directory: directory, adapters: [.cursor: Failing(tool: tool)], vault: Vault(store: MemorySecretStore()), sessions: { _ in [] })
+        guard case .saved(let bob) = await service.syncLive(.cursor) else { throw KeyhopError("bob") }
+        tool.login = ["user": "ada"]
+        guard case .saved(let ada) = await service.syncLive(.cursor) else { throw KeyhopError("ada") }
+        let earlier = UsageSnapshot(windows: [UsageWindow(label: "Month", usedPercent: 30, resetsAt: nil, windowSeconds: nil)], error: nil, fetchedAt: Date(timeIntervalSince1970: 1_800_000_000))
+        let usage = await service.fetchUsage(previous: [bob: earlier])
+        XCTAssertEqual(usage[ada]?.signedOut, true)
+        XCTAssertNil(usage[bob]?.signedOut)
+        XCTAssertNotNil(usage[bob]?.error)
+        XCTAssertEqual(usage[bob]?.windows, earlier.windows)
     }
 
     func testSessionsAreToldFromTheirCommandLines() {
@@ -368,5 +489,14 @@ final class RefreshRuleTests: XCTestCase {
             try await group.waitForAll()
         }
         XCTAssertEqual(inside.login?["max"], "1")
+    }
+}
+
+final class UUIDBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: UUID?
+    var id: UUID? {
+        get { lock.lock(); defer { lock.unlock() }; return value }
+        set { lock.lock(); value = newValue; lock.unlock() }
     }
 }

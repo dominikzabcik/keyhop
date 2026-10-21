@@ -39,7 +39,7 @@ struct ClaudeAdapter: ProviderAdapter {
 
     func apply(_ secret: Secret) async throws {
         guard let oauth = JSON.object(secret["oauth"]), oauth["accessToken"] is String else {
-            throw KeyhopError("Saved Claude login is damaged")
+            throw KeyhopError("Saved Claude login is damaged", signedOut: true)
         }
         var root = Self.readCredentials() ?? [:]
         root["claudeAiOauth"] = oauth
@@ -59,13 +59,13 @@ struct ClaudeAdapter: ProviderAdapter {
 
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
         guard var oauth = JSON.object(secret["oauth"]), var token = oauth["accessToken"] as? String else {
-            throw KeyhopError("Saved Claude login is damaged")
+            throw KeyhopError("Saved Claude login is damaged", signedOut: true)
         }
 
         let expiresAt = JSON.number(oauth["expiresAt"]).map { Date(timeIntervalSince1970: $0 / 1000) }
         if let expiresAt, expiresAt < Date().addingTimeInterval(120) {
             guard allowRefresh else { throw LimitsWaitForTool(tool: "Claude Code") }
-            guard let refresh = oauth["refreshToken"] as? String else { throw KeyhopError("Login expired. Sign in again.") }
+            guard let refresh = oauth["refreshToken"] as? String else { throw KeyhopError("Login expired. Sign in again.", signedOut: true) }
             let (data, status) = try await HTTP.postJSON("https://platform.claude.com/v1/oauth/token", body: [
                 "grant_type": "refresh_token",
                 "refresh_token": refresh,
@@ -74,7 +74,7 @@ struct ClaudeAdapter: ProviderAdapter {
             guard status == 200, let body = JSON.object(data), let access = body["access_token"] as? String else {
                 throw KeyhopError(status == 400 || status == 401
                     ? "Login expired. Switch to it and run claude to sign in again."
-                    : "Token refresh failed (\(status))")
+                    : "Token refresh failed (\(status))", signedOut: status == 400 || status == 401)
             }
             oauth["accessToken"] = access
             if let v = body["refresh_token"] as? String { oauth["refreshToken"] = v }
@@ -90,7 +90,7 @@ struct ClaudeAdapter: ProviderAdapter {
         let (data, status) = try await HTTP.get("https://api.anthropic.com/api/oauth/usage", headers: Self.headers(token))
         switch status {
         case 200: break
-        case 401: throw KeyhopError("Claude rejected this login. Sign in again.")
+        case 401: throw KeyhopError("Claude rejected this login. Sign in again.", signedOut: true)
         case 429: throw KeyhopError("Claude is rate limiting usage checks. Try again in a few minutes.")
         default: throw KeyhopError("Claude usage returned \(status)")
         }
@@ -247,7 +247,7 @@ struct ClaudeAdapter: ProviderAdapter {
     /// account in `.claude.json`, and the person's settings seeded from the usual folder once.
     static func place(_ secret: Secret, in folder: URL) throws {
         guard let oauth = JSON.object(secret["oauth"]), oauth["accessToken"] is String else {
-            throw KeyhopError("Saved Claude login is damaged")
+            throw KeyhopError("Saved Claude login is damaged", signedOut: true)
         }
         let credentials = folder.appendingPathComponent(".credentials.json")
         var root = (try? Data(contentsOf: credentials)).flatMap { JSON.object($0) } ?? [:]
@@ -265,6 +265,35 @@ struct ClaudeAdapter: ProviderAdapter {
         if let account = JSON.object(secret["account"]) { config["oauthAccount"] = account }
         try Files.writeAtomically(JSON.data(config, pretty: true), to: configFile)
     }
+
+    /// The login as Claude Code last left it in a `keyhop run` folder, when that is this same
+    /// account and newer than `saved`. Claude Code refreshes the login there, which retires the
+    /// saved copy, so this one is the copy to use.
+    static func folderCopy(in folder: URL, newerThan saved: Secret) -> Secret? {
+        guard let savedOAuth = JSON.object(saved["oauth"]) else { return nil }
+        var copies: [[String: Any]] = []
+        if let file = (try? Data(contentsOf: folder.appendingPathComponent(".credentials.json"))).flatMap({ JSON.object($0) }),
+           let oauth = file["claudeAiOauth"] as? [String: Any] { copies.append(oauth) }
+        #if os(macOS)
+        let service = keychainService(environment: ["CLAUDE_CONFIG_DIR": folder.path])
+        if let root = Keychain.read(service: service, account: keychainAccount).flatMap({ JSON.object($0) }),
+           let oauth = root["claudeAiOauth"] as? [String: Any] { copies.append(oauth) }
+        #endif
+        let expiry = { (oauth: [String: Any]) in JSON.number(oauth["expiresAt"]) ?? 0 }
+        guard let newest = copies.max(by: { expiry($0) < expiry($1) }), expiry(newest) > expiry(savedOAuth),
+              newest["refreshToken"] as? String != savedOAuth["refreshToken"] as? String else { return nil }
+        // A sign-in inside the folder makes it another account, and that copy isn't this login's.
+        let config = (try? Data(contentsOf: folder.appendingPathComponent(".claude.json"))).flatMap { JSON.object($0) }
+        if let there = (config?["oauthAccount"] as? [String: Any])?["accountUuid"] as? String,
+           let here = JSON.object(saved["account"])?["accountUuid"] as? String, there != here { return nil }
+        guard let oauth = try? JSON.string(newest) else { return nil }
+        var updated = saved
+        updated["oauth"] = oauth
+        return updated
+    }
+
+    /// Where Claude Code notes each running session (`<pid>.json`, with when it started).
+    static var sessionsDirectory: URL { configDirectory.appendingPathComponent("sessions", isDirectory: true) }
 
     private static func readConfig() -> [String: Any]? {
         (try? Data(contentsOf: configURL)).flatMap { JSON.object($0) }

@@ -44,7 +44,7 @@ struct GeminiAdapter: ProviderAdapter {
     func apply(_ secret: Secret) async throws {
         guard let raw = secret["credentials"], let credentials = JSON.object(raw),
               credentials["access_token"] is String || credentials["refresh_token"] is String else {
-            throw KeyhopError("Saved Gemini login is damaged")
+            throw KeyhopError("Saved Gemini login is damaged", signedOut: true)
         }
         try Files.writeAtomically(Data(raw.utf8), to: credentialsURL)
         let claims = JWT.claims(credentials["id_token"] as? String)
@@ -60,7 +60,7 @@ struct GeminiAdapter: ProviderAdapter {
     }
 
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
-        guard JSON.object(secret["credentials"]) != nil else { throw KeyhopError("Saved Gemini login is damaged") }
+        guard JSON.object(secret["credentials"]) != nil else { throw KeyhopError("Saved Gemini login is damaged", signedOut: true) }
         return LimitReport(windows: [], plan: nil)
     }
 

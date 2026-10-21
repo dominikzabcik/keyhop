@@ -152,10 +152,11 @@ struct CloudLink: Codable, Equatable {
 }
 
 enum CloudSync {
-    /// The tools keyhop.app's daily_usage CHECK accepts today. Measured-only tools stay local
-    /// until the widening migration is deployed; one unknown tool would fail the whole upload.
+    /// The tools keyhop.app's daily_usage CHECK accepts (migration 0013, live since 2026-10-16).
+    /// A tool added here before its migration is deployed would fail the whole upload.
     static let cloudAcceptedTools: Set<String> = [
         "claude", "cursor", "codex", "gemini", "opencode", "pi", "copilot", "windsurf", "codebuff",
+        "amp", "goose", "qwen", "kimi", "grok", "kilo", "openclaw",
     ]
 
     /// Daily totals per tool, in this computer's local days.

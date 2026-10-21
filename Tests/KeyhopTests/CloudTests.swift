@@ -81,6 +81,18 @@ final class CloudTests: XCTestCase {
         ])
     }
 
+    func testEveryToolTheAppCountsIsOneTheCloudAccepts() async throws {
+        XCTAssertEqual(CloudSync.cloudAcceptedTools, Set(Provider.allCases.map(\.rawValue)))
+        let engine = try TrackerEngine(url: url)
+        let today = Calendar.current.startOfDay(for: Date())
+        try await engine.store([
+            UsageRecord(key: "a", provider: .amp, account: nil, session: nil, kind: .request, timestamp: today.addingTimeInterval(5),
+                        model: "model", tokens: TokenCounts(output: 10), cost: 0.1, billed: nil),
+        ])
+        let days = try await CloudSync.days(tracker: engine, since: today)
+        XCTAssertEqual(days.map(\.tool), ["amp"])
+    }
+
     func testCacheReadsTravelWithTheDayAndTodayIsTheLiveReading() async throws {
         let engine = try TrackerEngine(url: url)
         let now = Date()

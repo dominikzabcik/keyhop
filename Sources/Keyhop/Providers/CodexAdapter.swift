@@ -65,7 +65,7 @@ struct CodexAdapter: ProviderAdapter {
         }
 
         if let expiry = JWT.expiry(access), expiry < Date().addingTimeInterval(300) {
-            guard allowRefresh else { throw KeyhopError("Login expired. Run codex once to refresh it.") }
+            guard allowRefresh else { throw LimitsWaitForTool(tool: "Codex") }
             guard let refresh = tokens["refresh_token"] as? String else { throw KeyhopError("Login expired. Sign in again.") }
             let (data, status) = try await HTTP.postJSON("https://auth.openai.com/oauth/token", body: [
                 "client_id": Self.clientID,

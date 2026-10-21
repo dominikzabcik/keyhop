@@ -64,7 +64,7 @@ struct ClaudeAdapter: ProviderAdapter {
 
         let expiresAt = JSON.number(oauth["expiresAt"]).map { Date(timeIntervalSince1970: $0 / 1000) }
         if let expiresAt, expiresAt < Date().addingTimeInterval(120) {
-            guard allowRefresh else { throw KeyhopError("Login expired. Run claude once to refresh it.") }
+            guard allowRefresh else { throw LimitsWaitForTool(tool: "Claude Code") }
             guard let refresh = oauth["refreshToken"] as? String else { throw KeyhopError("Login expired. Sign in again.") }
             let (data, status) = try await HTTP.postJSON("https://platform.claude.com/v1/oauth/token", body: [
                 "grant_type": "refresh_token",

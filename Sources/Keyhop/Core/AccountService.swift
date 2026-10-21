@@ -18,6 +18,9 @@ actor AccountService {
     private let adapters: [Provider: any ProviderAdapter]
     private let metaURL: URL
     private let onActiveChange: @Sendable (Provider, UUID?) -> Void
+    private let directory: URL
+    /// Whether a session of a tool runs here, so its logins' tokens are left to it.
+    private let sessionsRunning: @Sendable (Provider) -> Bool
     /// The last hop per tool, so a login something else puts back soon after can be noticed.
     private var lastHop: [Provider: (from: UUID, to: UUID, at: Date)] = [:]
     private var notes: [String] = []
@@ -25,7 +28,10 @@ actor AccountService {
     init(directory: URL = Platform.dataDirectory,
          adapters: [Provider: any ProviderAdapter] = Adapters.all,
          vault: Vault = Vault(),
-         onActiveChange: @escaping @Sendable (Provider, UUID?) -> Void = { _, _ in }) {
+         onActiveChange: @escaping @Sendable (Provider, UUID?) -> Void = { _, _ in },
+         sessionsRunning: @escaping @Sendable (Provider) -> Bool = ToolSessions.running) {
+        self.directory = directory
+        self.sessionsRunning = sessionsRunning
         metaURL = directory.appendingPathComponent("accounts.json")
         accounts = Self.loadAccounts(from: directory)
         self.adapters = adapters
@@ -224,9 +230,15 @@ actor AccountService {
     // MARK: Limits
 
     /// Fetches every saved account's limits with its own token. Tokens are refreshed only for
-    /// accounts that aren't in use. Failures keep the last good reading alongside the error.
+    /// accounts that aren't in use, and for Claude Code and Codex only while none of their
+    /// sessions runs (`ToolSessions`). Failures keep the last good reading alongside the error.
     func fetchUsage(previous: [UUID: UsageSnapshot], progress: ProgressHandler? = nil) async -> [UUID: UsageSnapshot] {
-        let targets = accounts.map { ($0, active[$0.provider] == $0.id) }
+        var busy: [Provider: Bool] = [:]
+        for provider in Set(accounts.map(\.provider)) where ToolSessions.rotating.contains(provider) {
+            busy[provider] = sessionsRunning(provider)
+        }
+        let targets = accounts.map { ($0, active[$0.provider] == $0.id || busy[$0.provider] == true) } // (account, leave its token alone)
+        let directory = directory
         progress?(WorkProgress(step: .limits, done: 0, total: targets.count))
         let vault = vault
         let adapters = adapters
@@ -237,13 +249,21 @@ actor AccountService {
                 group.addTask {
                     var snapshot = earlier
                     var plan: String?
-                    if let secret = await vault.read(account.id) {
+                    if await vault.read(account.id) != nil {
                         do {
-                            let report = try await adapter.fetchUsage(secret, allowRefresh: !isActive) { updated in
-                                await vault.write(updated, for: account.id)
+                            let read = { () async throws -> LimitReport in
+                                // Read again inside the lock: another process may have just refreshed it.
+                                guard let secret = await vault.read(account.id) else { throw KeyhopError("The saved login is missing.") }
+                                return try await adapter.fetchUsage(secret, allowRefresh: !isActive) { updated in
+                                    await vault.write(updated, for: account.id)
+                                }
                             }
+                            let report = isActive ? try await read() : try await RefreshLock.holding(account.id, in: directory, read)
                             snapshot = UsageSnapshot(windows: report.windows, error: nil, fetchedAt: Date())
                             plan = report.plan
+                        } catch is LimitsWaitForTool {
+                            // Not signed out: the tool refreshes it on its next use. The last reading stays.
+                            snapshot.error = nil
                         } catch {
                             snapshot.error = error.localizedDescription
                         }

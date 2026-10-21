@@ -28,8 +28,10 @@ protocol ProviderAdapter: Sendable {
     var holdsManyLogins: Bool { get }
 
     /// Fetches limits for a saved login. Tokens are only refreshed when `allowRefresh` is
-    /// set, which the store limits to accounts not in use, so a running tool never has
-    /// its refresh token rotated out from under it. Rotated secrets go to `persist` right away.
+    /// set, which the store limits to accounts not in use (and for Claude Code and Codex to times
+    /// when none of their sessions runs), so a running tool never has its refresh token rotated
+    /// out from under it. Rotated secrets go to `persist` right away. Throw `LimitsWaitForTool`
+    /// for a token past its hour that may not be refreshed: the last reading then stays.
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport
 }
 

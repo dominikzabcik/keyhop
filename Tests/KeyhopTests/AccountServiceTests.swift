@@ -278,3 +278,95 @@ final class AccountServiceTests: XCTestCase {
         XCTAssertNil(label)
     }
 }
+
+/// Says which logins it was allowed to refresh, and that a token is past its hour when it wasn't.
+struct RefreshWatchingAdapter: ProviderAdapter {
+    let provider: Provider = .codex
+    let tool: FakeTool
+    let allowed: FakeTool
+
+    func readLive() async throws -> LiveLogin? {
+        guard let secret = tool.login, let user = secret["user"] else { return nil }
+        return LiveLogin(identity: user, email: "\(user)@example.com", plan: nil, secret: secret)
+    }
+
+    func apply(_ secret: Secret) async throws { tool.login = secret }
+    func signOutLocally() async throws { tool.login = nil }
+    func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
+        var seen = allowed.login ?? [:]
+        seen[secret["user"] ?? "?"] = allowRefresh ? "yes" : "no"
+        allowed.login = seen
+        guard allowRefresh || secret["user"] == "ada" else { throw LimitsWaitForTool(tool: "Codex") }
+        return LimitReport(windows: [UsageWindow(label: "5h", usedPercent: 10, resetsAt: nil, windowSeconds: 18000)], plan: nil)
+    }
+}
+
+final class RefreshRuleTests: XCTestCase {
+    private var directory: URL!
+
+    override func setUp() {
+        directory = FileManager.default.temporaryDirectory.appendingPathComponent("keyhop-refresh-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    }
+
+    override func tearDown() { try? FileManager.default.removeItem(at: directory) }
+
+    private func twoLogins(sessionRunning: Bool) async throws -> (AccountService, FakeTool, UUID, UUID) {
+        let tool = FakeTool(["user": "bob"]), allowed = FakeTool(nil)
+        let service = AccountService(directory: directory, adapters: [.codex: RefreshWatchingAdapter(tool: tool, allowed: allowed)],
+                                     vault: Vault(store: MemorySecretStore()), sessionsRunning: { _ in sessionRunning })
+        guard case .saved(let bob) = await service.syncLive(.codex) else { throw KeyhopError("bob") }
+        tool.login = ["user": "ada"]
+        guard case .saved(let ada) = await service.syncLive(.codex) else { throw KeyhopError("ada") }
+        return (service, allowed, ada, bob)
+    }
+
+    func testOnlyALoginNotInUseIsRefreshedWhileNoSessionRuns() async throws {
+        let (service, allowed, _, bob) = try await twoLogins(sessionRunning: false)
+        let usage = await service.fetchUsage(previous: [:])
+        XCTAssertEqual(allowed.login, ["ada": "no", "bob": "yes"])
+        XCTAssertNil(usage[bob]?.error)
+    }
+
+    func testARunningSessionKeepsEveryLoginsTokenAndTheLastReadingStays() async throws {
+        let (service, allowed, _, bob) = try await twoLogins(sessionRunning: true)
+        let earlier = UsageSnapshot(windows: [UsageWindow(label: "5h", usedPercent: 40, resetsAt: nil, windowSeconds: 18000)],
+                                    error: "Login expired.", fetchedAt: Date(timeIntervalSince1970: 1_800_000_000))
+        let usage = await service.fetchUsage(previous: [bob: earlier])
+        XCTAssertEqual(allowed.login, ["ada": "no", "bob": "no"])
+        XCTAssertEqual(usage[bob]?.windows, earlier.windows)
+        XCTAssertEqual(usage[bob]?.fetchedAt, earlier.fetchedAt)
+        XCTAssertNil(usage[bob]?.error, "a token past its hour is not a signed-out login")
+    }
+
+    func testSessionsAreToldFromTheirCommandLines() {
+        XCTAssertTrue(ToolSessions.isSession(of: .claude, commandLine: "claude --resume"))
+        XCTAssertTrue(ToolSessions.isSession(of: .claude, commandLine: "/Users/a/.local/share/claude/versions/2.1.3 -p hi"))
+        XCTAssertTrue(ToolSessions.isSession(of: .claude, commandLine: "node /opt/homebrew/lib/node_modules/@anthropic-ai/claude-code/cli.js"))
+        XCTAssertFalse(ToolSessions.isSession(of: .claude, commandLine: "/Applications/Claude.app/Contents/MacOS/Claude"))
+        XCTAssertFalse(ToolSessions.isSession(of: .claude, commandLine: "vim claude.md"))
+        XCTAssertTrue(ToolSessions.isSession(of: .codex, commandLine: "/Users/a/.vscode/extensions/openai.chatgpt-1/bin/codex app-server"))
+        XCTAssertTrue(ToolSessions.isSession(of: .codex, commandLine: "codex-aarch64-apple-darwin exec"))
+        XCTAssertFalse(ToolSessions.isSession(of: .codex, commandLine: "keyhop switch codex"))
+        XCTAssertFalse(ToolSessions.isSession(of: .gemini, commandLine: "gemini"))
+    }
+
+    func testTwoProcessesNeverRefreshTheSameLoginAtOnce() async throws {
+        let id = UUID(), dir = directory!
+        let inside = FakeTool(["n": "0", "max": "0"])
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for _ in 0..<4 {
+                group.addTask {
+                    try await RefreshLock.holding(id, in: dir) {
+                        let n = Int(inside.login?["n"] ?? "0")! + 1
+                        inside.login = ["n": "\(n)", "max": "\(max(n, Int(inside.login?["max"] ?? "0")!))"]
+                        try await Task.sleep(for: .milliseconds(30))
+                        inside.login = ["n": "\(n - 1)", "max": inside.login?["max"] ?? "0"]
+                    }
+                }
+            }
+            try await group.waitForAll()
+        }
+        XCTAssertEqual(inside.login?["max"], "1")
+    }
+}

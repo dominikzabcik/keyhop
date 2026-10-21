@@ -7,6 +7,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+// A step that never settles (a message with no answer, a host that never starts) would hold the
+// job until it is cancelled; say which one and stop instead.
+let step = "starting";
+const at = (what) => { step = what; console.log("…", what); };
+setTimeout(() => { console.log("FAILED: stuck at", step); process.exit(1); }, 120000).unref();
+
 const repo = path.resolve(new URL("../..", import.meta.url).pathname);
 const binary = path.join(repo, ".build/debug/Keyhop");
 const root = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), "keyhop-ext-"));
@@ -20,6 +26,7 @@ fs.writeFileSync(path.join(data, "accounts.json"), JSON.stringify([
 const use = (id) => { fs.writeFileSync(path.join(data, ".s"), JSON.stringify({ usage: {}, active: { claude: id }, cursorExports: {}, sentAlerts: {} })); fs.renameSync(path.join(data, ".s"), path.join(data, "cli-state.json")); };
 use(A);
 const env = { ...process.env, KEYHOP_DATA_DIR: data, KEYHOP_SECRET_STORE: "file", HOME: home };
+at("installing the native host");
 execFileSync(binary, ["browser", "install"], { env });
 const ext = path.join(data, "Chrome Extension");
 // Where the install registers the host: ~/Library/Application Support on a Mac, ~/.config elsewhere.
@@ -28,10 +35,12 @@ const registered = fs.readdirSync(browsers, { recursive: true }).filter((f) => f
 fs.mkdirSync(path.join(profile, "NativeMessagingHosts"), { recursive: true });
 fs.copyFileSync(path.join(browsers, registered[0]), path.join(profile, "NativeMessagingHosts/app.keyhop.browser.json"));
 
+at("launching Chromium with the extension");
 const context = await chromium.launchPersistentContext(profile, {
   headless: true, channel: "chromium", env,
   args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`],
 });
+at("waiting for the extension's service worker");
 let [worker] = context.serviceWorkers();
 worker ||= await context.waitForEvent("serviceworker");
 const id = new URL(worker.url()).host;
@@ -45,6 +54,7 @@ await worker.evaluate(() => {
     return new Response(JSON.stringify({ email_address: who[0], uuid: who[1] }), { status: 200 });
   };
 });
+at("opening the popup");
 const popup = await context.newPage();
 await popup.goto(`chrome-extension://${id}/popup.html`);
 const status = () => popup.evaluate(() => new Promise((r) => chrome.runtime.sendMessage({ type: "status" }, r))).catch(() => null);
@@ -56,6 +66,7 @@ const wait = async (what, test, ms = 15000) => {
   console.log("FAILED:", what, JSON.stringify(await status()), await session(), vault()); process.exitCode = 1;
 };
 
+at("asking the extension to reconnect to the host");
 // Reconnect so the hello runs after fetch is stubbed.
 await popup.evaluate(() => new Promise((r) => chrome.runtime.sendMessage({ type: "sync" }, r)));
 await context.addCookies([{ name: "sessionKey", value: "sk-a", domain: ".claude.ai", path: "/", secure: true, httpOnly: true, sameSite: "Lax", expires: 1900000000 }]);
@@ -69,8 +80,10 @@ use(A);
 await wait("hopping back puts a@x.dev's login back", async () => (await session()) === "sk-a");
 use(B);
 await wait("and b@x.dev's again, with no sign-in", async () => (await session()) === "sk-b" && !(await status())?.sites?.["claude.ai"]?.needs);
+at("reading the popup");
 await popup.reload();
 const shown = await popup.locator("body").innerText();
 if (!shown.includes("b@x.dev")) { console.log("FAILED: the popup names the account", shown); process.exitCode = 1; }
+at("closing Chromium");
 await context.close();
 fs.rmSync(root, { recursive: true, force: true });

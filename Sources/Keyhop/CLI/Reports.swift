@@ -64,6 +64,8 @@ struct StatusDocument: Encodable {
         let name: String
         let plan: String?
         let active: Bool
+        /// Smart Hop offers it only when no other login of the tool has room.
+        let keepForLast: Bool
         let limits: [Limit]
         let limitsReadAt: Date?
         /// Set only when the tool turned the login down: it has to be signed in again.
@@ -123,6 +125,7 @@ struct StatusDocument: Encodable {
                         name: account.displayName,
                         plan: account.plan,
                         active: overview.active[provider] == account.id,
+                        keepForLast: account.isKeptForLast,
                         limits: windows.map { window in
                             Limit(label: window.label, usedPercent: window.usedPercent, resetsAt: window.resetsAt,
                                   runsOutAt: overview.forecasts[AlertRules.forecastKey(account.id, window.label)],

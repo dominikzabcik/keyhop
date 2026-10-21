@@ -17,7 +17,11 @@ enum SmartHop {
     private struct Candidate {
         let recommendation: AccountRecommendation
         let score: Double
+        let keptForLast: Bool
     }
+
+    /// Room worth hopping for; below it a hop buys too little.
+    static let usefulRoom: Double = 20
 
     static func recommendation(
         for provider: Provider,
@@ -30,7 +34,7 @@ enum SmartHop {
         excluding excluded: Set<UUID> = [],
         now: Date = Date()
     ) -> AccountRecommendation? {
-        accounts
+        let ranked = accounts
             .filter { $0.provider == provider && !excluded.contains($0.id) }
             .compactMap { candidate($0, active: active, usage: usage, forecasts: forecasts,
                                     budgets: budgets, budgetSpend: budgetSpend, now: now) }
@@ -38,8 +42,9 @@ enum SmartHop {
                 if $0.score != $1.score { return $0.score > $1.score }
                 return $0.recommendation.account.uuidString < $1.recommendation.account.uuidString
             }
-            .first?
-            .recommendation
+        // The logins in turn go first; one kept for last only when none of them has room worth a hop.
+        let useful = ranked.filter { $0.recommendation.room >= usefulRoom }
+        return (useful.first { !$0.keptForLast } ?? useful.first ?? ranked.first { !$0.keptForLast } ?? ranked.first)?.recommendation
     }
 
     static func recommendations(
@@ -81,7 +86,9 @@ enum SmartHop {
         let forecastPenalty = runOut == nil ? 0 : 30
         let score = remaining * 0.75 + (budgetRemaining ?? 100) * 0.25 + resetBonus - Double(forecastPenalty)
         let reason: String
-        if let budgetRemaining, budgetRemaining < 30 {
+        if account.isKeptForLast {
+            reason = "\(percent(remaining))% left; kept for last, and no other login has more room."
+        } else if let budgetRemaining, budgetRemaining < 30 {
             reason = "\(percent(remaining))% limit room and \(percent(budgetRemaining))% of its budget left."
         } else if let hoursToReset, hoursToReset < 2 {
             reason = "\(percent(remaining))% left; its tightest limit resets \(relativeReset(hoursToReset))."
@@ -103,7 +110,8 @@ enum SmartHop {
                 runsOutAt: runOut,
                 reason: reason
             ),
-            score: score
+            score: score,
+            keptForLast: account.isKeptForLast
         )
     }
 

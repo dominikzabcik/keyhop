@@ -59,7 +59,7 @@ enum AlertRules {
                     budgetSpend: budgetSpend,
                     excluding: unavailable.union([id]),
                     now: now
-                ).flatMap { $0.room >= 20 ? $0 : nil }
+                ).flatMap { $0.room >= SmartHop.usefulRoom ? $0 : nil }
 
                 // KB-Notify: the title names the tool and its state, the subtitle the account and the
                 // figure, and the body what to do about it.

@@ -108,6 +108,8 @@ test('a Claude Code login offers the command that runs it in one terminal', asyn
     return new Promise((done) => setTimeout(() => done(document.querySelector('.row-menu [data-action="copy"]')?.getAttribute('data-value') ?? null), 300));
   });
   expect(command).toMatch(/^keyhop run \S+ --tool claude -- claude$/);
+  const keep = await browser.evaluate(() => document.querySelector('.row-menu [data-action="reserve"]')?.textContent?.trim() ?? null);
+  expect(keep).toBe('Keep for last');
 });
 
 test('usage names the token columns', async ({ app, screen, browser }) => {

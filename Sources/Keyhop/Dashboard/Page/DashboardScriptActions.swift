@@ -153,6 +153,7 @@ extension DashboardPage {
       case "confirm-remove": ui.confirming = id; ui.editing = null; ui.menu = null; render(); break;
       case "cancel-remove": ui.confirming = null; render(); break;
       case "remove": act(el, () => api("/api/remove", { id }).finally(() => { ui.confirming = null; }), "Removing"); break;
+      case "reserve": ui.menu = null; act(null, () => api("/api/reserve", { id, on: el.dataset.value === "on" })); break;
       case "range-menu":
         ui.rangeOpen = !ui.rangeOpen;
         render();

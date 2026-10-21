@@ -104,6 +104,20 @@ final class AlertRulesTests: XCTestCase {
         XCTAssertEqual(alerts.first?.switchTo, shaky.id)
     }
 
+    func testALoginKeptForLastIsOfferedOnlyWhenNoOtherHasRoom() {
+        let inUse = account("a@x.dev"), other = account("b@x.dev")
+        var work = account("work@x.dev")
+        work.keepForLast = true
+        let usage = [inUse.id: reading(95), other.id: reading(60), work.id: reading(0)]
+        let alerts = AlertRules.evaluate(accounts: [inUse, other, work], active: [.claude: inUse.id], usage: usage,
+                                         forecasts: [:], budgets: [], budgetSpend: [:], now: now)
+        XCTAssertEqual(alerts.first?.switchTo, other.id)
+        let full = [inUse.id: reading(95), other.id: reading(100), work.id: reading(0)]
+        let last = AlertRules.evaluate(accounts: [inUse, other, work], active: [.claude: inUse.id], usage: full,
+                                       forecasts: [:], budgets: [], budgetSpend: [:], now: now)
+        XCTAssertEqual(last.first?.switchTo, work.id)
+    }
+
     func testAutoHopPicksTheLimitAlertsRecommendedAccount() {
         let inUse = account("a@x.dev"), roomy = account("c@x.dev")
         let alerts = AlertRules.evaluate(accounts: [inUse, roomy], active: [.claude: inUse.id],

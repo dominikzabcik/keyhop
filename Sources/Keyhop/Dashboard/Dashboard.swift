@@ -822,6 +822,9 @@ actor DashboardSession {
             case ("POST", "/api/rename"):
                 let body = try Self.decode(RenameBody.self, request)
                 return .json(try await rename(body.id, to: body.name))
+            case ("POST", "/api/reserve"):
+                let body = try Self.decode(ReserveBody.self, request)
+                return .json(try await reserve(body.id, body.on))
             case ("POST", "/api/remove"):
                 return .json(try await remove(try Self.decode(IDBody.self, request).id))
             case ("POST", "/api/budget"):
@@ -1045,6 +1048,10 @@ actor DashboardSession {
 
     private struct IDBody: Decodable { let id: UUID }
     private struct ToolBody: Decodable { let tool: String }
+    private struct ReserveBody: Decodable {
+        let id: UUID
+        let on: Bool
+    }
     private struct RenameBody: Decodable {
         let id: UUID
         let name: String
@@ -1223,6 +1230,14 @@ actor DashboardSession {
         await workspace.service.rename(id, to: name)
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         return DashboardAction(message: trimmed.isEmpty ? "\(account.email) shows its email again." : "Named \(account.email) \"\(trimmed)\".", note: nil)
+    }
+
+    private func reserve(_ id: UUID, _ on: Bool) async throws -> DashboardAction {
+        try refuseInSample()
+        let workspace = try openWorkspace()
+        guard let account = await workspace.service.account(id) else { throw KeyhopError("That account isn't saved.") }
+        await workspace.service.keepForLast(id, on)
+        return DashboardAction(message: on ? "\(account.displayName) is kept for last." : "\(account.displayName) is back in turn.", note: nil)
     }
 
     private func remove(_ id: UUID) async throws -> DashboardAction {

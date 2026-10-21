@@ -127,6 +127,11 @@ struct Account: Codable, Identifiable, Equatable {
     /// When Keyhop first saw another login in this one's place. A session started before then may
     /// still hold this login's token, so Keyhop leaves the token alone while one runs.
     var leftAt: Date? = nil
+    /// Kept for last: Smart Hop offers this login only when no other one of its tool has room,
+    /// so a work or paid login is spent after the rest.
+    var keepForLast: Bool? = nil
+
+    var isKeptForLast: Bool { keepForLast == true }
 
     var displayName: String {
         if let label, !label.isEmpty { return label }

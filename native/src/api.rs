@@ -323,6 +323,8 @@ pub struct Account {
     pub email: String,
     pub plan: Option<String>,
     pub active: bool,
+    /// Smart Hop offers it only when no other login of the tool has room.
+    pub keep_for_last: bool,
     /// Set only when the tool turned the login down.
     pub error: Option<String>,
     /// The last reading failed for another reason; the limits are the last good ones.

@@ -112,6 +112,7 @@ keyhop run work@studio.dev -- claude   run a tool under one login in this termin
 keyhop run map ~/Code/work work@studio.dev  inside that folder, keyhop run -- claude picks the login
 keyhop add cursor                      sign Cursor out here and save the next login
 keyhop rename work@studio.dev Work     give an account a name
+keyhop reserve work@studio.dev         keep a login for last: Smart Hop offers it only when no other has room (--off undoes)
 keyhop usage --range 30d --tool claude tokens and API value by account, model, maker and project
 keyhop usage --range 2026-06-01..2026-08-31  any days; also 90d, 12m and all
 keyhop forecast [--tool <id>]          every login's limits pooled: what is left, how fast it drains, the next reset

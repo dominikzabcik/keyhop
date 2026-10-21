@@ -405,6 +405,20 @@ enum Commands {
         print(clear ? "Removed the name from \(account.email)." : "Named \(account.email) \"\(name)\".")
     }
 
+    /// Keeps a login for last, like a work or paid one: Smart Hop and the alerts offer it only when
+    /// no other login of its tool has room. `--off` puts it back in turn.
+    static func reserve(_ args: inout Arguments) async throws {
+        let off = args.flag("--off")
+        let tool = try toolOption(&args)
+        let reference = try args.positional("the login to keep for last")
+        try args.finish()
+        let workspace = try Workspace.open()
+        let account = try resolve(reference, tool: tool, in: await workspace.service.accounts)
+        await workspace.service.keepForLast(account.id, !off)
+        print(off ? "\(account.displayName) is back in turn for \(account.provider.name)."
+                  : "\(account.displayName) is kept for last: Smart Hop offers it only when no other \(account.provider.name) login has room.")
+    }
+
     static func remove(_ args: inout Arguments) async throws {
         let tool = try toolOption(&args)
         let reference = try args.positional("the account to remove")

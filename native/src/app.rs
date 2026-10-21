@@ -1152,7 +1152,8 @@ impl KeyhopWindow {
         let lane = model::lane(account);
         let (outlook, tone) = self.outlook(account);
         let meta = account.error.clone().unwrap_or_else(|| {
-            let plan = account.plan.clone().unwrap_or_default();
+            let plan = [account.plan.clone().unwrap_or_default(), if account.keep_for_last { "kept for last".into() } else { String::new() }]
+                .into_iter().filter(|p| !p.is_empty()).collect::<Vec<_>>().join(" · ");
             // A failed reading keeps the last good one, and says how old it is.
             match (&account.read_error, &account.limits_read_at) {
                 (Some(_), Some(read)) => [plan, format!("last read {}", model::ago(read))].into_iter().filter(|p| !p.is_empty()).collect::<Vec<_>>().join(" · "),

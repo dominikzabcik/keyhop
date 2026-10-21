@@ -4,7 +4,7 @@ import Foundation
 /// for data; on macOS the app binary answers the same commands.
 enum KeyhopCLI {
     static let commands: Set<String> = [
-        "status", "refresh", "recommend", "switch", "run", "add", "rename", "remove", "usage", "plans", "forecast", "coach", "merge", "dashboard", "insights", "budget",
+        "status", "refresh", "recommend", "switch", "run", "add", "rename", "reserve", "remove", "usage", "plans", "forecast", "coach", "merge", "dashboard", "insights", "budget",
         "cloud", "work", "browser", "mcp", "update", "doctor", "services", "reset", "version", "help", "--help", "-h", "--version",
     ]
 
@@ -41,6 +41,7 @@ enum KeyhopCLI {
             case "run": try await Commands.run(&args)
             case "add": try await Commands.add(&args)
             case "rename": try await Commands.rename(&args)
+            case "reserve": try await Commands.reserve(&args)
             case "remove": try await Commands.remove(&args)
             case "usage": try await Commands.usage(&args)
             case "plans": try await Commands.plans(&args)
@@ -84,6 +85,7 @@ enum KeyhopCLI {
       run map <folder> <account>           Inside that folder, keyhop run -- claude picks the login itself
       add <tool> [--no-wait]               Sign a tool out here so you can save another account
       rename <account> <name>              Give an account a name
+      reserve <account> [--off]            Keep a login for last: Smart Hop offers it only when no other has room
       remove <account>                     Forget a saved account that isn't in use
 
     Usage and budgets

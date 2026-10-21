@@ -686,8 +686,9 @@ private struct MenuFacts {
             guard let activeID = store.active[tool], let current = accounts.first(where: { $0.id == activeID }),
                   let currentUsed = used(current, store: store) else { continue }
             let pick = accounts
-                .filter { $0.id != current.id && store.usage[$0.id]?.error == nil && !(store.usage[$0.id]?.windows.isEmpty ?? true) }
-                .min { (used($0, store: store) ?? 101) < (used($1, store: store) ?? 101) }
+                .filter { $0.id != current.id && store.usage[$0.id]?.signedOut != true && !(store.usage[$0.id]?.windows.isEmpty ?? true) }
+                // A login kept for last comes after every other one with room.
+                .min { ($0.isKeptForLast ? 1 : 0, used($0, store: store) ?? 101) < ($1.isKeptForLast ? 1 : 0, used($1, store: store) ?? 101) }
             guard let pick, let pickUsed = used(pick, store: store), pickUsed + 15 < currentUsed else { continue }
             let gap = currentUsed - pickUsed
             if best == nil || gap > best!.gap {

@@ -69,7 +69,7 @@ extension DashboardPage {
     const editing = ui.editing === account.id;
     // A failed reading keeps the last good one, and says how old it is.
     const read = account.error || !account.limitsReadAt ? "" : `${account.readError ? "last read" : "read"} ${fmt.relative(account.limitsReadAt)}`;
-    const meta = [account.plan, account.label ? account.email : "", read].filter(Boolean).join(" · ");
+    const meta = [account.plan, account.label ? account.email : "", account.keepForLast ? "kept for last" : "", read].filter(Boolean).join(" · ");
     const pill = account.error ? `<span class="lim-pill bad">Signed out</span>`
       : account.active ? `<span class="lim-pill in-use" style="view-transition-name:in-use-${esc(tool.id)}">In use</span>`
       : best && best.id === account.id ? `<span class="lim-pill good">Most room</span>` : "";
@@ -97,6 +97,7 @@ extension DashboardPage {
     const open = ui.menu === account.id;
     const menu = open ? `<div class="row-menu" role="menu">
         <button type="button" role="menuitem" data-action="edit" data-id="${esc(account.id)}">Rename</button>
+        ${tool.accounts.length > 1 ? `<button type="button" role="menuitem" data-action="reserve" data-id="${esc(account.id)}" data-value="${account.keepForLast ? "off" : "on"}" title="${account.keepForLast ? "Smart Hop offers it in turn again" : "Smart Hop offers it only when no other login has room"}">${account.keepForLast ? "Use in turn" : "Keep for last"}</button>` : ""}
         ${runnable[tool.id] && !account.error ? `<button type="button" role="menuitem" data-action="copy" data-value="${esc(`keyhop run ${shellWord(account.email)} --tool ${tool.id} -- ${runnable[tool.id]}`)}" title="Copies a command that runs ${esc(tool.name)} as this login in one terminal, without a hop">Copy terminal command</button>` : ""}
         ${account.active ? "" : `<button type="button" role="menuitem" class="danger" data-action="confirm-remove" data-id="${esc(account.id)}">Remove</button>`}
       </div>` : "";

@@ -393,6 +393,12 @@ actor AccountService {
         saveMeta()
     }
 
+    func keepForLast(_ id: UUID, _ on: Bool) {
+        guard let index = accounts.firstIndex(where: { $0.id == id }) else { return }
+        accounts[index].keepForLast = on ? true : nil
+        saveMeta()
+    }
+
     func remove(_ id: UUID) async throws {
         guard let account = account(id) else { throw KeyhopError("That account isn't saved.") }
         guard active[account.provider] != id else {

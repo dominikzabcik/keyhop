@@ -10,8 +10,14 @@ import path from "node:path";
 // A step that never settles (a message with no answer, a host that never starts) would hold the
 // job until it is cancelled; say which one and stop instead.
 let step = "starting";
+// On GitHub a failure is also an annotation, which can be read without the job's log.
+const failed = (...parts) => {
+  console.log("FAILED:", ...parts);
+  if (process.env.GITHUB_ACTIONS) console.log(`::error title=Browser extension::${parts.join(" ")}`);
+  process.exitCode = 1;
+};
 const at = (what) => { step = what; console.log("…", what); };
-setTimeout(() => { console.log("FAILED: stuck at", step); process.exit(1); }, 120000).unref();
+setTimeout(() => { failed("stuck at", step); process.exit(1); }, 120000).unref();
 
 const repo = path.resolve(new URL("../..", import.meta.url).pathname);
 const binary = path.join(repo, ".build/debug/Keyhop");
@@ -44,7 +50,7 @@ at("waiting for the extension's service worker");
 let [worker] = context.serviceWorkers();
 worker ||= await context.waitForEvent("serviceworker");
 const id = new URL(worker.url()).host;
-if (id !== "jghheogemlfdoplloeaiffadakpfjhna") { console.log("FAILED: the manifest key gives the extension", id); process.exitCode = 1; }
+if (id !== "jghheogemlfdoplloeaiffadakpfjhna") failed("the manifest key gives the extension", id);
 // claude.ai can't be reached here, so who-is-signed-in answers from the sessionKey cookie.
 await worker.evaluate(() => {
   globalThis.fetch = async (url) => {
@@ -63,7 +69,7 @@ const vault = () => fs.existsSync(path.join(data, "vault")) ? fs.readdirSync(pat
 const wait = async (what, test, ms = 15000) => {
   const end = Date.now() + ms;
   while (Date.now() < end) { if (await test()) return console.log("ok:", what); await new Promise((r) => setTimeout(r, 300)); }
-  console.log("FAILED:", what, JSON.stringify(await status()), await session(), vault()); process.exitCode = 1;
+  failed(what, JSON.stringify(await status()), await session(), JSON.stringify(vault()));
 };
 
 at("asking the extension to reconnect to the host");
@@ -83,7 +89,7 @@ await wait("and b@x.dev's again, with no sign-in", async () => (await session())
 at("reading the popup");
 await popup.reload();
 const shown = await popup.locator("body").innerText();
-if (!shown.includes("b@x.dev")) { console.log("FAILED: the popup names the account", shown); process.exitCode = 1; }
+if (!shown.includes("b@x.dev")) failed("the popup names the account", shown);
 at("closing Chromium");
 await context.close();
 fs.rmSync(root, { recursive: true, force: true });

@@ -460,6 +460,52 @@ final class RefreshRuleTests: XCTestCase {
         XCTAssertEqual(usage[bob]?.windows, earlier.windows)
     }
 
+    func testAKeyhopRunNoteBlocksAHopToThatLoginForCodexToo() async throws {
+        let tool = FakeTool(["user": "bob"]), allowed = FakeTool(nil)
+        // The default session reader, pointed at this service's own run folders.
+        let service = AccountService(directory: directory, adapters: [.codex: RefreshWatchingAdapter(tool: tool, allowed: allowed)],
+                                     vault: Vault(store: MemorySecretStore()))
+        guard case .saved(let bob) = await service.syncLive(.codex) else { throw KeyhopError("bob") }
+        tool.login = ["user": "ada"]
+        guard case .saved = await service.syncLive(.codex) else { throw KeyhopError("ada") }
+        let folder = RunDirectories.folder(provider: .codex, account: bob, base: directory.appendingPathComponent("run"))
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let note = try XCTUnwrap(RunDirectories.markRunning(in: folder, directory: "/work"))
+        let found = ToolSessions.running(.codex, runBase: directory.appendingPathComponent("run")) ?? []
+        XCTAssertTrue(found.contains { $0.place == .own(bob) && $0.directory == "/work" })
+        do {
+            try await service.switchTo(bob)
+            XCTFail("the hop should wait for the run to end")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("its own terminal"), error.localizedDescription)
+        }
+        try FileManager.default.removeItem(at: note)
+        XCTAssertFalse((ToolSessions.running(.codex, runBase: directory.appendingPathComponent("run")) ?? []).contains { $0.place == .own(bob) })
+    }
+
+    func testALeaveIsKeptToTheSecondAboveAndTheLatestOneWins() async throws {
+        XCTAssertEqual(AccountService.leaveTime(Date(timeIntervalSince1970: 100.2)), Date(timeIntervalSince1970: 101))
+        let tool = FakeTool(["user": "bob"]), allowed = FakeTool(nil)
+        let make = { AccountService(directory: self.directory, adapters: [.codex: RefreshWatchingAdapter(tool: tool, allowed: allowed)],
+                                    vault: Vault(store: MemorySecretStore()), sessions: { _ in [] }) }
+        let first = make()
+        guard case .saved(let bob) = await first.syncLive(.codex) else { throw KeyhopError("bob") }
+        tool.login = ["user": "ada"]
+        _ = await first.syncLive(.codex)
+        let early = await first.accounts.first { $0.id == bob }?.leftAt
+        // Another process loads the file, and a later leave of bob lands on disk from elsewhere.
+        var onDisk = AccountService.loadAccounts(from: directory)
+        let later = Date(timeIntervalSince1970: ((early ?? Date()).timeIntervalSince1970 + 120).rounded(.up))
+        if let index = onDisk.firstIndex(where: { $0.id == bob }) { onDisk[index].leftAt = later }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(onDisk).write(to: directory.appendingPathComponent("accounts.json"))
+        _ = await first.fetchUsage(previous: [:])
+        tool.login = ["user": "ada", "token": "2"]
+        _ = await first.syncLive(.codex)
+        XCTAssertEqual(AccountService.loadAccounts(from: directory).first { $0.id == bob }?.leftAt, later)
+    }
+
     func testSessionsAreToldFromTheirCommandLines() {
         XCTAssertTrue(ToolSessions.isSession(of: .claude, commandLine: "claude --resume"))
         XCTAssertTrue(ToolSessions.isSession(of: .claude, commandLine: "/Users/a/.local/share/claude/versions/2.1.3 -p hi"))

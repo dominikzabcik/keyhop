@@ -29,9 +29,10 @@ actor AccountService {
          adapters: [Provider: any ProviderAdapter] = Adapters.all,
          vault: Vault = Vault(),
          onActiveChange: @escaping @Sendable (Provider, UUID?) -> Void = { _, _ in },
-         sessions: @escaping @Sendable (Provider) -> [ToolSession]? = ToolSessions.running) {
+         sessions: (@Sendable (Provider) -> [ToolSession]?)? = nil) {
         self.directory = directory
-        self.sessions = sessions
+        let runBase = directory.appendingPathComponent("run", isDirectory: true)
+        self.sessions = sessions ?? { ToolSessions.running($0, runBase: runBase) }
         metaURL = directory.appendingPathComponent("accounts.json")
         accounts = Self.loadAccounts(from: directory)
         self.adapters = adapters
@@ -102,7 +103,12 @@ actor AccountService {
             if let hop = lastHop[provider], hop.from == known.id, active[provider] == hop.to,
                Date().timeIntervalSince(hop.at) < 15 * 60 {
                 lastHop[provider] = nil
-                if let secret = await vault.read(hop.to), (try? await adapter.apply(secret)) != nil {
+                if let target = account(hop.to), sessions(provider)?.contains(where: { $0.place == .own(hop.to) }) != true,
+                   (try? await RefreshLock.holding(hop.to, in: directory, { () async throws -> Bool in
+                       guard let secret = await Self.freshest(target, vault: vault, directory: directory) else { return false }
+                       try await adapter.apply(secret)
+                       return true
+                   })) == true {
                     let name = account(hop.to)?.displayName ?? "the new login"
                     notes.append("An open \(provider.name) session put \(known.displayName) back. Keyhop moved it to \(name) again; restart that session to keep it there.")
                     saveMeta()
@@ -167,12 +173,16 @@ actor AccountService {
         if let session = sessions(provider)?.first(where: { $0.place == .own(id) }) {
             throw KeyhopError("\(account.displayName) is running in its own terminal (keyhop run\(session.directory.map { " in \($0)" } ?? "")). Two places refreshing one login sign it out, so close that session before hopping to it.")
         }
-        guard let secret = await Self.freshest(account, vault: vault, directory: directory) else {
-            throw KeyhopError("The saved login for \(account.email) is missing from \(vault.storeName).")
-        }
         let previous = active[provider]
         lastHop[provider] = nil
-        try await adapter.apply(secret)
+        // Under the refresh lock, so a refresh in flight elsewhere can't retire the token being put in place.
+        let vault = vault, directory = directory, storeName = vault.storeName
+        try await RefreshLock.holding(id, in: directory) {
+            guard let secret = await Self.freshest(account, vault: vault, directory: directory) else {
+                throw KeyhopError("The saved login for \(account.email) is missing from \(storeName).")
+            }
+            try await adapter.apply(secret)
+        }
         switch await syncLive(provider) {
         case .current(let active) where active == id,
              .saved(let active) where active == id:
@@ -265,10 +275,13 @@ actor AccountService {
            let session = found.first(where: { $0.place != .own(id) && ToolSessions.holds($0, account, hasOwnFolder: false) }) {
             throw KeyhopError("A \(account.provider.name) session\(session.directory.map { " in \($0)" } ?? "") started before Keyhop saw \(account.displayName) leave, so it may still hold that login. Two places refreshing one login sign it out: close that session first, or hop to \(account.displayName) instead.")
         }
-        guard let secret = await Self.freshest(account, vault: vault, directory: directory) else {
-            throw KeyhopError("The saved login for \(account.displayName) is missing from \(vault.storeName).")
+        let vault = vault, directory = directory, base = runBase, storeName = vault.storeName
+        return try await RefreshLock.holding(id, in: directory) {
+            guard let secret = await Self.freshest(account, vault: vault, directory: directory) else {
+                throw KeyhopError("The saved login for \(account.displayName) is missing from \(storeName).")
+            }
+            return try RunDirectories.prepare(account: account, secret: secret, base: base)
         }
-        return try RunDirectories.prepare(account: account, secret: secret, base: runBase)
     }
 
     // MARK: Limits
@@ -280,7 +293,7 @@ actor AccountService {
         // A login not in use is noted as left now if it never was, so later sessions don't count.
         var noted = false
         for index in accounts.indices where accounts[index].leftAt == nil && active[accounts[index].provider] != accounts[index].id {
-            accounts[index].leftAt = Date()
+            accounts[index].leftAt = Self.leaveTime()
             noted = true
         }
         if noted { saveMeta() }
@@ -289,18 +302,23 @@ actor AccountService {
             running[provider] = sessions(provider)
         }
         // (account, leave its token alone): the login in use, or one a running session may hold.
-        let targets = accounts.map { account -> (Account, Bool) in
-            if active[account.provider] == account.id { return (account, true) }
-            guard let found = running[account.provider] else { return (account, false) }
-            guard let found else { return (account, true) }
-            return (account, found.contains { ToolSessions.holds($0, account, hasOwnFolder: hasOwnFolder(account)) })
+        func held(_ account: Account, _ found: [ToolSession]??, ownFolder: Bool) -> Bool {
+            guard let found else { return false }
+            guard let found else { return true }
+            return found.contains { ToolSessions.holds($0, account, hasOwnFolder: ownFolder) }
+        }
+        let targets = accounts.map { account -> (Account, Bool, Bool) in
+            let ownFolder = hasOwnFolder(account)
+            if active[account.provider] == account.id { return (account, true, ownFolder) }
+            return (account, held(account, running[account.provider], ownFolder: ownFolder), ownFolder)
         }
         let directory = directory
+        let sessions = sessions
         progress?(WorkProgress(step: .limits, done: 0, total: targets.count))
         let vault = vault
         let adapters = adapters
         let results = await withTaskGroup(of: (UUID, UsageSnapshot, String?).self) { group -> [(UUID, UsageSnapshot, String?)] in
-            for (account, isActive) in targets {
+            for (account, isActive, ownFolder) in targets {
                 guard let adapter = adapters[account.provider] else { continue }
                 let earlier = previous[account.id] ?? UsageSnapshot()
                 group.addTask {
@@ -314,8 +332,15 @@ actor AccountService {
                                 guard let secret = await Self.freshest(account, vault: vault, directory: directory) else {
                                     throw KeyhopError("The saved login is missing.")
                                 }
-                                return try await adapter.fetchUsage(secret, allowRefresh: !isActive) { updated in
-                                    await vault.write(updated, for: account.id)
+                                // A session may have started while this waited on the lock: look again.
+                                let leave = isActive || (ToolSessions.rotating.contains(account.provider)
+                                    && held(account, .some(sessions(account.provider)), ownFolder: ownFolder))
+                                return try await adapter.fetchUsage(secret, allowRefresh: !leave) { updated in
+                                    // The old token is spent: the new one has to be kept, so try again before giving up.
+                                    for attempt in 0..<3 {
+                                        if await vault.write(updated, for: account.id) { return }
+                                        try? await Task.sleep(for: .milliseconds(200 * (attempt + 1)))
+                                    }
                                 }
                             }
                             let report = isActive ? try await read() : try await RefreshLock.holding(account.id, in: directory, read)
@@ -381,13 +406,27 @@ actor AccountService {
     private func setActive(_ provider: Provider, _ id: UUID?) {
         guard active[provider] != id else { return }
         if let left = active[provider], let index = accounts.firstIndex(where: { $0.id == left }) {
-            accounts[index].leftAt = Date()
+            accounts[index].leftAt = Self.leaveTime()
         }
         active[provider] = id
         onActiveChange(provider, id)
     }
 
+    /// Now, rounded up to the second the accounts file keeps, so a session that started a moment
+    /// before the leave never reads as after it.
+    static func leaveTime(_ now: Date = Date()) -> Date {
+        Date(timeIntervalSince1970: (now.timeIntervalSince1970).rounded(.up))
+    }
+
     private func saveMeta() {
+        // Another Keyhop process may have seen a later leave: keep the latest of the two.
+        let onDisk = Dictionary(Self.loadAccounts(from: directory).map { ($0.id, $0.leftAt) }, uniquingKeysWith: { a, _ in a })
+        for index in accounts.indices {
+            if let theirs = onDisk[accounts[index].id] ?? nil, theirs > (accounts[index].leftAt ?? .distantPast),
+               active[accounts[index].provider] != accounts[index].id {
+                accounts[index].leftAt = theirs
+            }
+        }
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

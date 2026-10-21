@@ -298,7 +298,9 @@ enum CloudSync {
     /// because the fallback on this computer is the email address, and that never leaves it.
     static func limits(accounts: [Account], usage: [UUID: UsageSnapshot], now: Date = Date()) -> [CloudLimit] {
         accounts.flatMap { account -> [CloudLimit] in
-            guard let snapshot = usage[account.id], snapshot.error == nil else { return [] }
+            // A reading Keyhop couldn't renew (its tool holds the token) is old news, not where it stands.
+            guard let snapshot = usage[account.id], snapshot.error == nil,
+                  let fetchedAt = snapshot.fetchedAt, now.timeIntervalSince(fetchedAt) < 3600 else { return [] }
             let label = account.label.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 }
             return snapshot.windows.compactMap { window in
                 // A reset already in the past is a reading waiting to be refreshed, not a countdown.

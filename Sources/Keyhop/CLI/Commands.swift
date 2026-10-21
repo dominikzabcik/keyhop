@@ -191,7 +191,8 @@ enum Commands {
         let budgets = try await tracker.budgets()
         let spend = try await tracker.budgetSpend(for: budgets, now: now, sole: sole)
         let alerts = AlertRules.evaluate(accounts: accounts, active: active, usage: usage, forecasts: forecasts,
-                                         budgets: budgets, budgetSpend: spend, now: now)
+                                         budgets: budgets, budgetSpend: spend, now: now,
+                                         unavailable: ToolSessions.runningInOwnFolder())
         return Overview(accounts: accounts, active: active, usage: usage, today: today.byAccount, todayAll: today.all,
                         budgets: budgets, budgetSpend: spend, forecasts: forecasts, alerts: alerts, notices: [],
                         refreshedAt: workspace.state.refreshedAt, secretStore: workspace.service.vault.storeName)
@@ -265,8 +266,10 @@ enum Commands {
             // The login in use already lives in the usual folder; a second copy would sign it out.
             FileHandle.standardError.write(Data("keyhop: \(executable) runs as \(account.displayName), the login in use, from its usual folder\n".utf8))
         }
-        let status = try Shell.runInteractive(path, Array(command.dropFirst()), environment: environment)
-        exit(status)
+        let note = folder.flatMap { RunDirectories.markRunning(in: $0) }
+        let status = Result { try Shell.runInteractive(path, Array(command.dropFirst()), environment: environment) }
+        if let note { try? FileManager.default.removeItem(at: note) }
+        exit(try status.get())
     }
 
     private static func runMap(_ args: inout Arguments, tool: Provider?) async throws {

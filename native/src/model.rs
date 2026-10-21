@@ -228,6 +228,11 @@ mod tests {
 }
 
 /// How long until a moment, the way the window says it: "2d 7h", "3h 5m", "12m".
+/// Whether a moment is already behind us: a window whose reset passed since it was read.
+pub fn passed(iso: &str) -> bool {
+    epoch(iso).is_some_and(|at| at <= now())
+}
+
 pub fn until(iso: &str) -> String {
     let Some(at) = epoch(iso) else { return String::new() };
     let s = (at - now()).max(0);

@@ -170,7 +170,8 @@ final class UsageTracker: ObservableObject {
         revision += 1
 
         var alerts = AlertRules.evaluate(accounts: store.accounts, active: store.active, usage: store.usage, forecasts: forecasts,
-                                         budgets: budgets, budgetSpend: budgetSpend, now: now)
+                                         budgets: budgets, budgetSpend: budgetSpend, now: now,
+                                         unavailable: ToolSessions.runningInOwnFolder())
         // With hop-before-the-limit on, the hop replaces the warning: the account with room takes
         // over, and the notification says what happened instead of asking.
         if UserDefaults.standard.bool(forKey: "autoHop"), store.switching == nil,

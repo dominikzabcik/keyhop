@@ -58,7 +58,7 @@ extension DashboardPage {
         <span class="lwin-name">${esc(windowName(limit.label))}</span>
         ${progress(limit.usedPercent, null, undefined, `limits:${account.id}:${limit.label}`)}
         <span class="lwin-pct${used >= 90 ? " bad" : ""}">${used}% used</span>
-        <span class="lwin-foot">${limit.resetsAt ? `resets in ${esc(fmt.until(limit.resetsAt))}` : ""}</span>
+        <span class="lwin-foot">${!limit.resetsAt ? "" : new Date(limit.resetsAt) <= new Date() ? "reset since this reading" : `resets in ${esc(fmt.until(limit.resetsAt))}`}</span>
       </div>`;
     }).join("");
   }

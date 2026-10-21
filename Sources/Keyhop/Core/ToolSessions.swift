@@ -33,27 +33,38 @@ enum ToolSessions {
 
     /// Every running session of the tool, or nil when that can't be told (then every login counts
     /// as held: a limit read later is better than a login lost).
-    static func running(_ provider: Provider) -> [ToolSession]? {
+    static func running(_ provider: Provider, runBase: URL = RunDirectories.base) -> [ToolSession]? {
         guard rotating.contains(provider) else { return [] }
         #if os(Windows)
         return nil
         #else
-        switch provider {
-        case .claude:
+        // `keyhop run` notes itself in the login's folder for as long as the tool runs there.
+        var found: [ToolSession] = []
+        for run in RunDirectories.all(base: runBase) where run.provider == provider {
+            found += noted(in: run.folder.appendingPathComponent(RunDirectories.markers, isDirectory: true), place: .own(run.account))
             // Claude Code notes each session in <config>/sessions/<pid>.json, so the folder it runs
             // from (and with it the login) and when it started are known exactly.
-            let usual = ClaudeAdapter.sessionsDirectory
-            var found = noted(in: usual, place: .usual)
-            for run in RunDirectories.all() where run.provider == .claude {
+            if provider == .claude {
                 found += noted(in: run.folder.appendingPathComponent("sessions", isDirectory: true), place: .own(run.account))
             }
-            if FileManager.default.fileExists(atPath: usual.path) { return found }
-            guard let listed = processes(of: .claude) else { return nil }
-            return found + listed
-        default:
-            return processes(of: provider)
         }
+        if provider == .claude { found += noted(in: ClaudeAdapter.sessionsDirectory, place: .usual) }
+        // Whatever runs without a note (an older build, a one-off `claude -p`) still counts, as unknown.
+        guard let listed = processes(of: provider) else { return nil }
+        let known = Set(found.map(\.pid))
+        return found + listed.filter { !known.contains($0.pid) }
         #endif
+    }
+
+    /// The logins running in their own `keyhop run` folder now, which a hop must not move to.
+    static func runningInOwnFolder(runBase: URL = RunDirectories.base) -> Set<UUID> {
+        var found: Set<UUID> = []
+        for provider in rotating {
+            for session in running(provider, runBase: runBase) ?? [] {
+                if case .own(let id) = session.place { found.insert(id) }
+            }
+        }
+        return found
     }
 
     /// Whether a session may hold this login's token. A session in the usual folder holds the
@@ -135,7 +146,7 @@ enum RefreshLock {
         #else
         let folder = directory.appendingPathComponent("locks", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let fd = open(folder.appendingPathComponent("\(id.uuidString).lock").path, O_CREAT | O_RDWR, 0o600)
+        let fd = open(folder.appendingPathComponent("\(id.uuidString).lock").path, O_CREAT | O_RDWR | O_CLOEXEC, 0o600)
         guard fd >= 0 else { return try await body() }
         defer { close(fd) }
         // Another process refreshing this login is done within seconds; after half a minute the
@@ -143,7 +154,7 @@ enum RefreshLock {
         var held = false
         for _ in 0..<120 {
             if flock(fd, LOCK_EX | LOCK_NB) == 0 { held = true; break }
-            try? await Task.sleep(for: .milliseconds(250))
+            try await Task.sleep(for: .milliseconds(250))
         }
         guard held else { throw LimitsWaitForTool(tool: nil) }
         defer { flock(fd, LOCK_UN) }

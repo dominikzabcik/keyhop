@@ -46,6 +46,21 @@ enum RunDirectories {
         }
     }
 
+    /// The folder inside a login's own folder where each `keyhop run` notes itself while it runs.
+    static let markers = "keyhop-run"
+
+    /// Notes this process in the login's folder (`<pid>.json`, like Claude Code's own session
+    /// notes) so a hop to the login waits until it ends. Returns the note to remove afterwards.
+    static func markRunning(in folder: URL, directory: String = FileManager.default.currentDirectoryPath) -> URL? {
+        let notes = folder.appendingPathComponent(markers, isDirectory: true)
+        try? FileManager.default.createDirectory(at: notes, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let pid = ProcessInfo.processInfo.processIdentifier
+        let note = notes.appendingPathComponent("\(pid).json")
+        let body: [String: Any] = ["pid": Int(pid), "startedAt": Int64(Date().timeIntervalSince1970 * 1000), "cwd": directory]
+        guard let data = try? JSONSerialization.data(withJSONObject: body), (try? Files.writeAtomically(data, to: note)) != nil else { return nil }
+        return note
+    }
+
     /// Puts the login into its folder, seeding the tool's settings from the usual folder the first
     /// time, and returns the folder. The usual folder is never touched.
     @discardableResult

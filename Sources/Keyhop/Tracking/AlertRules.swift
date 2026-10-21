@@ -36,9 +36,10 @@ enum AlertRules {
         return nil
     }
 
+    /// `unavailable` are logins a hop can't move to right now (one running in its own terminal).
     static func evaluate(accounts: [Account], active: [Provider: UUID], usage: [UUID: UsageSnapshot],
                          forecasts: [String: Date], budgets: [Budget], budgetSpend: [String: Double],
-                         now: Date) -> [AlertCandidate] {
+                         now: Date, unavailable: Set<UUID> = []) -> [AlertCandidate] {
         var alerts: [AlertCandidate] = []
 
         for provider in Provider.allCases {
@@ -56,7 +57,7 @@ enum AlertRules {
                     forecasts: forecasts,
                     budgets: budgets,
                     budgetSpend: budgetSpend,
-                    excluding: [id],
+                    excluding: unavailable.union([id]),
                     now: now
                 ).flatMap { $0.room >= 20 ? $0 : nil }
 

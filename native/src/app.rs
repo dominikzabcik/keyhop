@@ -1168,7 +1168,7 @@ impl KeyhopWindow {
                 .child(div().w(px(80.)).flex_none().truncate().text_color(t.muted).child(model::window_name(&limit.label)))
                 .child(div().flex_1().child(self.bar(limit.used_percent, limit.pace)))
                 .child(div().w(px(36.)).flex().justify_end().font_weight(FontWeight::SEMIBOLD).text_color(t.text).child(format!("{:.0}%", limit.used_percent)))
-                .child(div().w(px(84.)).text_color(t.subtle).child(limit.resets_at.as_deref().map(|r| format!("back in {}", model::until(r))).unwrap_or_default()))
+                .child(div().w(px(84.)).text_color(t.subtle).child(limit.resets_at.as_deref().map(|r| if model::passed(r) { "reset since".to_string() } else { format!("back in {}", model::until(r)) }).unwrap_or_default()))
         });
         let dot = match lane {
             Lane::Needs => t.bad,

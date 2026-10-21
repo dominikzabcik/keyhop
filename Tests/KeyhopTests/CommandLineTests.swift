@@ -79,6 +79,31 @@ final class AlertRulesTests: XCTestCase {
         XCTAssertEqual(alerts.first?.switchName, "c@x.dev")
     }
 
+    func testALoginBackFromItsResetIsOfferedEvenWithAnOldReading() {
+        let inUse = account("a@x.dev"), wall = account("b@x.dev"), half = account("c@x.dev")
+        // b read at 100% an hour before its window turned over; c is half full and current.
+        let reset = UsageSnapshot(windows: [UsageWindow(label: "5h", usedPercent: 100, resetsAt: now.addingTimeInterval(-600), windowSeconds: 18000)],
+                                  fetchedAt: now.addingTimeInterval(-3600))
+        let alerts = AlertRules.evaluate(accounts: [inUse, wall, half], active: [.claude: inUse.id],
+                                         usage: [inUse.id: reading(95), wall.id: reset, half.id: reading(50)],
+                                         forecasts: [:], budgets: [], budgetSpend: [:], now: now)
+        XCTAssertEqual(alerts.first?.switchTo, wall.id)
+        XCTAssertEqual(SmartHop.room(reset.windows[0], now), 100)
+    }
+
+    func testAFailedReadingKeepsALoginOfferedButSignedOutAndOwnTerminalLoginsAreNot() {
+        let inUse = account("a@x.dev"), shaky = account("b@x.dev"), gone = account("c@x.dev"), own = account("d@x.dev")
+        var stale = reading(10)
+        stale.error = "Claude usage returned 503"
+        var out = reading(0)
+        out.error = "Claude rejected this login. Sign in again."
+        out.signedOut = true
+        let usage = [inUse.id: reading(95), shaky.id: stale, gone.id: out, own.id: reading(0)]
+        let alerts = AlertRules.evaluate(accounts: [inUse, shaky, gone, own], active: [.claude: inUse.id], usage: usage,
+                                         forecasts: [:], budgets: [], budgetSpend: [:], now: now, unavailable: [own.id])
+        XCTAssertEqual(alerts.first?.switchTo, shaky.id)
+    }
+
     func testAutoHopPicksTheLimitAlertsRecommendedAccount() {
         let inUse = account("a@x.dev"), roomy = account("c@x.dev")
         let alerts = AlertRules.evaluate(accounts: [inUse, roomy], active: [.claude: inUse.id],

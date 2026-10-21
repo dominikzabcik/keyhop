@@ -66,16 +66,17 @@ enum SmartHop {
         budgetSpend: [String: Double],
         now: Date
     ) -> Candidate? {
-        guard let snapshot = usage[account.id], snapshot.error == nil, !snapshot.windows.isEmpty,
-              let tightest = snapshot.windows.min(by: { room($0) < room($1) }) else { return nil }
-        let remaining = room(tightest)
+        // A reading that failed this time still has its last good windows; a signed-out login has none to offer.
+        guard let snapshot = usage[account.id], snapshot.signedOut != true, !snapshot.windows.isEmpty,
+              let tightest = snapshot.windows.min(by: { room($0, now) < room($1, now) }) else { return nil }
+        let remaining = room(tightest, now)
         let scope = Budget.scope(for: account.id)
         let budget = budgets.first { $0.scope == scope } ?? budgets.first { $0.scope == Budget.everything }
         let budgetRemaining = budget.map { max(0, min(100, (1 - (budgetSpend[$0.scope] ?? 0) / max($0.amount, 0.01)) * 100)) }
         let runOut = snapshot.windows.compactMap { forecasts[AlertRules.forecastKey(account.id, $0.label)] }
             .filter { $0 > now }
             .min()
-        let hoursToReset = tightest.resetsAt.map { max(0, $0.timeIntervalSince(now) / 3600) }
+        let hoursToReset = tightest.resetsAt.flatMap { $0 > now ? $0.timeIntervalSince(now) / 3600 : nil }
         let resetBonus = hoursToReset.map { max(0, 12 - min($0, 12)) * 0.5 } ?? 0
         let forecastPenalty = runOut == nil ? 0 : 30
         let score = remaining * 0.75 + (budgetRemaining ?? 100) * 0.25 + resetBonus - Double(forecastPenalty)
@@ -98,7 +99,7 @@ enum SmartHop {
                 active: active[account.provider] == account.id,
                 room: remaining,
                 budgetRemaining: budgetRemaining,
-                resetsAt: tightest.resetsAt,
+                resetsAt: tightest.resetsAt.flatMap { $0 > now ? $0 : nil },
                 runsOutAt: runOut,
                 reason: reason
             ),
@@ -106,8 +107,11 @@ enum SmartHop {
         )
     }
 
-    private static func room(_ window: UsageWindow) -> Double {
-        max(0, min(100, 100 - window.usedPercent))
+    /// Room left in a window. One whose reset has passed since it was read is empty again, so a
+    /// login at its wall comes back by itself once its window turns over, read or not.
+    static func room(_ window: UsageWindow, _ now: Date) -> Double {
+        if let resetsAt = window.resetsAt, resetsAt <= now { return 100 }
+        return max(0, min(100, 100 - window.usedPercent))
     }
 
     private static func percent(_ value: Double) -> Int {

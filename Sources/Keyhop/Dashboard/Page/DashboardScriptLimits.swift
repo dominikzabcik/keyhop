@@ -81,11 +81,15 @@ extension DashboardPage {
     return `<div class="lim-row${account.active ? " active" : ""}" style="view-transition-name:acct-${esc(account.id)}">
       <div class="lim-who">${who}</div>
       <div class="lwins">${windowBars(account, tool)}</div>
-      <div class="lim-side"><div class="row-actions">${loginActions(account, editing, best)}</div></div>
+      <div class="lim-side"><div class="row-actions">${loginActions(account, editing, best, tool)}</div></div>
     </div>`;
   }
 
-  function loginActions(account, editing, best) {
+  // Claude Code and Codex can run under one login in one terminal (keyhop run), with no hop.
+  const runnable = { claude: "claude", codex: "codex" };
+  const shellWord = (text) => /^[\w@.+-]+$/.test(text) ? text : `'${text.replace(/'/g, `'\\''`)}'`;
+
+  function loginActions(account, editing, best, tool) {
     if (isStatic || editing) return "";
     if (ui.confirming === account.id) {
       return `<span class="subtle" style="font-size:12.5px">Remove this login?</span><button class="btn sm secondary danger" data-action="remove" data-id="${esc(account.id)}">Remove</button><button class="btn sm ghost" data-action="cancel-remove">Keep</button>`;
@@ -93,6 +97,7 @@ extension DashboardPage {
     const open = ui.menu === account.id;
     const menu = open ? `<div class="row-menu" role="menu">
         <button type="button" role="menuitem" data-action="edit" data-id="${esc(account.id)}">Rename</button>
+        ${runnable[tool.id] && !account.error ? `<button type="button" role="menuitem" data-action="copy" data-value="${esc(`keyhop run ${shellWord(account.email)} --tool ${tool.id} -- ${runnable[tool.id]}`)}" title="Copies a command that runs ${esc(tool.name)} as this login in one terminal, without a hop">Copy terminal command</button>` : ""}
         ${account.active ? "" : `<button type="button" role="menuitem" class="danger" data-action="confirm-remove" data-id="${esc(account.id)}">Remove</button>`}
       </div>` : "";
     const lead = best && best.id === account.id;

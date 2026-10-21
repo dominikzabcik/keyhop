@@ -100,6 +100,16 @@ test('an old link to accounts opens limits, which can add another login', async 
   await assertReadable(browser);
 });
 
+test('a Claude Code login offers the command that runs it in one terminal', async ({ app, browser }) => {
+  await openWindow(app, 'limits');
+  await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.lim-group[aria-label="Claude Code"] [data-action="account-menu"]').length)).toBeGreaterThan(0);
+  const command = await browser.evaluate(() => {
+    (document.querySelector('.lim-group[aria-label="Claude Code"] [data-action="account-menu"]') as HTMLElement).click();
+    return new Promise((done) => setTimeout(() => done(document.querySelector('.row-menu [data-action="copy"]')?.getAttribute('data-value') ?? null), 300));
+  });
+  expect(command).toMatch(/^keyhop run \S+ --tool claude -- claude$/);
+});
+
 test('usage names the token columns', async ({ app, screen, browser }) => {
   await openWindow(app, 'usage');
   await expect(screen.getByRole('heading', 'Usage', { level: 1 })).toBeVisible();

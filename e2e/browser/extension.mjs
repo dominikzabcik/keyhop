@@ -22,9 +22,11 @@ use(A);
 const env = { ...process.env, KEYHOP_DATA_DIR: data, KEYHOP_SECRET_STORE: "file", HOME: home };
 execFileSync(binary, ["browser", "install"], { env });
 const ext = path.join(data, "Chrome Extension");
-const registered = fs.readdirSync(path.join(home, ".config"), { recursive: true }).filter((f) => f.endsWith("app.keyhop.browser.json"));
+// Where the install registers the host: ~/Library/Application Support on a Mac, ~/.config elsewhere.
+const browsers = path.join(home, process.platform === "darwin" ? "Library/Application Support" : ".config");
+const registered = fs.readdirSync(browsers, { recursive: true }).filter((f) => f.endsWith("app.keyhop.browser.json"));
 fs.mkdirSync(path.join(profile, "NativeMessagingHosts"), { recursive: true });
-fs.copyFileSync(path.join(home, ".config", registered[0]), path.join(profile, "NativeMessagingHosts/app.keyhop.browser.json"));
+fs.copyFileSync(path.join(browsers, registered[0]), path.join(profile, "NativeMessagingHosts/app.keyhop.browser.json"));
 
 const context = await chromium.launchPersistentContext(profile, {
   headless: true, channel: "chromium", env,

@@ -66,11 +66,13 @@ protocol SecretStore: Sendable {
 
 enum SecretStores {
     static func standard(service: String) -> any SecretStore {
+        let files = FileSecretStore(directory: Platform.dataDirectory.appendingPathComponent("vault", isDirectory: true))
+        // Tests and throwaway data folders keep secrets in files, on a Mac too: a Keychain call
+        // with no keychain behind it (a CI runner's borrowed HOME) waits on a prompt nobody sees.
+        if ProcessInfo.processInfo.environment["KEYHOP_SECRET_STORE"] == "file" { return files }
         #if os(macOS)
         return KeychainSecretStore(service: service)
         #else
-        let files = FileSecretStore(directory: Platform.dataDirectory.appendingPathComponent("vault", isDirectory: true))
-        if ProcessInfo.processInfo.environment["KEYHOP_SECRET_STORE"] == "file" { return files }
         #if os(Windows)
         return WindowsSecretStore(files: files)
         #else

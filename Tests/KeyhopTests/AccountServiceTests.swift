@@ -46,6 +46,15 @@ final class FakeTool: @unchecked Sendable {
             lock.unlock()
         }
     }
+
+    /// Changes the login under the lock, so logins read at once never lose each other's note.
+    func update(_ change: (inout Secret) -> Void) {
+        lock.lock()
+        defer { lock.unlock() }
+        var secret = current ?? [:]
+        change(&secret)
+        current = secret
+    }
 }
 
 struct FakeAdapter: ProviderAdapter {
@@ -293,9 +302,7 @@ struct RefreshWatchingAdapter: ProviderAdapter {
     func apply(_ secret: Secret) async throws { tool.login = secret }
     func signOutLocally() async throws { tool.login = nil }
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
-        var seen = allowed.login ?? [:]
-        seen[secret["user"] ?? "?"] = allowRefresh ? "yes" : "no"
-        allowed.login = seen
+        allowed.update { $0[secret["user"] ?? "?"] = allowRefresh ? "yes" : "no" }
         guard allowRefresh || secret["user"] == "ada" else { throw LimitsWaitForTool(tool: "Codex") }
         return LimitReport(windows: [UsageWindow(label: "5h", usedPercent: 10, resetsAt: nil, windowSeconds: 18000)], plan: nil)
     }

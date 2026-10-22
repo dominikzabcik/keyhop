@@ -62,10 +62,10 @@ test('home is the total, the pet and what needs you', async ({ app, screen, brow
   await expect(screen.getByRole('heading', 'Top models')).toBeVisible();
   await expect(screen.getByRole('heading', 'Activity')).toBeVisible();
   await expect(screen.getByRole('heading', 'Needs you')).toBeVisible();
-  // The sidebar, the status bar and Needs you count the same logins.
+  // The sidebar and Needs you count the same logins.
   const listed = await browser.evaluate(() => document.querySelectorAll('.attention .arow').length);
-  const chip = await browser.evaluate(() => document.querySelector('#status-needs')?.hidden ? 0 : parseInt(document.querySelector('#status-needs')?.textContent || '0', 10));
-  expect(chip).toBeLessThanOrEqual(listed);
+  const count = await browser.evaluate(() => document.querySelector('#limits-count')?.hidden ? 0 : parseInt(document.querySelector('#limits-count')?.textContent || '0', 10));
+  expect(count).toBeLessThanOrEqual(listed);
   // The linked sample has a pet: its stages run along the bottom of its night.
   await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.hpet .hstage').length)).toBe(6);
   await screen.getByRole('button', { name: 'Month', exact: true }).tap();
@@ -86,6 +86,14 @@ test('limits lists each login with what it has used, and no guesses', async ({ a
   for (const guess of ['runs out', 'Empty around', 'At this pace', 'Projected']) {
     await expect(screen.getByText(guess, { exact: false })).toHaveCount(0);
   }
+  // Above the logins, what they have left and how it went: readings only, from 24 hours to 7 days.
+  await expect(screen.getByRole('heading', 'What your logins have left', { level: 2 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'The last 24 hours', { level: 2 })).toBeVisible();
+  await expect(browser.locator('.qchart svg .qline')).toHaveCount(1);
+  await browser.locator('[data-action="quota-hours"][data-value="168"]').tap();
+  await expect(screen.getByRole('heading', 'The last 7 days', { level: 2 })).toBeVisible();
+  await browser.locator('[data-action="quota-view"][data-value="drain"]').tap();
+  await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.qchart svg .qbar').length)).toBeGreaterThan(0);
   await browser.locator('[data-action="quota-tool"][data-value="codex"]').tap();
   await expect(screen.getByRole('heading', 'Codex', { level: 2 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Claude Code', { level: 2 })).toHaveCount(0);
@@ -240,19 +248,21 @@ test('settings keeps the link, the profile and the phone together', async ({ app
   await assertReadable(browser);
 });
 
-test('the status bar turns the field from night to day and back', async ({ app, screen, browser }) => {
+test('the top bar turns the field from night to day and back', async ({ app, screen, browser }) => {
   await openWindow(app, 'overview');
   const field = () => browser.evaluate(() => document.documentElement.dataset.theme ?? '');
   await expect.poll(field).toBe('night');
-  await screen.getByRole('button', { name: 'Night', exact: true }).click();
+  await screen.getByRole('button', { name: 'Show the field by day', exact: true }).click();
   await expect.poll(field).toBe('day');
-  await expect(browser.locator('#status-theme')).toHaveText(/day/i);
+  await expect(browser.locator('#theme')).toHaveAttribute('aria-label', 'Show the field by night');
   // The choice is saved, so another open of the window is still by day.
   await openWindow(app, 'usage');
   await expect.poll(field).toBe('day');
   await assertReadable(browser);
-  await browser.locator('#status-theme').click();
+  await browser.locator('#theme').click();
   await expect.poll(field).toBe('night');
+  // Nothing sits under the content any more.
+  await expect(browser.locator('footer.statusbar')).toHaveCount(0);
 });
 
 test('settings sets up the browser extension and says whether it is connected', async ({ app, screen, browser }) => {

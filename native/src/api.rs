@@ -352,7 +352,6 @@ pub struct Quota {
     pub past_start: String,
     pub forecast_start: String,
     pub pools: Vec<Pool>,
-    pub accounts: Vec<QuotaAccount>,
 }
 
 #[derive(Deserialize, Clone, Default, Debug)]
@@ -363,11 +362,10 @@ pub struct Pool {
     pub accounts: u32,
     pub capacity: f64,
     pub remaining: f64,
-    pub drain_per_hour: f64,
-    pub empty_at: Option<String>,
     pub next_reset: Option<Reset>,
     pub past: Vec<Option<f64>>,
-    pub forecast: Vec<f64>,
+    /// How much was used per hour at each past step.
+    pub drain: Vec<Option<f64>>,
 }
 
 #[derive(Deserialize, Clone, Default, Debug)]
@@ -378,12 +376,3 @@ pub struct Reset {
     pub account: String,
 }
 
-#[derive(Deserialize, Clone, Default, Debug)]
-#[serde(rename_all = "camelCase", default)]
-pub struct QuotaAccount {
-    pub id: String,
-    pub remaining: f64,
-    pub drain_per_hour: f64,
-    pub empty_at: Option<String>,
-    pub back_at: Option<String>,
-}

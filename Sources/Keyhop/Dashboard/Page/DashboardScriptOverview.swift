@@ -145,20 +145,19 @@ extension DashboardPage {
       live.className = `side-live${fresh ? " on" : ""}`;
       live.innerHTML = fresh ? `<i aria-hidden="true"></i>Live` : read ? esc(`read ${fmt.relative(read)}`) : "";
     }
-    renderStatus(needs);
+    renderStatus();
     syncField();
   }
 
-  // The status bar holds only what is wrong, and the field's switch. Figures live on their pages.
-  function renderStatus(needs) {
-    const themeBtn = $("#status-theme");
-    if (themeBtn) themeBtn.textContent = ui.theme === "day" ? "Day" : "Night";
-    const needsBtn = $("#status-needs");
-    const clear = $("#status-clear");
-    if (needsBtn && clear) {
-      needsBtn.hidden = !data.state || needs === 0;
-      clear.hidden = !data.state || needs > 0;
-      if (needs) needsBtn.innerHTML = `<i aria-hidden="true"></i>${needs} need${needs === 1 ? "s" : ""} you`;
+  // The top bar's field switch, and a word when a tool's service is in trouble. What needs you is
+  // counted on Limits in the sidebar.
+  function renderStatus() {
+    const themeBtn = $("#theme");
+    if (themeBtn) {
+      const day = ui.theme === "day";
+      themeBtn.setAttribute("aria-label", day ? "Show the field by night" : "Show the field by day");
+      themeBtn.title = day ? "Night" : "Day";
+      themeBtn.querySelector("use")?.setAttribute("href", day ? "#i-moon" : "#i-sun");
     }
     const out = $("#status-outage");
     const troubled = (data.services || []).find((service) => serviceShort[service.level]);

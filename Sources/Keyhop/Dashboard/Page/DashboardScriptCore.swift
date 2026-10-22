@@ -41,7 +41,7 @@ extension DashboardPage {
     editing: null, confirming: null, budgetEdit: null, offline: null,
     settingsPane: "general", checkingUpdate: false,
     homeMenu: null, homeTool: "", homeAccount: "", homeQuery: "", homeRange: "today", treeOpen: {},
-    quotaTool: "all", lastIn: {},
+    quotaTool: "all", quotaHours: 24, quotaView: "left", lastIn: {},
     pending: new Map(), loadingUsage: 0,
     // The field in force: "night" or "day". Empty until the saved choice has been applied.
     theme: "",
@@ -210,6 +210,13 @@ extension DashboardPage {
     catch { data.quests = null; }
   }
 
+  // What every login had left at each reading, kept 8 days: Limits draws it, measured only.
+  async function loadQuota() {
+    if (isStatic) return;
+    try { data.quota = await api("/api/quota"); data.quotaError = null; }
+    catch (error) { data.quotaError = error.message; }
+  }
+
   let workDaysLoading = false;
   function loadWorkDays() {
     if (workDaysLoading) return;
@@ -223,6 +230,8 @@ extension DashboardPage {
   async function loadSection() {
     try {
       if (ui.section === "overview" || ui.section === "limits") loadServices();
+      // Limits draws its logins at once; the history fills in when it arrives.
+      if (ui.section === "limits") loadQuota().then(() => { if (ui.section === "limits" && !editing()) render(); });
       if (ui.section === "overview") {
         const jobs = [loadUsage("today"), loadUsage("week")];
         if (!["today", "week"].includes(ui.homeRange)) jobs.push(loadUsage(ui.homeRange));

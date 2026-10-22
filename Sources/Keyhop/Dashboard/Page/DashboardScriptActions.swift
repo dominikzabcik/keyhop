@@ -103,6 +103,8 @@ extension DashboardPage {
       case "palette": openPalette(); break;
       case "goto": go(el.dataset.section); break;
       case "quota-tool": ui.quotaTool = el.dataset.value; transition(render); break;
+      case "quota-hours": ui.quotaHours = +el.dataset.value; render(); break;
+      case "quota-view": ui.quotaView = el.dataset.value; render(); break;
       // A tool in the sidebar opens Limits on that tool; pressed again, on every tool.
       case "side-tool": {
         const again = ui.section === "limits" && ui.quotaTool === el.dataset.value;

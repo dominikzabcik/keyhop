@@ -1,6 +1,8 @@
 //! Keyhop's window in GPUI, after the KB boards: the sidebar with each limit live, Home (the
-//! total, tokens per day, top models, the pet's night, activity and what needs you), Limits
-//! (pooled and projected) and the status bar, drawn over the same local API the HTML window reads.
+//! total, tokens per day, top models, the pet's night, activity and what needs you) and Limits
+//! (what the logins have left and how it went, measured only), drawn over the same local API the
+//! HTML window reads. The top bar carries the field switch and what is being read; there is no
+//! status bar.
 
 use crate::api::{Account, Client, Pet, Pool, Quota, State, Tool, Usage};
 use crate::model::{self, Lane};
@@ -32,6 +34,8 @@ pub struct KeyhopWindow {
     later: Option<String>,
     /// The tool Limits is narrowed to, or "all".
     quota_tool: String,
+    /// How far back Limits' history reaches: 24 or 168 hours.
+    quota_hours: i64,
     problem: Option<String>,
     toast: Option<String>,
     section: Section,
@@ -81,6 +85,7 @@ impl KeyhopWindow {
             range: "week",
             later: None,
             quota_tool: "all".into(),
+            quota_hours: 24,
             problem: None,
             toast: None,
             section,
@@ -410,34 +415,36 @@ impl KeyhopWindow {
             .bg(t.sidebar)
             .border_r_1()
             .border_color(t.border)
-            .px(px(12.))
-            .pt(px(12.))
-            .pb(px(12.))
+            .px(px(14.))
+            .pt(px(18.))
+            .pb(px(14.))
             .child(
                 div()
                     .flex()
                     .items_center()
-                    .gap(px(10.))
-                    .h(px(48.))
-                    .px(px(8.))
+                    .gap(px(12.))
+                    .h(px(40.))
+                    .px(px(4.))
                     .child(div().flex_none().size(px(32.)).rounded(px(7.)).bg(t.primary).flex().items_center().justify_center().child(mark_glyph(t.on_primary)))
                     .child(
                         div()
                             .flex()
                             .flex_col()
+                            .gap(px(2.))
                             .min_w_0()
-                            .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).text_color(t.text).child("Keyhop"))
+                            .child(div().text_size(px(14.)).font_weight(FontWeight::SEMIBOLD).text_color(t.text).child("Keyhop"))
                             .child(div().truncate().text_size(px(12.)).text_color(t.muted).child(format!("{logins} logins · {used_tools} tools"))),
                     ),
             )
             .child(
                 div()
                     .id("hop")
-                    .mt(px(10.))
+                    .mt(px(16.))
+                    .mx(px(2.))
                     .flex()
                     .items_center()
                     .gap(px(8.))
-                    .h(px(34.))
+                    .h(px(36.))
                     .px(px(11.))
                     .rounded(px(8.))
                     .border_1()
@@ -457,7 +464,7 @@ impl KeyhopWindow {
                     .child(div().flex_1().child("Hop to a login…"))
                     .child(div().px(px(5.)).h(px(20.)).rounded(px(5.)).bg(t.accent2).font_family("Geist Mono").text_size(px(11.)).flex().items_center().child(if cfg!(target_os = "macos") { "⌘K" } else { "Ctrl K" })),
             )
-            .child(div().mt(px(22.)).mb(px(6.)).px(px(8.)).child(self.lab("Platform").text_color(t.subtle)))
+            .child(div().mt(px(26.)).mb(px(8.)).px(px(8.)).child(self.lab("Platform").text_color(t.subtle)))
             .child(
                 div()
                     .flex()
@@ -471,8 +478,8 @@ impl KeyhopWindow {
             )
             .child(
                 div()
-                    .mt(px(22.))
-                    .mb(px(6.))
+                    .mt(px(26.))
+                    .mb(px(8.))
                     .px(px(8.))
                     .flex()
                     .items_center()
@@ -535,13 +542,11 @@ impl KeyhopWindow {
             Section::Home => "Home",
             Section::Limits => "Limits",
         };
-        let read = self.state.as_ref().and_then(|s| s.status.refreshed_at.clone());
-        let line = match (self.today.is_empty(), read) {
-            (false, Some(read)) => format!("{} · limits read {}", self.today, model::ago(&read)),
-            (false, None) => format!("{} · limits not read yet", self.today),
-            (true, Some(read)) => format!("Limits read {}", model::ago(&read)),
-            (true, None) => String::new(),
-        };
+        // What is being read, or what a hop said, only while it matters; the sidebar says when the
+        // limits were last read.
+        let reading = self.state.as_ref().is_some_and(|s| s.refreshing);
+        let line = self.toast.clone().or_else(|| reading.then(|| "Reading limits…".to_string())).unwrap_or_default();
+        let sample = self.state.as_ref().is_some_and(|s| s.mode == "sample");
         let controls: AnyElement = match self.section {
             Section::Home => self.segmented(RANGES.iter().map(|(id, label)| (id.to_string(), label.to_string(), None)).collect(), self.range, cx).into_any_element(),
             Section::Limits => {
@@ -565,7 +570,28 @@ impl KeyhopWindow {
             .child(div().flex_none().text_size(px(15.)).font_weight(FontWeight::SEMIBOLD).child(title))
             .child(div().min_w_0().overflow_hidden().child(controls))
             .child(div().flex_1())
-            .child(div().flex_none().text_size(px(12.)).text_color(t.muted).child(line))
+            .when(!line.is_empty(), |d| d.child(div().flex_none().text_size(px(12.)).text_color(t.muted).child(line)))
+            .when(sample, |d| d.child(div().flex_none().px(px(8.)).h(px(24.)).rounded(px(6.)).bg(Theme::tint(t.warn, 0.18)).text_color(t.warn_ink).text_size(px(12.)).font_weight(FontWeight::SEMIBOLD).flex().items_center().child("Sample")))
+            .child(
+                div()
+                    .id("theme")
+                    .flex_none()
+                    .size(px(34.))
+                    .rounded(px(8.))
+                    .bg(t.card)
+                    .border_1()
+                    .border_color(t.border)
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .text_size(px(15.))
+                    .text_color(t.muted)
+                    .cursor_pointer()
+                    .hover(|s| s.text_color(t.text))
+                    .on_click(cx.listener(|this, _, _, cx| this.toggle_theme(cx)))
+                    // The field it switches to: the moon by day, the sun by night.
+                    .child(if t.day { "☾" } else { "☀" }),
+            )
             .child(
                 div()
                     .id("refresh")
@@ -1108,49 +1134,52 @@ impl KeyhopWindow {
 
     // MARK: Limits
 
+    /// What the pool had left over the chosen span, a column per step, with resets in green.
     fn chart(&self, quota: &Quota, pool: &Pool) -> impl IntoElement {
         let t = self.theme;
         let now = model::epoch(&quota.forecast_start).unwrap_or_else(model::now);
-        let (from, to) = (now - 72 * 3_600, now + 168 * 3_600);
+        let from = now - self.quota_hours * 3_600;
         let height = 150.0_f32;
         let top = pool.capacity.max(100.0);
-        let columns = model::columns(quota, pool, from, to, 120);
-        div()
-            .flex()
-            .items_end()
-            .gap(px(1.))
-            .h(px(height))
-            .px(px(24.))
-            .children(columns.into_iter().map(|column| {
-                let (value, measured) = column.unwrap_or((0.0, true));
-                let share = (value / top).clamp(0.0, 1.0) as f32;
-                div().flex_1().h(px((share * height).max(1.0))).rounded_t(px(2.)).bg(if measured { Theme::tint(t.ink, 0.55) } else { Theme::tint(t.primary, 0.5) })
-            }))
+        let columns = model::history(quota, pool, from, now, if self.quota_hours > 48 { 84 } else { 48 });
+        let resets = model::reset_columns(&columns, top);
+        if columns.iter().flatten().count() < 2 {
+            return div().px(px(24.)).h(px(height)).flex().items_center().text_size(px(13.)).text_color(t.muted).child("Keyhop draws this once it has read the limits for a while.");
+        }
+        div().flex().items_end().gap(px(1.)).h(px(height)).px(px(24.)).children(columns.into_iter().zip(resets).map(|(value, reset)| {
+            let share = (value.unwrap_or(0.0) / top).clamp(0.0, 1.0) as f32;
+            div().flex_1().h(px(if value.is_some() { (share * height).max(1.0) } else { 0.0 })).rounded_t(px(2.)).bg(if reset { t.good } else { Theme::tint(t.ink, 0.55) })
+        }))
     }
 
-    fn outlook(&self, account: &Account) -> (String, Rgba) {
+    /// 24 hours or 7 days of history.
+    fn span_toggle(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
-        if account.error.is_some() {
-            return ("Sign in again".into(), t.bad);
-        }
-        let forecast = self.quota.as_ref().and_then(|q| q.accounts.iter().find(|a| a.id == account.id));
-        if let Some(back) = forecast.and_then(|f| f.back_at.as_deref()) {
-            return (format!("Back in {}", model::until(back)), t.bad);
-        }
-        if let Some(empty) = forecast.and_then(|f| f.empty_at.as_deref()) {
-            return (format!("Empty in {}", model::until(empty)), t.warn_ink);
-        }
-        match forecast {
-            Some(f) if f.drain_per_hour >= 0.05 => (format!("~{}", model::per_hour(f.drain_per_hour)), t.text),
-            _ if account.limits.is_empty() => (String::new(), t.subtle),
-            _ => ((if account.active { "Idle" } else { "Resting" }).into(), t.subtle),
-        }
+        div().flex().p(px(3.)).gap(px(2.)).rounded(px(8.)).bg(t.card).border_1().border_color(t.border).children([(24_i64, "24 hours"), (168, "7 days")].into_iter().map(|(hours, label)| {
+            let on = self.quota_hours == hours;
+            div()
+                .id(SharedString::from(format!("span-{hours}")))
+                .flex()
+                .items_center()
+                .h(px(26.))
+                .px(px(12.))
+                .rounded(px(6.))
+                .text_size(px(12.))
+                .when(on, |d| d.bg(t.accent2).text_color(t.text).font_weight(FontWeight::SEMIBOLD))
+                .when(!on, |d| d.text_color(t.muted).font_weight(FontWeight::MEDIUM))
+                .cursor_pointer()
+                .hover(|s| s.text_color(t.text))
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.quota_hours = hours;
+                    cx.notify();
+                }))
+                .child(label)
+        }))
     }
 
     fn login_line(&self, tool: &Tool, account: &Account, first: bool, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
         let lane = model::lane(account);
-        let (outlook, tone) = self.outlook(account);
         let meta = account.error.clone().unwrap_or_else(|| {
             let plan = [account.plan.clone().unwrap_or_default(), if account.keep_for_last { "kept for last".into() } else { String::new() }]
                 .into_iter().filter(|p| !p.is_empty()).collect::<Vec<_>>().join(" · ");
@@ -1167,7 +1196,7 @@ impl KeyhopWindow {
                 .gap(px(10.))
                 .text_size(px(12.))
                 .child(div().w(px(80.)).flex_none().truncate().text_color(t.muted).child(model::window_name(&limit.label)))
-                .child(div().flex_1().child(self.bar(limit.used_percent, limit.pace)))
+                .child(div().flex_1().child(self.bar(limit.used_percent, None)))
                 .child(div().w(px(36.)).flex().justify_end().font_weight(FontWeight::SEMIBOLD).text_color(t.text).child(format!("{:.0}%", limit.used_percent)))
                 .child(div().w(px(84.)).text_color(t.subtle).child(limit.resets_at.as_deref().map(|r| if model::passed(r) { "reset since".to_string() } else { format!("back in {}", model::until(r)) }).unwrap_or_default()))
         });
@@ -1210,7 +1239,6 @@ impl KeyhopWindow {
                     ),
             )
             .child(div().flex_1().min_w_0().flex().flex_col().gap(px(8.)).children(windows).when(account.limits.is_empty(), |d| d.child(div().text_size(px(12.5)).text_color(t.subtle).child(if tool.accounts.iter().all(|a| a.limits.is_empty()) { "No limit to read." } else { "" }))))
-            .child(div().w(px(120.)).flex_none().text_size(px(12.5)).font_weight(FontWeight::SEMIBOLD).text_color(tone).child(outlook))
             .child(div().w(px(130.)).flex_none().flex().justify_end().when(!account.active, |d| d.child(self.button(format!("switch-{}", account.id), if account.error.is_some() { "Hop and sign in".into() } else { "Hop here".into() }, account.error.is_none(), account.id.clone(), cx))))
     }
 
@@ -1235,6 +1263,11 @@ impl KeyhopWindow {
         let pooled: AnyElement = match (self.quota.as_ref(), pool) {
             (Some(quota), Some(pool)) if pool.accounts > 0 => {
                 let reset = pool.next_reset.as_ref();
+                let one = pool.accounts == 1;
+                let last_hour = model::last_hour(pool);
+                let logins: Vec<&Account> = kept.iter().filter(|tool| self.quota_tool == "all" || tool.id == self.quota_tool).flat_map(|tool| tool.accounts.iter()).filter(|a| model::left(a).is_some()).collect();
+                let roomy = logins.iter().filter(|a| model::left(a).unwrap_or(0.0) >= 20.0).count();
+                let scope = if self.quota_tool == "all" { format!("{} login{} with limits", pool.accounts, if one { "" } else { "s" }) } else { format!("{} {} login{}", pool.accounts, pool.name, if one { "" } else { "s" }) };
                 let left = self
                     .card()
                     .w(relative(0.42))
@@ -1242,21 +1275,32 @@ impl KeyhopWindow {
                     .gap(px(14.))
                     .px(px(26.))
                     .py(px(24.))
-                    .child(self.lab(&format!("{} logins with limits · out of {:.0}%", pool.accounts, pool.capacity)))
+                    .child(self.lab(&if one { scope } else { format!("{scope} · out of {:.0}%", pool.capacity) }))
                     .child(div().text_size(px(24.)).font_weight(FontWeight::MEDIUM).child("What your logins have left"))
-                    .child(div().flex().items_end().gap(px(10.)).child(div().text_size(px(56.)).line_height(px(56.)).font_weight(FontWeight::MEDIUM).child(format!("{:.0}%", pool.remaining))).child(div().pb(px(6.)).text_size(px(13.)).text_color(t.muted).child("left across them all")))
-                    .child(div().text_size(px(13.)).text_color(t.muted).child("Each login keeps its own limits. This adds up what each one has left, so 100% is one full login."))
+                    .child(div().flex().items_end().gap(px(10.)).child(div().text_size(px(56.)).line_height(px(56.)).font_weight(FontWeight::MEDIUM).child(format!("{:.0}%", pool.remaining))).child(div().pb(px(6.)).text_size(px(13.)).text_color(t.muted).child(if one { "left" } else { "left across them all" })))
+                    .when(!one, |d| d.child(div().text_size(px(13.)).text_color(t.muted).child("Each login keeps its own limits. This adds up what each one has left, so 100% is one full login.")))
                     .child(
                         div()
                             .flex()
                             .pt(px(16.))
                             .border_t_1()
                             .border_color(Theme::tint(t.text, 0.08))
-                            .child(self.figure("Draining", if pool.drain_per_hour >= 0.05 { format!("{:.0}%/h", pool.drain_per_hour) } else { "Idle".into() }, "this hour, all logins".into(), t.text, true))
-                            .child(self.figure("Next reset", reset.map(|r| format!("+{:.0}%", r.gain)).unwrap_or_else(|| "None".into()), reset.map(|r| format!("in {}", model::until(&r.at))).unwrap_or_default(), t.good, false))
-                            .child(self.figure("At this pace", pool.empty_at.as_deref().map(model::until).unwrap_or_else(|| "7 days".into()), if pool.empty_at.is_some() { "before all run out".into() } else { "and more".into() }, t.text, false)),
+                            .child(self.figure("Last hour", if last_hour >= 0.05 { if last_hour >= 10.0 { format!("{last_hour:.0}% used") } else { format!("{last_hour:.1}% used") } } else { "Nothing used".into() }, (if one { "by this login" } else { "across the logins" }).into(), t.text, true))
+                            .child(match reset {
+                                Some(r) => self.figure("Next reset", format!("+{:.0}%", r.gain), format!("in {} · {}", model::until(&r.at), r.account), t.good, false),
+                                None => self.figure("Next reset", "None soon".into(), "no window resets this week".into(), t.text, false),
+                            })
+                            .child(self.figure("With room", format!("{roomy} of {}", logins.len()), "logins with 20% or more left".into(), if roomy == 0 { t.bad } else { t.text }, false)),
                     );
-                let right = self.card().flex_1().min_w_0().pb(px(20.)).child(self.card_head("This week and next", Some("3 days measured · 7 projected".into()))).child(div().pt(px(16.)).child(self.chart(quota, pool)));
+                let title = if self.quota_hours > 48 { "The last 7 days" } else { "The last 24 hours" };
+                let right = self
+                    .card()
+                    .flex_1()
+                    .min_w_0()
+                    .pb(px(20.))
+                    .child(self.card_head(title, None))
+                    .child(div().pt(px(16.)).child(self.chart(quota, pool)))
+                    .child(div().px(px(24.)).pt(px(14.)).flex().child(self.span_toggle(cx)));
                 div().flex().gap(px(18.)).items_start().child(left).child(right).into_any_element()
             }
             (Some(_), _) => self.card().child(div().p(px(24.)).text_color(t.muted).text_size(px(13.)).child("No login here has a limit to read.")).into_any_element(),
@@ -1284,49 +1328,6 @@ impl KeyhopWindow {
             );
         }
         div().id("limits").size_full().overflow_y_scroll().child(div().flex().flex_col().px(px(24.)).pt(px(20.)).pb(px(28.)).gap(px(24.)).child(pooled).children(groups))
-    }
-
-    // MARK: Status bar
-
-    fn status_bar(&self, state: Option<&State>, needs: usize, cx: &mut Context<Self>) -> impl IntoElement {
-        let t = self.theme;
-        let today = state.map(|s| format!("{} TODAY", model::tokens(s.status.today.tokens))).unwrap_or_default();
-        let sample = state.is_some_and(|s| s.mode == "sample");
-        let read = state.and_then(|s| s.status.refreshed_at.clone()).map(|r| format!("Read {}", model::ago(&r))).unwrap_or_else(|| "Not read yet".into());
-        let chip = |text: String, ink: Rgba, ground: Rgba| div().flex().items_center().gap(px(6.)).h(px(20.)).px(px(8.)).rounded(px(6.)).bg(ground).text_color(ink).child(div().size(px(6.)).rounded(px(3.)).bg(ink)).child(text);
-        div()
-            .flex()
-            .items_center()
-            .gap(px(12.))
-            .h(px(28.))
-            .px(px(12.))
-            .flex_none()
-            .bg(t.sidebar)
-            .border_t_1()
-            .border_color(t.border)
-            .text_size(px(12.))
-            .text_color(t.muted)
-            .when(sample, |d| d.child(div().px(px(6.)).rounded(px(4.)).bg(Theme::tint(t.warn, 0.18)).text_color(t.warn_ink).font_weight(FontWeight::SEMIBOLD).child("Sample")))
-            .child(if needs > 0 {
-                chip(format!("{needs} need{} a hop", if needs == 1 { "s" } else { "" }), t.bad, Theme::tint(rgb(0xfb414a), 0.14))
-            } else {
-                chip("Live".into(), t.good, Theme::tint(t.good, 0.0)).child(div().ml(px(8.)).text_color(t.muted).child("Limits clear"))
-            })
-            .children(self.toast.clone().map(|toast| div().text_color(t.text).child(toast)))
-            .child(div().flex_1())
-            .child(div().font_family("Geist Mono").text_size(px(11.)).text_color(t.subtle).child(today))
-            .child(
-                div()
-                    .id("theme")
-                    .font_family("Geist Mono")
-                    .text_size(px(11.))
-                    .text_color(t.subtle)
-                    .cursor_pointer()
-                    .hover(|s| s.text_color(t.text))
-                    .on_click(cx.listener(|this, _, _, cx| this.toggle_theme(cx)))
-                    .child(if t.day { "DAY" } else { "NIGHT" }),
-            )
-            .child(div().id("status-refresh").h(px(20.)).px(px(8.)).rounded(px(6.)).bg(t.accent2).text_color(t.text).flex().items_center().cursor_pointer().on_click(cx.listener(|this, _, _, cx| this.refresh(cx))).child(read))
     }
 }
 
@@ -1405,6 +1406,5 @@ impl Render for KeyhopWindow {
                     .child(self.sidebar(&tools, needs, cx))
                     .child(div().flex_1().min_w_0().h_full().flex().flex_col().child(self.topbar(cx)).child(div().flex_1().min_h_0().child(body))),
             )
-            .child(self.status_bar(state.as_ref(), needs, cx))
     }
 }

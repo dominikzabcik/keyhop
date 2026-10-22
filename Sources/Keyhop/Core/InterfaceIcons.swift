@@ -24,6 +24,9 @@ enum InterfaceIcons {
         ("alert", #"<path d="M8 2.2 14.3 13H1.7z"/><path d="M8 6.5v3"/><path d="M8 11.4v.1"/>"#),
         ("plus", #"<path d="M8 3.5v9M3.5 8h9"/>"#),
         ("more", #"<g stroke-width="2.2"><path d="M3.5 8h.01"/><path d="M8 8h.01"/><path d="M12.5 8h.01"/></g>"#),
+        // The field by day and by night.
+        ("sun", #"<circle cx="8" cy="8" r="2.8"/><path d="M8 1.8v1.4M8 12.8v1.4M1.8 8h1.4M12.8 8h1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/>"#),
+        ("moon", #"<path d="M13.2 9.6A5.5 5.5 0 0 1 6.4 2.8a5.5 5.5 0 1 0 6.8 6.8Z"/>"#),
         ("search", #"<circle cx="7" cy="7" r="4.5"/><path d="m10.4 10.4 3.1 3.1"/>"#),
         // A dial with its needle: how much of a window is left.
         ("gauge", #"<path d="M2.6 11.5a5.5 5.5 0 1 1 10.8 0"/><path d="M8 9.5 10.6 6.4"/>"#),

@@ -43,29 +43,20 @@ pub fn tightest(account: &Account) -> Option<&Limit> {
     account.limits.iter().max_by(|a, b| a.used_percent.total_cmp(&b.used_percent))
 }
 
-fn runs_out_soon(limit: &Limit) -> bool {
-    let Some(eta) = limit.runs_out_at.as_deref().and_then(epoch) else { return false };
-    if eta <= now() {
-        return false;
-    }
-    !matches!(limit.resets_at.as_deref().and_then(epoch), Some(reset) if eta >= reset)
-}
-
+/// The lane a login reads as, the HTML window's `laneOf`: by what it has left, never by a guess
+/// of when it runs out.
 pub fn lane(account: &Account) -> Lane {
     if account.error.is_some() {
-        return Lane::Needs;
+        return if account.active { Lane::Needs } else { Lane::Hot };
     }
-    if account.limits.is_empty() {
-        return Lane::Quiet;
-    }
-    let used = max_used(account);
-    if used >= 85.0 || account.limits.iter().any(runs_out_soon) {
-        return Lane::Needs;
+    let Some(left) = left(account) else { return Lane::Quiet };
+    if left <= 15.0 {
+        return if account.active { Lane::Needs } else { Lane::Hot };
     }
     if account.active {
         return Lane::Active;
     }
-    if used >= 60.0 { Lane::Hot } else { Lane::Room }
+    if left <= 40.0 { Lane::Hot } else { Lane::Room }
 }
 
 /// The login with the most room for a tool, if it has fifteen points more than the one in use.
@@ -213,17 +204,14 @@ mod tests {
     }
 
     #[test]
-    fn columns_fold_measured_then_projected() {
+    fn history_keeps_readings_and_marks_resets() {
         let quota = crate::api::Quota { step: 1800, past_start: "2026-10-12T10:00:00Z".into(), forecast_start: "2026-10-12T12:00:00Z".into(), ..Default::default() };
-        let pool = crate::api::Pool { capacity: 200.0, past: vec![Some(150.0), None, Some(140.0), Some(130.0), Some(120.0)], forecast: vec![120.0, 110.0, 100.0, 190.0], ..Default::default() };
+        let pool = crate::api::Pool { capacity: 200.0, past: vec![Some(150.0), None, Some(140.0), Some(130.0), Some(190.0)], drain: vec![None, Some(4.0), Some(2.0), Some(6.0)], ..Default::default() };
         let from = epoch("2026-10-12T10:00:00Z").unwrap();
-        let cols = columns(&quota, &pool, from, from + 4 * 3600, 4);
-        assert_eq!(cols[0], Some((150.0, true)));
-        assert_eq!(cols[1], Some((130.0, true)));
-        assert_eq!(cols[2], Some((110.0, false)));
-        assert_eq!(cols[3], Some((190.0, false)));
-        assert_eq!(per_hour(3.25), "3.2% an hour");
-        assert_eq!(per_hour(44.0), "44% an hour");
+        let cols = history(&quota, &pool, from, from + 3 * 3600, 3);
+        assert_eq!(cols, vec![Some(150.0), Some(130.0), Some(190.0)]);
+        assert_eq!(reset_columns(&cols, 200.0), vec![false, false, true]);
+        assert_eq!(last_hour(&pool), 4.0);
     }
 }
 
@@ -246,27 +234,52 @@ pub fn until(iso: &str) -> String {
     }
 }
 
-/// A drain rate in percent an hour, to one decimal under ten.
-pub fn per_hour(rate: f64) -> String {
-    if rate >= 10.0 { format!("{rate:.0}% an hour") } else { format!("{rate:.1}% an hour") }
-}
-
-/// A pool's remaining share over time, folded into `count` columns from `from` to `to` (seconds):
-/// each column the last value known in it, and whether it was measured or projected.
-pub fn columns(quota: &crate::api::Quota, pool: &crate::api::Pool, from: i64, to: i64, count: usize) -> Vec<Option<(f64, bool)>> {
+/// What a pool had left over time, folded into `count` columns from `from` to `to` (seconds):
+/// each column the last reading in it. Readings only; nothing is projected.
+pub fn history(quota: &crate::api::Quota, pool: &crate::api::Pool, from: i64, to: i64, count: usize) -> Vec<Option<f64>> {
     let step = quota.step.max(60);
     let past0 = epoch(&quota.past_start).unwrap_or(0);
-    let ahead0 = epoch(&quota.forecast_start).unwrap_or(0);
-    let mut points: Vec<(i64, f64, bool)> = pool.past.iter().enumerate().filter_map(|(i, v)| v.map(|v| (past0 + i as i64 * step, v, true))).collect();
-    points.extend(pool.forecast.iter().enumerate().skip(1).map(|(i, v)| (ahead0 + i as i64 * step, *v, false)));
+    let points: Vec<(i64, f64)> = pool.past.iter().enumerate().filter_map(|(i, v)| v.map(|v| (past0 + i as i64 * step, v))).collect();
     let width = ((to - from) as f64 / count as f64).max(1.0);
     (0..count)
         .map(|c| {
             let start = from + (c as f64 * width) as i64;
             let end = from + ((c + 1) as f64 * width) as i64;
-            points.iter().filter(|(t, _, _)| *t >= start && *t < end).last().map(|(_, v, measured)| (*v, *measured))
+            points.iter().filter(|(t, _)| *t >= start && *t < end).last().map(|(_, v)| *v)
         })
         .collect()
+}
+
+/// The columns where a reset lifted the line: up by ten points, or a twentieth of the top, at once.
+pub fn reset_columns(columns: &[Option<f64>], top: f64) -> Vec<bool> {
+    let mut last = None;
+    columns
+        .iter()
+        .map(|value| {
+            let lifted = matches!((last, value), (Some(before), Some(now)) if now - before >= (top * 0.05).max(10.0));
+            if value.is_some() {
+                last = *value;
+            }
+            lifted
+        })
+        .collect()
+}
+
+/// What was used in the last hour: the mean of the last two half-hour readings of the drain.
+pub fn last_hour(pool: &crate::api::Pool) -> f64 {
+    let read: Vec<f64> = pool.drain.iter().filter_map(|v| *v).collect();
+    let tail = &read[read.len().saturating_sub(2)..];
+    if tail.is_empty() { 0.0 } else { tail.iter().sum::<f64>() / tail.len() as f64 }
+}
+
+/// What a login has left on its tightest window, a window whose reset has passed counting as
+/// full; none when it is signed out or has no limit to read.
+pub fn left(account: &Account) -> Option<f64> {
+    if account.error.is_some() || account.limits.is_empty() {
+        return None;
+    }
+    let used = account.limits.iter().map(|l| if l.resets_at.as_deref().is_some_and(passed) { 0.0 } else { l.used_percent }).fold(0.0, f64::max);
+    Some((100.0 - used).clamp(0.0, 100.0))
 }
 
 /// Home's tools share one blue, lightest for the largest share (KB-Home).

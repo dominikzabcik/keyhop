@@ -99,7 +99,7 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .skip-link:focus-visible { transform: translateY(0); }
 
 /* Shell */
-.shell { display: grid; grid-template-columns: 256px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 26px; height: 100vh; }
+.shell { display: grid; grid-template-columns: 256px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100vh; }
 .sidebar { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; background: var(--sidebar); border-right: 1px solid var(--border); min-height: 0; }
 .brand, .hop-side, .side-label, .side-foot { flex: none; }
 .brand { display: flex; align-items: center; gap: 10px; height: 60px; padding: 0 18px; border-bottom: 1px solid var(--border); }
@@ -632,19 +632,19 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .toast-copy small { color: var(--muted); font-size: 12px; }
 
 /* The sidebar after coss-ui: the workspace, a search to hop, the places, then each limit live. */
-.brand { height: auto; padding: 12px 12px 4px; border-bottom: 0; gap: 10px; }
+.brand { height: auto; padding: 18px 18px 6px; border-bottom: 0; gap: 12px; }
 .brand-tile { flex: none; width: 32px; height: 32px; border-radius: 7px; display: grid; place-items: center; background: var(--primary); color: var(--on-primary); }
 .brand-tile svg { width: 16px; height: 16px; }
-.brand-copy { flex: 1; min-width: 0; display: grid; line-height: 16px; }
-.brand-copy b { font-size: 13px; font-weight: 600; }
+.brand-copy { flex: 1; min-width: 0; display: grid; gap: 2px; line-height: 17px; }
+.brand-copy b { font-size: 14px; font-weight: 600; }
 .brand-copy small { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mac-window .brand { padding-left: 12px; padding-top: 36px; }
-.hop-side { width: calc(100% - 24px); height: 34px; margin: 10px 12px 0; justify-content: flex-start; background: transparent; border-color: var(--border-strong); color: var(--muted); font-weight: 450; }
+.mac-window .brand { padding-left: 18px; padding-top: 46px; }
+.hop-side { width: calc(100% - 32px); height: 36px; margin: 16px 16px 0; justify-content: flex-start; background: transparent; border-color: var(--border-strong); color: var(--muted); font-weight: 450; }
 .hop-side:hover { color: var(--text); }
 .hop-side kbd { margin-left: auto; }
 .side-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; padding-bottom: 8px; }
-.nav-label { margin: 22px 20px 6px; }
-.nav { padding: 0 12px; }
+.nav-label { margin: 26px 22px 8px; }
+.nav { padding: 0 14px; }
 .nav a { color: hsl(var(--on) / .86); font-weight: 450; }
 .nav a[aria-current="page"] { font-weight: 600; color: var(--text); }
 .nav a > svg:first-child { color: var(--muted); }
@@ -661,13 +661,13 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .nav-sub button { display: flex; align-items: center; height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 13px; text-align: left; cursor: pointer; }
 .nav-sub button:hover { background: var(--hover); color: var(--text); }
 .nav-sub button[aria-pressed="true"] { color: var(--text); font-weight: 560; background: hsl(var(--on) / .05); }
-.side-label { display: flex; align-items: center; justify-content: space-between; margin: 22px 20px 6px; color: var(--subtle); font: 500 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; }
+.side-label { display: flex; align-items: center; justify-content: space-between; margin: 26px 22px 8px; color: var(--subtle); font: 500 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; }
 .side-live { display: inline-flex; align-items: center; gap: 6px; font: 450 12px var(--sans); letter-spacing: 0; text-transform: none; color: var(--subtle); }
 .side-live.on { color: var(--good); }
 .side-live i { width: 6px; height: 6px; border-radius: 3px; background: currentColor; }
 @media (prefers-reduced-motion: no-preference) { .side-live.on i, .chip.live i { animation: live 1.6s ease-out infinite; } }
 @keyframes live { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 60%, transparent); } 100% { box-shadow: 0 0 0 7px transparent; } }
-.acct-tree { overflow: visible; padding: 0 12px; display: grid; gap: 4px; }
+.acct-tree { overflow: visible; padding: 0 14px; display: grid; gap: 4px; }
 .side-login { display: grid; gap: 6px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; text-align: left; cursor: pointer; color: var(--text); }
 .side-login:hover { background: var(--hover); }
 .side-login[aria-pressed="true"] { background: hsl(var(--on) / .07); }
@@ -682,7 +682,7 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .side-bar > span { display: block; height: 100%; border-radius: inherit; background: hsl(var(--on) / .78); transition: width .5s ease; }
 .side-login.warn .side-bar > span { background: var(--warn); }
 .side-login.bad .side-bar > span { background: var(--red, #fb414a); }
-.side-foot { flex: none; border-top: 0; padding: 8px 12px 12px; }
+.side-foot { flex: none; border-top: 0; padding: 10px 14px 14px; }
 .side-account { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 8px; border-radius: 8px; color: var(--text); text-decoration: none; }
 .side-account:hover, .side-account[aria-current="page"] { background: var(--hover); }
 .side-account .avatar { flex: none; width: 32px; height: 32px; border-radius: 7px; display: grid; place-items: center; background: color-mix(in srgb, var(--primary) 25%, transparent); font-size: 12px; font-weight: 600; }
@@ -701,6 +701,10 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .top-title .toolbar::-webkit-scrollbar { display: none; }
 .top-actions { flex: none; }
 @media (max-width: 1240px) { .top-read { display: none; } }
+.top-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 7px; font-size: 12px; text-decoration: none; white-space: nowrap; }
+.top-chip .mark { width: 12px; height: 12px; }
+.top-chip.warn { color: var(--warn-ink); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.top-chip.warn:hover { background: color-mix(in srgb, var(--warn) 22%, transparent); }
 .top-read { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .icon-btn { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--muted); cursor: pointer; }
 .icon-btn:hover { color: var(--text); border-color: var(--border-strong); }
@@ -711,15 +715,6 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .tabs button[aria-pressed="true"] { font-weight: 600; }
 .tabs.has-thumb::before { border-radius: 6px; background: hsl(var(--on) / .09); }
 
-/* The status bar: problems as chips on the left, quiet figures in the label face on the right. */
-.statusbar .chip { display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px; border: 0; border-radius: 6px; font-size: 12px; background: transparent; color: var(--muted); text-decoration: none; cursor: pointer; }
-.statusbar .chip i { width: 6px; height: 6px; border-radius: 3px; background: currentColor; }
-.statusbar .chip .mark { width: 12px; height: 12px; }
-.statusbar .chip.bad { color: var(--bad); background: color-mix(in srgb, var(--red, #fb414a) 14%, transparent); }
-.statusbar .chip.warn { color: var(--warn-ink); background: color-mix(in srgb, var(--warn) 14%, transparent); }
-.statusbar .chip.live { color: var(--good); cursor: default; padding-left: 4px; }
-.statusbar .status-fig { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--subtle); }
-.statusbar .status-btn { height: 20px; padding: 0 8px; border-radius: 6px; background: hsl(var(--on) / .07); color: var(--text); font-size: 12px; }
 
 /* The wallpaper canvas, kept for the backdrop that can show on every page. */
 .hero-art { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
@@ -902,21 +897,7 @@ details.setup summary .subtle { font-weight: 450; font-size: 12.5px; overflow: h
 details.setup[open] summary { border-bottom: 1px solid var(--border); }
 .setup-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .setup-row .mark { margin-top: 2px; }
-.statusbar {
-  position: relative; grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; gap: 14px; padding: 0 12px;
-  border-top: 1px solid var(--border); background: var(--sidebar); color: var(--muted); font-size: 11.5px;
-  white-space: nowrap; overflow: hidden; min-width: 0;
-}
-.statusbar button, .statusbar a {
-  display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: inherit;
-  padding: 0; height: 26px; text-decoration: none; cursor: pointer; min-width: 0;
-}
-.statusbar button:hover, .statusbar a:hover { color: var(--text); }
-.statusbar .status-grow { flex: 1; }
-.status-btn .icon { width: 12px; height: 12px; }
-.status-btn.spin .icon { animation: turn 1s linear infinite; }
-#read { overflow: hidden; text-overflow: ellipsis; }
-.statusbar .meter { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: transparent; }
+
 
 @media (max-width: 1180px) {
   .usage-board { grid-template-columns: 1fr; }
@@ -935,12 +916,11 @@ details.setup[open] summary { border-bottom: 1px solid var(--border); }
   .tool-row .row-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
 @media (max-width: 820px) {
-  .shell { grid-template-columns: 1fr; grid-template-rows: auto minmax(240px, 1fr) auto; height: auto; min-height: 100vh; }
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto minmax(240px, 1fr); height: auto; min-height: 100vh; }
   body { overflow: auto; }
-  .sidebar, .content, .statusbar { grid-column: 1; }
+  .sidebar, .content { grid-column: 1; }
   .sidebar { grid-row: 1; border-right: 0; border-bottom: 1px solid var(--border); }
   .content { grid-row: 2; }
-  .statusbar { grid-row: 3; }
   .nav { grid-auto-flow: column; overflow-x: auto; flex: none; min-height: auto; }
   .nav-label { margin: 0 4px 0 12px; align-self: center; white-space: nowrap; }
   .acct-tree, .side-label, .pet-foot { display: none; }

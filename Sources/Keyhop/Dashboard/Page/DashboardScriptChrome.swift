@@ -1,6 +1,6 @@
 import Foundation
 
-/// The sidebar, status bar, motion, the Hop palette and progress: what stays while sections change.
+/// The sidebar, top bar, motion, the Hop palette and progress: what stays while sections change.
 extension DashboardPage {
     static let scriptChrome = ##"""
   // MARK: Shell
@@ -348,17 +348,18 @@ extension DashboardPage {
     const busyNow = !!(state?.refreshing || step || ui.loadingUsage);
     const read = state?.status?.refreshedAt;
     const label = step ? `${step.title}${step.count ? ` · ${step.count}` : ""}` : state?.refreshing ? "Starting…" : ui.loadingUsage ? "Reading usage" : read ? `Limits read ${fmt.relative(read)}` : "Limits not read yet";
-    $("#read").textContent = label;
     const top = $("#top-read");
-    // The top bar names a read only while one runs; the status bar always says when the last was.
+    // The top bar names a read only while one runs; the refresh button says when the last was.
     if (top) top.textContent = busyNow ? label : "";
+    const refresh = $("#refresh");
+    if (refresh) refresh.title = busyNow ? label : `${label}. Read again`;
     $("#main")?.setAttribute("aria-busy", busyNow ? "true" : "false");
-    for (const meter of [$("#foot-meter"), $("#top-meter")]) {
+    for (const meter of [$("#top-meter")]) {
       if (!meter) continue;
       const known = step?.fraction != null;
       meter.classList.toggle("unknown", busyNow && !known);
       meter.firstElementChild.style.width = known ? `${(step.fraction * 100).toFixed(1)}%` : "";
-      if (meter.id === "foot-meter") meter.hidden = !busyNow; else meter.classList.toggle("on", busyNow);
+      meter.classList.toggle("on", busyNow);
       meter.setAttribute("aria-hidden", busyNow ? "false" : "true");
       if (known) meter.setAttribute("aria-valuenow", Math.round(step.fraction * 100)); else meter.removeAttribute("aria-valuenow");
     }
@@ -434,7 +435,7 @@ extension DashboardPage {
       mode.innerHTML = isStatic ? `<span class="badge">Saved</span>` : state?.mode === "sample" ? `<span class="badge sample">Sample</span>` : "";
       mode.hidden = !mode.textContent.trim();
     }
-    for (const refresh of [$("#refresh"), $("#status-read")]) {
+    for (const refresh of [$("#refresh")]) {
       if (!refresh) continue;
       refresh.disabled = isStatic;
       refresh.classList.toggle("spin", !!state?.refreshing);

@@ -127,7 +127,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Run tests
-        run: swift test
+        run: scripts/swift-test.sh
 
       - name: Build universal app
         run: ./scripts/build-app.sh
@@ -284,7 +284,7 @@ jobs:
           curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_${{ matrix.nfpm }}.tar.gz" | tar -xz -C /usr/local/bin nfpm
 
       - name: Run tests
-        run: swift test
+        run: scripts/swift-test.sh
 
       - name: Build the binary and packages
         run: |
@@ -502,7 +502,12 @@ jobs:
           swift-build: 6.3.3-RELEASE
 
       - name: Run tests
-        run: swift test
+        shell: pwsh
+        run: |
+          swift test 2>&1 | Tee-Object -FilePath swift-test.log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) { Select-String -Path swift-test.log -Pattern ': error: |Fatal error|Test Case .* failed' | Select-Object -First 40 | ForEach-Object { "::error title=swift test::$($_.Line)" } }
+          exit $code
 
       - name: Build the zip
         shell: pwsh

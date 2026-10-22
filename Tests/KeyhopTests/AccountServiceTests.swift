@@ -381,6 +381,9 @@ final class RefreshRuleTests: XCTestCase {
     }
 
     func testNotedClaudeSessionsCountOnlyWhileTheirProcessRuns() throws {
+        #if os(Windows)
+        throw XCTSkip("Windows has no process list or file lock for Keyhop to read sessions with")
+        #endif
         let folder = directory.appendingPathComponent("sessions", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let me = getpid()
@@ -461,6 +464,9 @@ final class RefreshRuleTests: XCTestCase {
     }
 
     func testAKeyhopRunNoteBlocksAHopToThatLoginForCodexToo() async throws {
+        #if os(Windows)
+        throw XCTSkip("Windows has no process list or file lock for Keyhop to read sessions with")
+        #endif
         let tool = FakeTool(["user": "bob"]), allowed = FakeTool(nil)
         // The default session reader, pointed at this service's own run folders.
         let service = AccountService(directory: directory, adapters: [.codex: RefreshWatchingAdapter(tool: tool, allowed: allowed)],
@@ -519,6 +525,9 @@ final class RefreshRuleTests: XCTestCase {
     }
 
     func testTwoProcessesNeverRefreshTheSameLoginAtOnce() async throws {
+        #if os(Windows)
+        throw XCTSkip("Windows has no process list or file lock for Keyhop to read sessions with")
+        #endif
         let id = UUID(), dir = directory!
         let inside = FakeTool(["n": "0", "max": "0"])
         try await withThrowingTaskGroup(of: Void.self) { group in

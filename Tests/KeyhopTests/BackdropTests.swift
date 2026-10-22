@@ -47,7 +47,7 @@ final class BackdropTests: XCTestCase {
         let page = DashboardPage.render(boot: nil)
         XCTAssertTrue(page.contains(#":root[data-theme="day"]"#))
         XCTAssertTrue(page.contains("prefers-color-scheme: light"))
-        XCTAssertTrue(page.contains(#"id="status-theme""#))
+        XCTAssertTrue(page.contains(#"id="theme" data-action="theme-toggle""#))
         // Every overlay tint reads from the ink hue, so the day field never paints white on white.
         let style = page.components(separatedBy: "<style>")[1].components(separatedBy: "</style>")[0]
         XCTAssertFalse(style.contains("hsl(0 0% 100% / "))

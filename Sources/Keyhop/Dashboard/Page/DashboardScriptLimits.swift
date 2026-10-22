@@ -1,7 +1,8 @@
 import Foundation
 
-/// Limits: every saved login, grouped by tool, with what each window has used and when it
-/// resets. Only what the tools report; no guesses about when a limit will run out.
+/// Limits: what the logins have left and how it went, then every saved login, grouped by tool, with
+/// what each window has used and when it resets. Only what the tools reported; no guesses about
+/// when a limit will run out.
 extension DashboardPage {
     static let scriptLimits = ##"""
   // MARK: Limits
@@ -25,7 +26,166 @@ extension DashboardPage {
       ? `<p class="lim-foot">${esc(nameList(measured.map((tool) => tool.name)))} ${measured.length === 1 ? "has" : "have"} no limit to read. ${measured.length === 1 ? "It is" : "They are"} counted in Usage.</p>` : "";
     const unset = ui.quotaTool === "all" ? setupCard(tools.filter((tool) => !tool.accounts.length && !adding(tool.id))) : "";
     const empty = !kept.length ? `<section class="card"><p class="empty">No saved logins yet. Add one below.</p></section>` : "";
-    return { toolbar, body: `<div class="lim-page">${empty}${groups}${note}${unset}</div>` };
+    return { toolbar, body: `<div class="lim-page">${kept.length ? quotaCard() : ""}${empty}${groups}${note}${unset}</div>` };
+  }
+
+  // MARK: What is left, and how it went
+
+  const QUOTA_SPANS = { 24: "24 hours", 168: "7 days" };
+  const quotaPool = (tool = ui.quotaTool) => data.quota?.pools?.find((pool) => pool.tool === tool) || null;
+
+  // "Tue 22:00", or just the time when it is today.
+  function when(date) {
+    const at = new Date(date);
+    return at.toDateString() === new Date().toDateString() ? fmt.clock(at) : fmt.day(at, { weekday: "short", hour: "2-digit", minute: "2-digit" });
+  }
+
+  // The pooled figure beside the measured history: readings only, nothing projected.
+  function quotaCard() {
+    if (!data.quota) {
+      if (isStatic) return "";
+      if (data.quotaError) return `<div class="notice">${icon("alert")}<div><b>The history isn't available</b><p>${esc(data.quotaError)}</p></div></div>`;
+      return `<div class="lim-top"><section class="card lim-total skel-card" style="min-height:300px"></section><section class="card qcard skel-card" style="min-height:300px"></section></div>`;
+    }
+    const pool = quotaPool();
+    if (!pool || !pool.accounts) return "";
+    const share = pool.capacity ? pool.remaining / pool.capacity : 0;
+    const tone = share <= 0.15 ? "bad" : share <= 0.35 ? "warn" : "";
+    const one = pool.accounts === 1;
+    const scope = ui.quotaTool === "all" ? `${pool.accounts} login${one ? "" : "s"} with limits` : `${pool.accounts} ${esc(pool.name)} login${one ? "" : "s"}`;
+    const drain = (pool.drain || []).filter((v) => v != null);
+    const lastHour = drain.slice(-2).reduce((sum, v) => sum + v, 0) / Math.max(1, drain.slice(-2).length);
+    const tools = (data.state?.status.tools || []).filter((tool) => ui.quotaTool === "all" || tool.id === ui.quotaTool);
+    const logins = tools.flatMap((tool) => tool.accounts).filter((account) => account.limits?.length && !account.error);
+    const roomy = logins.filter((account) => leftOf(account) >= 20).length;
+    const figure = (name, value, sub, cls = "") => `<div class="lim-fig"><span class="lim-fig-name">${name}</span><b class="${cls}">${value}</b><span class="lim-fig-sub">${sub}</span></div>`;
+    const figures = [
+      figure("Last hour", lastHour >= 0.05 ? `${lastHour >= 10 ? Math.round(lastHour) : lastHour.toFixed(1)}% used` : "Nothing used", one ? "by this login" : "across the logins"),
+      pool.nextReset
+        ? figure("Next reset", `+${Math.round(pool.nextReset.gain)}%`, `at ${esc(when(pool.nextReset.at))} · ${esc(pool.nextReset.account)}`, "up")
+        : figure("Next reset", "None soon", "no window resets this week"),
+      figure("With room", `${roomy} of ${logins.length}`, "logins with 20% or more left", roomy ? "" : "bad"),
+    ].join("");
+    const summary = `<section class="card lim-total" aria-labelledby="lim-total-h">
+      <span class="lim-total-title"><span class="lab">${scope}${one ? "" : ` · out of ${Math.round(pool.capacity)}%`}</span><h2 id="lim-total-h">What your logins have left</h2></span>
+      <div class="lim-big ${tone}"><b data-count="${pool.remaining}" data-count-key="quota:${esc(pool.tool)}" data-format="pct">${Math.round(pool.remaining)}%</b><span>left${one ? "" : " across them all"}</span></div>
+      ${one ? "" : `<p class="lim-note">Each login keeps its own limits. This adds up what each one has left, so 100% is one full login.</p>`}
+      <div class="lim-figs">${figures}</div>
+    </section>`;
+    const hours = QUOTA_SPANS[ui.quotaHours] ? ui.quotaHours : 24;
+    const legend = ui.quotaView === "drain" ? `<span><i class="bar"></i>Used per hour</span>` : `<span><i class="solid"></i>Left</span><span><i class="reset"></i>Reset</span>`;
+    const history = `<section class="card qcard" aria-labelledby="lim-hist-h">
+      <div class="lim-fore-head"><h2 id="lim-hist-h">The last ${esc(QUOTA_SPANS[hours])}</h2><span class="qlegend">${legend}</span></div>
+      <div class="qchart chart">${ui.quotaView === "drain" ? drainChart(pool, hours) : leftChart(pool, hours)}</div>
+      <div class="lim-fore-tools">${tabs("quota-hours", Object.entries(QUOTA_SPANS), String(hours))}${tabs("quota-view", [["left", "Left"], ["drain", "Used per hour"]], ui.quotaView)}</div>
+    </section>`;
+    return `<div class="lim-top">${summary}${history}</div>`;
+  }
+
+  // The history sits beside the summary, so its chart is drawn to that card's width.
+  function historyWidth() {
+    const main = Math.min(1480, ($("#main")?.clientWidth || 1200) - 56);
+    const wide = !matchMedia("(max-width: 1180px)").matches;
+    return Math.max(420, Math.floor((wide ? (main - 18) * 1.3 / 2.3 : main) - 54));
+  }
+
+  // A series as [time, value] points, from its first time and the report's step.
+  function seriesPoints(start, values) {
+    const t0 = new Date(start).getTime(), step = (data.quota.step || 1800) * 1000;
+    return values.map((value, i) => [t0 + i * step, value]);
+  }
+
+  function timeAxis(from, to, x, H, B) {
+    let labels = "";
+    if ((to - from) / 3600_000 <= 48) {
+      const every = 4 * 3600_000;
+      for (let t = Math.ceil(from / every) * every; t <= to; t += every) {
+        labels += `<text class="axis" x="${x(t).toFixed(1)}" y="${H - 7}" text-anchor="middle">${esc(fmt.clock(new Date(t)))}</text>`;
+      }
+    } else {
+      const day = new Date(from); day.setHours(24, 0, 0, 0);
+      for (let t = day.getTime(); t <= to; t += 86400_000) {
+        const label = t + 43200_000 <= to ? `<text class="axis" x="${x(t + 43200_000).toFixed(1)}" y="${H - 7}" text-anchor="middle">${esc(fmt.day(t, { weekday: "short" }))}</text>` : "";
+        labels += `<line class="grid day" x1="${x(t).toFixed(1)}" x2="${x(t).toFixed(1)}" y1="8" y2="${H - B}"/>${label}`;
+      }
+    }
+    return labels;
+  }
+
+  // What was left at each reading, with a mark where a reset lifted it.
+  function leftChart(pool, hours) {
+    const W = historyWidth(), H = 240, L = 48, R = 14, T = 12, B = 26;
+    const now = new Date(data.quota.forecastStart).getTime();
+    const from = now - hours * 3600_000;
+    const top = Math.max(100, pool.capacity);
+    const x = (t) => L + ((t - from) / (now - from)) * (W - L - R);
+    const y = (v) => T + (1 - Math.max(0, Math.min(top, v)) / top) * (H - T - B);
+    const points = seriesPoints(data.quota.pastStart, pool.past).filter(([t, v]) => v != null && t >= from && t <= now);
+    if (points.length < 2) return `<p class="empty">Keyhop draws this once it has read the limits for a while.</p>`;
+    let grid = "";
+    for (let i = 0; i <= 4; i++) {
+      const value = (top / 4) * i, yy = y(value).toFixed(1);
+      grid += `<line class="${i ? "grid" : "base"}" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text class="axis" x="${L - 8}" y="${yy}" text-anchor="end" dominant-baseline="central">${Math.round(value)}%</text>`;
+    }
+    grid += timeAxis(from, now, x, H, B);
+    const line = points.map(([t, v], i) => `${i ? "L" : "M"}${x(t).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    const area = `${line}L${x(points[points.length - 1][0]).toFixed(1)},${y(0).toFixed(1)}L${x(points[0][0]).toFixed(1)},${y(0).toFixed(1)}Z`;
+    // Resets close together read as one, so only the first in any three hours is marked.
+    let resets = "", lastReset = -Infinity;
+    for (let i = 1; i < points.length; i++) {
+      const gain = points[i][1] - points[i - 1][1];
+      if (gain >= Math.max(10, top * 0.05) && points[i][0] - lastReset >= 3 * 3600_000) {
+        lastReset = points[i][0];
+        const rx = x(points[i][0]).toFixed(1);
+        resets += `<line class="qreset" x1="${rx}" x2="${rx}" y1="${y(points[i - 1][1]).toFixed(1)}" y2="${y(points[i][1]).toFixed(1)}"/>`;
+      }
+    }
+    // Hover strips, one per half hour by day or per two hours across a week, each with its reading.
+    const strip = hours > 48 ? 2 * 3600_000 : 1800_000;
+    let hits = "";
+    for (let t = from; t < now; t += strip) {
+      const mid = t + strip / 2;
+      const point = points.reduce((best, p) => (!best || Math.abs(p[0] - mid) < Math.abs(best[0] - mid) ? p : best), null);
+      if (!point || Math.abs(point[0] - mid) > strip) continue;
+      hits += `<rect class="hit" x="${x(t).toFixed(1)}" y="${T}" width="${(x(Math.min(now, t + strip)) - x(t)).toFixed(1)}" height="${H - T - B}"${tipAttr(fmt.day(point[0], { weekday: "short", hour: "2-digit", minute: "2-digit" }), [["Left", `${Math.round(point[1])}%${pool.accounts > 1 ? ` of ${Math.round(pool.capacity)}%` : ""}`]])}/>`;
+    }
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(pool.name)} left over the last ${esc(QUOTA_SPANS[hours])}">
+      ${grid}<path class="qarea" d="${area}"/><path class="qline" d="${line}"/>${resets}${hits}
+    </svg>`;
+  }
+
+  // How much was used in each hour, or each four hours across a week.
+  function drainChart(pool, hours) {
+    const W = historyWidth(), H = 240, L = 48, R = 14, T = 12, B = 26;
+    const now = new Date(data.quota.forecastStart).getTime();
+    const from = now - hours * 3600_000;
+    const points = seriesPoints(data.quota.pastStart, pool.drain || []).filter(([t, v]) => v != null && t >= from && t <= now);
+    if (!points.length) return `<p class="empty">Keyhop draws this once it has read the limits for a while.</p>`;
+    const block = hours > 48 ? 4 * 3600_000 : 3600_000;
+    const buckets = new Map();
+    for (const [t, v] of points) {
+      const key = Math.floor(t / block) * block;
+      const entry = buckets.get(key) || { sum: 0, n: 0 };
+      entry.sum += v; entry.n += 1;
+      buckets.set(key, entry);
+    }
+    const rows = [...buckets.entries()].map(([t, e]) => [t, e.sum / e.n]);
+    const ceiling = niceCeiling(Math.max(1, ...rows.map(([, v]) => v)));
+    const x = (t) => L + ((t - from) / (now + block - from)) * (W - L - R);
+    const y = (v) => T + (1 - v / ceiling) * (H - T - B);
+    let grid = "";
+    for (let i = 0; i <= 4; i++) {
+      const value = (ceiling / 4) * i, yy = y(value).toFixed(1);
+      grid += `<line class="${i ? "grid" : "base"}" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text class="axis" x="${L - 8}" y="${yy}" text-anchor="end" dominant-baseline="central">${value < 10 && value % 1 ? value.toFixed(1) : Math.round(value)}%</text>`;
+    }
+    grid += timeAxis(from, now + block, x, H, B);
+    const bw = Math.max(2, (x(from + block) - x(from)) * 0.62);
+    const per = (v) => `${v >= 10 ? Math.round(v) : v.toFixed(1)}% an hour`;
+    const bars = rows.map(([t, v]) => {
+      const cx = x(t + block / 2), h = Math.max(0, y(0) - y(v));
+      return `<rect class="qbar" x="${(cx - bw / 2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5"${tipAttr(fmt.day(t, { weekday: "short", hour: "2-digit", minute: "2-digit" }), [["Used", per(v)]])}/>`;
+    }).join("");
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(pool.name)} used per hour">${grid}${bars}</svg>`;
   }
 
   // MARK: Logins

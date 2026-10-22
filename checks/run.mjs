@@ -279,7 +279,7 @@ async function checkApp(browser) {
         await page.getByText("Checking for updates…", { exact: true }).waitFor({ state: "visible" });
         if (await page.locator("#top-meter").evaluate((meter) => meter.classList.contains("on"))) {
           // Say what the bar was carrying, so a slow machine's reason is in the report.
-          const carrying = await page.locator("#read").textContent().catch(() => "");
+          const carrying = await page.locator("#top-read").textContent().catch(() => "");
           throw new Error(`update check borrowed the limits progress bar (it said "${(carrying || "").trim()}")`);
         }
       });

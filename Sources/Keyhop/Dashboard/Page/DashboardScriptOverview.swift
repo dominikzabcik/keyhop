@@ -110,8 +110,7 @@ extension DashboardPage {
     const title = $("#title");
     if (title) title.hidden = false;
     const tools = data.state?.status?.tools || [];
-    // One count everywhere: what Home's Needs you lists about logins.
-    const needs = data.state ? attentionItems(tools).filter((item) => item.login).length : 0;
+    const needs = data.state ? needsCount(tools) : 0;
     const badge = $("#limits-count");
     if (badge) {
       badge.hidden = needs === 0;
@@ -171,7 +170,7 @@ extension DashboardPage {
     }
   }
 
-  // What the pet says: the hop worth making, if there is one. A login with nowhere to go is in Needs you.
+  // What the pet says: the hop worth making, if there is one. A login with nowhere to go is counted on Limits.
   function homeHeadline(tools) {
     const hop = bestHop(tools);
     if (hop) return { title: `${hop.tool.name} has ${leftOf(hop.from)}% left.`, sub: `${hop.to.name} has ${leftOf(hop.to)}%.`, target: hop.to.id };
@@ -183,47 +182,16 @@ extension DashboardPage {
     return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   }
 
-  // Home's list of what wants a decision now: a login in use that is low, a saved login that is
-  // signed out, an outage, a budget. Each has one action.
-  function attentionItems(tools) {
-    const items = [];
+  // The logins that want a decision now: one in use that is low, or one signed out. Limits in the
+  // sidebar counts them.
+  function needsCount(tools) {
+    let count = 0;
     for (const tool of tools) {
       const active = tool.accounts.find((account) => account.active);
-      if (active && !active.error && laneOf(active) === "needs") {
-        const alt = alternative(tool, active);
-        const top = tightest(active);
-        items.push({ login: true, tone: alt ? "hop" : "bad", mark: tool.id,
-          title: `${tool.name} has ${leftOf(active)}% left`,
-          text: alt ? `${active.name} is low. ${alt.name} has ${leftOf(alt)}%.` : `${active.name}${top?.resetsAt ? `, back in ${fmt.until(top.resetsAt)}` : ""}. No other login has room.`,
-          action: isStatic ? "" : alt ? `<button class="btn sm" type="button" data-action="switch" data-id="${esc(alt.id)}">Hop</button>`
-            : `<button class="btn sm secondary" type="button" data-action="add" data-tool="${esc(tool.id)}">Add login</button>` });
-      }
-      for (const account of tool.accounts.filter((item) => item.error)) {
-        items.push({ login: true, tone: "bad", glyph: "key", title: `${account.name} is signed out`, text: `${tool.name}. Sign in again to use it.`,
-          action: isStatic ? "" : account.active ? `<button class="btn sm secondary" type="button" data-action="goto" data-section="limits">Open</button>`
-            : `<button class="btn sm secondary" type="button" data-action="switch" data-id="${esc(account.id)}">Sign in</button>` });
-      }
+      if (active && !active.error && laneOf(active) === "needs") count += 1;
+      count += tool.accounts.filter((account) => account.error).length;
     }
-    for (const service of data.services || []) {
-      if (!servicePhrase[service.level]) continue;
-      const incident = service.incidents && service.incidents[0];
-      items.push({ tone: service.level === "maintenance" ? "" : "warn", mark: service.tool, title: `${toolName(service.tool)} ${serviceShort[service.level]}`,
-        text: incident?.title || outageSentence(service),
-        action: incident?.link || service.page ? `<a class="btn sm ghost" href="${esc(incident?.link || service.page)}" target="_blank" rel="noopener">Status</a>` : "" });
-    }
-    for (const alert of (data.state.status.alerts || []).filter((item) => item.key?.startsWith("budget:"))) {
-      items.push({ tone: "warn", glyph: "budgets", title: alert.title, text: alert.subtitle || alert.body, action: `<button class="btn sm ghost" type="button" data-action="goto" data-section="budgets">Budgets</button>` });
-    }
-    return items;
-  }
-
-  function attentionCard(tools) {
-    const items = attentionItems(tools);
-    const rows = items.map((item) => `<div class="arow ${item.tone || "quiet"}" role="listitem"><span class="arow-glyph" aria-hidden="true">${item.mark ? mark(item.mark) : icon(item.glyph || "alert")}</span><div class="arow-copy"><b>${esc(item.title)}</b>${item.text ? `<p>${esc(item.text)}</p>` : ""}</div>${item.action || ""}</div>`).join("");
-    return `<section class="card attention" aria-labelledby="needs-h">
-      <div class="card-head"><h2 id="needs-h">Needs you</h2></div>
-      ${rows ? `<div class="alist" role="list">${rows}</div>` : `<p class="aclear">${icon("check")}Nothing needs you.</p>`}
-    </section>`;
+    return count;
   }
 
   // Tools on Home share one blue, lightest for the largest share.
@@ -393,7 +361,7 @@ extension DashboardPage {
     const waiting = error ? `<section class="card"><p class="empty">${esc(error)}</p></section>` : homeSkeleton();
     const left = usage ? `${homeTotal(usage)}${homeTrend(usage)}${homeModels(usage)}` : waiting;
     const activity = usage ? homeActivity(usage) : "";
-    return { toolbar: picker, body: `<div class="home-cols"><div class="home-col">${left}</div><div class="home-col">${homePet(tools)}${activity}${attentionCard(tools)}</div></div>` };
+    return { toolbar: picker, body: `<div class="home-cols"><div class="home-col">${left}</div><div class="home-col">${homePet(tools)}${activity}</div></div>` };
   }
 
   function petSvg(pet) {

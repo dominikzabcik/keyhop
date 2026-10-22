@@ -112,6 +112,8 @@ extension DashboardPage {
     return `<p class="busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span><b>${esc(title)}</b>${count}</p>
       <div class="meter${step?.fraction != null ? "" : " unknown"}" role="progressbar" aria-label="${esc(title)}" ${step?.fraction != null ? `aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(step.fraction * 100)}"` : ""}><span ${width}></span></div>${hint}`;
   }
+  // A report that couldn't be read says why, and offers to read it again.
+  const failed = (message) => `<div class="notice">${icon("alert")}<div><p>${esc(message)}</p></div>${isStatic ? "" : `<button class="btn sm secondary" type="button" data-action="section-retry">Try again</button>`}</div>`;
   const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
   const maxUsed = (account) => Math.max(0, ...(account.limits || []).map((l) => l.usedPercent));
   // What a login has left on its tightest window, as Keyhop reads it (its `room`), or null when
@@ -122,9 +124,10 @@ extension DashboardPage {
 
   // MARK: Data
 
-  async function api(path, body) {
+  // Most answers come at once; a report over a month of history can wait on the logs being read.
+  async function api(path, body, wait = 30_000) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+    const timeout = setTimeout(() => controller.abort(), wait);
     const init = { method: body === undefined ? "GET" : "POST", headers: { Authorization: "Bearer " + token }, signal: controller.signal };
     if (body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(body); }
     let response;
@@ -244,10 +247,10 @@ extension DashboardPage {
       if (ui.section === "usage") await loadUsage(ui.range, ui.tool);
       if (ui.section === "budgets") await loadUsage("month");
       if (ui.section === "coach" && !isStatic) {
-        try { data.coach = await api("/api/coach"); data.coachError = null; } catch (error) { data.coachError = error.message; }
+        try { data.coach = await api("/api/coach", undefined, 180_000); data.coachError = null; } catch (error) { data.coachError = error.message; }
       }
       if (ui.section === "plans" && !isStatic) {
-        try { data.plans = await api("/api/plans"); data.plansError = null; } catch (error) { data.plansError = error.message; }
+        try { data.plans = await api("/api/plans", undefined, 180_000); data.plansError = null; } catch (error) { data.plansError = error.message; }
       }
       if (!isStatic && data.state?.cloud?.linked && CLOUD_SECTIONS.includes(ui.section)) {
         const petReady = ui.section === "profile" ? loadPet() : null;

@@ -61,11 +61,9 @@ test('home is the total, the pet and what needs you', async ({ app, screen, brow
   await expect(browser.locator('.htrend .hbar.now')).toHaveCount(1);
   await expect(screen.getByRole('heading', 'Top models')).toBeVisible();
   await expect(screen.getByRole('heading', 'Activity')).toBeVisible();
-  await expect(screen.getByRole('heading', 'Needs you')).toBeVisible();
-  // The sidebar and Needs you count the same logins.
-  const listed = await browser.evaluate(() => document.querySelectorAll('.attention .arow').length);
-  const count = await browser.evaluate(() => document.querySelector('#limits-count')?.hidden ? 0 : parseInt(document.querySelector('#limits-count')?.textContent || '0', 10));
-  expect(count).toBeLessThanOrEqual(listed);
+  // What needs you is counted on Limits in the sidebar, not listed again on Home.
+  await expect(screen.getByRole('heading', 'Needs you')).toHaveCount(0);
+  await expect(browser.locator('#limits-count')).toBeVisible();
   // The linked sample has a pet: its stages run along the bottom of its night.
   await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.hpet .hstage').length)).toBe(6);
   await screen.getByRole('button', { name: 'Month', exact: true }).tap();
@@ -139,8 +137,10 @@ test('plans price each login against the month', async ({ app, screen, browser }
   await openWindow(app, 'plans');
   await expect(screen.getByRole('heading', 'Insights', { level: 1 })).toBeVisible();
   await expect(browser.locator('#subnav [data-section="plans"]')).toHaveAttribute('aria-pressed', 'true');
-  await expect(screen.getByText('You pay', { exact: false })).toBeVisible();
-  await expect(screen.getByText('API value this month', { exact: false }).first()).toBeVisible();
+  await expect(screen.getByText('a month in plans', { exact: true })).toBeVisible();
+  // One row a login, and no paragraphs: no verdicts and no pace.
+  await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.plans-table tbody tr').length)).toBeGreaterThan(1);
+  await expect(screen.getByText('on pace for', { exact: false })).toHaveCount(0);
   await assertReadable(browser);
 });
 

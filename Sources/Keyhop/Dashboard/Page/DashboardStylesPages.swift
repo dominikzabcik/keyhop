@@ -105,19 +105,6 @@ button.tile:hover .tile-name { color: var(--text); }
 .coach-delta .subtle { color: var(--muted); }
 
 /* Plans: the price against the month, money in green and the value bar in blue. */
-.plans-head .card-body { padding: 24px 26px; }
-.plans-headline { font-size: 22px; line-height: 28px; font-weight: 500; letter-spacing: -.02em; margin-bottom: 8px; }
-.plans-head .subtle { color: var(--muted); font-size: 12px; }
-.plan-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; margin-top: 0; }
-.plan-card .card-head { align-items: center; padding-bottom: 10px; }
-.plan-card .card-head h2 .mark { width: 13px; height: 13px; color: hsl(var(--on) / .85); }
-.plan-top b { font-size: 16px; font-weight: 600; }
-.plan-value b { font-size: 24px; font-weight: 500; letter-spacing: -.025em; color: var(--good); }
-.plan-card > .card-body > .progress:not(.bad):not(.warn) > span { background: var(--primary); }
-.plan-card .progress { height: 4px; }
-.plan-verdict { color: var(--text); }
-.plan-windows { border-top-color: hsl(var(--on) / .08); }
-.plan-window { font-size: 12px; }
 
 /* Budgets: the spend line is the one blue; the budget rows are hairline rows. */
 .split, .split.wide-left { gap: 18px; }

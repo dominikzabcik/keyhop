@@ -12,7 +12,7 @@ extension DashboardPage {
 
   function coachPage() {
     if (isStatic) return { body: `<section class="card"><p class="empty">Coaching is read live in the window, not in a saved page.</p></section>` };
-    if (data.coachError) return { body: `<div class="notice">${icon("alert")}<div><p>${esc(data.coachError)}</p></div></div>` };
+    if (data.coachError) return { body: failed(data.coachError) };
     const report = data.coach;
     if (!report) return { body: `<section class="card"><p class="empty" data-loading="Reading the last thirty days">${loadingInner("Reading the last thirty days")}</p></section>` };
     const o = report.optimize, c = report.compare, y = report.yield;

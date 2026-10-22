@@ -512,21 +512,15 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .team-digest { margin: 14px 0; padding-top: 14px; border-top: 1px solid var(--border); display: grid; gap: 6px; }
 .team-digest b { font-weight: 600; }
 /* Coach: findings first, then the figures that back them. */
-/* Plans: one card per login, the month's API value against the plan's price. */
-.plans-headline { margin: 0 0 6px; font-size: 17px; font-weight: 620; letter-spacing: -.015em; text-wrap: pretty; }
-.plans-head .subtle { margin: 0; font-size: 12.5px; max-width: 72ch; }
-.plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; margin-top: 14px; }
-.plan-card .card-head h2 { gap: 8px; }
-.plan-top { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
-.plan-top > div { display: grid; gap: 2px; }
-.plan-top b { font-size: 15px; font-weight: 620; }
-.plan-value { text-align: right; }
-.plan-value b { font-size: 20px; font-weight: 640; letter-spacing: -.02em; }
-.plan-verdict { margin: 12px 0 0; font-size: 13px; }
-.plan-advice { margin: 6px 0 0; font-size: 13px; color: var(--warn-ink); }
-.plan-windows { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-.plan-window { display: grid; grid-template-columns: 64px minmax(0, 1fr) 78px; gap: 10px; align-items: center; font-size: 12px; }
-.plan-window .num { text-align: right; }
+/* Plans: two figures, then one row a login: the month's API value against the plan's price. */
+.plans-head { display: flex; flex-wrap: wrap; gap: 12px 48px; padding: 22px 26px; margin-bottom: 18px; }
+.plans-fig { display: grid; gap: 2px; }
+.plans-fig b { font-size: 26px; line-height: 30px; font-weight: 500; letter-spacing: -.025em; }
+.plans-fig span { font-size: 12.5px; }
+.plans-table td { vertical-align: middle; }
+.plans-table th { white-space: nowrap; }
+.plan-peak { display: grid; grid-template-columns: minmax(60px, 120px) auto; gap: 10px; align-items: center; }
+.plan-peak .progress { height: 4px; }
 .pill { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: hsl(var(--on) / .07); color: var(--muted); font-size: 11.5px; font-weight: 560; white-space: nowrap; }
 .pill.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 16%, transparent); }
 .pill.warn { color: var(--warn-ink); background: color-mix(in srgb, var(--warn) 16%, transparent); }
@@ -699,6 +693,8 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 /* A page with many controls lets them scroll sideways rather than push the read time away. */
 .top-title .toolbar { justify-content: flex-start; flex-wrap: nowrap; min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: -2px; }
 .top-title .toolbar::-webkit-scrollbar { display: none; }
+/* An open range menu hangs below the bar, so the bar mustn't clip it. */
+.top-title .toolbar:has(.range-menu) { overflow: visible; }
 .top-actions { flex: none; }
 @media (max-width: 1240px) { .top-read { display: none; } }
 .top-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 7px; font-size: 12px; text-decoration: none; white-space: nowrap; }
@@ -870,7 +866,6 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .hheat-foot .scale { display: inline-flex; align-items: center; gap: 4px; }
 .hheat-foot .scale .hcell { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
-.alist { display: grid; grid-template-columns: minmax(0, 1fr); padding: 4px 20px 12px; }
 .arow { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 4px; }
 .arow + .arow { border-top: 1px solid hsl(var(--on) / .07); }
 .arow-glyph { flex: none; width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; background: hsl(var(--on) / .07); color: var(--muted); }
@@ -883,8 +878,6 @@ button.tile:hover { background: hsl(var(--on) / .05); border-color: hsl(var(--on
 .arow-copy b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .arow-copy p { margin: 1px 0 0; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .arow .btn { flex: none; }
-.aclear { display: flex; align-items: center; gap: 10px; margin: 0; padding: 12px 24px 20px; color: var(--muted); }
-.aclear .icon { color: var(--good); }
 .hwelcome { display: grid; gap: 8px; padding: 24px 26px; }
 .hwelcome h2 { margin: 0; font-size: 26px; font-weight: 500; letter-spacing: -.02em; }
 .hwelcome p { margin: 0; max-width: 60ch; }

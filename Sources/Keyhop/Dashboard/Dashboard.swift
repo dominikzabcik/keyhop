@@ -1145,12 +1145,16 @@ actor DashboardSession {
     private func switchAccount(_ id: UUID) async throws -> DashboardAction {
         try refuseInSample()
         var workspace = try openWorkspace()
-        let account = try await workspace.service.switchTo(id)
-        let inUse = await workspace.service.active[account.provider]
-        try await workspace.tracker.noteActive(account.provider, account: inUse, at: Date())
-        workspace.state.active[account.provider.rawValue] = inUse?.uuidString
+        let switched = try await workspace.service.switchTo(id)
+        let account = switched.account
+        for provider in [account.provider] + switched.followed.map(\.provider) {
+            let inUse = await workspace.service.active[provider]
+            try await workspace.tracker.noteActive(provider, account: inUse, at: Date())
+            workspace.state.active[provider.rawValue] = inUse?.uuidString
+        }
         workspace.state.save()
-        return DashboardAction(message: "Switched \(account.provider.name) to \(account.displayName).", note: account.provider.switchNote.map(Output.plain))
+        let note = ([account.provider.switchNote].compactMap { $0 } + switched.notes).map(Output.plain).joined(separator: "\n")
+        return DashboardAction(message: "Switched \(account.provider.name) to \(account.displayName).", note: note.isEmpty ? nil : note)
     }
 
     private func add(_ word: String) async throws -> DashboardAction {

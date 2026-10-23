@@ -193,11 +193,13 @@ final class AccountStore: ObservableObject {
         Task {
             await refreshTask?.value
             do {
-                try await service.switchTo(account.id)
+                let switched = try await service.switchTo(account.id)
                 setFocus(account.provider)
                 // A credential that outranks the saved login means the hop won't take effect;
                 // that matters more than the usual note.
-                notice = Overrides.list(for: account.provider).first ?? account.provider.switchNote
+                let first = Overrides.list(for: account.provider).first ?? account.provider.switchNote
+                let lines = [first].compactMap { $0 } + switched.notes
+                notice = lines.isEmpty ? nil : lines.joined(separator: " ")
             } catch {
                 notice = "Couldn't switch: \(error.localizedDescription)"
             }

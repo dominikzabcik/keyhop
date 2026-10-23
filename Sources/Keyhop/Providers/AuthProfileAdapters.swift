@@ -92,6 +92,12 @@ private struct AuthProfileFile {
         try Files.writeAtomically(Data(raw.utf8), to: url)
     }
 
+    func anthropicAccount(of secret: Secret) async -> String? {
+        guard let root = JSON.object(secret["credentials"]), let credential = root["anthropic"] as? [String: Any],
+              let token = Self.anthropicAccessToken(key: "anthropic", credential: credential) else { return nil }
+        return try? await lookup(token).uuid
+    }
+
     func signOutLocally() throws {
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         try Files.writeAtomically(try JSON.data([String: Any](), pretty: true), to: url)
@@ -194,6 +200,7 @@ struct OpenCodeAdapter: ProviderAdapter {
     func readLive() async throws -> LiveLogin? { try await file.readLive() }
     func apply(_ secret: Secret) async throws { try file.apply(secret) }
     func signOutLocally() async throws { try file.signOutLocally() }
+    func anthropicAccount(of secret: Secret) async -> String? { await file.anthropicAccount(of: secret) }
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
         guard secret["credentials"] != nil else { throw KeyhopError("Saved OpenCode profile is damaged") }
         return LimitReport(windows: [], plan: nil)
@@ -231,6 +238,7 @@ struct PiAdapter: ProviderAdapter {
     func readLive() async throws -> LiveLogin? { try await file.readLive() }
     func apply(_ secret: Secret) async throws { try file.apply(secret) }
     func signOutLocally() async throws { try file.signOutLocally() }
+    func anthropicAccount(of secret: Secret) async -> String? { await file.anthropicAccount(of: secret) }
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
         guard secret["credentials"] != nil else { throw KeyhopError("Saved Pi profile is damaged") }
         return LimitReport(windows: [], plan: nil)

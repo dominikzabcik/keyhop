@@ -33,6 +33,10 @@ protocol ProviderAdapter: Sendable {
     /// out from under it. Rotated secrets go to `persist` right away. Throw `LimitsWaitForTool`
     /// for a token past its hour that may not be refreshed: the last reading then stays.
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport
+
+    /// The Anthropic account a saved login is signed in to, for tools that can sign in to
+    /// Anthropic beside Claude Code. Nil when it has none or it can't be asked.
+    func anthropicAccount(of secret: Secret) async -> String?
 }
 
 extension ProviderAdapter {
@@ -43,6 +47,8 @@ extension ProviderAdapter {
     func blocker() -> String? { nil }
 
     var holdsManyLogins: Bool { false }
+
+    func anthropicAccount(of secret: Secret) async -> String? { nil }
 }
 
 enum Adapters {

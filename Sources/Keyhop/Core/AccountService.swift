@@ -87,11 +87,13 @@ actor AccountService {
             return .signedOut
         }
 
+        let anthropic = Self.followers.contains(provider) ? await adapter.anthropicAccount(of: live.secret) : nil
         if let known = accounts.first(where: { $0.provider == provider && $0.identity == live.identity }) {
             guard await vault.write(live.secret, for: known.id) else {
                 return .failed("Couldn't update the saved \(provider.name) login in \(vault.storeName).")
             }
             if let index = accounts.firstIndex(where: { $0.id == known.id }) {
+                if let anthropic { accounts[index].anthropicAccount = anthropic }
                 let placeholder = "\(provider.name) account"
                 if !live.email.isEmpty, live.emailTrusted || accounts[index].email == placeholder {
                     accounts[index].email = live.email
@@ -122,8 +124,9 @@ actor AccountService {
         }
 
         let email = live.email.isEmpty ? "\(provider.name) account" : live.email
-        let account = Account(id: UUID(), provider: provider, identity: live.identity, email: email,
+        var account = Account(id: UUID(), provider: provider, identity: live.identity, email: email,
                               label: nil, plan: live.plan, addedAt: Date())
+        account.anthropicAccount = anthropic
         guard await vault.write(live.secret, for: account.id) else {
             return .failed("Couldn't save the \(provider.name) login to \(vault.storeName).")
         }
@@ -160,16 +163,24 @@ actor AccountService {
         if changed { saveMeta() }
     }
 
+    /// What a switch moved: the account asked for, any OpenCode or Pi profile that followed it,
+    /// and a line for each of those tools that moved or stayed.
+    struct Switched: Sendable {
+        var account: Account
+        var followed: [Account] = []
+        var notes: [String] = []
+    }
+
     /// Moves the tool to a saved account. The login in use is saved first, so a switch never
-    /// loses one.
+    /// loses one. A Claude Code switch takes OpenCode and Pi along (`follow`).
     @discardableResult
-    func switchTo(_ id: UUID) async throws -> Account {
+    func switchTo(_ id: UUID, follow: Bool = true) async throws -> Switched {
         guard let account = account(id), let adapter = adapters[account.provider] else {
             throw KeyhopError("That account isn't saved.")
         }
         let provider = account.provider
         if case .failed(let message) = await syncLive(provider) { throw KeyhopError(message) }
-        guard active[provider] != id else { return account }
+        guard active[provider] != id else { return Switched(account: account) }
         if let session = sessions(provider)?.first(where: { $0.place == .own(id) }) {
             throw KeyhopError("\(account.displayName) is running in its own terminal (keyhop run\(session.directory.map { " in \($0)" } ?? "")). Two places refreshing one login sign it out, so close that session before hopping to it.")
         }
@@ -187,7 +198,8 @@ actor AccountService {
         case .current(let active) where active == id,
              .saved(let active) where active == id:
             if let previous { lastHop[provider] = (previous, id, Date()) }
-            return account
+            guard follow, provider == .claude else { return Switched(account: account) }
+            return await self.follow(account)
         case .failed(let message):
             throw KeyhopError("The login was applied, but Keyhop couldn't confirm the switch. \(message)")
         case .signedOut:
@@ -196,6 +208,57 @@ actor AccountService {
             let live = self.account(active)?.displayName ?? "another account"
             throw KeyhopError("The login was applied, but \(provider.name) reports \(live) instead of \(account.displayName).")
         }
+    }
+
+    /// Tools that can sign in to Anthropic beside Claude Code, and so follow it when it hops.
+    static let followers: [Provider] = [.opencode, .pi]
+
+    /// Moves each follower that is on an Anthropic sign-in to its own saved profile for the account
+    /// Claude Code now uses. A follower never gets a copy of Claude Code's token: the two would
+    /// refresh one login against each other and sign it out. Without a profile of its own for that
+    /// account, a follower stays where it is and is named.
+    private func follow(_ claude: Account) async -> Switched {
+        var result = Switched(account: claude)
+        guard let uuid = claude.identity.split(separator: "|").first.map(String.init), !uuid.isEmpty else { return result }
+        for provider in Self.followers {
+            guard let adapter = adapters[provider], accounts.contains(where: { $0.provider == provider }) else { continue }
+            let liveID: UUID
+            switch await syncLive(provider) {
+            case .current(let id), .saved(let id): liveID = id
+            case .failed(let message):
+                result.notes.append("\(provider.name) didn't follow: \(message)")
+                continue
+            case .signedOut: continue
+            }
+            // A profile on another provider's sign-in isn't one Claude Code's account says anything about.
+            guard let live = account(liveID), let current = live.anthropicAccount, current != uuid else { continue }
+            await learnAnthropicAccounts(provider, adapter: adapter)
+            guard let target = accounts.first(where: { $0.provider == provider && $0.anthropicAccount == uuid }) else {
+                result.notes.append("\(provider.name) stays on \(live.displayName): it has no saved sign-in for \(claude.displayName). Sign \(provider.name) in to that account once and it follows from then on.")
+                continue
+            }
+            do {
+                let moved = try await switchTo(target.id, follow: false)
+                result.followed.append(moved.account)
+                result.notes.append("\(provider.name) followed to \(moved.account.displayName).")
+            } catch {
+                result.notes.append("\(provider.name) didn't follow: \(error.localizedDescription)")
+            }
+        }
+        return result
+    }
+
+    /// Asks which Anthropic account each saved profile of a follower uses, for profiles saved before
+    /// Keyhop kept that. One whose token has lapsed stays unknown until it is in use again.
+    private func learnAnthropicAccounts(_ provider: Provider, adapter: any ProviderAdapter) async {
+        var changed = false
+        for saved in accounts where saved.provider == provider && saved.anthropicAccount == nil {
+            guard let secret = await vault.read(saved.id), let found = await adapter.anthropicAccount(of: secret),
+                  let index = accounts.firstIndex(where: { $0.id == saved.id }) else { continue }
+            accounts[index].anthropicAccount = found
+            changed = true
+        }
+        if changed { saveMeta() }
     }
 
     /// Signs the tool out on this machine only, after saving its login, so the next sign-in can be

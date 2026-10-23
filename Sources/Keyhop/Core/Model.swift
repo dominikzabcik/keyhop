@@ -130,6 +130,9 @@ struct Account: Codable, Identifiable, Equatable {
     /// Kept for last: Smart Hop offers this login only when no other one of its tool has room,
     /// so a work or paid login is spent after the rest.
     var keepForLast: Bool? = nil
+    /// The Anthropic account an OpenCode or Pi profile is signed in to, so the profile can follow
+    /// Claude Code when it hops. Nil when the profile has no Anthropic sign-in or it isn't known yet.
+    var anthropicAccount: String? = nil
 
     var isKeptForLast: Bool { keepForLast == true }
 

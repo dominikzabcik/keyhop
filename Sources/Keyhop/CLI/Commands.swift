@@ -323,15 +323,17 @@ enum Commands {
         try args.finish()
         var workspace = try Workspace.open()
         let account = try resolve(reference, tool: tool, in: await workspace.service.accounts)
-        try await workspace.service.switchTo(account.id)
-        let inUse = await workspace.service.active[account.provider]
-        try await workspace.tracker.noteActive(account.provider, account: inUse, at: Date())
-        workspace.state.active[account.provider.rawValue] = inUse?.uuidString
+        let switched = try await workspace.service.switchTo(account.id)
+        for provider in [account.provider] + switched.followed.map(\.provider) {
+            let inUse = await workspace.service.active[provider]
+            try await workspace.tracker.noteActive(provider, account: inUse, at: Date())
+            workspace.state.active[provider.rawValue] = inUse?.uuidString
+        }
         workspace.state.save()
 
         let message = "Switched \(account.provider.name) to \(account.displayName)."
         let overrides = Overrides.list(for: account.provider)
-        let note = ([account.provider.switchNote].compactMap { $0 } + overrides).map(Output.plain).joined(separator: "\n")
+        let note = ([account.provider.switchNote].compactMap { $0 } + overrides + switched.notes).map(Output.plain).joined(separator: "\n")
         if json {
             try Output.json(ActionResult(ok: true, message: message, account: account.id, note: note.isEmpty ? nil : note))
         } else {

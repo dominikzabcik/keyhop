@@ -70,6 +70,8 @@ struct FakeAdapter: ProviderAdapter {
 
     func signOutLocally() async throws { tool.login = nil }
 
+    func anthropicAccount(of secret: Secret) async -> String? { secret["anthropic"] }
+
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
         guard let used = secret["used"].flatMap(Double.init) else { throw KeyhopError("No usage for this login") }
         return LimitReport(windows: [UsageWindow(label: "5h", usedPercent: used, resetsAt: nil, windowSeconds: 18000)], plan: "Max")
@@ -155,6 +157,66 @@ final class AccountServiceTests: XCTestCase {
         tool.login = ["user": "bob", "token": "b3"]
         let second = await service.syncLive(.codex)
         XCTAssertEqual(second, .current(bob))
+    }
+
+    func testOpenCodeAndPiFollowAClaudeHopToTheirOwnProfileForThatAccount() async throws {
+        let claude = FakeTool(["user": "ada", "token": "c1"])
+        let opencode = FakeTool(["user": "oc-ada", "anthropic": "ada", "token": "o1"])
+        let pi = FakeTool(["user": "pi-ada", "anthropic": "ada", "token": "p1"])
+        let service = AccountService(directory: directory, adapters: [
+            .claude: FakeAdapter(provider: .claude, tool: claude),
+            .opencode: FakeAdapter(provider: .opencode, tool: opencode),
+            .pi: FakeAdapter(provider: .pi, tool: pi),
+        ], vault: Vault(store: MemorySecretStore()), sessions: { _ in [] })
+        _ = try savedID(await service.syncLive(.claude))
+        _ = try savedID(await service.syncLive(.opencode))
+        _ = try savedID(await service.syncLive(.pi))
+        claude.login = ["user": "bob", "token": "c2"]
+        let bob = try savedID(await service.syncLive(.claude))
+        opencode.login = ["user": "oc-bob", "anthropic": "bob", "token": "o2"]
+        let openBob = try savedID(await service.syncLive(.opencode))
+        claude.login = ["user": "ada", "token": "c1"]
+        opencode.login = ["user": "oc-ada", "anthropic": "ada", "token": "o1"]
+        _ = await service.syncLive(.claude)
+        _ = await service.syncLive(.opencode)
+
+        let switched = try await service.switchTo(bob)
+        XCTAssertEqual(claude.login?["user"], "bob")
+        XCTAssertEqual(opencode.login?["user"], "oc-bob")
+        // Its own profile, never Claude Code's token.
+        XCTAssertEqual(opencode.login?["token"], "o2")
+        XCTAssertEqual(switched.followed.map(\.id), [openBob])
+        // Pi has no profile for Bob, so it stays where it was and says so.
+        XCTAssertEqual(pi.login?["user"], "pi-ada")
+        XCTAssertEqual(switched.notes.count, 2)
+        XCTAssertTrue(switched.notes[1].contains("Pi stays on"))
+        XCTAssertEqual(AccountService.loadAccounts(from: directory).first { $0.id == openBob }?.anthropicAccount, "bob")
+    }
+
+    func testAProfileOnAnotherProvidersSignInDoesNotFollowClaude() async throws {
+        let claude = FakeTool(["user": "ada", "token": "c1"])
+        let opencode = FakeTool(["user": "oc-openai", "token": "o1"])
+        let service = AccountService(directory: directory, adapters: [
+            .claude: FakeAdapter(provider: .claude, tool: claude),
+            .opencode: FakeAdapter(provider: .opencode, tool: opencode),
+        ], vault: Vault(store: MemorySecretStore()), sessions: { _ in [] })
+        _ = try savedID(await service.syncLive(.claude))
+        _ = try savedID(await service.syncLive(.opencode))
+        claude.login = ["user": "bob", "token": "c2"]
+        _ = try savedID(await service.syncLive(.claude))
+        opencode.login = ["user": "oc-bob", "anthropic": "bob", "token": "o2"]
+        _ = try savedID(await service.syncLive(.opencode))
+        claude.login = ["user": "ada", "token": "c1"]
+        opencode.login = ["user": "oc-openai", "token": "o1"]
+        _ = await service.syncLive(.claude)
+        _ = await service.syncLive(.opencode)
+
+        let accounts = await service.accounts
+        let bob = try XCTUnwrap(accounts.first { $0.provider == .claude && $0.identity == "bob" })
+        let switched = try await service.switchTo(bob.id)
+        XCTAssertEqual(opencode.login?["user"], "oc-openai")
+        XCTAssertTrue(switched.followed.isEmpty)
+        XCTAssertTrue(switched.notes.isEmpty)
     }
 
     func testSwitchingSavesTheRotatedLoginBeforeReplacingIt() async throws {

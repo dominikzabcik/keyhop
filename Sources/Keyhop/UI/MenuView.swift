@@ -2,21 +2,20 @@
 import ServiceManagement
 import SwiftUI
 
-/// The menu bar panel, the Coss Blue board "BC 1": a short night field with what needs you and the
-/// pet, a ring per tool with what its login in use has left, the one hop that helps or the one
-/// thing that needs you, and Open, Refresh and More along the bottom. A ring opens that tool's
-/// logins, to switch or rename. It opens on the last reading at once; a read runs quietly behind.
+/// The menu bar panel in the 2.0 world: a chrome header with what needs you, a ring per tool with
+/// what its login in use has left, the one hop that helps or the one thing that needs you, and
+/// Open, Refresh and More along the bottom. A ring opens that tool's logins, to switch or rename.
+/// It opens on the last reading at once; a read runs quietly behind.
 struct MenuView: View {
     @EnvironmentObject private var store: AccountStore
     @EnvironmentObject private var tracker: UsageTracker
-    @State private var pet: CloudPet?
     @State private var opened: Provider?
     @State private var renaming: UUID?
 
     var body: some View {
         let facts = MenuFacts.make(store: store, tracker: tracker)
         VStack(alignment: .leading, spacing: 0) {
-            MenuField(facts: facts, pet: pet)
+            MenuField(facts: facts)
 
             if let adding = store.addingFor {
                 AddingPanel(provider: adding)
@@ -50,67 +49,37 @@ struct MenuView: View {
         .frame(width: 360)
         .background(Brand.panel)
         .environment(\.colorScheme, .dark)
-        .task {
-            if pet == nil { pet = PetCache.pet }
-            if let loaded = await PetCache.load() { pet = loaded }
-        }
     }
 }
 
-/// The pet, kept between openings so the menu never waits on the network to show it. It is read
-/// again at most every quarter hour.
-@MainActor
-private enum PetCache {
-    static var pet: CloudPet?
-    private static var loadedAt: Date?
+// MARK: Header
 
-    /// A failed load keeps the last pet. The status icon stays the limit glyph either way.
-    static func load() async -> CloudPet? {
-        guard let link = CloudLink.load() else {
-            pet = nil
-            return nil
-        }
-        if let loadedAt, Date().timeIntervalSince(loadedAt) < 15 * 60 { return pet }
-        loadedAt = Date()
-        if let loaded = try? await CloudClient(server: link.server, token: link.token).pet() {
-            pet = loaded
-        }
-        return pet
-    }
-}
-
-// MARK: Field
-
-/// The pet's night as a short header: the stage and how many logins, then in a sentence what
-/// needs you, if anything, and today's tokens. Only what the tools report; no pooled figure and
-/// no guess at a reset.
+/// A chrome header, like the window's title bar: how many logins, then in a sentence what needs
+/// you, if anything, and today's tokens. Only what the tools report; no pooled figure and no
+/// guess at a reset. The pet lives on the Profile page, not here.
 private struct MenuField: View {
     @EnvironmentObject private var store: AccountStore
     let facts: MenuFacts
-    let pet: CloudPet?
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            FieldScene()
+        HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(label)
-                    .font(Brand.mono(10.5, weight: .medium))
-                    .tracking(1.4)
-                    .textCase(.uppercase)
-                    .foregroundStyle(Brand.muted)
+                    .font(Brand.sans(11.5, weight: .medium))
+                    .foregroundStyle(Brand.subtle)
                     .lineLimit(1)
                 Button {
-                    AppWindow.show(section: "limits")
+                    AppWindow.show(section: "home")
                 } label: {
                     Text(facts.title)
-                        .font(Brand.sans(17, weight: .semibold))
-                        .tracking(-0.3)
+                        .font(Brand.sans(16, weight: .semibold))
+                        .tracking(-0.2)
                         .foregroundStyle(Brand.text)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                 }
                 .buttonStyle(.plain)
-                .help("Open Limits")
+                .help("Open Keyhop")
                 Text(facts.sub)
                     .font(Brand.sans(12))
                     .foregroundStyle(Brand.muted)
@@ -121,145 +90,28 @@ private struct MenuField: View {
                     .foregroundStyle(Brand.subtle)
                     .lineLimit(1)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 14)
-            .padding(.trailing, 64)
             .frame(maxWidth: .infinity, alignment: .leading)
+            PixelMark()
+                .frame(width: 22, height: 22)
+                .padding(.top, 2)
+                .accessibilityHidden(true)
         }
-        .overlay(alignment: .bottomTrailing) {
-            FieldPet(pet: pet)
-                .padding(.trailing, 18)
-                .padding(.bottom, 8)
-        }
-        .frame(minHeight: 104)
-        .clipped()
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 12)
+        .background(Brand.sidebar)
+        .overlay(alignment: .bottom) { RowDivider() }
         .accessibilityElement(children: .contain)
     }
 
     private var label: String {
         let logins = store.accounts.count
-        let count = logins == 1 ? "1 login" : "\(logins) logins"
-        guard let pet else { return count }
-        return "\(pet.stageName) · \(count)"
+        return logins == 1 ? "1 login" : "\(logins) logins"
     }
 
     private var tokensLine: String {
         let tokens = "\(Numbers.tokens(facts.tokens)) tokens today"
         return facts.cost > 0 ? "\(tokens) · \(Numbers.usd(facts.cost))" : tokens
-    }
-}
-
-/// Stars, two hills and a blue glow where the pet stands, drawn from the board's 360 by 132 scene.
-private struct FieldScene: View {
-    var body: some View {
-        Canvas { context, size in
-            let bounds = Path(CGRect(origin: .zero, size: size))
-            context.fill(bounds, with: .color(Color(hex: "#13151A")))
-            context.fill(bounds, with: .radialGradient(
-                Gradient(colors: [Brand.primary.opacity(0.32), Brand.primary.opacity(0)]),
-                center: CGPoint(x: size.width * 0.75, y: size.height),
-                startRadius: 0, endRadius: size.width * 0.62))
-            let sx = size.width / 360
-            let sy = size.height / 132
-            for star in Self.stars {
-                let rect = CGRect(x: star.x * sx, y: star.y * sy, width: star.r, height: star.r)
-                context.fill(Path(rect), with: .color(.white.opacity(0.35)))
-            }
-            context.fill(hill(from: (0, 108), [(60, 96, 130, 100, 190, 104), (250, 108, 310, 94, 360, 98)], sx: sx, sy: sy, size: size),
-                         with: .color(Color(hex: "#1C1F26")))
-            context.fill(hill(from: (0, 122), [(90, 114, 190, 116, 270, 120), (320, 122, 345, 121, 360, 120)], sx: sx, sy: sy, size: size),
-                         with: .color(Color(hex: "#171A20")))
-        }
-        .accessibilityHidden(true)
-    }
-
-    private struct Star {
-        let x: CGFloat
-        let y: CGFloat
-        let r: CGFloat
-    }
-
-    /// The same seeded scatter as the board, so the sky doesn't change between openings.
-    private static let stars: [Star] = {
-        var seed = 11
-        func next() -> CGFloat {
-            seed = (seed * 9301 + 49297) % 233280
-            return CGFloat(seed) / 233280
-        }
-        var stars: [Star] = []
-        for _ in 0..<26 {
-            let x = (next() * 360).rounded()
-            let y = (next() * 110).rounded()
-            stars.append(Star(x: x, y: y, r: next() > 0.85 ? 2 : 1.2))
-        }
-        return stars
-    }()
-
-    /// A hill: from a start point along cubic curves (two controls, then the end), closed along the bottom.
-    private func hill(from start: (CGFloat, CGFloat), _ curves: [(CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat)],
-                      sx: CGFloat, sy: CGFloat, size: CGSize) -> Path {
-        Path { path in
-            path.move(to: CGPoint(x: start.0 * sx, y: start.1 * sy))
-            for curve in curves {
-                path.addCurve(to: CGPoint(x: curve.4 * sx, y: curve.5 * sy),
-                              control1: CGPoint(x: curve.0 * sx, y: curve.1 * sy),
-                              control2: CGPoint(x: curve.2 * sx, y: curve.3 * sy))
-            }
-            path.addLine(to: CGPoint(x: size.width, y: size.height))
-            path.addLine(to: CGPoint(x: 0, y: size.height))
-            path.closeSubpath()
-        }
-    }
-}
-
-/// The account's pet, painted from the shapes the website computes, hopping on the spot. Without a
-/// linked account the field shows Keyhop's mark instead.
-private struct FieldPet: View {
-    let pet: CloudPet?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.staticSnapshot) private var staticSnapshot
-
-    var body: some View {
-        VStack(spacing: 1) {
-            // The hop runs as one repeating animation, so the sprite is drawn once, not every frame.
-            if reduceMotion || staticSnapshot {
-                sprite
-            } else {
-                sprite.phaseAnimator([false, true]) { content, up in
-                    content.offset(y: up ? -11 : 0)
-                } animation: { up in
-                    up ? .easeOut(duration: 0.24).delay(1.44) : .easeIn(duration: 0.24)
-                }
-            }
-            Ellipse()
-                .fill(Color.black.opacity(0.45))
-                .frame(width: 36, height: 6)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(pet.map { "Your pet, \($0.caption)" } ?? "Keyhop")
-    }
-
-    @ViewBuilder
-    private var sprite: some View {
-        if let pet, pet.width > 0, pet.height > 0 {
-            let height: CGFloat = 52
-            let width = height * CGFloat(pet.width) / CGFloat(pet.height)
-            Canvas { context, size in
-                let scale = size.height / CGFloat(pet.height)
-                for shape in pet.shapes {
-                    let rect = CGRect(x: CGFloat(shape.x) * scale, y: CGFloat(shape.y) * scale,
-                                      width: CGFloat(shape.w) * scale, height: CGFloat(shape.h) * scale)
-                    context.fill(Path(rect), with: .color(Color(red: shape.red, green: shape.green, blue: shape.blue).opacity(shape.opacity)))
-                }
-            }
-            .frame(width: width, height: height)
-            .drawingGroup()
-        } else {
-            PixelMark(tint: Brand.text.opacity(0.8))
-                .frame(width: 30, height: 30)
-                .padding(.bottom, 4)
-        }
     }
 }
 
@@ -295,10 +147,10 @@ private struct RingTile: View {
     @State private var hovering = false
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         VStack(spacing: 7) {
             ZStack {
-                Circle().stroke(Color.white.opacity(0.08), lineWidth: 4)
+                Circle().stroke(Brand.borderStrong, lineWidth: 4)
                 Circle()
                     .trim(from: 0, to: CGFloat(ring.left) / 100)
                     .stroke(ring.tone.ring, style: StrokeStyle(lineWidth: 4, lineCap: .round))
@@ -307,7 +159,7 @@ private struct RingTile: View {
                     .renderingMode(.template)
                     .resizable()
                     .frame(width: 18, height: 18)
-                    .foregroundStyle(Color(white: 0.9))
+                    .foregroundStyle(Brand.text)
             }
             .frame(width: 44, height: 44)
             VStack(spacing: 0) {
@@ -325,8 +177,8 @@ private struct RingTile: View {
         .frame(maxWidth: .infinity)
         .padding(.top, 12)
         .padding(.bottom, 10)
-        .background(shape.fill(ring.tone == .out ? Brand.red.opacity(0.07) : Color.white.opacity(hovering || open ? 0.05 : 0.025)))
-        .overlay(shape.strokeBorder(ring.tone == .out ? Brand.red.opacity(0.28) : Color.white.opacity(open ? 0.16 : 0.06)))
+        .background(shape.fill(ring.tone == .out ? Brand.red.opacity(0.07) : hovering || open ? Brand.raisedHover : Brand.raised))
+        .overlay(shape.strokeBorder(ring.tone == .out ? Brand.red.opacity(0.28) : open ? Brand.borderStrong : Brand.border))
         .contentShape(shape)
         .onHover { hovering = $0 }
     }
@@ -344,7 +196,7 @@ private struct MenuLogins: View {
     private static let rowHeight: CGFloat = 40
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         let rows = facts.rows.filter { $0.account.provider == provider }
         VStack(alignment: .leading, spacing: 0) {
             if rows.count > Self.shownRows {
@@ -369,7 +221,7 @@ private struct MenuLogins: View {
             .disabled(store.addingFor != nil || store.switching != nil || !Provider.switchable.contains(provider))
         }
         .padding(4)
-        .background(shape.fill(Color.white.opacity(0.025)))
+        .background(shape.fill(Brand.raised))
         .overlay(shape.strokeBorder(Brand.border))
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
@@ -485,13 +337,13 @@ private struct HopCard: View {
     let hop: MenuHop
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         HStack(spacing: 10) {
             Image(nsImage: Marks.image(for: hop.tool))
                 .renderingMode(.template)
                 .resizable()
                 .frame(width: 16, height: 16)
-                .foregroundStyle(Color(white: 0.9))
+                .foregroundStyle(Brand.text)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text("\(hop.tool.shortName) has \(hop.fromLeft)% left")
@@ -520,47 +372,36 @@ private struct HopCard: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background {
-            ZStack {
-                shape.fill(Color(hex: "#13151A"))
-                shape.fill(RadialGradient(colors: [Brand.primary.opacity(0.2), .clear],
-                                          center: .bottomTrailing, startRadius: 0, endRadius: 220))
-            }
-        }
-        .overlay(shape.strokeBorder(Brand.primary.opacity(0.25)))
+        .background(shape.fill(Brand.raised))
+        .overlay(shape.strokeBorder(Brand.borderStrong))
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
     }
 }
 
-/// The login in use that needs you and can't be helped by a hop: what is wrong, and the one thing to do.
+/// The remedy for what the header already says, when no hop helps: one quiet button, so the
+/// sentence lives once.
 private struct WarningLine: View {
     @EnvironmentObject private var store: AccountStore
     let warning: MenuWarning
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Circle().fill(Brand.red).frame(width: 6, height: 6).accessibilityHidden(true)
-            Text(warning.text)
-                .font(Brand.sans(12))
-                .foregroundStyle(Brand.bad)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Button(warning.action.title) {
-                switch warning.action {
-                case .add: store.beginAdd(warning.account.provider)
-                case .open: AppWindow.show(section: "limits")
-                }
+        Button {
+            switch warning.action {
+            case .add: store.beginAdd(warning.account.provider)
+            case .open: AppWindow.show(section: "limits")
             }
-            .buttonStyle(.plain)
-            .font(Brand.sans(12, weight: .semibold))
-            .foregroundStyle(Brand.text)
-            .fixedSize()
-            .disabled(warning.action == .add && store.addingFor != nil)
+        } label: {
+            Text(title).frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 16)
+        .buttonStyle(AppButtonStyle(kind: .secondary, size: .small))
+        .disabled(warning.action == .add && store.addingFor != nil)
+        .padding(.horizontal, 12)
         .padding(.bottom, 12)
+    }
+
+    private var title: String {
+        warning.action == .add ? "Add a \(warning.account.provider.shortName) login" : "Open Limits"
     }
 }
 
@@ -583,7 +424,7 @@ private struct MenuRing: Identifiable {
             switch self {
             case .out: Brand.red
             case .low: Brand.warn
-            case .fine: Color(white: 0.9)
+            case .fine: Brand.text
             }
         }
         var ink: Color {
@@ -614,11 +455,9 @@ private struct MenuHop {
 private struct MenuWarning {
     enum Action: Equatable {
         case add, open
-        var title: String { self == .add ? "Add" : "Limits" }
     }
 
     let account: Account
-    let text: String
     let action: Action
 }
 
@@ -698,19 +537,16 @@ private struct MenuFacts {
     }
 
     /// Only the logins in use: one that is signed out, or nearly out with no login to hop to.
+    /// The header's headline says what is wrong; the warning carries only the remedy.
     private static func warning(rows: [MenuRow]) -> MenuWarning? {
         guard let row = rows.first(where: { $0.active && $0.lane == .needs }) else { return nil }
         let account = row.account
-        let tool = account.provider.shortName
-        if row.signedOut {
-            return MenuWarning(account: account, text: "\(tool) on \(account.displayName) is signed out", action: .open)
-        }
+        if row.signedOut { return MenuWarning(account: account, action: .open) }
         let others = rows.filter { $0.account.provider == account.provider && $0.account.id != account.id }
-        if others.isEmpty {
-            return MenuWarning(account: account, text: "\(tool) has \(row.left ?? 0)% left · no other login",
-                               action: Provider.switchable.contains(account.provider) ? .add : .open)
+        if others.isEmpty, Provider.switchable.contains(account.provider) {
+            return MenuWarning(account: account, action: .add)
         }
-        return MenuWarning(account: account, text: "\(tool) has \(row.left ?? 0)% left · no other login has room", action: .open)
+        return MenuWarning(account: account, action: .open)
     }
 
     /// The window's rule: Smart Hop's pick for a tool, when it has room worth a hop and clearly
@@ -925,7 +761,7 @@ private struct MenuFooter: View {
     private func cell<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         HStack(spacing: 7) { content() }
             .font(Brand.sans(12))
-            .foregroundStyle(Color(white: 0.9))
+            .foregroundStyle(Brand.text)
             .frame(maxWidth: .infinity, minHeight: 40)
             .contentShape(Rectangle())
     }
@@ -966,7 +802,7 @@ private struct MenuFooter: View {
         } label: {
             Text("More")
                 .font(Brand.sans(12))
-                .foregroundStyle(Color(white: 0.9))
+                .foregroundStyle(Brand.text)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)

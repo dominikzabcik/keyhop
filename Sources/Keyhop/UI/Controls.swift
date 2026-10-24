@@ -152,13 +152,13 @@ struct LimitBar: View {
             let height = geo.size.height
             let value = min(max(fraction, 0), 1)
             ZStack(alignment: .leading) {
-                Capsule().fill(Color.white.opacity(0.07))
+                Capsule().fill(Brand.border)
                 Capsule()
                     .fill(Self.tint(value, pace: pace))
                     .frame(width: value > 0 ? max(height, width * value) : 0)
                 if let pace {
                     Capsule()
-                        .fill(Color.white.opacity(0.4))
+                        .fill(Color(hex: "#FFFAF0").opacity(0.4))
                         .frame(width: 1.5, height: height + 5)
                         .offset(x: min(max(width * pace - 0.75, 0), width - 1.5))
                 }

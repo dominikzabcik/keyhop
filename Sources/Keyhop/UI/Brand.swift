@@ -72,7 +72,7 @@ extension View {
         return background(shape.fill(Brand.panel))
             .clipShape(shape)
             .overlay(shape.strokeBorder(LinearGradient(
-                colors: [Color.white.opacity(0.11), Color.white.opacity(0.035)],
+                colors: [Color(hex: "#FFFAF0").opacity(0.11), Color(hex: "#FFFAF0").opacity(0.035)],
                 startPoint: .top, endPoint: .bottom), lineWidth: 1))
     }
 }
@@ -101,7 +101,7 @@ struct Badge: View {
             .padding(.horizontal, 8)
             .frame(height: 20)
             .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(live ? Brand.good.opacity(0.1) : Color.white.opacity(0.07)))
+                .fill(live ? Brand.good.opacity(0.1) : Brand.border))
     }
 }
 

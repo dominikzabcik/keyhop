@@ -3,32 +3,34 @@ import AppKit
 import CoreText
 import SwiftUI
 
-/// The dashboard's design tokens, so the menu, the welcome window and Keyhop's window read as one
-/// app: Coss Blue's neutral surfaces, white at low opacity for edges and hover, one blue for
-/// actions, and colors that otherwise only ever mean a state.
+/// The design tokens of the Keyhop 2.0 world, so the menu, the welcome window and Keyhop's window
+/// read as one app: warm charcoal surfaces, hairlines cut from the paper ink, paper-on-ink actions,
+/// color only where it means a state, and brand blue only inside the K mark.
 enum Brand {
-    static let background = Color(hex: "#161616")
-    static let sidebar = Color(hex: "#111111")
-    static let panel = Color(hex: "#1A1A1A")
-    static let raised = Color(hex: "#1F1F1F")
-    static let raisedHover = Color(hex: "#262626")
-    static let hover = Color.white.opacity(0.05)
-    static let selected = Color.white.opacity(0.1)
-    static let border = Color.white.opacity(0.10)
-    static let borderStrong = Color.white.opacity(0.16)
-    static let faint = Color.white.opacity(0.08)
-    static let text = Color(hex: "#F5F5F5")
-    static let muted = Color(hex: "#A3A3A3")
-    static let subtle = Color(hex: "#8A8A8A")
-    static let primary = Color(hex: "#60A5FA")
-    static let primaryHover = Color(hex: "#7DB6FB")
-    static let onPrimary = Color(hex: "#0A1628")
-    static let good = Color(hex: "#34D399")
-    static let warn = Color(hex: "#F59E0B")
+    static let background = Color(hex: "#0C0B0A")
+    static let sidebar = Color(hex: "#090807")
+    static let panel = Color(hex: "#121110")
+    static let raised = Color(hex: "#181613")
+    static let raisedHover = Color(hex: "#201D19")
+    static let hover = Color(hex: "#FFFAF0").opacity(0.05)
+    static let selected = Color(hex: "#FFFAF0").opacity(0.09)
+    static let border = Color(hex: "#FFFAF0").opacity(0.07)
+    static let borderStrong = Color(hex: "#FFFAF0").opacity(0.12)
+    static let faint = Color(hex: "#FFFAF0").opacity(0.05)
+    static let text = Color(hex: "#ECEAE5")
+    static let muted = Color(hex: "#A8A49B")
+    static let subtle = Color(hex: "#8B8780")
+    /// Actions are paper on ink; blue stopped being a button color in 2.0.
+    static let primary = Color(hex: "#ECEAE5")
+    static let primaryHover = Color(hex: "#F8F6F1")
+    static let onPrimary = Color(hex: "#121110")
+    /// The one blue, and it lives only in the K mark.
+    static let blue = Color(hex: "#2F5FD9")
+    static let good = Color(hex: "#4FAE72")
+    static let warn = Color(hex: "#D9A03A")
     /// Red as text; `red` is the same state as a fill or a ring.
-    static let bad = Color(hex: "#FF8A82")
-    static let red = Color(hex: "#FB414A")
-    static let info = Color(hex: "#93C5FD")
+    static let bad = Color(hex: "#E8705F")
+    static let red = Color(hex: "#E05746")
 
     /// The window's ground, the page's --g0: warm charcoal behind loads, resizes and corners.
     static let backgroundColor = NSColor(srgbRed: 0x0c / 255, green: 0x0b / 255, blue: 0x0a / 255, alpha: 1)
@@ -134,7 +136,8 @@ struct PixelMark: View {
             ZStack(alignment: .topLeading) {
                 square(x: 2.5, y: 2.5, width: 6, height: 19.5, unit: unit, opacity: 1)
                 square(x: 9.6, y: 9.2, width: 6, height: 6, unit: unit, opacity: 1)
-                square(x: 16, y: 1, width: 6, height: 6, unit: unit, opacity: arms[0])
+                // The hopped arm carries the one blue; animated, the light owns both arms.
+                square(x: 16, y: 1, width: 6, height: 6, unit: unit, opacity: arms[0], color: animated ? tint : Brand.blue)
                 square(x: 16, y: 17, width: 6, height: 6, unit: unit, opacity: arms[1])
             }
             .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
@@ -143,9 +146,9 @@ struct PixelMark: View {
         .accessibilityHidden(true)
     }
 
-    private func square(x: Double, y: Double, width: Double, height: Double, unit: Double, opacity: Double) -> some View {
+    private func square(x: Double, y: Double, width: Double, height: Double, unit: Double, opacity: Double, color: Color? = nil) -> some View {
         RoundedRectangle(cornerRadius: unit * 1.5, style: .continuous)
-            .fill(tint)
+            .fill(color ?? tint)
             .opacity(opacity)
             .frame(width: unit * width, height: unit * height)
             .offset(x: unit * x, y: unit * y)

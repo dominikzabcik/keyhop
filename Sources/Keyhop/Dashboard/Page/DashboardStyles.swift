@@ -69,10 +69,8 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 }
 .mac-window .titlebar { padding-left: 86px; -webkit-user-select: none; user-select: none; cursor: default; }
 .app { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.kmark {
-  width: 18px; height: 18px; border-radius: 5px; background: var(--brand);
-  color: #fff; font: 700 11px/18px var(--sans); text-align: center; flex: none;
-}
+/* The mark, bare on the chrome: paper K, the hopped arm in the one blue. */
+.kmark { width: 17px; height: 17px; color: var(--fg); flex: none; display: block; }
 .titlebar .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .readtime { color: var(--fg3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .readtime.stale { color: var(--low); }

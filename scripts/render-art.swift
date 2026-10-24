@@ -11,12 +11,17 @@ func gray(_ value: CGFloat, _ alpha: CGFloat = 1) -> CGColor {
     CGColor(colorSpace: sRGB, components: [value, value, value, alpha])!
 }
 
-/// The dashboard's neutrals.
+func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat, _ alpha: CGFloat = 1) -> CGColor {
+    CGColor(colorSpace: sRGB, components: [r, g, b, alpha])!
+}
+
+/// The 2.0 world: warm charcoal, paper ink, and the one blue on the arm that hops.
 enum Brand {
-    static let surfaceTop = gray(0.125)
-    static let surfaceBottom = gray(0.075)
-    static let ink = gray(0.92)
-    static let unlit = gray(1, 0.2)
+    static let surfaceTop = rgb(0.125, 0.114, 0.098)
+    static let surfaceBottom = rgb(0.047, 0.043, 0.039)
+    static let ink = rgb(0.925, 0.918, 0.898)
+    static let unlit = rgb(1, 0.98, 0.94, 0.2)
+    static let blue = rgb(0.184, 0.373, 0.851)
 }
 
 func canvas(_ width: Int, _ height: Int) -> CGContext {
@@ -102,8 +107,8 @@ func surface(_ ctx: CGContext, clip: CGPath, bounds: CGRect, grainScale: CGFloat
 
 /// Keyhop's K on its 24-unit grid: a solid stem, the joint that makes it a letter, and two arms with
 /// the upper one hopped clear. `levels` (0...1 each) fills the arms, so the menu bar can show the two
-/// nearest limits in the same shape. The logo itself keeps both arms solid.
-func pixelMark(_ ctx: CGContext, center: CGPoint, width: CGFloat, levels: [CGFloat] = [1, 1]) {
+/// nearest limits in the same shape. The logo keeps both arms solid, the hopped one in the brand blue.
+func pixelMark(_ ctx: CGContext, center: CGPoint, width: CGFloat, levels: [CGFloat] = [1, 1], accent: CGColor? = nil) {
     let unit = width / 24
     func place(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> CGPath {
         // The grid is read top-down; Core Graphics counts up, so y flips here.
@@ -115,8 +120,9 @@ func pixelMark(_ ctx: CGContext, center: CGPoint, width: CGFloat, levels: [CGFlo
     fill(ctx, place(9.6, 9.2, 6, 6), Brand.ink)
     for (index, arm) in [place(16, 1, 6, 6), place(16, 17, 6, 6)].enumerated() {
         let lit = min(max(levels[index], 0), 1)
+        let paint = index == 0 ? (accent ?? Brand.ink) : Brand.ink
         fill(ctx, arm, Brand.unlit)
-        if lit > 0 { fill(ctx, arm, Brand.ink.copy(alpha: lit)!) }
+        if lit > 0 { fill(ctx, arm, paint.copy(alpha: lit)!) }
     }
 }
 
@@ -157,7 +163,7 @@ func icon(pixels n: Int) -> CGImage {
     fill(ctx, body, Brand.surfaceBottom)
     ctx.restoreGState()
     surface(ctx, clip: body, bounds: bounds, grainScale: 1024 / CGFloat(n), grain: n >= 128)
-    pixelMark(ctx, center: CGPoint(x: 512, y: 512), width: 540)
+    pixelMark(ctx, center: CGPoint(x: 512, y: 512), width: 540, accent: Brand.blue)
 
     // Light catching the upper lip.
     ctx.saveGState()
@@ -194,7 +200,7 @@ func smallIcon(pixels n: Int) -> CGImage {
     }
     fill(ctx, box(left, top, arm, height), Brand.ink)
     fill(ctx, box(left + arm + gap, top + arm, arm, arm), Brand.ink)
-    fill(ctx, box(left + (arm + gap) * 2, top, arm, arm), Brand.ink)
+    fill(ctx, box(left + (arm + gap) * 2, top, arm, arm), n >= 24 ? Brand.blue : Brand.ink)
     fill(ctx, box(left + (arm + gap) * 2, top + arm * 2, arm, arm), Brand.ink)
     return ctx.makeImage()!
 }
@@ -227,7 +233,7 @@ func dmgBackground(scale k: CGFloat) -> CGImage {
     let ctx = canvas(Int(size.width * k), Int(size.height * k))
     ctx.scaleBy(x: k, y: k)
     let bounds = CGRect(origin: .zero, size: size)
-    surface(ctx, clip: CGPath(rect: bounds, transform: nil), bounds: bounds, grainScale: 1 / k, top: gray(0.47), bottom: gray(0.43))
+    surface(ctx, clip: CGPath(rect: bounds, transform: nil), bounds: bounds, grainScale: 1 / k, top: rgb(0.475, 0.466, 0.450), bottom: rgb(0.435, 0.427, 0.412))
 
     // Finder y (from the top) -> Core Graphics y (from the bottom).
     func y(_ fromTop: CGFloat) -> CGFloat { size.height - fromTop }
@@ -237,7 +243,7 @@ func dmgBackground(scale k: CGFloat) -> CGImage {
     let rowWidth = side * 4 + gap * 3
     for (i, alpha) in [0.25, 0.45, 0.7, 1.0].enumerated() {
         let rect = CGRect(x: 330 - rowWidth / 2 + CGFloat(i) * (side + gap), y: y(175) - side / 2, width: side, height: side)
-        fill(ctx, CGPath(roundedRect: rect, cornerWidth: 3, cornerHeight: 3, transform: nil), gray(0.08, alpha))
+        fill(ctx, CGPath(roundedRect: rect, cornerWidth: 3, cornerHeight: 3, transform: nil), rgb(0.055, 0.051, 0.047, alpha))
     }
 
     draw(ctx, line("Drag Keyhop into Applications", size: 16, weight: .semibold, color: gray(0.06)), center: CGPoint(x: 330, y: y(312)))
@@ -260,7 +266,7 @@ func banner(scale k: CGFloat) -> CGImage {
     let nameWidth = CTLineGetBoundsWithOptions(name, .useGlyphPathBounds).width
     let markWidth: CGFloat = 176, gap: CGFloat = 44
     let left = size.width / 2 - (markWidth + gap + nameWidth) / 2
-    pixelMark(ctx, center: CGPoint(x: left + markWidth / 2, y: size.height / 2), width: markWidth)
+    pixelMark(ctx, center: CGPoint(x: left + markWidth / 2, y: size.height / 2), width: markWidth, accent: Brand.blue)
     draw(ctx, name, center: CGPoint(x: left + markWidth + gap + nameWidth / 2, y: size.height / 2))
     return ctx.makeImage()!
 }

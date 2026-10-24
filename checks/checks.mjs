@@ -47,6 +47,8 @@ export async function readScreen(page) {
     const clipped = [...document.querySelectorAll("p, h1, h2, h3, h4, li, td, th, button, span, small, b, code")]
       .filter(visible)
       .filter((el) => {
+        // Screen-reader-only text is clipped on purpose; it is spoken, not drawn.
+        if (el.classList.contains("sr-only")) return false;
         const style = getComputedStyle(el);
         if (style.overflow === "visible" || el.textContent.trim().length < 4) return false;
         if (style.textOverflow === "ellipsis" || style.overflowX === "auto" || style.overflowY === "auto") return false;
@@ -70,7 +72,7 @@ export async function readScreen(page) {
       title: document.title,
       description: document.querySelector('meta[name="description"]')?.content ?? null,
       rootViewTransition: getComputedStyle(document.documentElement).viewTransitionName,
-      hasSidebarNavigation: !!document.querySelector("#nav"),
+      hasFixedChrome: !!document.querySelector(".titlebar"),
       headings,
       controls,
       overflow,
@@ -129,9 +131,9 @@ export function faults({ screen, width, reading, status, consoleErrors, failedRe
   for (const one of reading.namelessControls) fault("control-without-name", one);
 
   // The default root view-transition snapshot includes fixed navigation chrome. On Keyhop's
-  // dashboard that duplicates the sidebar while its selection thumb moves, causing a bright flash.
-  if (reading.hasSidebarNavigation && reading.rootViewTransition !== "none") {
-    fault("motion", `sidebar is captured by the ${reading.rootViewTransition || "default"} view transition`);
+  // window that duplicates the title bar while the view fades, causing a bright flash.
+  if (reading.hasFixedChrome && reading.rootViewTransition !== "none") {
+    fault("motion", `the title bar is captured by the ${reading.rootViewTransition || "default"} view transition`);
   }
 
   const h1s = reading.headings.filter((h) => h.level === 1);
@@ -219,10 +221,10 @@ export async function pokeControls(page, screen) {
       dead.push({ screen: screen.name, width: "laptop", kind: "dead-control", detail: `"${label}" does nothing when pressed` });
     }
     pressed.push(label);
-    // Keyhop's window opens the Jump to palette and the range menu over the page, where they would
+    // Keyhop's window opens the range menu and a row's menu over the page, where they would
     // cover the next control; Escape closes them. Other screens keep their own flow.
     try {
-      if (await page.$("#palette:not([hidden]), .range-menu")) { await page.keyboard.press("Escape"); await page.waitForTimeout(120); }
+      if (await page.$(".range-menu, .row-menu")) { await page.keyboard.press("Escape"); await page.waitForTimeout(120); }
     } catch {}
   }
   return { dead, pressed };

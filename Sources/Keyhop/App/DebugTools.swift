@@ -130,7 +130,6 @@ enum Previews {
 @MainActor
 enum Snapshot {
     static func render(prefix: String, tool: Provider = .claude) {
-        Brand.registerFonts()
         // The menu opens on the tab it last showed, which is saved. Rendering offscreen never runs
         // the view's onAppear, so the tab is set here instead and put back afterwards.
         let savedTab = UserDefaults.standard.string(forKey: "menuTool")

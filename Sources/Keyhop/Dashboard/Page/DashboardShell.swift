@@ -1,6 +1,6 @@
 import Foundation
 
-/// The window's markup: sidebar, content and overlays, with the script elements that load it.
+/// The window's markup: title bar, the view bar for demoted views, the work surface and overlays.
 extension DashboardPage {
     static let shell = ##"""
 </head>
@@ -12,40 +12,27 @@ extension DashboardPage {
 </svg>
 
 <div class="shell">
-  <aside class="sidebar">
-    <div class="brand">
-      <span class="brand-tile" aria-hidden="true"><svg viewBox="0 0 14 14" shape-rendering="crispEdges"><rect x="2" y="2" width="3" height="10" fill="currentColor"/><rect x="6" y="5" width="3" height="3" fill="currentColor"/><rect x="9" y="2" width="3" height="3" fill="currentColor"/><rect x="9" y="9" width="3" height="3" fill="currentColor"/></svg></span>
-      <span class="brand-copy"><b>Keyhop</b><small id="brand-line">Reading your logins</small></span>
-      <span class="badge channel-badge" id="channel-badge" hidden>Beta</span>
-    </div>
-    <button class="hop hop-side" type="button" data-action="palette" aria-keyshortcuts="Meta+K Control+K" aria-haspopup="dialog" aria-controls="palette"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><span>Hop to a login…</span><kbd id="hop-key" aria-hidden="true">⌘K</kbd></button>
-    <div class="side-scroll">
-      <div class="nav-label">Platform</div>
-      <nav class="nav" id="nav" aria-label="Sections">
-        <a href="#overview" data-section="overview" data-group="home"><svg><use href="#i-home"/></svg><span class="nav-name">Home</span></a>
-        <a href="#limits" data-section="limits" data-group="limits"><svg><use href="#i-gauge"/></svg><span class="nav-name">Limits</span><span class="nav-count" id="limits-count" hidden></span></a>
-        <a href="#usage" data-section="usage" data-group="usage"><svg><use href="#i-usage"/></svg><span class="nav-name">Usage</span></a>
-        <a href="#coach" data-section="coach" data-group="insights"><svg><use href="#i-bulb"/></svg><span class="nav-name">Insights</span><svg class="nav-chev" aria-hidden="true"><use href="#i-chev"/></svg></a>
-        <a href="#leaderboard" data-section="leaderboard" data-group="community" hidden><svg><use href="#i-people"/></svg><span class="nav-name">Community</span><svg class="nav-chev" aria-hidden="true"><use href="#i-chev"/></svg></a>
-      </nav>
-      <div class="side-label" id="tree-label"><span>Limits</span><span class="side-live" id="side-live" hidden></span></div>
-      <div class="acct-tree" id="tree"></div>
-    </div>
-    <div class="side-foot">
-      <a class="side-account" href="#settings" data-section="settings"><span class="avatar" id="side-avatar" aria-hidden="true">K</span><span class="side-account-copy"><b id="side-name">Settings</b><small id="side-sub">This computer</small></span><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg></a>
-    </div>
-  </aside>
-  <div class="content" id="content">
-    <div class="backdrop" id="backdrop" aria-hidden="true"></div>
-    <div class="hero-art" id="hero-art" hidden aria-hidden="true"><canvas id="field"></canvas><div class="hero-scene" id="hero-scene"></div></div>
-    <header class="topbar"><div class="top-title"><h1 id="title">Home</h1><div class="toolbar" id="toolbar"></div></div><div class="top-actions"><span id="mode" hidden></span><a class="top-chip warn" id="status-outage" href="#" target="_blank" rel="noopener" hidden></a><span class="top-read" id="top-read"></span><button type="button" class="icon-btn" id="theme" data-action="theme-toggle" aria-label="Show the field by day"><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg></button><button type="button" class="icon-btn" id="refresh" data-action="refresh" aria-label="Read limits and usage now"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button></div><div class="meter" id="top-meter" role="progressbar" aria-label="Keyhop is reading" aria-hidden="true"><span></span></div></header>
-    <main class="main" id="main" tabindex="-1" aria-busy="true"><div class="home-cols boot-skel" role="status" aria-label="Reading your accounts"><div class="home-col"><section class="card htotal skel-card"><span class="skel" style="width:110px;height:10px"></span><span class="skel" style="width:190px;height:22px"></span><span class="skel" style="width:240px;height:44px"></span></section><section class="card htrend skel-card"></section></div><div class="home-col"><section class="card skel-card" style="height:300px"></section><section class="card skel-card" style="height:160px"></section></div></div></main>
+  <header class="titlebar">
+    <span class="app"><span class="kmark" aria-hidden="true">K</span>Keyhop</span>
+    <span id="mode" hidden></span>
+    <a class="top-chip warn" id="status-outage" href="#" target="_blank" rel="noopener" hidden></a>
+    <span class="right">
+      <span class="readtime" id="readtime"></span>
+      <button type="button" class="iconbtn" id="refresh" data-action="refresh" aria-label="Read limits and usage now"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button>
+      <button type="button" class="iconbtn" id="gear" data-action="goto" data-section="settings" aria-label="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg></button>
+    </span>
+    <div class="meter" id="top-meter" role="progressbar" aria-label="Keyhop is reading" aria-hidden="true"><span></span></div>
+  </header>
+  <div class="viewbar" id="viewbar" hidden>
+    <button type="button" class="iconbtn back" data-action="goto" data-section="home" aria-label="Back to limits"><svg class="icon" aria-hidden="true"><use href="#i-chev"/></svg></button>
+    <h1 id="title">Keyhop</h1>
+    <span id="viewtabs"></span>
+    <div class="toolbar" id="toolbar"></div>
   </div>
+  <main class="main" id="main" tabindex="-1" aria-busy="true"><div class="core boot-skel" role="status" aria-label="Reading your logins"><div class="skel-card" style="border:0"><span class="skel" style="width:60%;height:15px"></span><span class="skel" style="width:100%;height:47px"></span><span class="skel" style="width:100%;height:47px"></span><span class="skel" style="width:100%;height:47px"></span><span class="skel" style="width:40%;height:34px"></span></div></div></main>
 </div>
 <div class="tip" id="tip" hidden></div>
-<div id="palette" hidden></div>
 <div class="toast away" id="toast" role="status" aria-live="polite"></div>
-<script>{{backdrop}}</script>
 <script id="boot" type="application/json">{{boot}}</script>
 <script>
 """##

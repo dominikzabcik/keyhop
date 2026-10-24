@@ -424,9 +424,9 @@ final class DashboardTests: XCTestCase {
     func testThePageCarriesTheResilientDashboardContract() {
         let page = DashboardPage.render(boot: nil)
         for marker in [
-            ">Hop<", "Search sections, ranges, tools, or accounts", "Skip to content",
-            "cacheSavings", "aria-haspopup=\"dialog\"", "AbortController", "checkingUpdate", "settingsPane",
-            "startViewTransition", "prefers-reduced-motion", "prefers-reduced-transparency",
+            "data-action=\"hop\"", "data-action=\"unhop\"", "SECTION_ALIASES", "Skip to content",
+            "cacheSavings", "AbortController", "checkingUpdate", "settingsPane",
+            "startViewTransition", "prefers-reduced-motion",
             "view-transition-name: none",
             "usageErrors", "Showing the last complete reading",
             "RelativeTimeFormat", "resumeRefresh", "No saved",

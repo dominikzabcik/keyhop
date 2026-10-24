@@ -1,0 +1,283 @@
+<title>Keyhop notch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* The window's canon world folded into the device silhouette: true black because the
+   surface extends the bezel. The notch is a status surface only; the hop lives in the window. */
+:root {
+  --bezel: #000;
+  --g0: #0c0b0a; --g1: #121110; --g2: #181613; --g3: #201d19;
+  --line: rgba(255,250,240,.06); --line-strong: rgba(255,250,240,.11);
+  --fg: #eceae5; --fg2: #a8a49b; --fg3: #8b8780;
+  --ok: #4fae72; --low: #d9a03a; --out: #e05746;
+  --brand: #2f5fd9;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--g0); color: var(--fg);
+  font: 400 13px/1.45 var(--sans);
+  min-height: 100vh; display: grid; place-items: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px;
+}
+::selection { background: rgba(47,95,217,.35); color: var(--fg); }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 5px; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+
+.wrap { width: min(1080px, 100%); }
+
+/* The staged top of a display: a quiet warm desktop under a dark menu bar. */
+.stage {
+  position: relative; height: 480px;
+  border: 1px solid var(--line-strong); border-radius: 10px 10px 8px 8px;
+  background: linear-gradient(180deg, #131210 0%, #11100e 40%, #0e0d0b 100%);
+  overflow: hidden;
+}
+.menubar {
+  position: relative; height: 37px;
+  background: rgba(10,9,8,.92);
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 16px;
+}
+.clock { color: var(--fg2); font: 500 12px/1 var(--mono); font-variant-numeric: tabular-nums; }
+
+/* The notch: collapsed it widens the bezel into two readout flanks; open it drops a
+   true-black panel with the notch's own corner language. */
+.notch {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: min(348px, calc(100% - 24px)); height: 37px;
+  color: var(--fg);
+  transition: width .14s ease-out .16s, height .16s ease-out;
+}
+.notch.open {
+  width: min(420px, calc(100% - 24px)); height: 286px;
+  transition: width .14s ease-out, height .16s ease-out .12s;
+}
+/* The black itself: clipped surface inside the shell, so the fillets can live outside it. */
+.surface {
+  position: absolute; inset: 0; background: var(--bezel);
+  border-radius: 0 0 14px 14px; overflow: hidden;
+  transition: border-radius .16s ease-out;
+}
+.notch.open .surface { border-radius: 0 0 20px 20px; }
+/* The toggle sits behind everything; the focus ring hugs the surface's own silhouette. */
+.togglebtn { position: absolute; inset: 0; cursor: pointer; }
+.togglebtn:focus-visible { outline: none; }
+.surface:has(.togglebtn:focus-visible) { outline: 2px solid var(--brand); outline-offset: -2px; }
+/* The camera lens sits in the housing's middle, a barely-lit disc on the black. */
+.lens {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  width: 8px; height: 8px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 35% 35%, #1d1b18 0 18%, #0b0a09 62%, #000 100%);
+}
+/* Outward fillets where the black meets the top edge, so the shape reads as hardware. */
+.fillet { position: absolute; top: 0; width: 10px; height: 10px; pointer-events: none; }
+.fillet.l { right: 100%; background: radial-gradient(circle at 0 100%, rgba(0,0,0,0) 9.5px, var(--bezel) 10px); }
+.fillet.r { left: 100%; background: radial-gradient(circle at 100% 100%, rgba(0,0,0,0) 9.5px, var(--bezel) 10px); }
+
+.flanks {
+  position: absolute; top: 0; left: 0; right: 0; height: 37px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; pointer-events: none;
+  opacity: 1; transition: opacity .12s ease-out .2s;
+}
+.notch.open .flanks { opacity: 0; transition: opacity .1s ease-out; }
+.flank { display: inline-flex; align-items: center; gap: 7px; font: 500 12px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.flank .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--out); }
+.flank.left { color: var(--out); }
+.flank.right { color: var(--fg2); }
+
+/* The dropped panel: the limits, then a hairline foot with today. Status only, no controls
+   beyond the quiet link; a click anywhere but the link closes the panel. */
+.panel {
+  position: absolute; inset: 0; padding: 51px 20px 16px;
+  display: flex; flex-direction: column;
+  opacity: 0; transition: opacity .12s ease-out;
+}
+.notch.open .panel { opacity: 1; transition: opacity .14s ease-out .22s; }
+
+.plist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+/* One group per tool; its windows stack inside (the tighter one leads at full weight). */
+.pgroup {
+  display: flex; flex-direction: column;
+  opacity: 0;
+  transition: opacity .16s ease-out;
+}
+.pgroup + .pgroup { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.notch.open .pgroup { opacity: 1; }
+.notch.open .pgroup:nth-child(1) { transition-delay: .22s; }
+.notch.open .pgroup:nth-child(2) { transition-delay: .27s; }
+.notch.open .pgroup:nth-child(3) { transition-delay: .32s; }
+.pline {
+  display: grid; grid-template-columns: 16px 80px 38px minmax(0,1fr) 112px;
+  gap: 12px; align-items: center; height: 30px;
+  padding: 0 8px; margin: 0 -8px; border-radius: 5px;
+  transition: background .15s ease-out;
+}
+.pline:hover { background: var(--g2); }
+.pline.sub { height: 22px; }
+.win { color: var(--fg3); font-size: 11px; white-space: nowrap; text-align: right; justify-self: end; }
+/* The tool's mark carries its state color; sub rows leave the column empty. */
+.ticon { display: flex; align-items: center; justify-content: center; color: var(--ok); }
+.pline.crit .ticon { color: var(--out); }
+.pline.low .ticon { color: var(--low); }
+.pline .tool { font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pline .runway { height: 4px; border-radius: 99px; background: var(--g3); overflow: hidden; }
+.pline.sub .left { font-size: 11px; color: var(--fg3); }
+.pline .runway i { display: block; height: 100%; border-radius: 99px; background: var(--ok); }
+.pline.crit .runway i { background: var(--out); }
+.pline.low .runway i { background: var(--low); }
+.pline .left { text-align: right; color: var(--fg2); font: 500 12px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pline.crit .left { color: var(--out); font-weight: 600; }
+
+.pfoot {
+  margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line);
+  display: flex; align-items: baseline; gap: 12px;
+}
+.pfoot .num { font: 600 13px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pfoot .num .val { color: var(--fg2); font-weight: 500; }
+.pfoot .cap { color: var(--fg3); font-size: 12px; white-space: nowrap; }
+.pfoot .share {
+  flex: 1 1 56px; min-width: 44px; align-self: center;
+  display: flex; gap: 2px; height: 2px; border-radius: 99px; overflow: hidden; margin: 0 2px;
+}
+.pfoot .share i { height: 100%; }
+.pfoot .share i:nth-child(1) { width: 25%; background: #cfcbc3; }
+.pfoot .share i:nth-child(2) { width: 20%; background: #a39f97; }
+.pfoot .share i:nth-child(3) { width: 19%; background: #827d74; }
+.pfoot .share i:nth-child(4) { width: 14%; background: #666258; }
+.pfoot .share i:nth-child(5) { width: 14%; background: #4e4a42; }
+.pfoot .share i:nth-child(6) { width: 8%; background: #3a3731; }
+.pfoot a {
+  margin-left: auto; color: var(--fg3); font-size: 12px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  padding: 8px 0; margin-block: -8px;
+  transition: color .15s ease-out;
+}
+.pfoot a:hover { color: var(--fg); }
+.pfoot a .k {
+  width: 14px; height: 14px; border-radius: 5px; background: var(--brand);
+  color: #fff; font: 700 9px/14px var(--sans); text-align: center; flex: none;
+}
+.readtime {
+  position: absolute; top: 13px; right: 20px;
+  color: var(--fg3); font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums;
+}
+.readtime.stale { color: var(--low); }
+
+.hint {
+  margin-top: 14px; color: var(--fg3); font-size: 12.5px; text-align: center;
+}
+
+@media (max-width: 640px) {
+  .stage { height: 380px; }
+  .pfoot .share { display: none; }
+  .panel { padding-inline: 16px; }
+  .pline { grid-template-columns: 16px 80px 28px minmax(0,1fr) 112px; gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="wrap">
+  <div class="stage" aria-label="Top of a MacBook display">
+    <div class="menubar">
+      <span class="clock">Fri 24 Oct 14:02</span>
+    </div>
+    <div class="notch" id="notch">
+      <span class="fillet l" aria-hidden="true"></span>
+      <span class="fillet r" aria-hidden="true"></span>
+      <div class="surface">
+        <button class="togglebtn" id="toggle" aria-expanded="false" aria-controls="panel"
+          aria-label="Keyhop: Codex 5 h window, 7% left, resets in 1 h 20 m. 7.6M tokens today."></button>
+        <span class="lens" aria-hidden="true"></span>
+        <span class="flanks" data-state="crit" aria-hidden="true">
+          <span class="flank left"><i class="dot"></i><span>7%</span></span>
+          <span class="flank right">7.6M</span>
+        </span>
+        <div class="panel" id="panel" role="region" aria-label="Limits and today" inert>
+          <span class="readtime" id="readtime">read 6 s ago</span>
+          <ul class="plist">
+            <li class="pgroup">
+              <div class="pline crit" role="group" aria-label="Codex, 5 h window, 7% left, resets in 1 h 20 m" title="At this pace the 5 h window empties around 14:20, an hour before it resets. Hop in the window.">
+                <span class="ticon" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l4 3.5-4 3.5"/><path d="M9 12.5h4"/></svg></span><span class="tool">Codex</span><span class="win">5 h</span>
+                <span class="runway"><i style="width:7%"></i></span>
+                <span class="left">7% · 1 h 20 m</span>
+              </div>
+              <div class="pline sub low" role="group" aria-label="Codex, weekly window, 31% left, resets in 4 days" title="Weekly pool running ahead of pace; the 5 h window is the tighter limit right now.">
+                <span></span><span></span><span class="win">week</span>
+                <span class="runway"><i style="width:31%"></i></span>
+                <span class="left">31% · 4 d</span>
+              </div>
+            </li>
+            <li class="pgroup">
+              <div class="pline" role="group" aria-label="Claude Code, 5 h window, 49% left, resets in 2 h 10 m" title="On pace to make its 5 h reset in 2 h 10 m.">
+                <span class="ticon" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 2v12M2.7 5l10.6 6M2.7 11l10.6-6"/></svg></span><span class="tool">Claude Code</span><span class="win">5 h</span>
+                <span class="runway"><i style="width:49%"></i></span>
+                <span class="left">49% · 2 h 10 m</span>
+              </div>
+              <div class="pline sub" role="group" aria-label="Claude Code, weekly window, 72% left, resets in 3 days" title="Weekly pool comfortably on pace.">
+                <span></span><span></span><span class="win">week</span>
+                <span class="runway"><i style="width:72%"></i></span>
+                <span class="left">72% · 3 d</span>
+              </div>
+            </li>
+            <li class="pgroup">
+              <div class="pline low" role="group" aria-label="Windsurf, daily window, 33% left, resets in 14 h" title="One daily pool; on pace to run out about 9 hours before the day resets. No second login to hop to.">
+                <span class="ticon" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 8c2-4.5 4-4.5 6 0s4 4.5 6 0"/></svg></span><span class="tool">Windsurf</span><span class="win">day</span>
+                <span class="runway"><i style="width:33%"></i></span>
+                <span class="left">33% · 14 h</span>
+              </div>
+            </li>
+          </ul>
+          <div class="pfoot">
+            <span class="num">7.6M <span class="val">· $15.21</span></span>
+            <span class="cap" title="214 calls · 62% cached">today</span>
+            <span class="share" role="img" aria-label="Share of today's tokens: Claude Code 25%, OpenCode 20%, Cursor 19%, Codex 14%, Gemini 14%, Pi 8%"
+              title="Claude Code 25% · OpenCode 20% · Cursor 19% · Codex 14% · Gemini 14% · Pi 8%"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <a href="#window" id="n-open"><span class="k" aria-hidden="true">K</span>Open Keyhop</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="hint">Click the notch. It shows the limits and today. The hop and the rest live in the window.</p>
+</div>
+
+<script>
+(() => {
+  const notch = document.getElementById("notch");
+  const toggle = document.getElementById("toggle");
+  const panel = document.getElementById("panel");
+
+  const setOpen = (open) => {
+    notch.classList.toggle("open", open);
+    toggle.setAttribute("aria-expanded", String(open));
+    panel.inert = !open;
+  };
+
+  toggle.addEventListener("click", () => setOpen(!notch.classList.contains("open")));
+  panel.addEventListener("click", (e) => {
+    if (!e.target.closest("a")) setOpen(false);
+  });
+  document.addEventListener("click", (e) => {
+    if (notch.classList.contains("open") && !notch.contains(e.target)) setOpen(false);
+  });
+  addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && notch.classList.contains("open")) { setOpen(false); toggle.focus(); }
+  });
+
+  let seconds = 6;
+  setInterval(() => {
+    seconds += 5;
+    const el = document.getElementById("readtime");
+    el.textContent = seconds < 60 ? `read ${seconds} s ago` : `read ${Math.round(seconds / 60)} min ago`;
+    el.classList.toggle("stale", seconds > 120);
+  }, 5000);
+})();
+</script>

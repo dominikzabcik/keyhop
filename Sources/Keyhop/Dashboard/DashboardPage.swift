@@ -11,7 +11,6 @@ enum DashboardPage {
         let page = template
             .replacingOccurrences(of: "{{marks}}", with: marks)
             .replacingOccurrences(of: "{{icons}}", with: InterfaceIcons.symbols)
-            .replacingOccurrences(of: "{{backdrop}}", with: Backdrop.script)
         // Inside a script element, "<" could close it early; JSON allows it escaped.
         let data = boot.map { $0.replacingOccurrences(of: "<", with: "\\u003c") } ?? "null"
         return page.replacingOccurrences(of: "{{boot}}", with: data)
@@ -21,11 +20,11 @@ enum DashboardPage {
     /// contract tests still read the whole page and a section's script stays readable on its own.
     static let template: String = [
         head,
-        "<style>", fonts, styles, stylesLimits, stylesPages, "</style>",
+        "<style>", styles, stylesLimits, stylesPages, "</style>",
         shell,
         "(() => {",
-        scriptCore, scriptChrome, scriptOverview, scriptLimits, scriptUsage, scriptBudgets,
-        scriptBackdrop, scriptPlans, scriptCoach, scriptCloud, scriptSettings, scriptActions,
+        scriptCore, scriptChrome, scriptHome, scriptLimits, scriptUsage, scriptBudgets,
+        scriptPlans, scriptCoach, scriptCloud, scriptSettings, scriptActions,
         tail,
     ].joined(separator: "\n")
 

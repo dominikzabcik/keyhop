@@ -1,0 +1,332 @@
+<title>Keyhop 2.0 okno</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Canon, played straight: one stepped neutral ramp, color is state only, brand blue lives in the K mark and focus. */
+:root {
+  --g0: #0c0b0a; --chrome: #090807; --g1: #121110; --g2: #181613; --g3: #201d19;
+  --line: rgba(255,250,240,.06); --line-strong: rgba(255,250,240,.11);
+  --fg: #eceae5; --fg2: #a8a49b; --fg3: #8b8780;
+  --ok: #4fae72; --low: #d9a03a; --out: #e05746;
+  --out-wash: rgba(224,87,70,.06); --ok-wash: rgba(79,174,114,.08);
+  --brand: #2f5fd9;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--g0); color: var(--fg);
+  font: 400 13px/1.45 var(--sans);
+  display: grid; place-items: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px;
+}
+::selection { background: rgba(47,95,217,.35); color: var(--fg); }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 5px; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+
+.window {
+  width: min(860px, 100%); background: var(--g1);
+  border: 1px solid var(--line-strong); border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Title bar sits a step below the work surface: traffic lights, app name, read-time, settings. */
+.titlebar {
+  display: flex; align-items: center; gap: 12px;
+  height: 44px; padding: 0 16px 0 18px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--line);
+}
+.lights { display: flex; gap: 8px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; }
+.lights i:nth-child(1) { background: #ff5f57; } .lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+.app { display: flex; align-items: center; gap: 8px; margin-left: 8px; font-weight: 600; }
+.kmark {
+  width: 18px; height: 18px; border-radius: 5px; background: var(--brand);
+  color: #fff; font: 700 11px/18px var(--sans); text-align: center;
+}
+.titlebar .right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.readtime { color: var(--fg3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.readtime.stale { color: var(--low); }
+.iconbtn {
+  width: 28px; height: 28px; border-radius: 5px; display: grid; place-items: center;
+  color: var(--fg2); transition: background .15s ease-out, color .15s ease-out;
+}
+.iconbtn:hover { background: var(--g2); color: var(--fg); }
+.icon { width: 15px; height: 15px; stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Verdict: one sentence, one action. */
+.verdict {
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 20px; border-bottom: 1px solid var(--line);
+}
+.verdict p { margin: 0 auto 0 0; font-size: 15px; font-weight: 500; letter-spacing: -.01em; min-width: 0; }
+.verdict p .detail { color: var(--fg2); font-weight: 400; }
+.btn {
+  flex: none; display: inline-flex; align-items: center; gap: 7px;
+  height: 32px; padding: 0 14px; border-radius: 5px;
+  background: var(--fg); color: #121110; font-weight: 600; font-size: 13px;
+  transition: background .15s ease-out, transform .1s ease-out;
+}
+.btn:hover { background: #fffdf8; }
+.btn:active { transform: scale(.98); }
+.btn.ghost { background: none; color: var(--fg2); border: 1px solid var(--line-strong); }
+.btn.ghost:hover { color: var(--fg); background: var(--g2); }
+.btn[hidden] { display: none; }
+
+/* Logins: rows ranked by how soon each one stops you; the critical row leads, tinted. */
+.logins { list-style: none; margin: 0; padding: 0; }
+.row {
+  display: grid;
+  grid-template-areas: "dot tool login runway left";
+  grid-template-columns: 8px 112px 220px minmax(0,1fr) 190px;
+  gap: 14px; align-items: center;
+  height: 47px; padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+  transition: background .15s ease-out;
+}
+.row:hover { background: var(--g2); }
+.row.crit { background: var(--out-wash); }
+.row.crit:hover { background: rgba(224,87,70,.1); }
+.row.hopped { background: var(--ok-wash); }
+.dot { grid-area: dot; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); justify-self: center; }
+.row.crit .dot { background: var(--out); }
+.row[data-state="low"] .dot { background: var(--low); }
+.row.idle .dot { background: var(--g3); }
+.tool { grid-area: tool; font-weight: 600; white-space: nowrap; }
+.login { grid-area: login; color: var(--fg2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.login .flag {
+  font-style: normal; font-size: 11px; color: var(--fg3);
+  border: 1px solid var(--line-strong); border-radius: 5px;
+  padding: 1.5px 6px; margin-left: 7px; white-space: nowrap;
+}
+.runway { grid-area: runway; height: 4px; border-radius: 99px; background: var(--g3); overflow: hidden; }
+.runway i { display: block; height: 100%; border-radius: 99px; background: var(--ok); transition: width .2s ease-out; }
+.row.crit .runway i { background: var(--out); }
+.row[data-state="low"] .runway i { background: var(--low); }
+.row.idle .runway { background: none; }
+.left {
+  grid-area: left; text-align: right; color: var(--fg2);
+  font: 500 12px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.row.crit .left { color: var(--out); font-weight: 600; }
+.row.idle .left, .row.idle .login { color: var(--fg3); }
+
+/* Today: the same grid as the rows, a step below the work surface. */
+.today {
+  display: grid;
+  grid-template-columns: 8px 112px 220px minmax(0,1fr) 190px;
+  gap: 6px 14px; align-items: end;
+  padding: 16px 20px 14px;
+  background: var(--chrome);
+}
+.figure { grid-column: 1 / 4; align-self: start; min-width: 0; }
+.figure .num { font: 600 20px/1.2 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.figure .num .val { color: var(--fg2); font-weight: 500; }
+.figure .sub { margin-top: 4px; color: var(--fg3); font-size: 12px; }
+.shares { grid-column: 4 / 6; min-width: 0; }
+.sharebar { display: flex; gap: 2px; height: 2px; border-radius: 99px; overflow: hidden; }
+.sharebar i { height: 100%; }
+.sharebar i:nth-child(1), .sharekey .ki:nth-child(1) i { background: #cfcbc3; }
+.sharebar i:nth-child(2), .sharekey .ki:nth-child(2) i { background: #a39f97; }
+.sharebar i:nth-child(3), .sharekey .ki:nth-child(3) i { background: #827d74; }
+.sharebar i:nth-child(4), .sharekey .ki:nth-child(4) i { background: #666258; }
+.sharebar i:nth-child(5), .sharekey .ki:nth-child(5) i { background: #4e4a42; }
+.sharebar i:nth-child(6), .sharekey .ki:nth-child(6) i { background: #3a3731; }
+.sharebar i:nth-child(1) { width: 25%; } .sharebar i:nth-child(2) { width: 20%; }
+.sharebar i:nth-child(3) { width: 19%; } .sharebar i:nth-child(4) { width: 14%; }
+.sharebar i:nth-child(5) { width: 14%; } .sharebar i:nth-child(6) { width: 8%; }
+.sharekey { margin-top: 9px; display: flex; flex-wrap: wrap; gap: 5px 14px; color: var(--fg3); font-size: 11.5px; }
+.sharekey .ki { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.sharekey .ki i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.sharekey .ki b { color: var(--fg2); font-weight: 500; }
+.links { grid-column: 1 / 6; display: flex; gap: 16px; justify-content: flex-end; margin-top: 6px; }
+.links a { color: var(--fg3); font-size: 12px; text-decoration: none; }
+.links a:hover { color: var(--fg); }
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-areas: "dot tool left" "x login runway";
+    grid-template-columns: 8px minmax(0,1fr) 150px;
+    height: auto; padding-block: 10px; row-gap: 6px;
+  }
+  .row .login { font-size: 12px; }
+  .left .rw { display: none; }
+  .row .runway { align-self: center; }
+  .verdict { flex-wrap: wrap; }
+  .today { grid-template-columns: 1fr; }
+  .figure, .shares, .links { grid-column: 1; }
+  .links { justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+
+<main class="window" aria-label="Keyhop">
+  <header class="titlebar">
+    <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="app"><span class="kmark" aria-hidden="true">K</span>Keyhop</span>
+    <span class="right">
+      <span class="readtime" id="readtime">read 6 s ago</span>
+      <button class="iconbtn" aria-label="Settings">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 11.5h12"/><circle cx="10.5" cy="4.5" r="1.7"/><circle cx="5.5" cy="11.5" r="1.7"/></svg>
+      </button>
+    </span>
+  </header>
+
+  <section class="verdict" aria-live="polite">
+    <p id="verdict-text">Codex runs out in about 40 minutes. <span class="detail">work@studio.dev has 59% left.</span></p>
+    <button class="btn" id="hop-main">
+      <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8h10M9 4.5 13.5 8 9 11.5"/></svg>
+      Hop Codex
+    </button>
+    <button class="btn ghost" id="undo" hidden>Undo</button>
+  </section>
+
+  <ul class="logins" id="logins">
+    <li class="row crit" data-key="codex" data-minutes="40" title="At this pace the window empties around 11:19, before it resets.">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="tool">Codex</span>
+      <span class="login">dz@personal.dev</span>
+      <span class="runway" role="img" aria-label="7% of the window left"><i style="width:7%"></i></span>
+      <span class="left">7% · <span class="rw">resets in </span>1 h 20 m</span>
+    </li>
+    <li class="row" data-key="claude" data-minutes="130">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="tool">Claude Code</span>
+      <span class="login">dz@personal.dev</span>
+      <span class="runway" role="img" aria-label="49% of the window left"><i style="width:49%"></i></span>
+      <span class="left">49% · <span class="rw">resets in </span>2 h 10 m</span>
+    </li>
+    <li class="row" data-state="low" data-key="windsurf" data-minutes="600" title="On pace to run out about 4 hours before the day resets. No second login to hop to; add one with keyhop add.">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="tool">Windsurf</span>
+      <span class="login">dz@personal.dev <em class="flag">no spare</em></span>
+      <span class="runway" role="img" aria-label="33% of the day left"><i style="width:33%"></i></span>
+      <span class="left">33% · <span class="rw">resets in </span>14 h</span>
+    </li>
+    <li class="row" data-key="cursor" data-minutes="18720" title="Comfortably on pace for the rest of the month.">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="tool">Cursor</span>
+      <span class="login">dominik@studio.dev</span>
+      <span class="runway" role="img" aria-label="38% of the month left"><i style="width:38%"></i></span>
+      <span class="left">38% · <span class="rw">resets in </span>13 d</span>
+    </li>
+    <li class="row" data-key="copilot" data-minutes="18730" title="Comfortably on pace for the rest of the month.">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="tool">Copilot</span>
+      <span class="login">dominikzabcik</span>
+      <span class="runway" role="img" aria-label="53% of the month left"><i style="width:53%"></i></span>
+      <span class="left">53% · <span class="rw">resets in </span>13 d</span>
+    </li>
+    <li class="row idle" data-key="gemini" data-minutes="99999" title="Gemini CLI publishes no limits; Keyhop measures its usage only.">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="tool">Gemini CLI</span>
+      <span class="login">measured only</span>
+      <span class="runway" aria-hidden="true"></span>
+      <span class="left"></span>
+    </li>
+  </ul>
+
+  <section class="today">
+    <div class="figure">
+      <div class="num">7.6M <span class="val">· $15.21</span></div>
+      <div class="sub">tokens today at API prices · 214 calls · 62% cached</div>
+    </div>
+    <div class="shares">
+      <div class="sharebar" role="img" aria-label="Share of today's tokens by tool"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="sharekey">
+        <span class="ki"><i aria-hidden="true"></i><b>Claude Code</b>&nbsp;25%</span>
+        <span class="ki"><i aria-hidden="true"></i><b>OpenCode</b>&nbsp;20%</span>
+        <span class="ki"><i aria-hidden="true"></i><b>Cursor</b>&nbsp;19%</span>
+        <span class="ki"><i aria-hidden="true"></i><b>Codex</b>&nbsp;14%</span>
+        <span class="ki"><i aria-hidden="true"></i><b>Gemini</b>&nbsp;14%</span>
+        <span class="ki"><i aria-hidden="true"></i><b>Pi</b>&nbsp;8%</span>
+      </div>
+    </div>
+    <nav class="links" aria-label="More">
+      <a href="#history">History</a>
+      <a href="#teams">Teams</a>
+    </nav>
+  </section>
+</main>
+
+<script>
+(() => {
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const list = document.getElementById("logins");
+  const verdict = document.getElementById("verdict-text");
+  const mainBtn = document.getElementById("hop-main");
+  const undoBtn = document.getElementById("undo");
+  const codex = list.querySelector('[data-key="codex"]');
+  const saved = {
+    login: "dz@personal.dev", width: "7%", minutes: 40,
+    left: '7% · <span class="rw">resets in </span>1 h 20 m',
+    title: codex.title,
+    verdict: 'Codex runs out in about 40 minutes. <span class="detail">work@studio.dev has 59% left.</span>',
+  };
+  const hoppedLeft = '59% · <span class="rw">resets in </span>4 h 05 m';
+  const steadyVerdict = 'Nothing runs out soon. <span class="detail">Next concern: Windsurf in about 10 h, with no spare login.</span>';
+  let steadyTimer;
+
+  // One property per move: each text swap is its own short opacity crossfade.
+  const fade = (el, apply) => {
+    if (reduced) { apply(); return; }
+    el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 90, easing: "ease-out" })
+      .finished.then(() => {
+        apply();
+        el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 110, easing: "ease-out" });
+      });
+  };
+
+  const rank = () => {
+    const rows = [...list.children];
+    const first = new Map(rows.map(r => [r, r.getBoundingClientRect().top]));
+    rows.sort((a, b) => (+a.dataset.minutes) - (+b.dataset.minutes)).forEach(r => list.appendChild(r));
+    if (reduced) return;
+    for (const r of rows) {
+      const dy = first.get(r) - r.getBoundingClientRect().top;
+      if (!dy) continue;
+      r.animate([{ transform: `translateY(${dy}px)` }, { transform: "translateY(0)" }], { duration: 180, easing: "ease-out" });
+    }
+  };
+
+  const apply = (hopped) => {
+    codex.classList.toggle("crit", !hopped);
+    codex.classList.toggle("hopped", hopped);
+    fade(codex.querySelector(".login"), () => { codex.querySelector(".login").textContent = hopped ? "work@studio.dev" : saved.login; });
+    fade(codex.querySelector(".left"), () => { codex.querySelector(".left").innerHTML = hopped ? hoppedLeft : saved.left; });
+    codex.querySelector(".runway i").style.width = hopped ? "59%" : saved.width;
+    codex.dataset.minutes = hopped ? 245 : saved.minutes;
+    codex.title = hopped ? "Fresh login; on pace to make its reset in 4 h 05 m." : saved.title;
+    fade(verdict, () => {
+      verdict.innerHTML = hopped
+        ? 'Hopped Codex to work@studio.dev. <span class="detail">59% of the window left.</span>'
+        : saved.verdict;
+    });
+    mainBtn.hidden = hopped;
+    undoBtn.hidden = !hopped;
+    setTimeout(rank, reduced ? 0 : 210);
+    clearTimeout(steadyTimer);
+    if (hopped) {
+      setTimeout(() => codex.classList.remove("hopped"), 2200);
+      steadyTimer = setTimeout(() => fade(verdict, () => { verdict.innerHTML = steadyVerdict; }), 7000);
+    }
+  };
+
+  mainBtn.addEventListener("click", () => apply(true));
+  undoBtn.addEventListener("click", () => apply(false));
+
+  let seconds = 6;
+  setInterval(() => {
+    seconds += 5;
+    const el = document.getElementById("readtime");
+    el.textContent = seconds < 60 ? `read ${seconds} s ago` : `read ${Math.round(seconds / 60)} min ago`;
+    el.classList.toggle("stale", seconds > 120);
+  }, 5000);
+})();
+</script>

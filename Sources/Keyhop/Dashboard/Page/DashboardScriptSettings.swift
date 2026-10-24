@@ -29,14 +29,13 @@ extension DashboardPage {
         <div class="row kv"><span>This window</span><span>Served by Keyhop on 127.0.0.1 with a private session key.</span></div>
       </div></section>`;
     const panes = {
-      general: `<div class="settings-intro"><h2>Window Appearance</h2><p>Choose how Keyhop sits alongside the rest of your Mac.</p></div>${isStatic ? "" : appearanceCard()}`,
       activity: `<div class="settings-intro"><h2>Activity</h2><p>Control what Keyhop reads locally and see where each tool is signed in.</p></div>${isStatic ? "" : workCard(state.work)}<section class="card"><div class="card-head"><h2>Tools on This Mac</h2></div>${tools}</section>`,
       browser: `<div class="settings-intro"><h2>Browser</h2><p>claude.ai and chatgpt.com follow each hop of Claude Code and Codex.</p></div>${browserCard(data.browser)}`,
       cloud: `<div class="settings-intro"><h2>Keyhop Cloud</h2><p>The link, what this computer sends, and who else can read it.</p></div>${cloudCard(state.cloud)}`,
       app: `<div class="settings-intro"><h2>App & Privacy</h2><p>Version ${esc(state.version)} on ${esc(state.platform)}. Updates and limit refreshes stay independent.</p></div>${helpCard()}<section class="card"><div class="card-head"><h2>Updates</h2>${isPrerelease(state.version) ? `<span class="pill warn">Beta build</span>` : ""}</div><div class="card-body">${updateRow}</div>${isStatic ? "" : channelRow(update)}</section>${privacy}`,
     };
-    if (ui.settingsPane === "cloud" && (isStatic || !state.cloud?.available)) ui.settingsPane = "general";
-    const choices = [["general", "settings", "Appearance"], ["activity", "usage", "Activity"]];
+    if (!panes[ui.settingsPane] || (ui.settingsPane === "cloud" && (isStatic || !state.cloud?.available))) ui.settingsPane = "activity";
+    const choices = [["activity", "usage", "Activity"]];
     if (!isStatic) choices.push(["browser", "hop", "Browser"]);
     if (!isStatic && state.cloud?.available) choices.push(["cloud", "leaderboard", "Cloud"]);
     choices.push(["app", "update", "App & Privacy"]);

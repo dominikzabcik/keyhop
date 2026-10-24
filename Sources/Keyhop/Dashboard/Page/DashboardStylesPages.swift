@@ -1,181 +1,181 @@
 import Foundation
 
-/// Usage, Insights, Community and Settings in the Coss Blue card language.
+/// The demoted views (Usage, Insights, Community) in the 2.0 language: ink on warm charcoal,
+/// hairline splits, color only where it means a state.
 extension DashboardPage {
     static let stylesPages = ##"""
-/* Pages: the same cards as Home. Figures are big and sans, splits are hairlines, and a page's
-   leading bar is the one blue. */
-.page { max-width: 1480px; gap: 18px; }
-.main:has(.page) { padding: 20px 24px 28px; }
-.page .lab { display: block; }
+/* Chrome extras: the outage chip in the titlebar, and the boot skeleton's spacing. */
+.top-chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 5px; font-size: 12px; text-decoration: none; white-space: nowrap; }
+.top-chip .mark { width: 12px; height: 12px; }
+.top-chip.warn { color: var(--low); background: var(--low-wash); }
+.top-chip.warn:hover { background: color-mix(in srgb, var(--low) 14%, transparent); }
+.boot-skel .skel-card { display: grid; gap: 12px; padding: 20px 24px 24px; }
+
+/* Page furniture shared by the demoted views. */
+.page { max-width: 1480px; gap: 14px; }
 .filter-row { display: flex; flex-wrap: wrap; gap: 8px; }
-
-/* Tables: mono uppercase headers, hairlines, tabular figures. */
-.table th { padding: 12px 24px; font: 500 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--subtle); border-bottom: 1px solid hsl(var(--on) / .08); }
-.table td { padding: 12px 24px; border-bottom: 1px solid hsl(var(--on) / .06); }
-.table.data th, .table.data td { padding-left: 16px; padding-right: 16px; }
-.table td.mono { font-size: 12px; color: var(--text); }
-.table td.mono.subtle { color: var(--subtle); }
-.table tbody tr:hover td { background: hsl(var(--on) / .025); }
-.table tr.me td { background: color-mix(in srgb, var(--primary) 7%, transparent); }
-.table tr.me td:first-child { box-shadow: inset 2px 0 0 var(--primary); }
-.card > .table:first-child thead th { padding-top: 18px; }
-.cell-name .mark { width: 15px; height: 15px; }
-.table-more { border-top-color: hsl(var(--on) / .06); }
-
-/* Stat strips: figures side by side, split by hairlines, no box inside the card. */
-.stat-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.stat-strip .stat { padding: 22px 24px 22px; }
-.stat-strip .stat + .stat { border-left: 1px solid hsl(var(--on) / .08); }
-.stat .label { font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.stat .value { margin-top: 10px; font-size: 30px; font-weight: 500; letter-spacing: -.03em; line-height: 1.1; }
-.stat .foot { margin-top: 6px; color: var(--muted); }
-.facts { border-top: 1px solid hsl(var(--on) / .08); }
-.facts div { padding: 16px 24px 18px; }
-.facts div + div { border-left-color: hsl(var(--on) / .08); }
-.facts b { font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
-.facts span { color: var(--muted); }
-
-/* Usage: the total reads like Home's, the rail's figures sit in a strip, and the heatmap is blue. */
-.usage-board { grid-template-columns: minmax(300px, 34%) minmax(0, 1fr); gap: 18px; }
-.usage-side, .usage-main { gap: 18px; }
-.total-card { padding: 24px 26px 26px; gap: 18px; }
-.total-head { align-items: baseline; color: var(--muted); }
-.total-title { display: grid; gap: 6px; }
-.total-title h2 { margin: 0; font-size: 26px; line-height: 30px; font-weight: 500; letter-spacing: -.02em; color: var(--text); }
-.total-change { font-size: 12px; }
-.total-figure { font-size: clamp(40px, 4.6vw, 60px); line-height: .95; font-weight: 500; letter-spacing: -.04em; }
-.total-facts { margin: 0; font-size: 12px; }
-.share-bar { gap: 2px; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 0; }
-.share-bar span { border-radius: 0; min-width: 2px; }
-.tiles { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 0; padding-top: 18px; border-top: 1px solid hsl(var(--on) / .08); row-gap: 18px; }
-.tile { padding: 0 14px; border: 0; border-left: 1px solid hsl(var(--on) / .08); border-radius: 0; background: transparent; gap: 6px; }
-.tile:first-child { padding-left: 0; border-left: 0; }
-button.tile:hover { background: transparent; border-color: hsl(var(--on) / .08); }
-button.tile:hover .tile-name { color: var(--text); }
-.tile-name { font-size: 12px; font-weight: 500; }
-.tile-name .mark { width: 13px; height: 13px; fill: currentColor; }
-.tile-share { font-size: 18px; line-height: 22px; font-weight: 500; letter-spacing: -.01em; }
-.tile-foot { font-size: 11px; line-height: 14px; white-space: normal; align-items: baseline; }
-.tile-foot .swatch { transform: translateY(-1px); }
-.spark { width: 56px; height: 20px; }
-.summary-card { padding: 0; gap: 0; }
-.summary-card .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border-bottom: 1px solid hsl(var(--on) / .08); }
-.summary-card .chip { padding: 18px 24px 16px; border-radius: 0; background: transparent; gap: 4px; }
-.summary-card .chip:nth-child(even) { border-left: 1px solid hsl(var(--on) / .08); }
-.summary-card .chip:nth-child(n + 3) { border-top: 1px solid hsl(var(--on) / .08); }
-.summary-card .chip b { font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
-.summary-card .chip span { color: var(--muted); font-size: 12px; }
-.summary-card .ranked { padding: 18px 24px 4px; gap: 14px; }
-.summary-card .summary-foot { margin: 14px 0 0; padding: 14px 24px 18px; border-top-color: hsl(var(--on) / .08); color: var(--muted); }
-.ranked-share { font: 600 12px var(--sans); }
-.ranked-track { height: 4px; }
-.ranked li:first-child .ranked-track span { background: var(--primary); }
-.ranked-name .mark { fill: currentColor; color: hsl(var(--on) / .8); }
-.ranked-name .mono { font: 450 13px var(--sans); }
-.heat rect.l0 { fill: hsl(var(--on) / .06); }
-.heat rect.l1 { fill: #1e3a5f; }
-.heat rect.l2 { fill: #2e5c99; }
-.heat rect.l3 { fill: #4d84c8; }
-.heat rect.l4 { fill: #93c5fd; }
-:root[data-theme="day"] .heat rect.l1 { fill: #dbeafe; }
-:root[data-theme="day"] .heat rect.l2 { fill: #93c5fd; }
-:root[data-theme="day"] .heat rect.l3 { fill: #3b82f6; }
-:root[data-theme="day"] .heat rect.l4 { fill: #1d4ed8; }
-.scale { gap: 4px; font-size: 11px; font-family: var(--sans); letter-spacing: 0; text-transform: none; }
-.scale .hcell { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-.chart-body { padding-top: 10px; }
-.mix-bar { height: 8px; border-radius: 4px; }
-.card-body > .table { margin: 0 -24px -20px !important; width: calc(100% + 48px) !important; }
+.chart-body { display: grid; gap: 14px; }
+.table-wrap { overflow-x: auto; }
+.card-body > .table { margin: 0 -16px -14px; width: calc(100% + 32px); }
 .card-head .tabs { margin-left: auto; }
+.table tr.me td { background: hsl(var(--on) / .035); }
+.table tr.me td:first-child { box-shadow: inset 2px 0 0 var(--fg); }
+.cell-name .mark { width: 15px; height: 15px; }
+.grow { flex: 1; min-width: 0; }
 
-/* Coach: each finding is a row with its mark, the figures behind them a strip. */
-.coach-findings { display: grid; padding: 4px 20px 12px; }
+/* The activity heatmap: one neutral ramp, never a hue. */
+.heat rect.l0 { fill: hsl(var(--on) / .05); }
+.heat rect.l1 { fill: hsl(var(--on) / .18); }
+.heat rect.l2 { fill: hsl(var(--on) / .36); }
+.heat rect.l3 { fill: hsl(var(--on) / .6); }
+.heat rect.l4 { fill: hsl(var(--on) / .9); }
+.heat text { fill: var(--fg3); font: 10.5px var(--mono); }
+svg.heat { display: block; margin: 0 auto; }
+.scale .hcell { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.hcell.l0 { background: hsl(var(--on) / .05); }
+.hcell.l1 { background: hsl(var(--on) / .18); }
+.hcell.l2 { background: hsl(var(--on) / .36); }
+.hcell.l3 { background: hsl(var(--on) / .6); }
+.hcell.l4 { background: hsl(var(--on) / .9); }
+
+/* Usage: the total card leads, tools as tiles, the summary beside the chart. */
+.usage-board { display: grid; grid-template-columns: minmax(280px, 34%) minmax(0, 1fr); gap: 14px; align-items: start; }
+.usage-side, .usage-main { display: grid; gap: 14px; align-content: start; }
+.usage-side svg.heat { max-width: 100%; height: auto; }
+.total-card { padding: 20px 22px 22px; display: grid; gap: 14px; align-content: start; }
+.total-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; color: var(--fg2); font-size: 13px; }
+.total-title { display: grid; gap: 6px; }
+.total-title h2 { margin: 0; font-size: 20px; line-height: 26px; font-weight: 600; letter-spacing: -.02em; color: var(--fg); }
+.total-change { display: inline-flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
+.total-figure { font: 600 clamp(32px, 4vw, 44px)/1.05 var(--mono); letter-spacing: -.02em; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.total-facts { margin: -4px 0 0; color: var(--fg2); font-size: 13px; }
+.share-bar { display: flex; gap: 3px; height: 8px; margin-top: 4px; }
+.share-bar span { min-width: 4px; border-radius: 99px; flex-basis: 0; transition: flex-grow .7s cubic-bezier(.2, .8, .2, 1); }
+.progress > span, .ranked-track span, .mix-bar span { transition: width .7s cubic-bezier(.2, .8, .2, 1); }
+.tile-mid { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; min-width: 0; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px; }
+.tile { display: grid; gap: 6px; align-content: start; padding: 11px 12px 12px; border-radius: 5px; border: 1px solid var(--line); background: hsl(var(--on) / .02); color: var(--fg); text-align: left; font: inherit; min-width: 0; }
+button.tile { cursor: pointer; transition: background .15s ease-out; }
+button.tile:hover { background: hsl(var(--on) / .045); }
+.tile-name { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; color: var(--fg2); }
+.tile-name > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-name .mark { width: 14px; height: 14px; fill: var(--fg); }
+.tile-share { font: 600 17px/1.2 var(--mono); font-variant-numeric: tabular-nums; }
+.tile-foot { display: flex; align-items: center; gap: 6px; color: var(--fg3); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile-foot .swatch { width: 6px; height: 6px; border-radius: 50%; }
+.summary-card { padding: 16px; display: grid; gap: 16px; align-content: start; }
+.chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.chip { display: grid; gap: 2px; padding: 10px 12px; border-radius: 5px; background: hsl(var(--on) / .03); }
+.chip b { font: 600 16px/1.3 var(--mono); font-variant-numeric: tabular-nums; }
+.chip span { color: var(--fg3); font-size: 11.5px; }
+.ranked { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.ranked li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 6px; align-items: center; }
+.ranked .place { color: var(--fg3); font: 11.5px var(--mono); text-align: center; }
+.ranked-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ranked-name .mark { width: 14px; height: 14px; fill: var(--fg2); }
+.ranked-name .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranked-share { font: 12px var(--mono); color: var(--fg); }
+.ranked-value { margin-left: auto; font: 11.5px var(--mono); }
+.ranked-track { grid-column: 2 / -1; height: 3px; border-radius: 99px; background: var(--g3); overflow: hidden; }
+.ranked-track span { display: block; height: 100%; border-radius: inherit; background: hsl(var(--on) / .55); }
+.ranked li:first-child .ranked-track span { background: hsl(var(--on) / .9); }
+.summary-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); color: var(--fg3); font-size: 12px; }
+
+/* Coach: each finding is a row with its mark; state color only on the glyph. */
+.coach-findings { display: grid; padding: 4px 16px 10px; }
 .coach-finding { display: flex; align-items: flex-start; gap: 12px; margin: 0; padding: 12px 4px; font-size: 13px; }
-.coach-finding.fine, .coach-finding.quiet { color: var(--muted); }
-.coach-finding + .coach-finding { border-top: 1px solid hsl(var(--on) / .07); }
+.coach-finding.fine, .coach-finding.quiet { color: var(--fg2); }
+.coach-finding + .coach-finding { border-top: 1px solid var(--line); }
 .coach-finding p { margin: 3px 0 0; flex: 1; min-width: 0; }
-.coach-finding.cache .arow-glyph, .coach-finding.premium .arow-glyph, .coach-finding.session .arow-glyph { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn-ink); }
-.coach-finding.fine .arow-glyph, .coach-finding.quiet .arow-glyph { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+.arow-glyph { flex: none; width: 26px; height: 26px; border-radius: 5px; display: grid; place-items: center; background: hsl(var(--on) / .06); color: var(--fg2); }
+.arow-glyph .icon { width: 13px; height: 13px; }
+.coach-finding.cache .arow-glyph, .coach-finding.premium .arow-glyph, .coach-finding.session .arow-glyph { background: var(--low-wash); color: var(--low); }
+.coach-finding.fine .arow-glyph, .coach-finding.quiet .arow-glyph { color: var(--ok); background: var(--ok-wash); }
 .coach-deltas { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; }
 .coach-deltas.card-body { padding: 6px 0 4px; }
-.coach-delta { display: grid; gap: 4px; padding: 14px 24px 16px; font-size: 12px; }
-.coach-delta + .coach-delta { border-left: 1px solid hsl(var(--on) / .08); }
-.coach-delta b { font-size: 24px; font-weight: 500; letter-spacing: -.025em; }
-.coach-delta .subtle { color: var(--muted); }
+.coach-delta { display: grid; gap: 4px; padding: 14px 20px 16px; font-size: 12px; }
+.coach-delta + .coach-delta { border-left: 1px solid var(--line); }
+.coach-delta b { font: 600 19px/1.2 var(--mono); font-variant-numeric: tabular-nums; }
+.coach-delta .subtle { color: var(--fg2); }
 
-/* Plans: the price against the month, money in green and the value bar in blue. */
+/* Plans: the month's figures lead; money reads as a figure, not a color. */
+.plans-head { display: flex; flex-wrap: wrap; gap: 12px 44px; padding: 20px 22px; margin-bottom: 14px; }
+.plans-fig { display: grid; gap: 2px; }
+.plans-fig b { font: 600 22px/26px var(--mono); font-variant-numeric: tabular-nums; }
+.plans-fig span { font-size: 12.5px; color: var(--fg2); }
+.plans-table td { vertical-align: middle; }
+.plans-table th { white-space: nowrap; }
+.plan-peak { display: grid; grid-template-columns: minmax(60px, 120px) auto; gap: 10px; align-items: center; }
+.plan-peak .progress { height: 4px; }
 
-/* Budgets: the spend line is the one blue; the budget rows are hairline rows. */
-.split, .split.wide-left { gap: 18px; }
+/* Budgets. */
 .budget-row .progress { height: 6px; }
-.budget-row .progress:not(.bad):not(.warn) > span { background: var(--primary); }
+.budget-row .progress:not(.bad):not(.warn) > span { background: var(--fg); }
 .budget-top b { font-size: 14px; }
-.budget-top .mono { font: 600 13px var(--sans); }
-.budget-top .mono .subtle { font-weight: 450; }
-.form { padding: 10px 24px 22px; gap: 16px; }
-.form label { color: var(--muted); font-size: 12px; font-weight: 500; }
+.budget-top .mono { font: 600 13px var(--mono); }
+.form label { color: var(--fg2); font-size: 12px; font-weight: 500; }
 .form > .btn, .form .row-actions { justify-self: start; }
 .form .btn:not(.sm) { width: auto; }
 
-.team-forms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 24px; border-top: 1px solid hsl(var(--on) / .07); padding-top: 18px; }
+/* Community: podium, board, season, team day. */
+.podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.podium-card { padding: 16px; display: grid; gap: 12px; }
+.podium-card .place { color: var(--fg3); font-size: 12px; }
+.podium-card.you { border-color: var(--line-strong); }
+.podium-value { font: 600 21px/1.2 var(--mono); font-variant-numeric: tabular-nums; }
+.podium .mix-bar, .table .mix-bar { margin: 0; height: 4px; border-radius: 2px; }
+.who .avatar { background: hsl(var(--on) / .08); color: var(--fg); border-radius: 5px; }
+.tier { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--tier); white-space: nowrap; }
+.tier svg { width: 23px; height: 18px; fill: currentColor; flex: none; }
+.tier.sm { gap: 6px; font-size: 12.5px; }
+.tier.sm svg { width: 15px; height: 12px; }
+.tier-bronze { --tier: hsl(26 20% 58%); }
+.tier-silver { --tier: hsl(0 0% 68%); }
+.tier-gold { --tier: hsl(42 26% 66%); }
+.tier-platinum { --tier: hsl(190 12% 72%); }
+.tier-diamond { --tier: hsl(205 20% 80%); }
+.tier-master { --tier: var(--fg); }
+.season-row { display: flex; align-items: center; gap: 16px; padding: 16px 18px; flex-wrap: wrap; }
+.season-row h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -.02em; }
+.season-row p { margin: 3px 0 0; color: var(--fg2); }
+.season-row .grow { min-width: 200px; }
+.season-row .tabs { justify-self: start; }
+.season-tier .tier { font-size: 18px; gap: 12px; }
+.season-tier .tier svg { width: 36px; height: 29px; }
+.quest-row { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 4px 18px; align-items: center; padding: 12px 16px; }
+.quest-row + .quest-row { border-top: 1px solid var(--line); }
+.quest-row p { margin: 2px 0 0; color: var(--fg2); font-size: 12.5px; }
+.quest-track { height: 4px; border-radius: 99px; background: var(--g3); overflow: hidden; }
+.quest-track span { display: block; height: 100%; border-radius: inherit; background: var(--fg); }
+.quest-row.done .quest-track span { background: var(--ok); }
+.quest-state { margin-top: 5px; font-size: 12px; color: var(--fg3); }
+.quest-row.done .quest-state { color: var(--ok); }
+.card-body .btn.claim-kick { width: auto; }
+.day-sum { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 14px; color: var(--fg2); font-size: 13px; }
+.day-sum b { color: var(--fg); font-variant-numeric: tabular-nums; font-weight: 600; }
+.day-figures { display: flex; gap: 16px; }
+.day-figures div { text-align: right; }
+.day-figures b { display: block; font-variant-numeric: tabular-nums; font-weight: 600; }
+.day-figures small, .task-meta, .day-note { color: var(--fg3); font-size: 12px; }
+.day-person .card-head { padding-bottom: 12px; }
+.task { padding: 12px 16px; border-top: 1px solid var(--line); }
+.task h3 { margin: 0; font-size: 13.5px; font-weight: 600; }
+.task-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
+.tasks { list-style: none; margin: 0; padding: 0; }
+.commits { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.commit { display: flex; gap: 8px; align-items: baseline; color: var(--fg2); font-size: 12.5px; }
+.sha { font-family: var(--mono); font-size: 11.5px; color: var(--fg3); }
+.day-nav { display: flex; align-items: center; gap: 6px; }
+.day-nav .now { padding: 0 8px; font-weight: 600; }
+.team-digest { margin: 14px 0; padding-top: 14px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.team-digest b { font-weight: 600; }
+.team-forms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 24px; border-top: 1px solid var(--line); padding-top: 16px; }
 .team-forms .form { padding: 0; align-content: start; }
 .team-forms > p { grid-column: 1 / -1; margin-top: 6px; }
-.tiles { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
-
-/* Community: a stat strip, three podium cards, then the board; the season leads with its tier. */
-.podium { gap: 18px; }
-.podium-card { padding: 20px 24px 22px; gap: 14px; }
-.podium-card.you { border-color: color-mix(in srgb, var(--primary) 45%, transparent); }
-.podium-card .place { font: 500 11px var(--mono); letter-spacing: .14em; color: var(--muted); }
-.podium-value { font-size: 28px; font-weight: 500; letter-spacing: -.03em; }
-.podium .mix-bar, .table .mix-bar { height: 4px; border-radius: 2px; }
-.who .avatar { background: hsl(var(--on) / .08); color: var(--text); border-radius: 7px; }
-.season-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px 24px; padding: 24px 26px; }
-.season-row .grow { display: grid; gap: 6px; min-width: 0; }
-.season-row h2 { margin: 0; font-size: 26px; line-height: 30px; font-weight: 500; letter-spacing: -.02em; }
-.season-row p { margin: 0; color: var(--muted); }
-.season-row .tabs { justify-self: start; margin-top: 8px; }
-.season-tier .tier { font-size: 20px; gap: 12px; }
-.season-tier .tier svg { width: 40px; height: 32px; }
-.quest-row { padding: 14px 24px; gap: 4px 24px; grid-template-columns: minmax(0, 1fr) 160px; }
-.quest-row + .quest-row { border-top-color: hsl(var(--on) / .07); }
-.quest-track { height: 4px; }
-.quest-track span { background: var(--primary); }
-.quest-row.done .quest-track span { background: var(--good); }
-.quest-state { color: var(--muted); }
-.card-body .btn.claim-kick { width: auto; }
-.btn.claim-kick { height: 36px; padding: 0 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
-.pet-card { padding: 16px 24px 16px 14px; gap: 8px 24px; }
-.pet-card .pet { width: 104px; }
-.pet-card h2 { font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
-.pet-card p { font-size: 13px; }
-.day-sum { margin: 0; gap: 8px 22px; font-size: 13px; }
-.day-sum b { font-size: 15px; font-weight: 600; }
-.day-person .card-head { padding-bottom: 12px; }
-.day-person .card-head h2 { font: 600 14px var(--sans); letter-spacing: -.01em; text-transform: none; color: var(--text); }
-.day-figures b { font-size: 16px; font-weight: 500; }
-.task { padding: 12px 24px; border-top-color: hsl(var(--on) / .07); }
-.tasks { list-style: none; margin: 0; padding: 0; }
-
-/* Settings: the panes as a quiet list beside the content. */
-.settings-shell { grid-template-columns: 196px minmax(0, 1fr); gap: 18px; }
-.settings-nav { padding: 6px; }
-.settings-nav button { height: 34px; font-size: 13px; }
-.settings-nav button[aria-current="page"] { color: var(--text); font-weight: 560; background: hsl(var(--on) / .07); }
-.settings-intro { padding: 4px 2px 0; }
-.settings-intro h2 { font-size: 22px; line-height: 28px; font-weight: 500; letter-spacing: -.02em; }
-.settings-intro p { font-size: 13px; }
-.setting-row b { font-weight: 600; }
-.setting-row p { font-size: 12.5px; }
-.kv { grid-template-columns: 170px minmax(0, 1fr); }
-.kv > span:first-child { font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
-.outbound { border-top-color: hsl(var(--on) / .07); }
 
 @media (max-width: 1180px) {
-  .stat-strip { grid-template-columns: 1fr; }
-  .stat-strip .stat + .stat { border-left: 0; border-top: 1px solid hsl(var(--on) / .08); }
-  .coach-delta + .coach-delta { border-left: 0; }
+  .usage-board, .podium, .team-forms { grid-template-columns: 1fr; }
+  .coach-delta + .coach-delta { border-left: 0; border-top: 1px solid var(--line); }
 }
 """##
 }

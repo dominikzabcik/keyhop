@@ -44,7 +44,7 @@ extension DashboardPage {
       ${figure(fmt.usd(report.paid), "a month in plans")}${figure(fmt.usd(report.apiValue), `API value in ${esc(report.month)}`)}${report.paid > 0 ? figure(times(report.apiValue, report.paid), "what the plans return") : ""}
     </section>`;
     const rows = report.rows.slice().sort((a, b) => a.toolName.localeCompare(b.toolName) || b.apiValue - a.apiValue).map(planRow).join("");
-    const table = `<section class="card"><table class="table plans-table"><thead><tr><th>Login</th><th>Plan</th><th class="right">Price</th><th class="right nowrap">API value</th><th class="right">Return</th><th>Peak this week</th><th></th></tr></thead><tbody>${rows}</tbody></table></section>`;
+    const table = `<section class="card"><div class="table-wrap"><table class="table plans-table"><thead><tr><th>Login</th><th>Plan</th><th class="right">Price</th><th class="right nowrap">API value</th><th class="right">Return</th><th>Peak this week</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
     return { body: head + table };
   }
 """##

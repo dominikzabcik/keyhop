@@ -15,7 +15,7 @@ export const WIDTHS = [
 
 /** Keyhop's window can't be made smaller than this, so it is never checked at phone width. */
 export const APP_WIDTHS = [
-  { name: "smallest", width: 960, height: 620 },
+  { name: "smallest", width: 760, height: 520 },
   { name: "laptop", width: 1280, height: 820 },
   { name: "wide", width: 1680, height: 1050 },
 ];
@@ -48,7 +48,9 @@ export const ACCOUNT_SCREENS = [
 
 /** The Mac window, served by `keyhop dashboard --sample`. Its sections live behind the hash. */
 export const APP_SCREENS = [
-  { name: "overview", section: "overview", mustSay: ["Tokens per hour", "Top models", "Activity"] },
+  { name: "home", section: "home", mustSay: ["tokens today at API prices", "requests"] },
+  // An older link to Overview lands on the core screen.
+  { name: "overview", section: "overview", mustSay: ["tokens today at API prices"] },
   { name: "limits", section: "limits", mustSay: ["In use", "resets in", "Add login"] },
   // An older link to Accounts lands on Limits.
   { name: "accounts", section: "accounts", mustSay: ["In use", "Add login"] },
@@ -65,7 +67,7 @@ export const APP_SCREENS = [
   { name: "team-members", section: "teams", mustSay: ["Leave Night Shift"], arrive: ["[data-action=board-pick]", "[data-action=board-view][data-value=members]"] },
   { name: "profile", section: "profile", mustSay: ["Keeps", "Quests", "Badges"] },
   // Settings opens one calm category at a time; the category rail names the rest.
-  { name: "settings", section: "settings", mustSay: ["Appearance", "Activity", "App & Privacy"], mayFail: ["/api/update"] },
+  { name: "settings", section: "settings", mustSay: ["Activity", "Browser", "App & Privacy"], mayFail: ["/api/update"] },
   { name: "settings-cloud", section: "settings", mustSay: ["How you appear", "This computer", "What this computer sends", "Live"], arrive: ['[data-action="settings-pane"][data-value="cloud"]'], mayFail: ["/api/update"] },
 ];
 

@@ -60,8 +60,9 @@ extension DashboardPage {
       : (usage.tools || []).map((tool) => ({ id: tool.id, name: tool.name, color: tool.color, figures: tool.figures, tool: tool.id,
           models: usage.models.filter((m) => m.tool === tool.id).length }));
     parts.sort((a, b) => value(b) - value(a));
-    // The same blue as Home, lightest for the largest share, whether the parts are tools or one tool's models.
-    parts.forEach((x, i) => { x.color = SHARE_BLUES[Math.min(i, SHARE_BLUES.length - 1)]; });
+    // The same grey steps as Home's today bar, lightest for the largest share, whether the parts
+    // are tools or one tool's models.
+    parts.forEach((x, i) => { x.color = SHARE_GREYS[Math.min(i, SHARE_GREYS.length - 1)]; });
     const sum = parts.reduce((s, x) => s + value(x), 0) || 1;
     const share = (x) => (value(x) / sum) * 100;
     const pct = (x) => { const v = share(x); return v > 0 && v < 1 ? "<1%" : `${Math.round(v)}%`; };

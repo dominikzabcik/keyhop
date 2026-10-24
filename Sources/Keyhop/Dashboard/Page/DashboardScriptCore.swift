@@ -4,19 +4,22 @@ import Foundation
 extension DashboardPage {
     static let scriptCore = ##"""
   "use strict";
-  const SECTIONS = ["overview", "limits", "accounts", "usage", "budgets", "plans", "coach", "leaderboard", "season", "teams", "profile", "settings"];
-  const TITLES = { overview: "Home", limits: "Limits", accounts: "Limits", usage: "Usage", budgets: "Budgets", plans: "Plans", coach: "Coach", leaderboard: "Leaderboard", season: "Season", teams: "Teams", profile: "Profile", settings: "Settings" };
+  const SECTIONS = ["home", "usage", "limits", "coach", "plans", "budgets", "leaderboard", "season", "teams", "profile", "settings"];
+  const TITLES = { home: "Keyhop", usage: "Usage", limits: "Limits", coach: "Coach", plans: "Plans", budgets: "Budgets", leaderboard: "Leaderboard", season: "Season", teams: "Teams", profile: "Profile", settings: "Settings" };
   const CLOUD_SECTIONS = ["leaderboard", "season", "teams", "profile"];
-  // The sidebar's five places. A place with more than one section shows them as tabs under its
-  // title, and opens on the one last seen there.
+  // The demoted views behind the core screen's quiet links. A view with more than one section
+  // shows them as tabs in the view bar, and opens on the one last seen there.
   const GROUPS = [
-    { id: "home", title: "Home", sections: ["overview"] },
-    { id: "limits", title: "Limits", sections: ["limits"] },
-    { id: "usage", title: "Usage", sections: ["usage"] },
+    { id: "home", title: "Keyhop", sections: ["home"] },
+    { id: "history", title: "History", sections: ["usage", "limits"] },
     { id: "insights", title: "Insights", sections: ["coach", "plans", "budgets"] },
     { id: "community", title: "Community", sections: ["leaderboard", "season", "teams", "profile"] },
+    { id: "settings", title: "Settings", sections: ["settings"] },
   ];
   const groupOf = (section) => GROUPS.find((group) => group.sections.includes(section)) || { id: section, title: TITLES[section], sections: [section] };
+  // Links from before the core screen still land where they meant to.
+  const SECTION_ALIASES = { overview: "home", accounts: "limits" };
+  const asSection = (name) => SECTION_ALIASES[name] || name;
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const store = {
@@ -30,25 +33,26 @@ extension DashboardPage {
   if (params.get("w") === "mac") document.documentElement.classList.add("mac-window");
   let token = params.get("k") || store.get("keyhop-token");
   if (params.get("k")) store.set("keyhop-token", token);
-  // Accounts and Limits were two sections; an old link to Accounts opens Limits.
-  const asked = params.get("s") || location.hash.slice(1);
-  const wanted = asked === "accounts" ? "limits" : asked;
+  const wanted = asSection(params.get("s") || location.hash.slice(1));
   const ui = {
-    section: SECTIONS.includes(wanted) ? wanted : (boot?.section === "accounts" ? "limits" : boot?.section || "overview"),
+    section: SECTIONS.includes(wanted) ? wanted : asSection(boot?.section || "home"),
     menu: null, hidden: { account: [], tool: [], model: [] },
     range: "week", rangeOpen: false, metric: "tokens", tool: "all", group: "account", breakdown: "periods", allPeriods: false,
     boardPeriod: "week", boardMetric: "efficiency", boardDivision: "", boardTeam: "", boardView: "ranks", boardDate: "", boardSeason: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
-    settingsPane: "general", checkingUpdate: false,
-    homeMenu: null, homeTool: "", homeAccount: "", homeQuery: "", homeRange: "today", treeOpen: {},
+    settingsPane: "activity", checkingUpdate: false,
     quotaTool: "all", quotaHours: 24, quotaView: "left", lastIn: {},
     pending: new Map(), loadingUsage: 0,
-    // The field in force: "night" or "day". Empty until the saved choice has been applied.
-    theme: "",
+    // The hop the verdict just made: the verdict confirms it and offers the way back for 7 seconds.
+    hopped: null,
   };
+  if (!SECTIONS.includes(ui.section)) ui.section = "home";
   history.replaceState(null, "", "#" + ui.section);
-  const data = { state: boot?.state || null, usage: {}, usageErrors: {}, doctor: null, update: null, updateError: null, pet: null, petError: null, quests: null };
+  const data = { state: boot?.state || null, usage: {}, usageErrors: {}, doctor: null, update: null, updateError: null, pet: null, petError: null };
   if (isStatic) for (const [range, doc] of Object.entries(boot.usage || {})) data.usage[range + ":all"] = doc;
+
+  // Share bars step through greys, lightest for the largest part; a hue would read as a state.
+  const SHARE_GREYS = ["#cfcbc3", "#b3afa7", "#96928a", "#78746d", "#5a5751", "#3a3731"];
 
   // MARK: Formatting
 
@@ -170,19 +174,19 @@ extension DashboardPage {
     return data.usage[key];
   }
 
-  // The providers' status pages are read on their own, so a slow page never holds Overview up.
+  // The providers' status pages are read on their own, so a slow page never holds the core up.
   // Read again at most every two minutes; Keyhop caches each page for five.
   let servicesLoading = false;
   function loadServices() {
     if (isStatic || servicesLoading || (data.servicesAt && Date.now() - data.servicesAt < 120_000)) return;
     servicesLoading = true;
     api("/api/services")
-      .then((list) => { data.services = list; data.servicesAt = Date.now(); if (ui.section === "overview" || ui.section === "limits") render(); })
+      .then((list) => { data.services = list; data.servicesAt = Date.now(); if (ui.section === "home" || ui.section === "limits") render(); })
       .catch(() => {})
       .finally(() => { servicesLoading = false; });
   }
 
-  // Release checks have their own state. They never borrow the limits progress bar or make the
+  // Release checks have their own state. They never borrow the progress bar or make the
   // rest of the window look busy.
   async function loadUpdate(force = false) {
     if (isStatic || ui.checkingUpdate || (!force && (data.update || data.updateError))) return;
@@ -208,11 +212,6 @@ extension DashboardPage {
     }
   }
 
-  async function loadQuests() {
-    try { data.quests = await api("/api/cloud/quests"); }
-    catch { data.quests = null; }
-  }
-
   // What every login had left at each reading, kept 8 days: Limits draws it, measured only.
   async function loadQuota() {
     if (isStatic) return;
@@ -220,30 +219,12 @@ extension DashboardPage {
     catch (error) { data.quotaError = error.message; }
   }
 
-  let workDaysLoading = false;
-  function loadWorkDays() {
-    if (workDaysLoading) return;
-    workDaysLoading = true;
-    api("/api/work/days")
-      .then((days) => { data.workDays = days; if (ui.section === "overview" && !editing()) render(); })
-      .catch(() => {})
-      .finally(() => { workDaysLoading = false; });
-  }
-
   async function loadSection() {
     try {
-      if (ui.section === "overview" || ui.section === "limits") loadServices();
+      if (ui.section === "home" || ui.section === "limits") loadServices();
+      if (ui.section === "home") await loadUsage("today");
       // Limits draws its logins at once; the history fills in when it arrives.
       if (ui.section === "limits") loadQuota().then(() => { if (ui.section === "limits" && !editing()) render(); });
-      if (ui.section === "overview") {
-        const jobs = [loadUsage("today"), loadUsage("week")];
-        if (!["today", "week"].includes(ui.homeRange)) jobs.push(loadUsage(ui.homeRange));
-        // Commits come from every repository's log, which can take a while the first time, so
-        // Home draws without them and fills them in when they arrive.
-        if (!isStatic) loadWorkDays();
-        if (!isStatic && data.state?.cloud?.linked) jobs.push(loadPet(), loadQuests());
-        await Promise.all(jobs);
-      }
       if (ui.section === "usage") await loadUsage(ui.range, ui.tool);
       if (ui.section === "budgets") await loadUsage("month");
       if (ui.section === "coach" && !isStatic) {
@@ -291,7 +272,6 @@ extension DashboardPage {
     } catch (error) {
       ui.offline = error.message;
     }
-    applyBackdrop();
   }
 
 """##

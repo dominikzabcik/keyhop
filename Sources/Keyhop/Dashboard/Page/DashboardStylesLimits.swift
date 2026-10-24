@@ -38,12 +38,12 @@ extension DashboardPage {
 .qcard { display: flex; flex-direction: column; gap: 14px; padding: 24px 26px 20px; overflow: hidden; }
 .qcard > .empty { padding: 0; }
 .lim-fore-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.lim-fore-head h2 { margin: 0; font: 500 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.lim-fore-head h2 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: -.01em; color: var(--fg); }
 .lim-fore-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .qlegend { display: inline-flex; align-items: center; gap: 14px; font-size: 12px; color: var(--muted); }
 .qlegend span { display: inline-flex; align-items: center; gap: 6px; }
 .qlegend i { display: inline-block; width: 12px; height: 0; border-top: 2px solid var(--text); }
-.qlegend i.dash { border-top: 2px dashed var(--primary); }
+.qlegend i.dash { border-top: 2px dashed var(--fg2); }
 .qlegend i.reset { width: 2px; height: 10px; border: 0; background: var(--good); }
 .qlegend i.bar { width: 8px; height: 8px; border: 0; border-radius: 2px; background: hsl(var(--on) / .55); }
 .qchart { flex: 1; min-height: 0; }
@@ -52,7 +52,7 @@ extension DashboardPage {
 .qchart .base { stroke: hsl(var(--on) / .08); }
 .qchart .axis { fill: var(--subtle); font: 11px var(--sans); }
 .qchart .qline { fill: none; stroke: var(--text); stroke-width: 2; stroke-linejoin: round; }
-.qchart .qline.ahead { stroke: var(--primary); stroke-dasharray: 5 5; }
+.qchart .qline.ahead { stroke: var(--fg2); stroke-dasharray: 5 5; }
 .qchart .qarea { fill: hsl(var(--on) / .05); }
 .qchart .qarea.ahead { fill: hsl(var(--on) / .015); }
 .qchart .qnow { stroke: hsl(var(--on) / .18); stroke-dasharray: 3 4; }
@@ -74,9 +74,9 @@ extension DashboardPage {
 .lim-list { overflow: visible; }
 .lim-row { display: grid; grid-template-columns: minmax(170px, 240px) minmax(0, 1fr) 132px; gap: 24px; align-items: center; min-height: 76px; padding: 16px 22px; }
 .lim-row + .lim-row { border-top: 1px solid hsl(var(--on) / .07); }
-.lim-row:first-child { border-radius: 12px 12px 0 0; }
-.lim-row:last-child { border-radius: 0 0 12px 12px; }
-.lim-row:only-child { border-radius: 12px; }
+.lim-row:first-child { border-radius: 8px 8px 0 0; }
+.lim-row:last-child { border-radius: 0 0 8px 8px; }
+.lim-row:only-child { border-radius: 8px; }
 .lim-row.wall { background: color-mix(in srgb, var(--red, #fb414a) 6%, transparent); }
 .lim-list:has(.lim-row.wall:only-child) { border-color: color-mix(in srgb, var(--red, #fb414a) 22%, transparent); }
 .lim-who { display: grid; gap: 4px; min-width: 0; }
@@ -86,7 +86,7 @@ extension DashboardPage {
 .lim-dot.warn { background: var(--warn); }
 .lim-dot.bad { background: var(--red, #fb414a); }
 .lim-pill { flex: none; display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-.lim-pill.in-use { background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--info); }
+.lim-pill.in-use { background: hsl(var(--on) / .09); color: var(--fg); }
 .lim-pill.good { background: color-mix(in srgb, var(--good, #22c55e) 14%, transparent); color: var(--good); }
 .lim-pill.bad { background: color-mix(in srgb, var(--red, #fb414a) 16%, transparent); color: var(--bad); }
 .lim-meta { padding-left: 14px; font-size: 12px; color: var(--subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -142,8 +142,9 @@ extension DashboardPage {
   .main:has(.lim-page) { padding: 16px; }
   .lim-figs { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .lim-fig { padding: 0; border-left: 0; }
-  .lwin { grid-template-columns: 56px minmax(0, 1fr) 64px; }
-  .lwin-foot { display: none; }
+  /* The reset time is a real figure, so it wraps under the bar instead of disappearing. */
+  .lwin { grid-template-columns: 56px minmax(0, 1fr) 64px; gap: 2px 14px; }
+  .lwin-foot { grid-column: 2 / -1; text-align: right; }
   .lim-group-head { flex-wrap: wrap; }
 }
 """##

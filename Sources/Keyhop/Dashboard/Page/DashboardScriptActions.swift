@@ -5,7 +5,7 @@ extension DashboardPage {
     static let scriptActions = ##"""
   // MARK: Actions
 
-  const editing = () => ui.editing || ui.confirming || ui.rangeOpen || ui.menu || ui.homeMenu || palette || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
+  const editing = () => ui.editing || ui.confirming || ui.rangeOpen || ui.menu || ["INPUT", "SELECT"].includes(document.activeElement?.tagName);
 
   // `morph` cross-fades the page into its new state once the call is done, for changes that move
   // things around, like switching which login is in use.
@@ -29,7 +29,31 @@ extension DashboardPage {
     }
   }
 
-  // A hop says where it went and what that login has, and offers the way back for a few seconds.
+  // The verdict's hop: the one control on the core screen. The row swaps its login in place, the
+  // verdict confirms it and holds the way back for 7 seconds, then settles.
+  let hopTimers = [];
+  async function hopVerdict(button, id, from, tool) {
+    const key = button ? pendingKey(button) : null;
+    if (key) { ui.pending.set(key, "Hopping"); applyPending(); }
+    try {
+      await api("/api/switch", { id });
+      await loadState();
+      await loadSection();
+      const now = (data.state?.status.tools || []).find((item) => item.id === tool);
+      const to = now?.accounts.find((account) => account.id === id);
+      ui.hopped = { tool, to: id, from, name: to?.name || "", at: Date.now() };
+      for (const timer of hopTimers) clearTimeout(timer);
+      hopTimers = [setTimeout(() => { if (!editing()) render(); }, 2300), setTimeout(() => { ui.hopped = null; if (!editing()) render(); }, 7100)];
+    } catch (error) {
+      toast(error.message, true);
+    } finally {
+      if (key) ui.pending.delete(key);
+      transition(render);
+      watchActivity();
+    }
+  }
+
+  // A hop made from the Limits view says where it went in a toast, with the way back.
   async function hopTo(button, id) {
     const tools = data.state?.status.tools || [];
     const tool = tools.find((item) => item.accounts.some((account) => account.id === id));
@@ -58,8 +82,16 @@ extension DashboardPage {
     render();
   }
 
+  async function showUsage(change) {
+    Object.assign(ui, change);
+    if (ui.section !== "usage") { await go("usage"); return; }
+    render();
+    await loadSection();
+    render();
+  }
+
   async function go(section) {
-    ui.section = section === "accounts" ? "limits" : section;
+    ui.section = asSection(section);
     section = ui.section;
     data.boardError = null;
     data.dayError = null;
@@ -69,84 +101,34 @@ extension DashboardPage {
     render();
   }
 
-  document.addEventListener("input", (event) => {
-    const hop = event.target.closest(".hcomposer input");
-    if (hop) ui.homeQuery = hop.value;
-    if (!palette || !event.target.closest("#palette")) return;
-    palette.query = event.target.value;
-    palette.index = 0;
-    drawPalette();
-  });
-
   document.addEventListener("click", async (event) => {
-    if (event.target.closest("[data-palette-close]")) { closePalette(); return; }
-    const option = event.target.closest("[data-palette]");
-    if (option) { runPalette(+option.dataset.palette); return; }
-    const link = event.target.closest("#nav a, .side-foot a[data-section]");
-    if (link) {
-      event.preventDefault();
-      const menuWas = ui.homeMenu;
-      ui.homeMenu = null;
-      if (link.dataset.section !== ui.section) go(link.dataset.section);
-      else if (menuWas) render();
-      return;
-    }
-    const closeHomeMenu = !!(ui.homeMenu && !event.target.closest(".hchip-wrap"));
-    if (closeHomeMenu) ui.homeMenu = null;
     // A click anywhere outside the open range menu closes it.
     if (ui.rangeOpen && !event.target.closest(".range-pick")) { ui.rangeOpen = false; render(); }
     if (ui.menu && !event.target.closest(".menu-anchor")) { ui.menu = null; render(); }
     const el = event.target.closest("[data-action]");
-    if (!el || el.disabled || el.tagName === "SELECT") { if (closeHomeMenu) render(); return; }
+    if (!el || el.disabled || el.tagName === "SELECT") return;
+    if (el.tagName === "A") event.preventDefault();
     const id = el.dataset.id;
     switch (el.dataset.action) {
-      case "palette": openPalette(); break;
       case "goto": go(el.dataset.section); break;
       case "section-retry": data.coachError = data.plansError = null; render(); await loadSection(); render(); break;
       case "quota-tool": ui.quotaTool = el.dataset.value; transition(render); break;
       case "quota-hours": ui.quotaHours = +el.dataset.value; render(); break;
       case "quota-view": ui.quotaView = el.dataset.value; render(); break;
-      // A tool in the sidebar opens Limits on that tool; pressed again, on every tool.
-      case "side-tool": {
-        const again = ui.section === "limits" && ui.quotaTool === el.dataset.value;
-        ui.quotaTool = again ? "all" : el.dataset.value;
-        if (ui.section === "limits") transition(render); else go("limits");
-        break;
-      }
-      case "home-range": {
-        ui.homeRange = el.dataset.value;
-        render();
-        try { await loadUsage(ui.homeRange); } catch (error) { toast(error.message, true); }
-        render();
-        break;
-      }
-      case "wallpaper": ui.settingsPane = "general"; go("settings"); break;
-      // The pet keeps quiet about this suggestion until it changes.
-      case "pet-later": ui.petLater = el.dataset.value; render(); break;
-      case "home-menu":
-        ui.homeMenu = ui.homeMenu === el.dataset.menu ? null : el.dataset.menu;
-        render();
-        break;
-      case "home-tool": {
-        ui.homeTool = el.dataset.id;
-        ui.homeMenu = null;
-        const picked = (data.state?.status.tools || []).find((t) => t.id === ui.homeTool);
-        const room = (picked?.accounts || []).filter((a) => !a.error).sort((a, b) => maxUsed(a) - maxUsed(b))[0];
-        ui.homeAccount = (room || picked?.accounts?.[0])?.id || "";
-        render();
-        break;
-      }
-      case "home-account":
-        ui.homeAccount = el.dataset.id;
-        ui.homeMenu = null;
-        render();
-        break;
       case "skip-content": $("#main")?.focus(); break;
       case "settings-pane": ui.settingsPane = el.dataset.value; render(); break;
       case "refresh":
         if (data.state?.refreshing) break;
         act(null, () => { data.state.refreshing = true; renderActivity(); return api("/api/refresh", {}); });
         break;
+      case "hop": hopVerdict(el, id, el.dataset.from, el.dataset.tool); break;
+      case "unhop": {
+        const back = ui.hopped;
+        ui.hopped = null;
+        for (const timer of hopTimers) clearTimeout(timer);
+        hopVerdict(el, id, back?.to, el.dataset.tool).then(() => { ui.hopped = null; render(); });
+        break;
+      }
       case "switch": hopTo(el, id); break;
       case "account-menu": ui.menu = ui.menu === id ? null : id; ui.confirming = null; render(); break;
       case "add": act(el, () => api("/api/add", { tool: el.dataset.tool }), "Signing out"); break;
@@ -241,9 +223,6 @@ extension DashboardPage {
         await loadSection();
         render();
         break;
-      case "appearance": setAppearance({ [el.dataset.key]: el.dataset.value }); break;
-      case "appearance-clear": setAppearance({ image: "" }); break;
-      case "theme-toggle": setAppearance({ theme: ui.theme === "day" ? "night" : "day" }); break;
       case "board-season":
         if (el.dataset.value === ui.boardSeason) break;
         ui.boardSeason = el.dataset.value;
@@ -318,33 +297,12 @@ extension DashboardPage {
         }, "Unlinking");
         break;
     }
-    if (closeHomeMenu && document.querySelector(".hpop")) render();
-  });
-
-  // Window opacity and blur follow their sliders while they move, and save when let go.
-  document.addEventListener("input", (event) => {
-    const slider = event.target.closest('[data-appearance="glass"], [data-appearance="blur"]');
-    if (!slider) return;
-    const look = data.state.appearance;
-    if (slider.dataset.appearance === "glass") applyGlass(Number(slider.value) / 100, look.blur);
-    else applyGlass(look.glass, Number(slider.value));
   });
 
   document.addEventListener("change", async (event) => {
     const publish = event.target.closest("[data-action=team-public]");
     if (publish) {
       act(publish, () => api("/api/cloud/team", { slug: ui.boardTeam, public: publish.checked }), publish.checked ? "Publishing" : "Hiding");
-      return;
-    }
-    const look = event.target.closest("[data-appearance]");
-    if (look) {
-      if (look.dataset.appearance === "opacity") { setAppearance({ opacity: Number(look.value) / 100 }); return; }
-      if (look.dataset.appearance === "glass") { setAppearance({ glass: Number(look.value) / 100 }); return; }
-      if (look.dataset.appearance === "blur") { setAppearance({ blur: Number(look.value) }); return; }
-      const file = look.files && look.files[0];
-      look.value = "";
-      if (!file) return;
-      try { setAppearance({ image: await shrinkPicture(file) }); } catch (error) { toast(error.message, true); }
       return;
     }
     const team = event.target.closest("select[data-action=board-team]");
@@ -463,33 +421,11 @@ extension DashboardPage {
   });
 
   document.addEventListener("keydown", (event) => {
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-      event.preventDefault();
-      if (palette) closePalette(); else openPalette();
-      return;
-    }
-    if (palette) {
-      const count = paletteMatches().length;
-      if (event.key === "Escape") { event.preventDefault(); closePalette(); return; }
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-        event.preventDefault();
-        palette.index = (palette.index + (event.key === "ArrowDown" ? 1 : -1) + count) % Math.max(1, count);
-        drawPalette();
-        return;
-      }
-      if (event.key === "Enter") { event.preventDefault(); runPalette(palette.index); return; }
-      return;
-    }
-    // Number keys jump between sections, unless someone is typing.
-    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "");
-    if (!typing && !event.metaKey && !event.ctrlKey && !event.altKey && /^[1-9]$/.test(event.key)) {
-      const section = shownSections()[+event.key - 1];
-      if (section && section !== ui.section) { event.preventDefault(); go(section); return; }
-    }
-    if (event.key === "Escape" && ui.homeMenu) { ui.homeMenu = null; render(); return; }
     if (event.key === "Escape" && ui.menu) { ui.menu = null; render(); return; }
     if (event.key === "Escape" && ui.rangeOpen) { ui.rangeOpen = false; render(); $(".range-button")?.focus(); return; }
-    if (event.key === "Escape" && (ui.editing || ui.confirming || ui.budgetEdit)) { ui.editing = ui.confirming = ui.budgetEdit = null; render(); }
+    if (event.key === "Escape" && (ui.editing || ui.confirming || ui.budgetEdit)) { ui.editing = ui.confirming = ui.budgetEdit = null; render(); return; }
+    // Escape anywhere else steps back to the core screen.
+    if (event.key === "Escape" && ui.section !== "home" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName || "")) go("home");
   });
   const followVisibility = () => document.documentElement.toggleAttribute("data-away", document.hidden);
   async function resumeRefresh() {
@@ -497,8 +433,8 @@ extension DashboardPage {
     if (document.hidden || isStatic || !data.state) return;
     try {
       await loadState();
-      if (ui.section === "overview" || ui.section === "usage" || ui.section === "limits") await loadSection();
-      if (!editing()) render(); else renderSidebar();
+      if (["home", "usage", "limits"].includes(ui.section)) await loadSection();
+      if (!editing()) render(); else renderChrome();
     } catch (error) {
       ui.offline = error.message;
       if (!editing()) render();
@@ -507,7 +443,9 @@ extension DashboardPage {
   document.addEventListener("visibilitychange", resumeRefresh);
   followVisibility();
   addEventListener("hashchange", () => {
-    const section = location.hash.slice(1);
+    // The hash is a plain section, or the launch form "s=<section>&k=<key>" a reopened link keeps.
+    const raw = location.hash.slice(1);
+    const section = asSection(raw.includes("=") ? new URLSearchParams(raw).get("s") || "" : raw);
     if (SECTIONS.includes(section) && section !== ui.section) go(section);
   });
   let resizeTimer;
@@ -516,7 +454,7 @@ extension DashboardPage {
   // MARK: Start
 
   async function start() {
-    if (isStatic) { render(); applyBackdrop(); return; }
+    if (isStatic) { render(); return; }
     if (!token) {
       $("#main").innerHTML = `<div class="page"><div class="card"><p class="empty">This window isn't connected to Keyhop. Open it from the tray, or run keyhop dashboard.</p></div></div>`;
       return;
@@ -535,8 +473,8 @@ extension DashboardPage {
       if (document.hidden) return;
       try {
         await loadState();
-        if (ui.section === "overview" || ui.section === "usage" || ui.section === "limits") await loadSection();
-        if (!editing()) render(); else renderSidebar();
+        if (["home", "usage", "limits"].includes(ui.section)) await loadSection();
+        if (!editing()) render(); else renderChrome();
         watchActivity();
       } catch (error) {
         ui.offline = error.message;
@@ -546,7 +484,7 @@ extension DashboardPage {
   }
   if (document.documentElement.classList.contains("mac-window")) {
     addEventListener("mousedown", (event) => {
-      if (event.button !== 0 || !event.target.closest(".brand, .topbar")) return;
+      if (event.button !== 0 || !event.target.closest(".titlebar")) return;
       if (event.target.closest("button, a, input, select, textarea, label")) return;
       window.webkit?.messageHandlers?.keyhopWindow?.postMessage(event.detail === 2 ? "zoom" : "drag");
     });

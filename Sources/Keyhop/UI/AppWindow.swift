@@ -117,10 +117,10 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
         super.init()
 
         webView.configuration.userContentController.add(ScriptBridge(self), name: Self.messageName)
-        // The web view is clear, so the page's tinted surfaces sit on the blur below, and no white
-        // flashes through on loads and resizes.
+        // The web view paints nothing of its own, so the window's charcoal shows through on loads
+        // and resizes instead of a white flash.
         webView.setValue(false, forKey: "drawsBackground")
-        webView.underPageBackgroundColor = .clear
+        webView.underPageBackgroundColor = Brand.backgroundColor
         webView.navigationDelegate = self
         webView.uiDelegate = self
 
@@ -133,29 +133,15 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
         toolbar.showsBaselineSeparator = false
         window.toolbar = toolbar
         window.toolbarStyle = .unified
-        // The window chrome follows the saved field; "auto" leaves it to the system.
-        let theme = DashboardAppearance.load().theme
-        window.appearance = theme == "auto" ? nil : NSAppearance(named: theme == "day" ? .aqua : .darkAqua)
+        // One face: the page is warm charcoal, so the window chrome is always dark.
+        window.appearance = NSAppearance(named: .darkAqua)
         window.isOpaque = false
-        // Fully clear with a shadow leaves a notch at the rounded corners; a trace of alpha keeps them clean.
-        window.backgroundColor = NSColor.black.withAlphaComponent(0.01)
+        window.backgroundColor = Brand.backgroundColor
         window.hasShadow = true
-        window.minSize = NSSize(width: 960, height: 620)
+        window.minSize = NSSize(width: 760, height: 520)
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed
-        // The whole app is glass: the page tints itself over the desktop, blurred behind the window.
-        if DesktopBlur.isAvailable {
-            window.contentView = webView
-        } else {
-            let vibrancy = NSVisualEffectView(frame: frame)
-            vibrancy.material = .underWindowBackground
-            vibrancy.blendingMode = .behindWindow
-            vibrancy.state = .active
-            webView.frame = vibrancy.bounds
-            webView.autoresizingMask = [.width, .height]
-            vibrancy.addSubview(webView)
-            window.contentView = vibrancy
-        }
+        window.contentView = webView
         window.delegate = self
         let restored = window.setFrameUsingName(Self.frameName)
         window.setFrameAutosaveName(Self.frameName)
@@ -168,9 +154,6 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
-        // The saved blur, until the page reports its own.
-        let appearance = DashboardAppearance.load()
-        DesktopBlur.set(window, radius: appearance.glass < 1 ? appearance.blur : 0)
         window.invalidateShadow()
     }
 
@@ -207,10 +190,6 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
     /// sends "blur:24" as its Blur setting changes.
     func received(_ message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, message.frameInfo.securityOrigin.host == "127.0.0.1" else { return }
-        if let body = message.body as? String, body.hasPrefix("blur:"), let radius = Int(body.dropFirst(5)) {
-            DesktopBlur.set(window, radius: radius)
-            return
-        }
         switch message.body as? String {
         case "drag":
             let current = NSApp.currentEvent.flatMap { $0.type == .leftMouseDown || $0.type == .leftMouseDragged ? $0 : nil }
@@ -268,28 +247,6 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
     private static func openOutside(_ url: URL) {
         guard url.scheme == "https" || url.scheme == "http" else { return }
         NSWorkspace.shared.open(url)
-    }
-}
-
-/// Blurs whatever is behind a window, the way terminals blur their backgrounds. It's a private
-/// WindowServer call, looked up at run time; if a macOS release drops it, the window uses the standard
-/// vibrancy view instead.
-enum DesktopBlur {
-    private typealias MainConnection = @convention(c) () -> Int32
-    private typealias SetRadius = @convention(c) (Int32, UInt32, Int32) -> Int32
-
-    private static let functions: (connection: MainConnection, setRadius: SetRadius)? = {
-        guard let handle = dlopen(nil, RTLD_NOW),
-              let connection = dlsym(handle, "CGSMainConnectionID"),
-              let setRadius = dlsym(handle, "CGSSetWindowBackgroundBlurRadius") else { return nil }
-        return (unsafeBitCast(connection, to: MainConnection.self), unsafeBitCast(setRadius, to: SetRadius.self))
-    }()
-
-    static var isAvailable: Bool { functions != nil }
-
-    static func set(_ window: NSWindow, radius: Int) {
-        guard let functions, window.windowNumber > 0 else { return }
-        _ = functions.setRadius(functions.connection(), UInt32(window.windowNumber), Int32(min(64, max(0, radius))))
     }
 }
 

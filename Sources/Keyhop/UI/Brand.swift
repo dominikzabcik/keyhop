@@ -30,43 +30,27 @@ enum Brand {
     static let red = Color(hex: "#FB414A")
     static let info = Color(hex: "#93C5FD")
 
-    static let backgroundColor = NSColor(srgbRed: 0x16 / 255, green: 0x16 / 255, blue: 0x16 / 255, alpha: 1)
+    /// The window's ground, the page's --g0: warm charcoal behind loads, resizes and corners.
+    static let backgroundColor = NSColor(srgbRed: 0x0c / 255, green: 0x0b / 255, blue: 0x0a / 255, alpha: 1)
 
-    /// Geist, the window's face. Registered once at launch from the fonts the window's page embeds;
-    /// until then, or if that fails, SwiftUI falls back to the system face.
+    /// The system face: the window speaks SF, so the menu and the welcome window do too.
     static func sans(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .custom("Geist", size: size).weight(weight)
+        .system(size: size, weight: weight)
     }
 
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .custom("Geist Mono", size: size).weight(weight)
+        .system(size: size, weight: weight, design: .monospaced)
     }
 
-    /// Figures: Geist a step heavier with digits of one width, so a number that changes never
+    /// Figures: a step heavier with digits of one width, so a number that changes never
     /// shifts what stands beside it.
     static func figure(_ size: CGFloat) -> Font {
         sans(size, weight: .semibold).monospacedDigit()
     }
 
-    /// Names and headings: Geist, a step heavier than the text around it.
+    /// Names and headings: a step heavier than the text around it.
     static func heading(_ size: CGFloat) -> Font {
         sans(size, weight: .semibold)
-    }
-
-    /// Hands Geist and Geist Mono to Core Text for this process, from the base64 fonts in the
-    /// window's stylesheet, so the app carries one copy of each.
-    static func registerFonts() {
-        var rest = Substring(DashboardPage.fonts)
-        while let start = rest.range(of: "base64,") {
-            rest = rest[start.upperBound...]
-            guard let end = rest.firstIndex(of: ")") else { break }
-            if let data = Data(base64Encoded: String(rest[..<end])),
-               let provider = CGDataProvider(data: data as CFData),
-               let font = CGFont(provider) {
-                CTFontManagerRegisterGraphicsFont(font, nil)
-            }
-            rest = rest[end...]
-        }
     }
 }
 

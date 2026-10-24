@@ -2,85 +2,72 @@ import { test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 import { assertReadable, openWindow } from './sample-window.ts';
 
-test('the sidebar lists its five places from the top', async ({ app, browser }) => {
-  await openWindow(app, 'overview');
-  await expect.poll(() => browser.evaluate(() => {
-    const community = document.querySelector('#nav a[data-group="community"]');
-    return !!community && !(community as HTMLElement).hidden;
-  })).toBe(true);
-
-  const layout = await browser.evaluate(() => {
-    const nav = document.querySelector('#nav');
-    if (!nav) return null;
-    const items = [...nav.querySelectorAll(':scope > a')].filter((el) => !(el as HTMLElement).hidden);
-    const boxes = items.map((el) => {
-      const box = el.getBoundingClientRect();
-      const clone = el.cloneNode(true) as HTMLElement;
-      clone.querySelectorAll('.nav-count').forEach((node) => node.remove());
-      return { name: (clone.textContent || '').replace(/\s+/g, ' ').trim(), top: box.top, bottom: box.bottom };
-    });
-    let maxGap = 0;
-    for (let i = 1; i < boxes.length; i++) maxGap = Math.max(maxGap, boxes[i].top - boxes[i - 1].bottom);
-    const tree = document.querySelector('#tree');
-    const settings = document.querySelector('.side-foot a[data-section="settings"]');
-    const treeBox = tree?.getBoundingClientRect();
-    const settingsBox = settings?.getBoundingClientRect();
+test('home is the verdict, the logins ranked by runway, and today', async ({ app, browser }) => {
+  await openWindow(app, 'home');
+  await expect(browser.locator('.core .verdict p')).toBeVisible();
+  const core = await browser.evaluate(() => {
+    const rows = [...document.querySelectorAll('.core .logins .row')];
+    const verdict = document.querySelector('.core .verdict p')?.textContent?.trim() ?? '';
     return {
-      names: boxes.map((box) => box.name),
-      maxGap,
-      limits: tree?.querySelectorAll('.side-login').length ?? 0,
-      settingsBelow: !!treeBox && !!settingsBox && settingsBox.top >= treeBox.bottom - 1,
+      verdict,
+      rows: rows.length,
+      firstIsCrit: rows[0]?.classList.contains('crit') ?? false,
+      idleLast: rows.length > 0 && [...rows].reverse().findIndex((row) => !row.classList.contains('idle')) <= rows.length - 1
+        && rows.findIndex((row) => row.classList.contains('idle')) > rows.findIndex((row) => !row.classList.contains('idle')),
+      noSpare: document.querySelectorAll('.core .flag').length,
+      sidebar: document.querySelectorAll('#nav, .sidebar').length,
     };
   });
-
-  expect(layout?.names).toEqual(['Home', 'Limits', 'Usage', 'Insights', 'Community']);
-  expect(layout?.maxGap ?? 999).toBeLessThan(12);
-  // Each tool with a limit shows what is left of it. The account and Settings sit under them.
-  expect(layout?.limits ?? 0).toBeGreaterThan(3);
-  expect(layout?.settingsBelow).toBe(true);
+  expect(core?.verdict.length ?? 0).toBeGreaterThan(10);
+  expect(core?.rows ?? 0).toBeGreaterThan(5);
+  // The row that stops you first sits on top, tinted; measured-only tools sink below the rest.
+  expect(core?.firstIsCrit).toBe(true);
+  expect(core?.idleLast).toBe(true);
+  expect(core?.noSpare ?? 0).toBeGreaterThan(0);
+  expect(core?.sidebar).toBe(0);
+  await assertReadable(browser);
 });
 
-test('a place with several sections opens them under its link and remembers the last one', async ({ app, screen, browser }) => {
-  await openWindow(app, 'plans');
-  await expect(screen.getByRole('heading', 'Insights', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#subnav [data-section="plans"]')).toHaveAttribute('aria-pressed', 'true');
-  await browser.locator('#subnav [data-section="budgets"]').tap();
-  await expect(screen.getByRole('heading', 'Budgets', { level: 2 })).toBeVisible();
-  await browser.locator('#nav a[data-group="usage"]').tap();
-  await expect(screen.getByRole('heading', 'Usage', { level: 1 })).toBeVisible();
-  await browser.locator('#nav a[data-group="insights"]').tap();
-  await expect(browser.locator('#subnav [data-section="budgets"]')).toHaveAttribute('aria-pressed', 'true');
+test('rows carry no controls; the verdict holds the one hop', async ({ app, browser }) => {
+  await openWindow(app, 'home');
+  await expect(browser.locator('.core .logins').first()).toBeVisible();
+  const controls = await browser.evaluate(() => ({
+    inRows: document.querySelectorAll('.core .logins button, .core .logins a').length,
+    hops: document.querySelectorAll('.core .verdict button').length,
+  }));
+  expect(controls?.inRows).toBe(0);
+  expect(controls?.hops ?? 9).toBeLessThan(2);
 });
 
-test('home is the total, the pet and what needs you', async ({ app, screen, browser }) => {
+test('today sums the day in figures and links the demoted views', async ({ app, screen, browser }) => {
+  await openWindow(app, 'home');
+  await expect(browser.locator('.core .today .num')).toBeVisible();
+  await expect(screen.getByText('tokens today at API prices', { exact: false })).toBeVisible();
+  await expect(screen.getByText('requests', { exact: false }).first()).toBeVisible();
+  // The share of the day, one bar and its key, tool by tool.
+  await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.core .sharebar i').length)).toBeGreaterThan(2);
+  await browser.locator('.core .links a[data-section="usage"]').tap();
+  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
+});
+
+test('an old link to overview opens the core, and accounts opens limits', async ({ app, screen, browser }) => {
   await openWindow(app, 'overview');
-  await expect(screen.getByRole('heading', 'Home', { level: 1 })).toBeVisible();
-  // Home opens on today: its hours, with the current one marked.
-  await expect(screen.getByRole('heading', 'Today, so far')).toBeVisible();
-  await expect(screen.getByRole('heading', 'Tokens per hour')).toBeVisible();
-  await expect(browser.locator('.htrend .hbar.now')).toHaveCount(1);
-  await expect(screen.getByRole('heading', 'Top models')).toBeVisible();
-  await expect(screen.getByRole('heading', 'Activity')).toBeVisible();
-  // What needs you is counted on Limits in the sidebar, not listed again on Home.
-  await expect(screen.getByRole('heading', 'Needs you')).toHaveCount(0);
-  await expect(browser.locator('#limits-count')).toBeVisible();
-  // The linked sample has a pet: its stages run along the bottom of its night.
-  await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.hpet .hstage').length)).toBe(6);
-  await screen.getByRole('button', { name: 'Month', exact: true }).tap();
-  await expect(screen.getByRole('button', { name: 'Month', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(screen.getByRole('heading', 'This month, so far')).toBeVisible();
-  await screen.getByRole('button', { name: 'Week', exact: true }).tap();
-  await expect(screen.getByRole('heading', 'Tokens per day')).toBeVisible();
+  await expect(browser.locator('.core .verdict p')).toBeVisible();
+  await openWindow(app, 'accounts');
+  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
+  await expect(browser.locator('#viewtabs [data-section="limits"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => screen.getByRole('button', 'Add login').count()).toBeGreaterThan(0);
+  await expect(screen.getByRole('button', 'Sign in').first()).toBeVisible();
   await assertReadable(browser);
 });
 
 test('limits lists each login with what it has used, and no guesses', async ({ app, screen, browser }) => {
   await openWindow(app, 'limits');
-  await expect(screen.getByRole('heading', 'Limits', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Claude Code', { level: 2 })).toBeVisible();
   await expect(screen.getByText('In use', { exact: true }).first()).toBeVisible();
   await expect(screen.getByText('resets in', { exact: false }).first()).toBeVisible();
-  // Keyhop shows what the tools report, never when a limit might run out.
+  // The detail view shows what the tools report, never when a limit might run out.
   for (const guess of ['runs out', 'Empty around', 'At this pace', 'Projected']) {
     await expect(screen.getByText(guess, { exact: false })).toHaveCount(0);
   }
@@ -98,14 +85,6 @@ test('limits lists each login with what it has used, and no guesses', async ({ a
   await assertReadable(browser);
 });
 
-test('an old link to accounts opens limits, which can add another login', async ({ app, screen, browser }) => {
-  await openWindow(app, 'accounts');
-  await expect(screen.getByRole('heading', 'Limits', { level: 1 })).toBeVisible();
-  await expect.poll(() => screen.getByRole('button', 'Add login').count()).toBeGreaterThan(0);
-  await expect(screen.getByRole('button', 'Sign in').first()).toBeVisible();
-  await assertReadable(browser);
-});
-
 test('a Claude Code login offers the command that runs it in one terminal', async ({ app, browser }) => {
   await openWindow(app, 'limits');
   await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.lim-group[aria-label="Claude Code"] [data-action="account-menu"]').length)).toBeGreaterThan(0);
@@ -120,27 +99,26 @@ test('a Claude Code login offers the command that runs it in one terminal', asyn
 
 test('usage names the token columns', async ({ app, screen, browser }) => {
   await openWindow(app, 'usage');
-  await expect(screen.getByRole('heading', 'Usage', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
+  await expect(browser.locator('#viewtabs [data-section="usage"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByRole('columnheader', 'Cache read')).toBeVisible();
   await expect(screen.getByRole('columnheader', 'API value')).toBeVisible();
   await assertReadable(browser);
 });
 
-test('budgets is its own list', async ({ app, screen, browser }) => {
-  await openWindow(app, 'budgets');
-  await expect(screen.getByRole('heading', 'Insights', { level: 1 })).toBeVisible();
-  await expect(screen.getByRole('heading', 'Budgets', { level: 2 })).toBeVisible();
-  await assertReadable(browser);
-});
-
-test('plans price each login against the month', async ({ app, screen, browser }) => {
+test('insights holds coach, plans and budgets as tabs', async ({ app, screen, browser }) => {
   await openWindow(app, 'plans');
   await expect(screen.getByRole('heading', 'Insights', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#subnav [data-section="plans"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(browser.locator('#viewtabs [data-section="plans"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByText('a month in plans', { exact: true })).toBeVisible();
   // One row a login, and no paragraphs: no verdicts and no pace.
   await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.plans-table tbody tr').length)).toBeGreaterThan(1);
   await expect(screen.getByText('on pace for', { exact: false })).toHaveCount(0);
+  await browser.locator('#viewtabs [data-section="budgets"]').tap();
+  await expect(screen.getByRole('heading', 'Budgets', { level: 2 })).toBeVisible();
+  // The group remembers the tab it was on.
+  await openWindow(app, 'usage');
+  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
   await assertReadable(browser);
 });
 
@@ -157,7 +135,7 @@ test('coach reads optimize, compare and yield', async ({ app, screen, browser })
 test('leaderboard is the ranks, by efficiency first', async ({ app, screen, browser }) => {
   await openWindow(app, 'leaderboard');
   await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#subnav [data-section="leaderboard"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(browser.locator('#viewtabs [data-section="leaderboard"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByText('Your rank')).toBeVisible();
   await expect(screen.getByRole('button', { name: 'Efficiency', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByText('Commits per M tokens')).toBeVisible();
@@ -170,7 +148,7 @@ test('leaderboard is the ranks, by efficiency first', async ({ app, screen, brow
 test('season is the standings', async ({ app, screen, browser }) => {
   await openWindow(app, 'season');
   await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#subnav [data-section="season"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(browser.locator('#viewtabs [data-section="season"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByRole('heading', 'Season standings')).toBeVisible();
   await assertReadable(browser);
 });
@@ -178,7 +156,7 @@ test('season is the standings', async ({ app, screen, browser }) => {
 test('teams opens on the list', async ({ app, screen, browser }) => {
   await openWindow(app, 'teams');
   await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#subnav [data-section="teams"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(browser.locator('#viewtabs [data-section="teams"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByRole('heading', 'Your teams')).toBeVisible();
   await assertReadable(browser);
 });
@@ -186,7 +164,7 @@ test('teams opens on the list', async ({ app, screen, browser }) => {
 test('profile holds the pet, keeps, quests and badges', async ({ app, screen, browser }) => {
   await openWindow(app, 'profile');
   await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#subnav [data-section="profile"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(browser.locator('#viewtabs [data-section="profile"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByRole('heading', 'Keeps')).toBeVisible();
   await expect(screen.getByRole('heading', 'Quests')).toBeVisible();
   await expect(screen.getByRole('heading', 'Badges')).toBeVisible();
@@ -205,35 +183,29 @@ test('a team splits into its day, its ranks and its members', async ({ app, scre
   await assertReadable(browser);
 });
 
-test('the sidebar stays packed in the smallest window', async ({ app, browser }) => {
-  await openWindow(app, 'overview');
-  await browser.setViewport({ width: 960, height: 620 });
-  await expect.poll(() => browser.evaluate(() => {
-    const community = document.querySelector('#nav a[data-group="community"]');
-    if (!community || (community as HTMLElement).hidden) return 999;
-    const nav = document.querySelector('#nav');
-    if (!nav) return 999;
-    const boxes = [...nav.children].filter((el) => !(el as HTMLElement).hidden).map((el) => el.getBoundingClientRect());
-    let maxGap = 0;
-    for (let i = 1; i < boxes.length; i++) maxGap = Math.max(maxGap, boxes[i].top - boxes[i - 1].bottom);
-    return maxGap;
-  })).toBeLessThan(12);
+test('the core fits the smallest window with nothing cut off sideways', async ({ app, browser }) => {
+  await openWindow(app, 'home');
+  await browser.setViewport({ width: 760, height: 520 });
+  await expect(browser.locator('.core .verdict p')).toBeVisible();
+  const overflow = await browser.evaluate(() => {
+    const doc = document.scrollingElement!;
+    return Math.max(doc.scrollWidth - doc.clientWidth, document.querySelector('.main')!.scrollWidth - document.querySelector('.main')!.clientWidth);
+  });
+  expect(overflow).toBe(0);
 });
 
-test('Hop lists the sections a linked account can open', async ({ app, screen }) => {
-  await openWindow(app, 'overview');
-  await screen.getByRole('button', 'Hop to a login…', { exact: true }).tap();
-  await expect(screen.getByRole('dialog', 'Hop')).toBeVisible();
-  for (const name of ['Home', 'Coach', 'Plans', 'Leaderboard', 'Season', 'Teams', 'Profile', 'Settings']) {
-    await expect(screen.getByRole('option', name, { exact: false })).toBeVisible();
-  }
+test('escape steps back from a demoted view to the core', async ({ app, screen, browser }) => {
+  await openWindow(app, 'usage');
+  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
+  await browser.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  await expect(browser.locator('.core .verdict p')).toBeVisible();
 });
 
-test('settings keeps the link, the profile and the phone together', async ({ app, screen, browser }) => {
+test('settings opens on activity, with no appearance pane left', async ({ app, screen, browser }) => {
   await openWindow(app, 'settings');
-  await expect(screen.getByRole('heading', 'Window Appearance')).toBeVisible();
-  await screen.getByRole('button', 'Activity').tap();
+  await expect(screen.getByRole('heading', 'Settings', { level: 1 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Activity')).toBeVisible();
+  await expect(screen.getByText('Window Appearance', { exact: false })).toHaveCount(0);
   await screen.getByRole('button', 'Cloud').tap();
   await expect(screen.getByRole('heading', 'How you appear')).toBeVisible();
   await expect(screen.getByRole('heading', 'This computer')).toBeVisible();
@@ -246,23 +218,6 @@ test('settings keeps the link, the profile and the phone together', async ({ app
   await screen.getByRole('button', 'App & Privacy').tap();
   await expect(screen.getByRole('heading', 'App & Privacy')).toBeVisible();
   await assertReadable(browser);
-});
-
-test('the top bar turns the field from night to day and back', async ({ app, screen, browser }) => {
-  await openWindow(app, 'overview');
-  const field = () => browser.evaluate(() => document.documentElement.dataset.theme ?? '');
-  await expect.poll(field).toBe('night');
-  await screen.getByRole('button', { name: 'Show the field by day', exact: true }).click();
-  await expect.poll(field).toBe('day');
-  await expect(browser.locator('#theme')).toHaveAttribute('aria-label', 'Show the field by night');
-  // The choice is saved, so another open of the window is still by day.
-  await openWindow(app, 'usage');
-  await expect.poll(field).toBe('day');
-  await assertReadable(browser);
-  await browser.locator('#theme').click();
-  await expect.poll(field).toBe('night');
-  // Nothing sits under the content any more.
-  await expect(browser.locator('footer.statusbar')).toHaveCount(0);
 });
 
 test('settings sets up the browser extension and says whether it is connected', async ({ app, screen, browser }) => {

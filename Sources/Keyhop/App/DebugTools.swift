@@ -148,6 +148,18 @@ enum Snapshot {
         write(WelcomeView(canMove: false, dismiss: {}).environmentObject(store).clipShape(corners), to: "\(prefix)-welcome.png")
         write(WelcomeView(canMove: false, dismiss: {}, startAtMore: true).environmentObject(store).clipShape(corners),
               to: "\(prefix)-welcome-more.png")
+
+        let closed = NotchState()
+        closed.notchWidth = 196
+        write(NotchCompanionView(state: closed).environmentObject(store).environmentObject(tracker)
+            .frame(width: 196 + 2 * NotchWindow.flankWidth + 2 * NotchWindow.fillet, height: 37),
+              to: "\(prefix)-notch.png")
+        let open = NotchState()
+        open.notchWidth = 196
+        open.open = true
+        write(NotchCompanionView(state: open).environmentObject(store).environmentObject(tracker)
+            .frame(width: 420, height: NotchFacts.make(store: store, tracker: tracker).openHeight),
+              to: "\(prefix)-notch-open.png")
     }
 
     private static func write(_ view: some View, to path: String) {

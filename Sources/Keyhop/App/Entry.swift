@@ -59,6 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Alerts.shared.configure()
             let welcomed = WelcomeWindow.showIfNeeded(AccountStore.shared)
             if !welcomed, !quiet { AppWindow.show() }
+            NotchWindow.applyFromDefaults()
             Self.announceUpdate()
             Updater.shared.checkIfDue()
         }

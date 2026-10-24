@@ -701,6 +701,7 @@ private struct MenuFooter: View {
     @ObservedObject private var updater = Updater.shared
     @AppStorage("autoRefresh") private var autoRefresh = true
     @AppStorage("autoHop") private var autoHop = false
+    @AppStorage("notchCompanion") private var notchCompanion = false
     @AppStorage("checkForUpdates") private var checkForUpdates = true
     @AppStorage("autoInstallUpdates") private var autoInstallUpdates = true
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -748,6 +749,9 @@ private struct MenuFooter: View {
         }
         .frame(height: 40)
         .overlay(alignment: .top) { RowDivider() }
+        .onChange(of: notchCompanion) { _, enabled in
+            NotchWindow.shared.apply(enabled)
+        }
         .onChange(of: launchAtLogin) { _, enabled in
             do {
                 if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
@@ -792,6 +796,9 @@ private struct MenuFooter: View {
             Toggle("Check usage every 5 minutes", isOn: $autoRefresh)
             Toggle("Hop before a limit automatically", isOn: $autoHop)
                 .disabled(!autoRefresh)
+            if NotchWindow.hasNotchScreen {
+                Toggle("Show under the notch", isOn: $notchCompanion)
+            }
             Toggle("Check for updates automatically", isOn: $checkForUpdates)
             Toggle("Install updates automatically", isOn: $autoInstallUpdates)
                 .disabled(!checkForUpdates)

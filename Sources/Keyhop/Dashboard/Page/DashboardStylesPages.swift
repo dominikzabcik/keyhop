@@ -118,6 +118,8 @@ button.tile:hover { background: hsl(var(--on) / .045); }
 .form .btn:not(.sm) { width: auto; }
 
 /* Community: podium, board, season, team day. */
+.stat-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stat-strip .stat + .stat { border-left: 1px solid var(--line); }
 .podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .podium-card { padding: 16px; display: grid; gap: 12px; }
 .podium-card .place { color: var(--fg3); font-size: 12px; }
@@ -174,8 +176,13 @@ button.tile:hover { background: hsl(var(--on) / .045); }
 .team-forms > p { grid-column: 1 / -1; margin-top: 6px; }
 
 @media (max-width: 1180px) {
-  .usage-board, .podium, .team-forms { grid-template-columns: 1fr; }
+  .usage-board { grid-template-columns: 1fr; }
   .coach-delta + .coach-delta { border-left: 0; border-top: 1px solid var(--line); }
+}
+@media (max-width: 900px) {
+  .podium, .team-forms { grid-template-columns: 1fr; }
+  .stat-strip { grid-template-columns: 1fr; }
+  .stat-strip .stat + .stat { border-left: 0; border-top: 1px solid var(--line); }
 }
 """##
 }

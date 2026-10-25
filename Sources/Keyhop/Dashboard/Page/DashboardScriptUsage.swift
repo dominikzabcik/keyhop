@@ -311,7 +311,7 @@ extension DashboardPage {
     const offset = (parse(days[0].day).getDay() + 6) % 7;
     const columns = Math.ceil((days.length + offset) / 7);
     const gap = 3, top = 18;
-    const cell = Math.max(9, Math.min(size === "full" ? 22 : 16, Math.floor((chartWidth(size) - (columns - 1) * gap) / columns)));
+    const cell = Math.max(9, Math.min(22, Math.floor((chartWidth(size) - (columns - 1) * gap) / columns)));
     const active = days.map((d) => d.tokens).filter((v) => v > 0).sort((a, b) => a - b);
     const quartile = (q) => (active.length ? active[Math.min(active.length - 1, Math.floor(q * active.length))] : 0);
     const cuts = [quartile(0.25), quartile(0.5), quartile(0.75)];

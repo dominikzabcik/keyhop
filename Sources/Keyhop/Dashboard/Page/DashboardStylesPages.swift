@@ -30,7 +30,7 @@ extension DashboardPage {
 .heat rect.l3 { fill: hsl(var(--on) / .6); }
 .heat rect.l4 { fill: hsl(var(--on) / .9); }
 .heat text { fill: var(--fg3); font: 10.5px var(--mono); }
-svg.heat { display: block; margin: 0 auto; }
+svg.heat { display: block; }
 .scale .hcell { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .hcell.l0 { background: hsl(var(--on) / .05); }
 .hcell.l1 { background: hsl(var(--on) / .18); }

@@ -394,7 +394,7 @@ details.setup[open] summary { border-bottom: 1px solid var(--line); }
 .heat rect[data-action]:hover { stroke: hsl(var(--on) / .7); stroke-width: 1.2; }
 ::view-transition-group(usage-chart) { animation-duration: .2s; }
 .heat text { fill: var(--fg3); font: 10.5px var(--mono); }
-svg.heat { display: block; margin: 0 auto; }
+svg.heat { display: block; }
 .scale { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--fg3); }
 .scale i { width: 10px; height: 10px; border-radius: 2px; }
 .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); }

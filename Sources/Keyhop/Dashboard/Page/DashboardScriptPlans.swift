@@ -15,10 +15,12 @@ extension DashboardPage {
     return ["", ""];
   }
   const times = (value, price) => price > 0 ? `${(value / price) >= 10 ? Math.round(value / price) : (value / price).toFixed(1)}×` : "";
+  // Plan prices are whole list dollars; cents belong to measured API values only.
+  const listPrice = (v) => v % 1 === 0 ? "$" + v.toLocaleString("en-US") : fmt.usd(v);
 
   // One row a login: its plan and price, the month's API value against it, and the week's peak.
   function planRow(row) {
-    const price = row.price == null ? "" : row.price === 0 ? "Free" : fmt.usd(row.price);
+    const price = row.price == null ? "" : row.price === 0 ? "Free" : listPrice(row.price);
     const peak = row.windows.reduce((best, w) => (!best || w.peak > best.peak ? w : best), null);
     const [label, tone] = planStanding(row);
     const pill = label ? `<span class="pill ${tone}"${row.advice ? ` title="${esc(row.advice)}"` : ""}>${esc(label)}</span>` : "";
@@ -41,7 +43,7 @@ extension DashboardPage {
     if (!report.rows.length) return { body: `<section class="card"><p class="empty">No logins to price yet. Add one under Limits.</p></section>` };
     const figure = (value, label) => `<div class="plans-fig"><b class="num">${value}</b><span class="subtle">${label}</span></div>`;
     const head = `<section class="card plans-head" title="API value is what the tokens would cost at standard API prices, never the bill. The peak is the highest a window reached in the last seven days.">
-      ${figure(fmt.usd(report.paid), "a month in plans")}${figure(fmt.usd(report.apiValue), `API value in ${esc(report.month)}`)}${report.paid > 0 ? figure(times(report.apiValue, report.paid), "what the plans return") : ""}
+      ${figure(listPrice(report.paid), "a month in plans")}${figure(fmt.usd(report.apiValue), `API value in ${esc(report.month)}`)}${report.paid > 0 ? figure(times(report.apiValue, report.paid), "what the plans return") : ""}
     </section>`;
     const rows = report.rows.slice().sort((a, b) => a.toolName.localeCompare(b.toolName) || b.apiValue - a.apiValue).map(planRow).join("");
     const table = `<section class="card"><div class="table-wrap"><table class="table plans-table"><thead><tr><th>Login</th><th>Plan</th><th class="right">Price</th><th class="right nowrap">API value</th><th class="right">Return</th><th>Peak this week</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></section>`;

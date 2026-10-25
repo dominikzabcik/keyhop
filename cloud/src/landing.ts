@@ -72,7 +72,7 @@ function appShot(): Html {
 
 const FIGURES: [string, string][] = [
   ["9", "AI coding tools it can switch"],
-  ["6", "of them with a full token history"],
+  ["13", "tools with a full token history"],
   ["0", "logins that leave your computer"],
   ["1 click", "from the alert to the login with room"],
 ];

@@ -18,18 +18,18 @@
 </p>
 
 <p align="center">
-  <img src="docs/dashboard.png" width="860" alt="The Keyhop dashboard with sample accounts: a limit, budget and outage alert, today's tokens beside an hour-by-hour dot matrix, the streak, API value, this week and the closest limit, then each tool's account in use">
+  <img src="docs/dashboard.png" width="860" alt="Keyhop's core screen with sample logins: the verdict up top, every login ranked by how much of its tightest window is left and when it resets, and today's tokens with their API value">
 </p>
 
 <p align="center">
-  <img src="docs/menu.png" width="300" alt="Keyhop's Mac menu on the Claude tab: the account in use with its 5-hour and weekly limits, and another account to switch to">
+  <img src="docs/menu.png" width="320" alt="Keyhop's Mac menu with sample logins: the verdict, a ring per tool showing what its login in use has left, and the one action it offers">
 </p>
 
 ## At a glance
 
 - **Nine tools, one click.** Claude Code, Cursor, Codex, Gemini CLI, OpenCode, Pi, GitHub Copilot, Windsurf and Codebuff move to another saved login without signing out anywhere else.
 - **Logins stay in the system's own store.** Keychain on macOS, Secret Service on Linux, DPAPI on Windows. The login in use is saved before every switch, so none is ever lost.
-- **Limits, usage and budgets in one place.** 5-hour and weekly limits where providers expose them, exact token history for six tools by account, model and project, and budgets that warn at 80%.
+- **Limits, usage and budgets in one place.** 5-hour and weekly limits where providers expose them, exact token history for thirteen tools by account, model and project, and budgets that warn at 80%.
 - **Smart Hop.** Ranks your accounts by limit room, resets, forecasts and budgets, offline and deterministic, and offers the switch before a limit runs out.
 - **Native on every desktop.** A SwiftUI app and menu bar on macOS, a tray on Linux and Windows, one `keyhop` command everywhere, and a read-only MCP server for your AI clients.
 - **Keyhop Cloud, if you want it.** Leaderboards, monthly ranked seasons, teams and a public profile with README images. Only daily totals leave the computer, never prompts, emails or logins.
@@ -93,7 +93,7 @@ GNOME hides tray icons unless the **AppIndicator and KStatusNotifierItem Support
 | **Switch** | Click one of a tool's other accounts. Where the provider exposes limits, each shows how much of its tightest one is used. Smart Hop weighs available limits, forecasts, resets and budgets. |
 | **Read the limits** | For supported providers, macOS shows the account in use with a large bar per limit, where a tick marks an even pace. On Linux and Windows, the menu shows each account's tightest available limit and the icon shows the busiest account's two nearest limits. |
 | **Rename, remove and budgets** | On macOS, right-click an account in the menu, or use Keyhop's window, which also sets budgets. On Linux and Windows, use the tray's **Accounts** submenu to rename or remove an account, and **Set a budget** for a monthly budget across all accounts. |
-| **Dashboard** | Keyhop's window, in five places: Home (the night or day field as a wallpaper, the hop composer, what needs your attention, the logins in use, and the week in four figures with the activity map and streaks), Limits (every login pooled and projected: what is left across them, how fast it drains, the next reset, and each login's windows, with add, switch, rename and remove), Usage (charts, activity, token mix, models), Insights (Coach, Plans and Budgets) and Community (Leaderboard, Season, Teams and Profile), plus Settings. The scene stays in Home's wallpaper unless you set it to show everywhere in **Settings › Appearance**. On macOS, open Keyhop from Applications or choose **Open Keyhop** in the menu. Click the tray icon on Windows, choose **Open Keyhop** in the Linux tray, or run `keyhop dashboard` anywhere. |
+| **Dashboard** | Keyhop's window opens on one screen: the verdict (which login empties when, and the one hop worth making), every login ranked by how much runway it has, and today's tokens with their API value. Everything else sits a quiet link away: History (Usage and Limits, with every login pooled and projected, and add, switch, rename and remove), Insights (Coach, Plans and Budgets) and Community (Leaderboard, Season, Teams and Profile), plus Settings. On macOS, open Keyhop from Applications or choose **Open Keyhop** in the menu. Click the tray icon on Windows, choose **Open Keyhop** in the Linux tray, or run `keyhop dashboard` anywhere. |
 | **Alerts** | A notification when a limit or budget is nearly used, with a **Switch** button for Smart Hop's best available account. |
 
 Keyhop switches nine tools and tracks exact token usage for thirteen. Claude Code, Cursor, Codex, Gemini CLI, OpenCode and Pi have account switching plus usage history; Amp, Goose, Qwen Code, Kimi Code, Grok Build, Kilo and OpenClaw are counted from their local logs without logins to switch. GitHub Copilot, Windsurf and Codebuff do not write complete model-token transcripts Keyhop can count, so they intentionally have no token history; Keyhop still reads Copilot's reported quotas, the active Windsurf profile's local limit cache, and Codebuff's credit and subscription limits instead of estimating any of them.
@@ -136,7 +136,7 @@ Add `--json` to any of them for scripts. `keyhop status --sample` and `keyhop da
 
 Smart Hop ranks saved accounts locally from remaining limits, reset timing, recent forecasts and budgets. It is deterministic, works offline with cached data and never reads prompts or source code. Run `keyhop recommend`, or use the recommendation shown in the app and tray.
 
-`keyhop mcp` exposes six read-only tools to local AI clients: `keyhop_status`, `keyhop_usage`, `keyhop_recommendation`, `keyhop_services`, `keyhop_plans` and `keyhop_coach`. They can inspect cached Keyhop data, but cannot switch accounts or read credentials. Add it to a client with one of these configurations:
+`keyhop mcp` exposes seven read-only tools to local AI clients: `keyhop_status`, `keyhop_usage`, `keyhop_recommendation`, `keyhop_services`, `keyhop_forecast`, `keyhop_plans` and `keyhop_coach`. They can inspect cached Keyhop data, but cannot switch accounts or read credentials. Add it to a client with one of these configurations:
 
 ```bash
 claude mcp add --scope user keyhop -- keyhop mcp
@@ -217,7 +217,7 @@ This is the maintainer's year, live:
 | `badge.svg` | One figure. Tokens over the last 7 days, until you say otherwise. |
 | `card.svg` | This season's tokens, the streak, active days, badges and tier. |
 | `streak.svg` | The current streak, the longest streak and active days. |
-| `tools.svg` | The share of Claude Code, Cursor, Codex, Gemini CLI, OpenCode and Pi. The last 30 days, until you say otherwise. |
+| `tools.svg` | The share of each counted tool, Claude Code to OpenClaw. The last 30 days, until you say otherwise. |
 | `graph.svg` | A year of days, Monday at the top, shaded by how many tokens that day used. The line above the squares is the year's total. |
 | `pet.svg` | The pet. |
 

@@ -141,12 +141,12 @@ function badgeImage(theme: Theme, label: string, value: string, aria: string): s
   const valueWidth = Math.max(44, Math.ceil(value.length * 7.4) + 20);
   const width = labelWidth + valueWidth;
   const height = 28;
-  const labelFill = theme.name === "dark" ? "#2c2c2c" : "#171717";
+  const labelFill = theme.name === "dark" ? "#201d19" : "#1b1915";
   return `${svgOpen(width, height, aria)}
   <rect width="${width}" height="${height}" rx="6" fill="${theme.bg}" stroke="${theme.stroke}" stroke-opacity="${theme.strokeOpacity}"/>
   <rect width="${labelWidth}" height="${height}" rx="6" fill="${labelFill}"/>
   <rect x="${labelWidth - 6}" width="6" height="${height}" fill="${labelFill}"/>
-  <text x="${labelWidth / 2}" y="18" text-anchor="middle" font-size="12" font-weight="600" fill="#EBEBEB" font-family="${SANS}">${esc(label)}</text>
+  <text x="${labelWidth / 2}" y="18" text-anchor="middle" font-size="12" font-weight="600" fill="#ECEAE5" font-family="${SANS}">${esc(label)}</text>
   <text x="${labelWidth + valueWidth / 2}" y="18" text-anchor="middle" font-size="12" font-weight="620" fill="${theme.text}" font-family="${SANS}">${esc(value)}</text>
 </svg>`;
 }

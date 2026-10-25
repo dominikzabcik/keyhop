@@ -15,7 +15,7 @@ const HEIGHT = 260;
 
 const TIER_TONES: Record<Theme["name"], Record<string, string>> = {
   dark: { bronze: "#b09070", silver: "#adadad", gold: "#c2ad84", platinum: "#b0bcbf", diamond: "#c3cdd4", master: "#f2f2f2" },
-  light: { bronze: "#8d6a45", silver: "#6a6a6a", gold: "#8a7040", platinum: "#5d6b70", diamond: "#4e5c66", master: "#171717" },
+  light: { bronze: "#8d6a45", silver: "#6a6a6a", gold: "#8a7040", platinum: "#5d6b70", diamond: "#4e5c66", master: "#1b1915" },
 };
 
 const TIER_STEPS: Record<string, number> = { bronze: 1, silver: 2, gold: 3, platinum: 4, diamond: 5, master: 6 };

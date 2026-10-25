@@ -281,12 +281,13 @@ describe("leaderboards", () => {
     expect(page.headers.get("content-security-policy")).toContain("default-src 'none'");
     const body = await page.text();
     expect(body).toContain("<h1>Leaderboard</h1>");
-    // Two scripts: the saved field applied before paint, then the page's own. Both carry this response's nonce.
+    // One script, the page's own, carrying this response's nonce.
     const nonce = page.headers.get("content-security-policy")!.match(/script-src 'nonce-([^']+)'/)?.[1];
     expect(nonce).toBeTruthy();
-    expect(body.match(/<script\b[^>]*>/g)).toEqual([`<script nonce="${nonce}">`, `<script nonce="${nonce}">`]);
-    expect(body).toContain('data-field-switch');
-    expect(body).toContain(':root[data-theme="day"]');
+    expect(body.match(/<script\b[^>]*>/g)).toEqual([`<script nonce="${nonce}">`]);
+    // The 2.0 world: the warm charcoal ground, and the K mark's hopped arm in the one blue.
+    expect(body).toContain("--bg: #0c0b0a");
+    expect(body).toContain('fill="#2f5fd9"');
   });
 });
 
@@ -323,19 +324,11 @@ describe("public site", () => {
     expect(await security.text()).toContain("Contact: https://github.com/dominikzabcik/keyhop/security/advisories/new");
   });
 
-  it("serves the Geist faces from its own origin, cached for good", async () => {
-    for (const name of ["geist-1.7.2.woff2", "geist-mono-1.7.2.woff2"]) {
-      const font = await call(`/fonts/${name}`);
-      expect(font.status).toBe(200);
-      expect(font.headers.get("content-type")).toBe("font/woff2");
-      expect(font.headers.get("cache-control")).toContain("immutable");
-      const bytes = new Uint8Array(await font.arrayBuffer());
-      expect(String.fromCharCode(...bytes.slice(0, 4))).toBe("wOF2");
-    }
-    expect((await call("/fonts/other.woff2")).status).toBe(404);
+  it("ships no webfonts: the system faces carry the page", async () => {
+    expect((await call("/fonts/geist-1.7.2.woff2")).status).toBe(404);
     const page = await call("/");
-    expect(page.headers.get("content-security-policy")).toContain("font-src 'self'");
-    expect(await page.text()).toContain("/fonts/geist-1.7.2.woff2");
+    expect(page.headers.get("content-security-policy")).not.toContain("font-src");
+    expect(await page.text()).not.toContain("/fonts/");
   });
 
   it("keeps sign-in and error pages out of search results", async () => {
@@ -930,13 +923,13 @@ describe("widgets", () => {
     expect(badge.headers.get("cache-control")).toContain("max-age=900");
     const svg = await badge.text();
     expect(svg).toContain("4K");
-    expect(svg).toContain("#171717");
+    expect(svg).toContain("#0c0b0a");
 
     const light = await (await call("/u/widge/card.svg?theme=light")).text();
-    expect(light).toContain("#f6f6f6");
+    expect(light).toContain("#f7f4ee");
     const unchanged = await (await call("/u/widge/badge.svg?theme=neon")).text();
-    expect(unchanged).toContain("#171717");
-    expect(unchanged).not.toContain("#f6f6f6");
+    expect(unchanged).toContain("#0c0b0a");
+    expect(unchanged).not.toContain("#f7f4ee");
 
     expect(await (await call("/u/widge/streak.svg")).text()).toContain("1 day");
     expect(await (await call("/u/widge/tools.svg")).text()).toContain("Claude Code");
@@ -1001,7 +994,7 @@ describe("widgets", () => {
     }
 
     const light = await (await call("/u/widge-year/graph.svg?theme=light")).text();
-    expect(light).toContain("#f6f6f6");
+    expect(light).toContain("#f7f4ee");
     expect(light).toContain(`fill="#e7e7e7"`);
     expect(light).not.toContain("#232323");
   });

@@ -19,23 +19,23 @@ export interface Theme {
 export const THEMES: Record<ThemeName, Theme> = {
   dark: {
     name: "dark",
-    bg: "#171717",
-    text: "#EBEBEB",
-    muted: "#8a8a8a",
-    faint: "#6f6f6f",
-    stroke: "#ffffff",
+    bg: "#0c0b0a",
+    text: "#ECEAE5",
+    muted: "#8b8780",
+    faint: "#6f6b64",
+    stroke: "#fffaf0",
     strokeOpacity: "0.08",
-    mark: "#EBEBEB",
+    mark: "#ECEAE5",
   },
   light: {
     name: "light",
-    bg: "#f6f6f6",
-    text: "#171717",
-    muted: "#5c5c5c",
-    faint: "#6f6f6f",
-    stroke: "#000000",
+    bg: "#f7f4ee",
+    text: "#1b1915",
+    muted: "#5f5b54",
+    faint: "#6f6b64",
+    stroke: "#1b1915",
     strokeOpacity: "0.1",
-    mark: "#171717",
+    mark: "#1b1915",
   },
 };
 
@@ -77,12 +77,12 @@ export function grouped(value: number): string {
   return Math.round(value).toLocaleString("en-US");
 }
 
-/** Keyhop's mark, on the image's own scale. */
+/** Keyhop's mark, on the image's own scale: the hopped arm carries the one blue. */
 export function keyhopMark(x: number, y: number, size: number, fill: string): string {
   const unit = size / 24;
-  const square = (left: number, top: number, width: number, height: number) =>
-    `<rect x="${x + left * unit}" y="${y + top * unit}" width="${width * unit}" height="${height * unit}" rx="${1.5 * unit}" fill="${fill}"/>`;
-  return square(2.5, 2.5, 6, 19.5) + square(9.6, 9.2, 6, 6) + square(16, 1, 6, 6) + square(16, 17, 6, 6);
+  const square = (left: number, top: number, width: number, height: number, color = fill) =>
+    `<rect x="${x + left * unit}" y="${y + top * unit}" width="${width * unit}" height="${height * unit}" rx="${1.5 * unit}" fill="${color}"/>`;
+  return square(2.5, 2.5, 6, 19.5) + square(9.6, 9.2, 6, 6) + square(16, 1, 6, 6, "#2f5fd9") + square(16, 17, 6, 6);
 }
 
 export function svgOpen(width: number, height: number, label: string): string {

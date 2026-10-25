@@ -5,7 +5,6 @@ import { card } from "./card";
 import { randomToken } from "./crypto";
 import type { AppEnv } from "./env";
 import { publicError } from "./errors";
-import { fonts } from "./fonts";
 import { limits, sweepLimits } from "./limits";
 import { live, sweepLive } from "./live";
 import { digests, sendDigests } from "./digest";
@@ -27,17 +26,16 @@ app.use("*", async (c, next) => {
   await next();
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
-  // Executable scripts are limited to the backdrop and only run with this response's nonce.
+  // Executable scripts only run with this response's nonce.
   c.header(
     "Content-Security-Policy",
-    `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`,
+    `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`,
   );
 });
 app.use("*", session);
 app.use("*", sameOrigin);
 
 app.route("/", site);
-app.route("/", fonts);
 app.route("/", auth);
 app.route("/", usage);
 app.route("/", work);

@@ -1,14 +1,13 @@
 import { html, raw } from "hono/html";
 import { MEASURED_TOOLS, type Tool, TOOL_NAMES } from "./env";
-import { creatureMarkup, petFrom } from "./pet";
 import type { Html } from "./ui";
-import { mark } from "./ui";
+import { PIXEL_MARK, mark } from "./ui";
 
 /**
- * The home page, as the KB-Web board in design/keyhop-v2/canvas draws it: the offer and the
- * install line beside a night field where three sample logins sit and the pet offers the hop,
- * then the figures, how a hop works, the tools, the settings people touch, the season, and
- * questions. Every sample on it says it is one.
+ * The home page in the Keyhop 2.0 world: the offer and the install line beside a picture of the
+ * app's own screen, with the verdict, the logins ranked by runway and the hop it offers, then the
+ * figures, how a hop works, the tools, the settings people touch, the season, and questions.
+ * Every sample on it says it is one.
  */
 
 // MARK: Sections
@@ -36,47 +35,34 @@ const TOOL_ROWS: ToolRow[] = [
 
 const INSTALL_UNIX = "curl -fsSL https://raw.githubusercontent.com/dominikzabcik/keyhop/main/install.sh | bash";
 
-// MARK: The night field
+// MARK: The app, pictured
 
-/** The same seeded stars as the board, so the picture never changes between visits. */
-function stars(): string {
-  let seed = 5;
-  const rnd = () => ((seed = (seed * 9301 + 49297) % 233280), seed / 233280);
-  return Array.from({ length: 44 }, (_, i) => {
-    const x = Math.round(rnd() * 400), y = Math.round(rnd() * 210), r = rnd() > 0.85 ? 2.2 : 1.3;
-    return `<rect class="star" style="--i:${i}" x="${x}" y="${y}" width="${r}" height="${r}"/>`;
-  }).join("");
-}
-
-interface SampleLogin { tool: Tool; who: string; sub: string; left: number; state: "in-use" | "pick" | "out" }
+interface SampleLogin { tool: Tool; who: string; sub: string; left: number; reset: string; state: "in-use" | "pick" | "out" }
 
 const SAMPLE_LOGINS: SampleLogin[] = [
-  { tool: "claude", who: "Personal · Claude Code", sub: "Max 5x · empty ~12:43 PM", left: 49, state: "in-use" },
-  { tool: "claude", who: "work@studio.dev · Claude Code", sub: "Pro · 5-hour 12%, weekly 41%", left: 59, state: "pick" },
-  { tool: "codex", who: "me@personal.dev · Codex", sub: "Plus · runs out ~11:19 AM", left: 7, state: "out" },
+  { tool: "claude", who: "Personal", sub: "Claude Code · Max 5x · in use", left: 18, reset: "empty ~12:43 PM", state: "in-use" },
+  { tool: "claude", who: "work@studio.dev", sub: "Claude Code · Pro", left: 88, reset: "resets 2:00 PM", state: "pick" },
+  { tool: "codex", who: "me@personal.dev", sub: "Codex · Plus", left: 7, reset: "back ~11:19 AM", state: "out" },
 ];
 
-/** A sample pet: Bulk, mostly Claude Code, on a twelve-day streak. */
-const SAMPLE_PET = creatureMarkup(petFrom({ tokens: 800_000_000, tools: { claude: 1 }, streak: 12, commits: 12_160 }), "field-pet");
-
-function nightField(): Html {
-  return html`<figure class="field" aria-label="Sample accounts: Claude Code's Personal login empties around 12:43 PM, and Keyhop offers to hop it to work@studio.dev, which is 12% into its window.">
-    <svg class="field-sky" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      ${raw(stars())}
-      <path d="M0 236 C 70 214 140 220 210 228 C 280 236 340 216 400 222 L400 300 L0 300 Z" fill="#1C1F26"/>
-      <path d="M0 266 C 100 252 210 256 300 262 C 350 265 380 264 400 262 L400 300 L0 300 Z" fill="#171A20"/>
-    </svg>
-    <div class="field-rows" aria-hidden="true">
-      ${SAMPLE_LOGINS.map((row) => html`<div class="field-row ${row.state}">
-        <span class="tool-chip">${mark(row.tool)}</span>
-        <span class="field-who"><b>${row.who}</b><small>${row.sub}</small></span>
-        <span class="meter"><i style="width:${row.left}%"></i></span>
-        <span class="field-left">${row.left}%</span>
-      </div>`)}
-    </div>
-    <div class="field-foot" aria-hidden="true">
-      <div class="bubble"><b>Claude Code is running low.</b><span>Personal empties around 12:43 PM. Hop it to work@studio.dev, 12% into its window?</span><span class="bubble-actions"><span class="bubble-hop">Hop</span><span class="bubble-later">Later</span></span></div>
-      <div class="field-pet-wrap">${raw(SAMPLE_PET)}<span class="shadow"></span></div>
+/** A picture of the app's own screen: the verdict, the logins ranked by runway, and the hop. */
+function appShot(): Html {
+  return html`<figure class="shot" aria-label="A sample of Keyhop's window: Claude Code's Personal login empties around 12:43 PM, work@studio.dev still has 88% of its window, and Keyhop offers the hop.">
+    <div class="shot-bar" aria-hidden="true">${raw(PIXEL_MARK)}<b>Keyhop</b><span>read 1 min ago</span></div>
+    <div class="shot-body" aria-hidden="true">
+      <p class="shot-verdict">Personal empties around 12:43 PM.<br>work@studio.dev has the room.</p>
+      <div class="shot-rows">
+        ${SAMPLE_LOGINS.map((row) => html`<div class="shot-row ${row.state}">
+          ${mark(row.tool)}
+          <span class="shot-who"><b>${row.who}</b><small>${row.sub}</small></span>
+          <span class="runway"><i style="width:${row.left}%"></i></span>
+          <span class="shot-left">${row.left}%<small>${row.reset}</small></span>
+        </div>`)}
+      </div>
+      <div class="shot-foot">
+        <span class="shot-hop">Hop to work@studio.dev</span>
+        <span class="shot-today">14.1M · $30.26 today</span>
+      </div>
     </div>
     <figcaption>Sample accounts</figcaption>
   </figure>`;
@@ -144,7 +130,7 @@ export function landingPage(): Html {
         </div>
         <span class="hero-note">MIT licence. The installer checks the release's SHA-256 before it installs anything.</span>
       </div>
-      ${nightField()}
+      ${appShot()}
     </section>
 
     <section class="figures" aria-label="Keyhop in figures">
@@ -248,59 +234,48 @@ body.landing { overflow-x: clip; }
 .landing-main h2 { font-size: 44px; line-height: 48px; font-weight: 500; letter-spacing: -.035em; text-wrap: balance; }
 .landing-main code { font-family: var(--mono); font-size: .9em; color: var(--text); }
 .landing-main .lab { display: block; }
-.btn.lg { height: 44px; padding: 0 22px; border-radius: 10px; font-size: 15px; }
+.btn.lg { height: 44px; padding: 0 22px; border-radius: 6px; font-size: 15px; }
 .btn.lg svg { width: 16px; height: 16px; fill: none; }
 
-/* The first screen: the offer beside the night field. */
+/* The first screen: the offer beside a picture of the app's own screen. */
 .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 56px; align-items: center; padding: 96px 0 88px; }
 .hero-copy { display: flex; flex-direction: column; gap: 24px; }
 .hero h1 { font-size: 72px; line-height: 72px; font-weight: 500; letter-spacing: -.045em; text-wrap: balance; }
 .hero-copy > p { max-width: 44ch; font-size: 17px; line-height: 27px; color: var(--muted); }
 .hero-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 10px; }
-.install-line { height: 44px; padding: 0 8px 0 16px; display: flex; align-items: center; gap: 12px; border-radius: 10px; background: hsl(var(--on) / .03); box-shadow: inset 0 0 0 1px var(--border); font-family: var(--mono); font-size: 13px; }
+.install-line { height: 44px; padding: 0 8px 0 16px; display: flex; align-items: center; gap: 12px; border-radius: 5px; background: hsl(var(--on) / .03); box-shadow: inset 0 0 0 1px var(--border); font-family: var(--mono); font-size: 13px; }
 .install-line .prompt { color: var(--subtle); }
 .install-line code { font-size: 13px; white-space: nowrap; }
 .hero-note { font-size: 13px; color: var(--subtle); }
 
-/* The field is always the night, in either theme: it is a picture of the app's own field. */
-.field { position: relative; height: 520px; margin: 0; overflow: hidden; border-radius: 16px; background: radial-gradient(80% 55% at 70% 100%, rgba(96, 165, 250, .30), transparent 72%), #13151a; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .10); color: #f5f5f5; }
-.field-sky { position: absolute; inset: 0; width: 100%; height: 100%; }
-.field-sky .star { fill: #fff; opacity: .35; }
-.field-rows { position: absolute; top: 22px; left: 22px; right: 22px; display: grid; gap: 8px; }
-.field-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) 140px 52px; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 10px; background: rgba(26, 26, 26, .86); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .10); }
-.field-row.pick { box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .55); }
-.tool-chip { flex: none; width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, .05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
-.field .mark { width: 16px; height: 16px; fill: #e5e5e5; }
-.field-who { min-width: 0; display: grid; line-height: 18px; }
-.field-who b { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.field-who small { font-size: 12px; color: #8a8a8a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.meter { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .08); overflow: hidden; }
-.meter i { display: block; height: 100%; border-radius: inherit; background: rgba(255, 255, 255, .78); }
-.field-row.pick .meter i { background: #60a5fa; }
-.field-row.out .meter i { background: #fb414a; }
-.field-left { text-align: right; font-size: 13px; font-weight: 600; }
-.field-row.out .field-left { color: #ff8a82; }
-.field-foot { position: absolute; left: 28px; right: 28px; bottom: 36px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
-.bubble { max-width: 290px; margin-bottom: 72px; padding: 12px 14px; display: grid; gap: 2px; border-radius: 10px 10px 2px 10px; background: #f5f5f5; color: #1d1d1f; font-size: 13px; line-height: 18px; box-shadow: 0 10px 28px rgba(0, 0, 10, .45); }
-.bubble b { font-weight: 600; }
-.bubble > span { color: #48484a; }
-.bubble-actions { margin-top: 8px; display: flex; gap: 6px; }
-.bubble-actions span { height: 28px; padding: 0 13px; display: inline-flex; align-items: center; border-radius: 7px; font-size: 12px; font-weight: 500; background: rgba(0, 0, 0, .06); color: #3a3a3c; }
-.bubble-actions .bubble-hop { background: #60a5fa; color: #0a1628; font-weight: 600; }
-.field-pet-wrap { flex: none; display: flex; flex-direction: column; align-items: center; }
-.field-pet { width: 104px; height: auto; }
-.shadow { width: 64px; height: 9px; margin-top: 2px; border-radius: 50%; background: #000; opacity: .45; }
-.field figcaption { position: absolute; left: 22px; bottom: 12px; font-size: 11px; color: #8a8a8a; }
-@media (prefers-reduced-motion: no-preference) {
-  .field-pet { animation: field-hop 2.4s cubic-bezier(.3, .7, .3, 1) infinite; transform-origin: 50% 100%; }
-  .shadow { animation: field-shade 2.4s cubic-bezier(.3, .7, .3, 1) infinite; }
-  .field-sky .star { animation: field-twinkle 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * -.37s); }
-  .bubble { animation: field-bubble .6s cubic-bezier(.2, .8, .2, 1) .5s both; }
-}
-@keyframes field-hop { 0%, 55%, 100% { transform: translateY(0) scale(1, 1); } 62% { transform: translateY(0) scale(1.08, .9); } 75% { transform: translateY(-16px) scale(.96, 1.05); } 88% { transform: translateY(0) scale(1.05, .94); } }
-@keyframes field-shade { 0%, 55%, 100% { transform: scaleX(1); opacity: .45; } 75% { transform: scaleX(.6); opacity: .2; } }
-@keyframes field-twinkle { 0%, 100% { opacity: .15; } 50% { opacity: .55; } }
-@keyframes field-bubble { from { opacity: 0; transform: translateY(6px) scale(.96); } to { opacity: 1; transform: none; } }
+/* The depth is tonal, the way the app draws it: chrome, ground, surface, never a shadow. */
+.shot { margin: 0; border-radius: 8px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--border-strong); overflow: hidden; }
+.shot-bar { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; background: var(--chrome); box-shadow: inset 0 -1px 0 var(--border); font-size: 13px; }
+.shot-bar b { font-weight: 600; }
+.shot-bar span { margin-left: auto; color: var(--subtle); font-family: var(--mono); font-size: 11.5px; }
+.shot-body { padding: 22px 20px 18px; display: grid; gap: 18px; }
+.shot-verdict { margin: 0; font-size: 19px; line-height: 27px; font-weight: 500; letter-spacing: -.015em; text-wrap: balance; }
+.shot-rows { display: grid; gap: 6px; }
+.shot-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) 110px 96px; gap: 14px; align-items: center; padding: 11px 13px; border-radius: 5px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border); }
+.shot-row.pick { box-shadow: inset 0 0 0 1px var(--border-strong); }
+.shot-row.out { background: rgba(224, 87, 70, .06); }
+.shot-row .mark { width: 15px; height: 15px; fill: var(--text); }
+.shot-who { min-width: 0; display: grid; line-height: 18px; }
+.shot-who b { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shot-who small { font-size: 12px; color: var(--subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runway { height: 4px; border-radius: 99px; background: hsl(var(--on) / .08); overflow: hidden; }
+.runway i { display: block; height: 100%; min-width: 4px; border-radius: inherit; background: var(--good); }
+.shot-row.in-use .runway i { background: var(--warn); }
+.shot-row.out .runway i { background: var(--bad); }
+.shot-left { text-align: right; display: grid; line-height: 16px; font-family: var(--mono); font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.shot-left small { font-size: 10.5px; font-weight: 400; color: var(--subtle); white-space: nowrap; }
+.shot-row.in-use .shot-left { color: var(--warn); }
+.shot-row.in-use .shot-left small, .shot-row.out .shot-left small { color: inherit; opacity: .8; }
+.shot-row.out .shot-left { color: var(--bad); }
+.shot-foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-top: 16px; box-shadow: inset 0 1px 0 var(--border); }
+.shot-hop { height: 32px; padding: 0 15px; display: inline-flex; align-items: center; border-radius: 5px; background: var(--primary); color: var(--on-primary); font-size: 13px; font-weight: 600; }
+.shot-today { color: var(--subtle); font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.shot figcaption { padding: 0 16px 12px; font-size: 11px; color: var(--subtle); background: var(--panel); }
 
 /* Figures: one strip, split by hairlines. */
 .figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); box-shadow: inset 0 1px 0 var(--faint), inset 0 -1px 0 var(--faint); }
@@ -317,13 +292,13 @@ body.landing { overflow-x: clip; }
 .band-head .btn { margin-top: 8px; }
 .band-note { font-size: 13px; color: var(--subtle) !important; }
 .split-band { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.6fr); gap: 56px; align-items: start; }
-.panel { margin: 0; padding: 0; border-radius: 12px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--border); overflow: hidden; list-style: none; }
+.panel { margin: 0; padding: 0; border-radius: 8px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--border); overflow: hidden; list-style: none; }
 
 .steps { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.step { padding: 24px; display: flex; flex-direction: column; gap: 14px; border-radius: 12px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--border); transition: box-shadow .25s ease; }
+.step { padding: 24px; display: flex; flex-direction: column; gap: 14px; border-radius: 8px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--border); transition: box-shadow .25s ease; }
 .step:hover { box-shadow: inset 0 0 0 1px var(--border-strong); }
 .step-top { display: flex; align-items: center; justify-content: space-between; }
-.step-n { width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: hsl(var(--on) / .06); font: 600 12px var(--mono); }
+.step-n { width: 28px; height: 28px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; background: hsl(var(--on) / .06); font: 600 12px var(--mono); }
 .step.last .step-n { background: var(--primary); color: var(--on-primary); }
 .step b { font-size: 18px; line-height: 24px; font-weight: 500; letter-spacing: -.01em; }
 .step > span:last-child { font-size: 14px; line-height: 22px; color: var(--muted); }
@@ -338,8 +313,8 @@ body.landing { overflow-x: clip; }
 .tool-table tbody th .mark { width: 16px; height: 16px; margin: -3px 10px 0 0; vertical-align: middle; fill: var(--text); }
 .tool-table td { color: var(--muted); }
 .tool-table td.path { font-family: var(--mono); font-size: 13px; }
-.tag { display: inline-flex; height: 22px; padding: 0 8px; align-items: center; border-radius: 6px; background: hsl(var(--on) / .06); color: var(--muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
-.tag.counted { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--info); }
+.tag { display: inline-flex; height: 22px; padding: 0 8px; align-items: center; border-radius: 5px; background: hsl(var(--on) / .06); color: var(--muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.tag.counted { background: hsl(var(--on) / .1); color: var(--text); }
 
 .settings-list li { padding: 20px 24px; display: flex; align-items: center; gap: 24px; }
 .settings-list li + li { box-shadow: inset 0 1px 0 hsl(var(--on) / .06); }
@@ -347,9 +322,9 @@ body.landing { overflow-x: clip; }
 .settings-list b { font-weight: 600; }
 .settings-list li > span:first-child > span { font-size: 14px; line-height: 22px; color: var(--muted); }
 .switch { position: relative; flex: none; width: 40px; height: 22px; border-radius: 7px; background: hsl(var(--on) / .14); }
-.switch i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 5px; background: #f5f5f5; }
+.switch i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 5px; background: var(--text); }
 .switch.on { background: var(--primary); }
-.switch.on i { left: 21px; }
+.switch.on i { left: 21px; background: var(--on-primary); }
 
 .board-row { min-width: 560px; display: grid; grid-template-columns: 40px minmax(0, 1fr) 120px 110px 90px; gap: 16px; align-items: center; min-height: 56px; padding: 0 22px; font-size: 14px; }
 .board-row + .board-row { box-shadow: inset 0 1px 0 hsl(var(--on) / .06); }
@@ -361,11 +336,11 @@ body.landing { overflow-x: clip; }
 .board-who > span:last-child { min-width: 0; display: grid; line-height: 18px; }
 .board-who b { font-weight: 600; }
 .board-who small { font-size: 12px; color: var(--subtle); }
-.initials { flex: none; width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: hsl(var(--on) / .08); font-size: 11px; font-weight: 600; }
+.initials { flex: none; width: 30px; height: 30px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; background: hsl(var(--on) / .08); font-size: 11px; font-weight: 600; }
 .board-row .eff { font-size: 16px; font-weight: 500; }
-.board-row.is-you { background: color-mix(in srgb, var(--primary) 7%, transparent); }
-.board-row.is-you .eff { color: var(--info); }
-.board-row.is-you .initials { background: color-mix(in srgb, var(--primary) 25%, transparent); }
+.board-row.is-you { background: hsl(var(--on) / .04); }
+.board-row.is-you .eff { color: var(--text); }
+.board-row.is-you .initials { background: hsl(var(--on) / .16); }
 
 .faq-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 40px; }
 .faq-item { padding-top: 18px; display: flex; flex-direction: column; gap: 8px; box-shadow: inset 0 1px 0 var(--faint); }
@@ -374,7 +349,7 @@ body.landing { overflow-x: clip; }
 .faq-item a { color: var(--text); text-underline-offset: 3px; }
 .faq-code { align-self: flex-start; max-width: 100%; padding: 6px 10px; border-radius: 8px; background: hsl(var(--on) / .04); box-shadow: inset 0 0 0 1px var(--faint); font-size: 12.5px !important; overflow-wrap: anywhere; }
 
-.cta { margin: 112px 0 80px; padding: 48px 56px; display: flex; align-items: center; gap: 16px 40px; flex-wrap: wrap; border-radius: 16px; background: radial-gradient(60% 120% at 85% 100%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%), var(--panel); box-shadow: inset 0 0 0 1px var(--border); }
+.cta { margin: 112px 0 80px; padding: 48px 56px; display: flex; align-items: center; gap: 16px 40px; flex-wrap: wrap; border-radius: 8px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border-strong); }
 .cta > span { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 10px; }
 .cta > span > span { color: var(--muted); }
 .cta .btn + .btn { margin-left: -24px; }
@@ -397,11 +372,9 @@ body.landing { overflow-x: clip; }
 @media (max-width: 600px) {
   .hero h1 { font-size: 44px; line-height: 46px; }
   .landing-main h2 { font-size: 32px; line-height: 36px; }
-  .field { height: 480px; }
-  .field-row { grid-template-columns: 30px minmax(0, 1fr) 44px; }
-  .field-row .meter { display: none; }
-  .bubble { margin-bottom: 64px; }
-  .field-pet { width: 80px; }
+  .shot-row { grid-template-columns: 16px minmax(0, 1fr) 72px; }
+  .shot-row .runway { display: none; }
+  .shot-foot { flex-wrap: wrap; }
   .install-line { width: 100%; }
   .install-line code { flex: 1; overflow: hidden; text-overflow: ellipsis; }
   .hero-actions .btn { width: 100%; }

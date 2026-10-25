@@ -76,11 +76,6 @@ impl Client {
         format!("{}/#s={section}&k={}", self.base, self.key)
     }
 
-    pub fn set_theme(&self, theme: &str) -> Result<()> {
-        self.post("/api/appearance", serde_json::json!({ "theme": theme }))?;
-        Ok(())
-    }
-
     pub fn refresh(&self) -> Result<()> {
         self.post("/api/refresh", serde_json::json!({}))?;
         Ok(())

@@ -155,12 +155,19 @@ final class Store: ObservableObject {
             ("tomas", nil, 2_030_000_000, false),
             ("alex", nil, 1_120_000_000, false),
         ]
-        board = CloudBoard(period: "week", metric: "tokens", entries: people.enumerated().map { index, person in
-            CloudBoard.Entry(rank: index + 1, login: person.0, name: person.1, avatarUrl: nil, isPublic: true,
-                             tokens: person.2, cost: Double(person.2) / 1_000_000 * 3.1, requests: person.2 / 42_000,
-                             activeDays: 6, tools: ["claude": person.2 * 5 / 12, "cursor": person.2 / 4, "codex": person.2 / 6, "gemini": person.2 / 6],
-                             isYou: person.3, commits: nil, insertions: nil, deletions: nil)
-        })
+        var entries: [CloudBoard.Entry] = []
+        for (index, person) in people.enumerated() {
+            let tokens: Int = person.2
+            let cost: Double = Double(tokens) / 1_000_000 * 3.1
+            let requests: Int = tokens / 42_000
+            let tools: [String: Int] = ["claude": tokens * 5 / 12, "cursor": tokens / 4, "codex": tokens / 6, "gemini": tokens / 6]
+            entries.append(CloudBoard.Entry(rank: index + 1, login: person.0, name: person.1, avatarUrl: nil, isPublic: true,
+                                            tokens: tokens, cost: cost, requests: requests,
+                                            activeDays: 6, tools: tools,
+                                            isYou: person.3, commits: nil, insertions: nil, deletions: nil,
+                                            efficiency: nil, cacheHit: nil, division: nil, live: nil))
+        }
+        board = CloudBoard(period: "week", metric: "tokens", entries: entries)
     }
 
     private var client: CloudClient? {

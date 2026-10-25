@@ -1,24 +1,27 @@
 import SwiftUI
 import UIKit
 
-/// Coss Blue, the same palette as Keyhop's window and the website. The Mac app's tokens live in an
-/// AppKit file, so the phone keeps its own copy of the few colours it needs rather than importing
-/// a desktop framework.
+/// The Keyhop 2.0 world, the same palette as Keyhop's window and the website: one warm charcoal
+/// ramp, color is state only, paper-on-ink actions, brand blue only in the K mark. The Mac app's
+/// tokens live in an AppKit file, so the phone keeps its own copy of the few colours it needs
+/// rather than importing a desktop framework.
 enum Brand {
-    static let background = Color(red: 0x16 / 255, green: 0x16 / 255, blue: 0x16 / 255)
-    static let panel = Color(red: 0x1A / 255, green: 0x1A / 255, blue: 0x1A / 255)
-    static let raised = Color(red: 0x1F / 255, green: 0x1F / 255, blue: 0x1F / 255)
-    static let border = Color.white.opacity(0.10)
-    static let text = Color(red: 0xF5 / 255, green: 0xF5 / 255, blue: 0xF5 / 255)
-    static let muted = Color(red: 0xA3 / 255, green: 0xA3 / 255, blue: 0xA3 / 255)
-    static let subtle = Color(red: 0x8A / 255, green: 0x8A / 255, blue: 0x8A / 255)
-    /// The one action colour, and the ink on it.
-    static let primary = Color(red: 0x60 / 255, green: 0xA5 / 255, blue: 0xFA / 255)
-    static let onPrimary = Color(red: 0x0A / 255, green: 0x16 / 255, blue: 0x28 / 255)
-    static let good = Color(red: 0x34 / 255, green: 0xD3 / 255, blue: 0x99 / 255)
+    static let background = Color(red: 0x0C / 255, green: 0x0B / 255, blue: 0x0A / 255)
+    static let panel = Color(red: 0x12 / 255, green: 0x11 / 255, blue: 0x10 / 255)
+    static let raised = Color(red: 0x18 / 255, green: 0x16 / 255, blue: 0x13 / 255)
+    static let border = Color(red: 1, green: 250 / 255, blue: 240 / 255).opacity(0.06)
+    static let text = Color(red: 0xEC / 255, green: 0xEA / 255, blue: 0xE5 / 255)
+    static let muted = Color(red: 0xA8 / 255, green: 0xA4 / 255, blue: 0x9B / 255)
+    static let subtle = Color(red: 0x8B / 255, green: 0x87 / 255, blue: 0x80 / 255)
+    /// The one action colour, paper on ink.
+    static let primary = Color(red: 0xEC / 255, green: 0xEA / 255, blue: 0xE5 / 255)
+    static let onPrimary = Color(red: 0x12 / 255, green: 0x11 / 255, blue: 0x10 / 255)
+    /// The one blue, worn only by the K mark's hopped arm.
+    static let blue = Color(red: 0x2F / 255, green: 0x5F / 255, blue: 0xD9 / 255)
+    static let good = Color(red: 0x4F / 255, green: 0xAE / 255, blue: 0x72 / 255)
     /// A limit with nothing left. Amber, the same weight as `good`, never a red alarm.
-    static let spent = Color(red: 0xF5 / 255, green: 0x9E / 255, blue: 0x0B / 255)
-    static let wrong = Color(red: 0xFF / 255, green: 0x8A / 255, blue: 0x82 / 255)
+    static let spent = Color(red: 0xD9 / 255, green: 0xA0 / 255, blue: 0x3A / 255)
+    static let wrong = Color(red: 0xE0 / 255, green: 0x57 / 255, blue: 0x46 / 255)
 
     /// Tier tones, matching the website's: a quiet shift, never a colour badge.
     static func tier(_ key: String) -> Color {
@@ -37,22 +40,13 @@ extension Font {
     /// The app's sizes, scaled with the reader's text size setting. At the default setting every
     /// size is exactly the one the design names; larger settings grow it in step with iOS.
     static func ui(_ size: CGFloat, _ weight: Font.Weight = .regular, _ style: Font.TextStyle = .body) -> Font {
-        // Geist, bundled (UIAppFonts); the system face stands in if it ever fails to load.
-        let base = UIFont(name: weight.geist, size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.uiWeight)
+        // The system face, as every 2.0 surface wears it.
+        let base = UIFont.systemFont(ofSize: size, weight: weight.uiWeight)
         return Font(UIFontMetrics(forTextStyle: style.uiStyle).scaledFont(for: base))
     }
 }
 
 private extension Font.Weight {
-    var geist: String {
-        switch self {
-        case .medium: "Geist-Medium"
-        case .semibold: "Geist-SemiBold"
-        case .bold, .heavy, .black: "Geist-Bold"
-        default: "Geist-Regular"
-        }
-    }
-
     var uiWeight: UIFont.Weight {
         switch self {
         case .medium: .medium
@@ -93,15 +87,16 @@ struct KeyhopMark: View {
     var body: some View {
         Canvas { context, _ in
             let unit = size / 24
-            func square(_ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat, _ level: Double = 1) {
+            func square(_ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat, _ level: Double = 1, color: Color = Brand.text) {
                 let rect = CGRect(x: x * unit, y: y * unit, width: width * unit, height: height * unit)
                 context.fill(Path(roundedRect: rect, cornerRadius: 1.5 * unit),
-                             with: .color(Brand.text.opacity(0.28 + 0.72 * level)))
+                             with: .color(color.opacity(0.28 + 0.72 * level)))
             }
             square(2.5, 2.5, 6, 19.5)
             square(9.6, 9.2, 6, 6)
-            // The upper arm carries the nearest limit, the lower one the next.
-            square(16, 1, 6, 6, arms.isEmpty ? 1 : min(max(arms[0], 0), 1))
+            // The upper arm carries the nearest limit, the lower one the next. As the plain logo
+            // the hopped arm wears the one blue, exactly as the mark does everywhere else.
+            square(16, 1, 6, 6, arms.isEmpty ? 1 : min(max(arms[0], 0), 1), color: arms.isEmpty ? Brand.blue : Brand.text)
             square(16, 17, 6, 6, arms.count > 1 ? min(max(arms[1], 0), 1) : (arms.isEmpty ? 1 : 0))
         }
         .frame(width: size, height: size)
@@ -146,7 +141,7 @@ struct PressStyle: ButtonStyle {
             .foregroundStyle(ink)
             .frame(maxWidth: .infinity, minHeight: 52)
             .background(fill.opacity(configuration.isPressed ? 0.78 : 1),
-                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
@@ -247,8 +242,8 @@ struct Card<Content: View>: View {
     var body: some View {
         content
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Brand.panel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Brand.border, lineWidth: 1))
+            .background(Brand.panel, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Brand.border, lineWidth: 1))
     }
 }
 

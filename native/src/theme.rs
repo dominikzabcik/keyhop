@@ -1,10 +1,10 @@
-//! Coss Blue, the window's tokens (Sources/Keyhop/Dashboard/Page/DashboardStyles.swift), night and day.
+//! The Keyhop 2.0 world, the window's tokens (Sources/Keyhop/Dashboard/Page/DashboardStyles.swift):
+//! one warm charcoal ramp, color is state only, paper-on-ink actions.
 
 use gpui_kit::{Rgba, rgb, rgba};
 
 #[derive(Clone, Copy)]
 pub struct Theme {
-    pub day: bool,
     pub bg: Rgba,
     pub sidebar: Rgba,
     pub card: Rgba,
@@ -16,7 +16,9 @@ pub struct Theme {
     pub accent2: Rgba,
     pub track: Rgba,
     pub ink: Rgba,
-    /// The one action colour: primary buttons.
+    /// Brand blue: only the K mark's hopped arm.
+    pub blue: Rgba,
+    /// The one action colour: primary buttons, paper on ink.
     pub primary: Rgba,
     pub on_primary: Rgba,
     pub warn: Rgba,
@@ -27,56 +29,28 @@ pub struct Theme {
 }
 
 impl Theme {
-    pub fn night() -> Self {
+    pub fn world() -> Self {
         Self {
-            day: false,
-            bg: rgb(0x161616),
-            sidebar: rgb(0x111111),
-            card: rgb(0x1a1a1a),
-            text: rgb(0xf5f5f5),
-            muted: rgb(0xa3a3a3),
-            subtle: rgb(0x8a8a8a),
-            border: rgba(0xffffff1a),
-            accent: rgba(0xffffff0f),
-            accent2: rgba(0xffffff1a),
-            track: rgba(0xffffff14),
-            ink: rgb(0xf5f5f5),
-            primary: rgb(0x60a5fa),
-            on_primary: rgb(0x0a1628),
-            warn: rgb(0xf59e0b),
-            warn_ink: rgb(0xfbbf24),
-            good: rgb(0x34d399),
-            bad: rgb(0xff8a82),
-            info: rgb(0x93c5fd),
+            bg: rgb(0x0c0b0a),
+            sidebar: rgb(0x090807),
+            card: rgb(0x121110),
+            text: rgb(0xeceae5),
+            muted: rgb(0xa8a49b),
+            subtle: rgb(0x8b8780),
+            border: rgba(0xfffaf00f),
+            accent: rgba(0xfffaf00d),
+            accent2: rgba(0xfffaf01c),
+            track: rgb(0x201d19),
+            ink: rgb(0xeceae5),
+            blue: rgb(0x2f5fd9),
+            primary: rgb(0xeceae5),
+            on_primary: rgb(0x121110),
+            warn: rgb(0xd9a03a),
+            warn_ink: rgb(0xd9a03a),
+            good: rgb(0x4fae72),
+            bad: rgb(0xe05746),
+            info: rgb(0xa8a49b),
         }
-    }
-
-    pub fn day() -> Self {
-        Self {
-            day: true,
-            bg: rgb(0xfafafa),
-            sidebar: rgb(0xf4f4f4),
-            card: rgb(0xffffff),
-            text: rgb(0x171717),
-            muted: rgb(0x525252),
-            subtle: rgb(0x737373),
-            border: rgba(0x00000014),
-            accent: rgba(0x0000000b),
-            accent2: rgba(0x00000014),
-            track: rgba(0x00000014),
-            ink: rgb(0x171717),
-            primary: rgb(0x2563eb),
-            on_primary: rgb(0xffffff),
-            warn: rgb(0xb86e12),
-            warn_ink: rgb(0x9a5b0c),
-            good: rgb(0x1f8a4c),
-            bad: rgb(0xc44b3c),
-            info: rgb(0x2563eb),
-        }
-    }
-
-    pub fn named(name: &str) -> Self {
-        if name == "day" { Self::day() } else { Self::night() }
     }
 
     /// A colour at a share of its own alpha, for tinted pills.

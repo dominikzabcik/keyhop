@@ -283,7 +283,8 @@ pub fn left(account: &Account) -> Option<f64> {
 }
 
 /// Home's tools share one blue, lightest for the largest share (KB-Home).
-pub const SHARE_BLUES: [u32; 6] = [0xa8cefc, 0x80b7fb, 0x60a5fa, 0x4d84c8, 0x3d6aa0, 0x2e4f78];
+/// The window's warm grey ramp for tool shares: the mix encodes order, never a hue.
+pub const SHARE_GREYS: [u32; 6] = [0xcfcbc3, 0xb3afa7, 0x96928a, 0x78746d, 0x5a5751, 0x3a3731];
 
 /// The pet's stages and the lifetime tokens each starts at.
 pub const PET_STAGES: [(&str, &str, u64); 6] = [

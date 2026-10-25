@@ -27,11 +27,6 @@ targets:
         group: Shared
       - path: Resources
         buildPhase: resources
-      - path: ../Assets/fonts
-        group: Resources
-        buildPhase: resources
-        excludes:
-          - OFL.txt
       - path: .generated/Assets.xcassets
         group: Resources
     info:
@@ -45,13 +40,6 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIUserInterfaceStyle: Dark
-        UIAppFonts:
-          - Geist-Regular.ttf
-          - Geist-Medium.ttf
-          - Geist-SemiBold.ttf
-          - Geist-Bold.ttf
-          - GeistMono-Regular.ttf
-          - GeistMono-Medium.ttf
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:

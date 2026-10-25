@@ -116,7 +116,7 @@ struct LinkView: View {
                         .foregroundStyle(Brand.muted)
                         .accessibilityAddTraits(.isHeader)
                     Text(pending.userCode)
-                        .font(.custom("GeistMono-Medium", size: 30))
+                        .font(.system(size: 30, weight: .medium, design: .monospaced))
                         .tracking(3)
                         .foregroundStyle(Brand.text)
                         .textSelection(.enabled)

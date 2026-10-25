@@ -73,8 +73,7 @@ fn fetch(client: &Client, range: &str) -> Loaded {
 }
 
 impl KeyhopWindow {
-    pub fn new(client: Client, section: Section, theme: Option<&str>, cx: &mut Context<Self>) -> Self {
-        let pinned = theme.map(str::to_string);
+    pub fn new(client: Client, section: Section, cx: &mut Context<Self>) -> Self {
         let window = Self {
             client,
             state: None,
@@ -89,7 +88,7 @@ impl KeyhopWindow {
             problem: None,
             toast: None,
             section,
-            theme: Theme::named(pinned.as_deref().unwrap_or("night")),
+            theme: Theme::world(),
             busy: false,
         };
         // Read everything now and every twenty seconds, off the main thread.
@@ -97,10 +96,9 @@ impl KeyhopWindow {
             loop {
                 let Ok((client, range)) = this.read_with(cx, |this, _| (this.client.clone(), this.range)) else { break };
                 let loaded = cx.background_executor().spawn(async move { fetch(&client, range) }).await;
-                let pinned = pinned.clone();
                 if this
                     .update(cx, |this, cx| {
-                        this.take(loaded, pinned.is_none());
+                        this.take(loaded);
                         cx.notify();
                     })
                     .is_err()
@@ -114,7 +112,7 @@ impl KeyhopWindow {
         window
     }
 
-    fn take(&mut self, loaded: Loaded, follow_theme: bool) {
+    fn take(&mut self, loaded: Loaded) {
         if loaded.quota.is_some() {
             self.quota = loaded.quota;
         }
@@ -129,9 +127,6 @@ impl KeyhopWindow {
         }
         match loaded.state {
             Ok(state) => {
-                if follow_theme {
-                    self.theme = Theme::named(&state.appearance.theme);
-                }
                 self.state = Some(state);
                 self.problem = None;
             }
@@ -145,7 +140,7 @@ impl KeyhopWindow {
         cx.spawn(async move |this, cx| {
             let loaded = cx.background_executor().spawn(async move { fetch(&client, range) }).await;
             let _ = this.update(cx, |this, cx| {
-                this.take(loaded, true);
+                this.take(loaded);
                 cx.notify();
             });
         })
@@ -173,14 +168,6 @@ impl KeyhopWindow {
             });
         })
         .detach();
-    }
-
-    fn toggle_theme(&mut self, cx: &mut Context<Self>) {
-        let next = if self.theme.day { "night" } else { "day" };
-        self.theme = Theme::named(next);
-        cx.notify();
-        let client = self.client.clone();
-        cx.background_executor().spawn(async move { client.set_theme(next) }).detach();
     }
 
     fn refresh(&mut self, cx: &mut Context<Self>) {
@@ -329,7 +316,7 @@ impl KeyhopWindow {
                         .px(px(6.))
                         .h(px(20.))
                         .rounded(px(6.))
-                        .bg(Theme::tint(rgb(0xfb414a), 0.16))
+                        .bg(Theme::tint(rgb(0xe05746), 0.16))
                         .text_color(t.bad)
                         .text_size(px(11.))
                         .font_weight(FontWeight::SEMIBOLD)
@@ -367,8 +354,8 @@ impl KeyhopWindow {
                     top.and_then(|l| l.resets_at.as_deref()).map(model::until).unwrap_or_default()
                 };
                 let fill = match left {
-                    _ if account.error.is_some() => rgb(0xfb414a),
-                    Some(l) if l <= 15.0 => rgb(0xfb414a),
+                    _ if account.error.is_some() => rgb(0xe05746),
+                    Some(l) if l <= 15.0 => rgb(0xe05746),
                     Some(l) if l <= 40.0 => t.warn,
                     _ => Theme::tint(t.text, 0.78),
                 };
@@ -425,7 +412,7 @@ impl KeyhopWindow {
                     .gap(px(12.))
                     .h(px(40.))
                     .px(px(4.))
-                    .child(div().flex_none().size(px(32.)).rounded(px(7.)).bg(t.primary).flex().items_center().justify_center().child(mark_glyph(t.on_primary)))
+                    .child(div().flex_none().child(mark_glyph(t.text, t.blue, 22.)))
                     .child(
                         div()
                             .flex()
@@ -574,26 +561,6 @@ impl KeyhopWindow {
             .when(sample, |d| d.child(div().flex_none().px(px(8.)).h(px(24.)).rounded(px(6.)).bg(Theme::tint(t.warn, 0.18)).text_color(t.warn_ink).text_size(px(12.)).font_weight(FontWeight::SEMIBOLD).flex().items_center().child("Sample")))
             .child(
                 div()
-                    .id("theme")
-                    .flex_none()
-                    .size(px(34.))
-                    .rounded(px(8.))
-                    .bg(t.card)
-                    .border_1()
-                    .border_color(t.border)
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .text_size(px(15.))
-                    .text_color(t.muted)
-                    .cursor_pointer()
-                    .hover(|s| s.text_color(t.text))
-                    .on_click(cx.listener(|this, _, _, cx| this.toggle_theme(cx)))
-                    // The field it switches to: the moon by day, the sun by night.
-                    .child(if t.day { "☾" } else { "☀" }),
-            )
-            .child(
-                div()
                     .id("refresh")
                     .flex_none()
                     .size(px(34.))
@@ -666,7 +633,7 @@ impl KeyhopWindow {
         let mut tools: Vec<_> = usage.tools.iter().filter(|tool| tool.figures.tokens > 0).collect();
         tools.sort_by(|a, b| b.figures.tokens.cmp(&a.figures.tokens));
         let sum = tools.iter().map(|tool| tool.figures.tokens).sum::<u64>().max(1) as f64;
-        let colour = |i: usize| rgb(model::SHARE_BLUES[i.min(model::SHARE_BLUES.len() - 1)]);
+        let colour = |i: usize| rgb(model::SHARE_GREYS[i.min(model::SHARE_GREYS.len() - 1)]);
         let side = total.input + total.cache_read + total.cache_write;
         let mut facts = vec![format!("{} requests", model::count(total.requests))];
         if side > 0 {
@@ -821,61 +788,20 @@ impl KeyhopWindow {
             },
             None => "Your pet".into(),
         };
-        let sky = if t.day { rgb(0xe9eef6) } else { rgb(0x13151a) };
-        let hills = if t.day { [rgb(0xd9e1ec), rgb(0xcfd8e5)] } else { [rgb(0x1c1f26), rgb(0x171a20)] };
-        let day = t.day;
         let quiet = self.later.as_deref() == Some(line.title.as_str());
         let later_title = line.title.clone();
         let drawn = pet.clone();
+        // The pet stands on a quiet tonal panel; the 2.0 world keeps no star scene.
         div()
             .relative()
             .flex()
             .flex_col()
             .min_h(px(400.))
-            .rounded(px(12.))
+            .rounded(px(8.))
             .overflow_hidden()
-            .bg(sky)
+            .bg(t.card)
             .border_1()
             .border_color(t.border)
-            .child(
-                canvas(
-                    |_, _, _| (),
-                    move |bounds, _, window, _| {
-                        let w = bounds.size.width;
-                        let h = bounds.size.height;
-                        let o = bounds.origin;
-                        if !day {
-                            let mut seed: u32 = 7;
-                            for _ in 0..34 {
-                                let mut next = || {
-                                    seed = (seed.wrapping_mul(9301).wrapping_add(49297)) % 233_280;
-                                    seed as f32 / 233_280.0
-                                };
-                                let (x, y, big) = (next(), next() * 0.62, next() > 0.8);
-                                let r = if big { px(2.) } else { px(1.4) };
-                                window.paint_quad(fill(Bounds::new(point(o.x + w * x, o.y + h * y), size(r, r)), Rgba { r: 1., g: 1., b: 1., a: 0.35 }));
-                            }
-                        }
-                        // Two hills across the bottom, as on the board: quadratic curves over the width.
-                        for (i, (lift, crest)) in [(0.79_f32, 0.73_f32), (0.89, 0.85)].into_iter().enumerate() {
-                            let mut path = PathBuilder::fill();
-                            path.move_to(point(o.x, o.y + h * lift));
-                            path.curve_to(point(o.x + w * 0.52, o.y + h * (lift + 0.01)), point(o.x + w * 0.26, o.y + h * crest));
-                            path.curve_to(point(o.x + w, o.y + h * (lift - 0.03)), point(o.x + w * 0.8, o.y + h * (crest + 0.06)));
-                            path.line_to(point(o.x + w, o.y + h));
-                            path.line_to(point(o.x, o.y + h));
-                            path.close();
-                            if let Ok(path) = path.build() {
-                                window.paint_path(path, hills[i]);
-                            }
-                        }
-                    },
-                )
-                .absolute()
-                .top_0()
-                .left_0()
-                .size_full(),
-            )
             .child(
                 div()
                     .relative()
@@ -885,7 +811,7 @@ impl KeyhopWindow {
                     .px(px(24.))
                     .pt(px(22.))
                     .child(self.lab(&title))
-                    .when(streak > 0, |d| d.child(div().flex().items_center().gap(px(6.)).h(px(22.)).px(px(8.)).rounded(px(6.)).bg(t.accent2).text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).child(div().size(px(6.)).rounded(px(3.)).bg(rgb(0xffb27a))).child(format!("On a {streak}-day streak")))),
+                    .when(streak > 0, |d| d.child(div().flex().items_center().gap(px(6.)).h(px(22.)).px(px(8.)).rounded(px(6.)).bg(t.accent2).text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).child(div().size(px(6.)).rounded(px(3.)).bg(rgb(0xd9a03a))).child(format!("On a {streak}-day streak")))),
             )
             .children(pet.as_ref().map(|p| {
                 div()
@@ -917,15 +843,17 @@ impl KeyhopWindow {
                                 .mb(px(64.))
                                 .p(px(12.))
                                 .rounded(px(8.))
-                                .bg(if day { rgb(0xffffff) } else { rgb(0xf5f5f5) })
-                                .text_color(rgb(0x1d1d1f))
+                                .bg(rgb(0x201d19))
+                                .border_1()
+                                .border_color(t.border)
+                                .text_color(t.text)
                                 .text_size(px(13.))
                                 .flex()
                                 .flex_col()
                                 .gap(px(2.))
                                 .child(div().font_weight(FontWeight::SEMIBOLD).child(line.title.clone()))
-                                .child(div().text_color(rgb(0x48484a)).child(line.sub.clone()))
-                                .when(!line.note.is_empty(), |d| d.child(div().text_color(rgb(0x9a5b0c)).child(line.note.clone())))
+                                .child(div().text_color(t.muted).child(line.sub.clone()))
+                                .when(!line.note.is_empty(), |d| d.child(div().text_color(t.warn_ink).child(line.note.clone())))
                                 .children(line.target.clone().map(|id| {
                                     div()
                                         .flex()
@@ -937,9 +865,9 @@ impl KeyhopWindow {
                                                 .id("pet-later")
                                                 .px(px(10.))
                                                 .h(px(28.))
-                                                .rounded(px(7.))
-                                                .bg(rgba(0x0000000f))
-                                                .text_color(rgb(0x3a3a3c))
+                                                .rounded(px(5.))
+                                                .bg(t.accent)
+                                                .text_color(t.muted)
                                                 .text_size(px(12.))
                                                 .font_weight(FontWeight::MEDIUM)
                                                 .flex()
@@ -974,7 +902,7 @@ impl KeyhopWindow {
                     .px(px(22.))
                     .pt(px(14.))
                     .pb(px(16.))
-                    .bg(if day { rgba(0xfafafab8) } else { rgba(0x161616b8) })
+                    .bg(rgba(0x121110b8))
                     .border_t_1()
                     .border_color(Theme::tint(t.text, 0.06))
                     .children(model::PET_STAGES.iter().enumerate().map(|(i, (_, name, _))| {
@@ -1008,11 +936,8 @@ impl KeyhopWindow {
         let t = self.theme;
         let days: Vec<_> = usage.heatmap.iter().rev().take(17 * 7).rev().cloned().collect();
         let levels = model::heat_levels(&days);
-        let colours: [Rgba; 5] = if t.day {
-            [rgba(0x0000000f), rgb(0xdbeafe), rgb(0x93c5fd), rgb(0x3b82f6), rgb(0x1d4ed8)]
-        } else {
-            [rgba(0xffffff0f), rgb(0x1e3a5f), rgb(0x2e5c99), rgb(0x4d84c8), rgb(0x93c5fd)]
-        };
+        // The activity heatmap, as the window draws it: one neutral ramp, never a hue.
+        let colours: [Rgba; 5] = [rgba(0xfffaf00d), rgba(0xfffaf02e), rgba(0xfffaf05c), rgba(0xfffaf099), rgba(0xfffaf0e6)];
         let s = &usage.streak;
         let note = if s.current > 0 {
             if s.current >= s.longest { format!("{}-day streak, your best", s.current) } else { format!("{}-day streak · best {}", s.current, s.longest) }
@@ -1092,7 +1017,7 @@ impl KeyhopWindow {
                     .pt(px(20.))
                     .pb(px(6.))
                     .child(self.lab("Needs your attention"))
-                    .when(count > 0, |d| d.child(div().px(px(6.)).h(px(20.)).rounded(px(6.)).bg(Theme::tint(rgb(0xfb414a), 0.16)).text_color(t.bad).text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).flex().items_center().child(count.to_string()))),
+                    .when(count > 0, |d| d.child(div().px(px(6.)).h(px(20.)).rounded(px(6.)).bg(Theme::tint(rgb(0xe05746), 0.16)).text_color(t.bad).text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).flex().items_center().child(count.to_string()))),
             )
             .when(count == 0, |d| d.child(div().px(px(24.)).pt(px(12.)).pb(px(20.)).text_size(px(13.)).text_color(t.muted).child("Nothing needs you. Every login in use has room.")))
             .child(div().flex().flex_col().px(px(20.)).pb(px(12.)).children(rows))
@@ -1233,7 +1158,7 @@ impl KeyhopWindow {
                                     .gap(px(6.))
                                     .child(div().truncate().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child(account.name.clone()))
                                     .when(account.active, |d| d.child(div().px(px(6.)).h(px(18.)).rounded(px(5.)).bg(Theme::tint(t.primary, 0.18)).text_color(t.info).text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).flex().items_center().child("In use")))
-                                    .when(account.error.is_some(), |d| d.child(div().px(px(6.)).h(px(18.)).rounded(px(5.)).bg(Theme::tint(rgb(0xfb414a), 0.16)).text_color(t.bad).text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).flex().items_center().child("Signed out"))),
+                                    .when(account.error.is_some(), |d| d.child(div().px(px(6.)).h(px(18.)).rounded(px(5.)).bg(Theme::tint(rgb(0xe05746), 0.16)).text_color(t.bad).text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).flex().items_center().child("Signed out"))),
                             )
                             .child(div().truncate().text_size(px(12.)).text_color(t.muted).child(meta)),
                     ),
@@ -1349,10 +1274,20 @@ fn usd(amount: f64) -> String {
     }
 }
 
-/// Keyhop's mark: four keys, the tall one on the left.
-fn mark_glyph(ink: Rgba) -> impl IntoElement {
-    let key = |x: f32, y: f32, w: f32, h: f32| div().absolute().left(px(x)).top(px(y)).w(px(w)).h(px(h)).bg(ink);
-    div().relative().size(px(16.)).child(key(2.3, 2.3, 3.4, 11.4)).child(key(6.9, 5.7, 3.4, 3.4)).child(key(10.3, 2.3, 3.4, 3.4)).child(key(10.3, 10.3, 3.4, 3.4))
+/// Keyhop's mark, the canonical 24-grid K: the tall key, the middle key, the hopped arm in brand
+/// blue, the lower arm. Bare ink on the ground, never on a tile.
+fn mark_glyph(ink: Rgba, hop: Rgba, size: f32) -> impl IntoElement {
+    let s = size / 24.;
+    let key = move |x: f32, y: f32, w: f32, h: f32, r: f32, fill: Rgba| {
+        div().absolute().left(px(x * s)).top(px(y * s)).w(px(w * s)).h(px(h * s)).rounded(px(r * s)).bg(fill)
+    };
+    div()
+        .relative()
+        .size(px(size))
+        .child(key(2.5, 2.5, 6., 19.5, 2., ink))
+        .child(key(9.6, 9.2, 6., 6., 1.5, ink))
+        .child(key(16., 1., 6., 6., 1.5, hop))
+        .child(key(16., 17., 6., 6., 1.5, ink))
 }
 
 /// The pet painted from its shapes, `height` pixels tall; nothing when there is no pet yet.

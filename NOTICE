@@ -13,7 +13,7 @@ scripts/update-pricing.py.
 Linux and Windows builds include SQLite (https://sqlite.org), which is in the
 public domain, in Sources/CSQLite.
 
-The iPhone app and native/ use the Geist and Geist Mono typefaces
+The native/ window uses the Geist and Geist Mono typefaces
 (https://vercel.com/font), Copyright (c) 2023 Vercel, in collaboration with
 basement.studio, licensed under the SIL Open Font License 1.1
 (https://openfontlicense.org), from the TrueType files in Assets/fonts, with

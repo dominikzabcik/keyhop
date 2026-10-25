@@ -2,7 +2,7 @@ import { test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 
 const pages: { path: string; heading: string; text?: string; link?: string; headings?: string[] }[] = [
-  { path: '/', heading: 'Every account.', text: 'Download Keyhop' },
+  { path: '/', heading: 'Every login, one hop away.', text: 'Bring every login.' },
   { path: '/download', heading: 'Ready on every desktop.', headings: ['macOS', 'Linux', 'Windows'] },
   { path: '/leaderboard', heading: 'Leaderboard' },
   { path: '/season', heading: 'Season', text: 'A season runs for one calendar month.' },

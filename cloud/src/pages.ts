@@ -430,16 +430,7 @@ pages.get("/u/:login", async (c) => {
         </div>
         ${person.public === 1 ? html`<label class="share">Share this profile<input class="field mono" readonly value="${url}"></label>` : ""}
       </section>
-      <section class="card wrapped-link"><div class="card-body setting-row"><div><b>${new Date().getUTCFullYear()}, wrapped</b><p class="muted" style="margin:4px 0 0;font-size:13px">The year so far: tokens, tools, streaks and commits, on one page.</p></div><a class="btn sm secondary" href="/u/${person.login}/wrapped">Open</a></div></section>
-      ${person.public === 1
-        ? html`<section class="card">
-            <div class="card-head"><h2>Widgets</h2><span class="hint">README</span></div>
-            <div class="card-body form">
-              ${widgetFields(url, PERSON_WIDGETS)}
-              <p class="muted" style="margin:0;font-size:13px">The badge shows tokens for the last 7 days. The year is a day for each of the last 53 weeks, shaded by that day's tokens. Add <span class="mono">?metric=commits&amp;period=month</span> to a badge, and <span class="mono">?theme=light</span> on a light page. Metrics: tokens, cost, requests, commits, lines, efficiency, cache, streak, rank, tier. Periods: today, week, month, all, season.</p>
-            </div>
-          </section>`
-        : ""}
+      <div class="split pet-season">
       <section class="card pet-card">
         ${raw(creatureMarkup(creature))}
         <div class="grow">
@@ -458,17 +449,7 @@ pages.get("/u/:login", async (c) => {
           <p class="next">${place.rank ? `#${place.rank} of ${place.players}${place.division ? ` in ${DIVISION_NAMES[place.division]}` : ""}, with ${tokens(place.tokens)} tokens.` : `Not ranked this season yet, with ${tokens(place.tokens)} tokens.`}</p>
         </div>
       </section>
-      ${keepsCard(claim, "profile", isSelf ? c.req.query("claim") : undefined, isSelf)}
-      ${goals && goals.length ? questsCard(goals) : ""}
-      <section class="card">
-        <div class="card-head"><h2>Badges</h2><span class="hint">${earned.length} of ${badges.length}</span></div>
-        <div class="badges">${badges.map(
-          (entry) => html`<div class="badge-row ${entry.earned ? "" : "locked"}">
-            ${badgeMark(entry.key)}
-            <span><b>${entry.name}</b><small>${entry.earned && entry.day ? `Earned ${entry.day}` : entry.note}</small></span>
-          </div>`,
-        )}</div>
-      </section>
+      </div>
       <section class="stats">
         <div class="card stat"><div class="label">Tokens, 30 days</div><div class="value">${tokens(stats.month.tokens)}</div><div class="foot">${count(stats.month.requests)} requests</div></div>
         <div class="card stat"><div class="label">API value, 30 days</div><div class="value">${usd(stats.month.costMicros)}</div><div class="foot">At standard API prices</div></div>
@@ -487,7 +468,28 @@ pages.get("/u/:login", async (c) => {
           <span>Requests</span><span class="mono">${count(stats.allTime.requests)}</span>
           <span>Active days</span><span class="mono">${count(stats.activeDays)}</span>
         </div></div>
-      </section>`,
+      </section>
+      ${keepsCard(claim, "profile", isSelf ? c.req.query("claim") : undefined, isSelf)}
+      ${goals && goals.length ? questsCard(goals) : ""}
+      <section class="card">
+        <div class="card-head"><h2>Badges</h2><span class="hint">${earned.length} of ${badges.length}</span></div>
+        <div class="badges">${badges.map(
+          (entry) => html`<div class="badge-row ${entry.earned ? "" : "locked"}">
+            ${badgeMark(entry.key)}
+            <span><b>${entry.name}</b><small>${entry.earned && entry.day ? `Earned ${entry.day}` : entry.note}</small></span>
+          </div>`,
+        )}</div>
+      </section>
+      <section class="card wrapped-link"><div class="card-body setting-row"><div><b>${new Date().getUTCFullYear()}, wrapped</b><p class="muted" style="margin:4px 0 0;font-size:13px">The year so far: tokens, tools, streaks and commits, on one page.</p></div><a class="btn sm secondary" href="/u/${person.login}/wrapped">Open</a></div></section>
+      ${person.public === 1
+        ? html`<section class="card">
+            <div class="card-head"><h2>Widgets</h2><span class="hint">README</span></div>
+            <div class="card-body form">
+              ${widgetFields(url, PERSON_WIDGETS)}
+              <p class="muted" style="margin:0;font-size:13px">The badge shows tokens for the last 7 days. The year is a day for each of the last 53 weeks, shaded by that day's tokens. Add <span class="mono">?metric=commits&amp;period=month</span> to a badge, and <span class="mono">?theme=light</span> on a light page. Metrics: tokens, cost, requests, commits, lines, efficiency, cache, streak, rank, tier. Periods: today, week, month, all, season.</p>
+            </div>
+          </section>`
+        : ""}`,
     {
       description: `${display} used ${tokens(stats.month.tokens)} tokens in the last 30 days. See their Keyhop profile.`,
       index: person.public === 1,

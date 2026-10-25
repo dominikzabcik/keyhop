@@ -22,7 +22,7 @@ export const APP_WIDTHS = [
 
 /** Pages anyone can reach without signing in. */
 export const SITE_SCREENS = [
-  { name: "home", path: "/", mustSay: ["Every account.", "One hop away.", "Download Keyhop"] },
+  { name: "home", path: "/", mustSay: ["Every login, one hop away.", "Download Keyhop"] },
   { name: "download", path: "/download", mustSay: ["macOS", "Linux", "Windows"] },
   { name: "leaderboard", path: "/leaderboard", mustSay: ["Leaderboard"] },
   { name: "season", path: "/season", mustSay: ["Season"] },

@@ -13,10 +13,9 @@ scripts/update-pricing.py.
 Linux and Windows builds include SQLite (https://sqlite.org), which is in the
 public domain, in Sources/CSQLite.
 
-The window and keyhop.app use the Geist and Geist Mono typefaces
+keyhop.app, the iPhone app and native/ use the Geist and Geist Mono typefaces
 (https://vercel.com/font), Copyright (c) 2023 Vercel, in collaboration with
 basement.studio, licensed under the SIL Open Font License 1.1
-(https://openfontlicense.org). They are embedded in
-Sources/Keyhop/Dashboard/Page/DashboardFonts.swift, which the Mac app also
-registers for its own views; the iPhone app and native/ use the TrueType files
-in Assets/fonts, with the license beside them.
+(https://openfontlicense.org). keyhop.app serves them from cloud/src/fonts.ts;
+the iPhone app and native/ use the TrueType files in Assets/fonts, with the
+license beside them.

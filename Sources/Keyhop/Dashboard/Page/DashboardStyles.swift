@@ -110,16 +110,15 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .page { max-width: 1320px; margin: 0 auto; display: grid; gap: 14px; }
 
 /* MARK: The core screen
-   The comp verbatim: verdict, ranked login rows, today. One sheet on the ground. */
-.main:has(.core) { display: grid; align-content: safe center; align-items: start; justify-items: center; padding: 24px 16px; }
-.core {
-  width: min(860px, 100%); background: var(--g1);
-  border: 1px solid var(--line-strong); border-radius: 8px;
-  overflow: hidden;
-}
+   The window is the sheet: verdict, ranked login rows, today, straight on the surface and
+   parted by hairlines. No card inside the window. */
+.main:has(.core) { display: flex; flex-direction: column; padding: 0; }
+.main:has(.core) > .page { width: 100%; max-width: none; margin: 0; padding: 16px 24px 0; }
+.core { flex: 1; display: flex; flex-direction: column; }
+.core .logins, .core .setup-list { flex: 1; }
 .verdict {
   display: flex; align-items: center; gap: 16px;
-  padding: 18px 20px; border-bottom: 1px solid var(--line);
+  padding: 20px 24px; border-bottom: 1px solid var(--line);
 }
 .verdict p { margin: 0 auto 0 0; font-size: 15px; font-weight: 500; letter-spacing: -.01em; min-width: 0; view-transition-name: verdict; }
 .verdict p .detail { color: var(--fg2); font-weight: 400; }
@@ -130,7 +129,7 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
   grid-template-areas: "dot tool login runway left";
   grid-template-columns: 8px 112px 220px minmax(0, 1fr) 190px;
   gap: 14px; align-items: center;
-  height: 47px; padding: 0 20px;
+  height: 47px; padding: 0 24px;
   border-bottom: 1px solid var(--line);
   transition: background .15s ease-out;
 }
@@ -167,7 +166,7 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
   display: grid;
   grid-template-columns: 8px 112px 220px minmax(0, 1fr) 190px;
   gap: 6px 14px; align-items: end;
-  padding: 16px 20px 14px;
+  padding: 16px 24px 14px;
   background: var(--chrome);
 }
 .core .figure { grid-column: 1 / 4; align-self: start; min-width: 0; }
@@ -190,7 +189,6 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .core .links { grid-column: 1 / 6; display: flex; gap: 16px; justify-content: flex-end; margin-top: 6px; }
 .core .links a { color: var(--fg3); font-size: 12px; text-decoration: none; transition: color .15s ease-out; }
 .core .links a:hover { color: var(--fg); }
-.setup-list { background: var(--g1); }
 .setup-mark { flex: none; width: 24px; height: 24px; display: grid; place-items: center; color: var(--fg2); }
 .setup-mark .mark { width: 15px; height: 15px; }
 

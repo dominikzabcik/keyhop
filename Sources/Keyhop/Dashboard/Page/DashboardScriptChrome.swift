@@ -154,7 +154,7 @@ extension DashboardPage {
     const page = { home: homePage, usage: usagePage, limits: limitsPage, coach: coachPage, plans: plansPage, budgets: budgetsPage, leaderboard: leaderboardPage, season: seasonPage, teams: teamsPage, profile: profilePage, settings: settingsPage }[ui.section](tools);
     renderViewbar(page.toolbar || "");
     const offline = ui.offline ? `<div class="notice">${icon("alert")}<div><p>${esc(ui.offline)}</p></div></div>` : "";
-    $("#main").innerHTML = ui.section === "home" ? `${offline ? `<div class="page" style="width:min(860px,100%)">${offline}</div>` : ""}${page.body}` : `<div class="page">${offline}${page.body}</div>`;
+    $("#main").innerHTML = ui.section === "home" ? `${offline ? `<div class="page">${offline}</div>` : ""}${page.body}` : `<div class="page">${offline}${page.body}</div>`;
     $("#main").setAttribute("aria-busy", (ui.loadingUsage || data.state.refreshing) ? "true" : "false");
     applyPending();
     renderActivity();

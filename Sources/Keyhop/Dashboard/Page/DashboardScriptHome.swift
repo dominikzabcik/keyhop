@@ -153,7 +153,7 @@ extension DashboardPage {
       return left == null ? [] : [{ tool, active, left }];
     }).sort((a, b) => a.left - b.left);
     const next = rows[0];
-    if (!next) return { text: `No limits to read yet. <span class="detail">Add a login in Limits.</span>`, button: "" };
+    if (!next) return { text: `No limits to read yet. <span class="detail">Add a login ${isStatic ? "in Limits" : "below"}.</span>`, button: "" };
     if (next.active.error) {
       return { text: `${esc(next.tool.name)} is signed out. <span class="detail">Sign in again from Limits.</span>`, button: "" };
     }
@@ -203,11 +203,19 @@ extension DashboardPage {
     return `<section class="today">${figure}${shares}<nav class="links" aria-label="More">${links}</nav></section>`;
   }
 
+  // Where a new login comes in: a quiet fold under the rows with the same add flow Limits has.
+  function addFold(tools) {
+    const addable = tools.filter((tool) => tool.switchable);
+    if (isStatic || !addable.length) return "";
+    const rows = addable.map((tool) => `<div class="row setup-row"><div class="account-id"><span class="setup-mark">${mark(tool.id)}</span><div class="account-copy"><div class="account-name"><b>${esc(tool.name)}</b></div><div class="account-line">${esc(tool.signInHint)}</div></div></div><button class="btn sm ghost" type="button" data-action="add" data-tool="${esc(tool.id)}">${icon("plus")}Add login</button></div>`).join("");
+    return `<details class="core-add"><summary>${icon("plus")}<span>Add a login</span></summary><div class="list">${rows}</div></details>`;
+  }
+
   function homePage(tools) {
     const adding = (id) => (data.state.adding || []).includes(id);
     const kept = tools.filter((tool) => tool.accounts.length || adding(tool.id));
     if (!kept.length) {
-      const rows = tools.map((tool) => `<div class="row setup-row"><div class="account-id"><span class="setup-mark">${mark(tool.id)}</span><div class="account-copy"><div class="account-name"><b>${esc(tool.name)}</b></div><div class="account-line">${esc(tool.signInHint)}</div></div></div>${isStatic ? "" : `<button class="btn sm" type="button" data-action="add" data-tool="${esc(tool.id)}">Add login</button>`}</div>`).join("");
+      const rows = tools.filter((tool) => tool.switchable).map((tool) => `<div class="row setup-row"><div class="account-id"><span class="setup-mark">${mark(tool.id)}</span><div class="account-copy"><div class="account-name"><b>${esc(tool.name)}</b></div><div class="account-line">${esc(tool.signInHint)}</div></div></div>${isStatic ? "" : `<button class="btn sm" type="button" data-action="add" data-tool="${esc(tool.id)}">Add login</button>`}</div>`).join("");
       return { body: `<div class="core">
         <h1 class="sr-only">Keyhop</h1>
         <section class="verdict"><p>No saved logins yet. <span class="detail">Sign in once and Keyhop keeps the login, reads its limits and hops when one runs low.</span></p></section>
@@ -223,6 +231,7 @@ extension DashboardPage {
       <h1 class="sr-only">Keyhop</h1>
       <section class="verdict" aria-live="polite"><p id="verdict-text">${verdict.text}</p>${verdict.button}</section>
       <ul class="logins" id="logins">${rows}${waitRows}</ul>
+      ${addFold(tools)}
       ${todayStrip()}
     </div>` };
   }

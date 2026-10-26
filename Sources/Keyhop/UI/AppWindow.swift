@@ -98,8 +98,8 @@ final class DashboardHost {
 
 @MainActor
 private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate {
-    /// Named for 2.0 so the sprawling frame saved by the twelve-section window is left behind.
-    private static let frameName = "KeyhopWindow2"
+    /// Named for 2.0 so frames saved by older layouts are left behind.
+    private static let frameName = "KeyhopWindow3"
     private static let messageName = "keyhopWindow"
 
     let window: NSWindow
@@ -110,9 +110,9 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
 
     init(host: DashboardHost, section: String) {
         self.host = host
-        // Hugs the core screen: the 860-point sheet plus its breathing room, tall enough for nine
-        // login rows with the quiet links still on screen.
-        let frame = NSRect(x: 0, y: 0, width: 920, height: 660)
+        // Hugs the core screen: tall enough for nine login rows, the add fold and today's figure
+        // with the quiet links still on screen.
+        let frame = NSRect(x: 0, y: 0, width: 920, height: 700)
         let webView = WKWebView(frame: frame, configuration: WKWebViewConfiguration())
         self.webView = webView
         window = NSWindow(contentRect: frame, styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],

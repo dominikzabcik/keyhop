@@ -50,6 +50,8 @@ struct StatusDocument: Encodable {
     struct Tool: Encodable {
         let id: String
         let name: String
+        /// Whether Keyhop can hold logins for it; measured-only tools have nothing to add.
+        let switchable: Bool
         let switchNote: String?
         let limitsNote: String?
         let signInHint: String
@@ -110,6 +112,7 @@ struct StatusDocument: Encodable {
             Tool(
                 id: provider.rawValue,
                 name: provider.name,
+                switchable: provider.isSwitchable,
                 switchNote: provider.switchNote.map(Output.plain),
                 limitsNote: provider.limitsNote,
                 signInHint: Output.plain(provider.signInHint),

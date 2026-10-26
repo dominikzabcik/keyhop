@@ -115,7 +115,6 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .main:has(.core) { display: flex; flex-direction: column; padding: 0; }
 .main:has(.core) > .page { width: 100%; max-width: none; margin: 0; padding: 16px 24px 0; }
 .core { flex: 1; display: flex; flex-direction: column; }
-.core .logins, .core .setup-list { flex: 1; }
 .verdict {
   display: flex; align-items: center; gap: 16px;
   padding: 20px 24px; border-bottom: 1px solid var(--line);
@@ -166,6 +165,7 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
   display: grid;
   grid-template-columns: 8px 112px 220px minmax(0, 1fr) 190px;
   gap: 6px 14px; align-items: end;
+  margin-top: auto;
   padding: 16px 24px 14px;
   background: var(--chrome);
 }
@@ -186,6 +186,17 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .sharekey .ki { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .sharekey .ki i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
 .sharekey .ki b { color: var(--fg2); font-weight: 500; }
+/* Setup rows carry their own flex layout; the ranked-row grid above must not catch them. */
+.core .row.setup-row { display: flex; height: auto; }
+
+/* The way in for a new login: one quiet row that unfolds the tools, the same add flow Limits has. */
+.core-add summary { display: flex; align-items: center; gap: 10px; height: 47px; padding: 0 24px; list-style: none; cursor: pointer; color: var(--fg3); font-size: 13px; font-weight: 500; border-bottom: 1px solid var(--line); transition: color .15s ease-out, background .15s ease-out; }
+.core-add summary::-webkit-details-marker { display: none; }
+.core-add summary:hover { color: var(--fg); background: var(--g2); }
+.core-add[open] summary { color: var(--fg); }
+.core-add .list > .row { padding: 14px 24px; }
+.core-add .list { border-bottom: 1px solid var(--line); }
+
 .core .links { grid-column: 1 / 6; display: flex; gap: 16px; justify-content: flex-end; margin-top: 6px; }
 .core .links a { color: var(--fg3); font-size: 12px; text-decoration: none; transition: color .15s ease-out; }
 .core .links a:hover { color: var(--fg); }

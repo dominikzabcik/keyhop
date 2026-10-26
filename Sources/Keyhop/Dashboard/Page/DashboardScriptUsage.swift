@@ -413,8 +413,9 @@ extension DashboardPage {
   function accountTable(accounts, metric) {
     const value = (a) => (metric === "tokens" ? a.figures.tokens : a.figures.cost);
     const sorted = accounts.slice().sort((a, b) => value(b) - value(a));
-    const rows = sorted.map((a) => `<tr>
-      <td><div class="cell-name"><span class="swatch" style="background:${a.color}"></span><span>${esc(a.name)}</span></div><div class="subtle" style="font-size:12px;margin-left:16px">${esc(toolName(a.tool))}${a.active ? " · in use" : ""}</div></td>
+    // The same warm-grey ramp as every share legend: rank carries the shade, state keeps the hues.
+    const rows = sorted.map((a, i) => `<tr>
+      <td><div class="cell-name"><span class="swatch" style="background:${SHARE_GREYS[Math.min(i, SHARE_GREYS.length - 1)]}"></span><span>${esc(a.name)}</span></div><div class="subtle" style="font-size:12px;margin-left:16px">${esc(toolName(a.tool))}${a.active ? " · in use" : ""}</div></td>
       <td class="right mono">${metric === "tokens" ? fmt.tokens(a.figures.tokens) : fmt.usd(a.figures.cost)}</td>
     </tr>`).join("");
     return `<table class="table"><thead><tr><th>Account</th><th class="right">${metric === "tokens" ? "Tokens" : "API value"}</th></tr></thead><tbody>${rows}</tbody></table>`;

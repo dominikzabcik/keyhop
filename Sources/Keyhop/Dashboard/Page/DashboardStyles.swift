@@ -112,6 +112,8 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 /* The window's progress, along the bottom edge of the title bar. */
 .titlebar .meter { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: transparent; opacity: 0; transition: opacity .25s ease-out; }
 .titlebar .meter.on { opacity: 1; }
+/* Progress whispers from the chrome; a full-width white bar would read as a broken rule. */
+.titlebar .meter > span { background: var(--fg3); }
 .meter { position: relative; height: 4px; border-radius: 99px; background: var(--g3); overflow: hidden; }
 .meter > span { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: inherit; background: var(--fg); transition: width .35s ease-out; }
 .meter.unknown > span { width: 28%; animation: travel 1.3s ease-in-out infinite; }

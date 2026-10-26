@@ -234,7 +234,8 @@ extension DashboardPage {
     if (!read) { el.textContent = isStatic ? "" : "not read yet"; el.classList.remove("stale"); return; }
     const seconds = Math.max(0, Math.round((Date.now() - new Date(read)) / 1000));
     el.textContent = seconds < 60 ? `read ${seconds} s ago` : seconds < 5400 ? `read ${Math.round(seconds / 60)} min ago` : `read ${fmt.relative(read)}`;
-    el.classList.toggle("stale", seconds > 120);
+    // Polling runs every five minutes, so amber only past two missed cycles; sooner would cry wolf mid-cycle.
+    el.classList.toggle("stale", seconds > 600);
   }
   setInterval(renderReadtime, 5000);
 

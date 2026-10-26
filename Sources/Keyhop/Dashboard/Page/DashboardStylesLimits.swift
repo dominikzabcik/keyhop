@@ -16,11 +16,11 @@ extension DashboardPage {
 .lim-tabs .n { color: var(--subtle); font-weight: 500; font-variant-numeric: tabular-nums; }
 .lim-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 18px; }
 
-.lim-total { display: flex; flex-direction: column; gap: 20px; padding: 24px 26px 26px; }
+.lim-total { display: flex; flex-direction: column; gap: 16px; padding: 20px 24px 22px; }
 .lim-total-title { display: grid; gap: 6px; }
-.lim-total h2 { margin: 0; font-size: 26px; line-height: 30px; font-weight: 500; letter-spacing: -.02em; }
+.lim-total h2 { margin: 0; font-size: 19px; line-height: 24px; font-weight: 500; letter-spacing: -.02em; }
 .lim-big { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.lim-big b { font-size: clamp(40px, 4.4vw, 60px); line-height: .95; font-weight: 500; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.lim-big b { font-size: clamp(36px, 3.8vw, 48px); line-height: .95; font-weight: 500; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .lim-big > span { color: var(--muted); }
 .lim-big.warn b { color: var(--warn-ink); }
 .lim-big.bad b { color: var(--bad); }
@@ -56,7 +56,7 @@ extension DashboardPage {
 .qchart .qarea { fill: hsl(var(--on) / .05); }
 .qchart .qarea.ahead { fill: hsl(var(--on) / .015); }
 .qchart .qnow { stroke: hsl(var(--on) / .18); stroke-dasharray: 3 4; }
-.qchart .qnow-label { fill: var(--text); font: 500 11px var(--sans); }
+.qchart .qnow-label { fill: var(--fg2); font: 500 11px var(--sans); }
 .qchart .qreset { stroke: var(--good); stroke-width: 2; }
 .qchart .qgain { fill: var(--good); font: 600 10.5px var(--sans); }
 .qchart .grid.day { stroke: hsl(var(--on) / .035); }
@@ -133,8 +133,11 @@ extension DashboardPage {
 .lim-tile .rename .field { height: 28px; }
 .lim-foot { margin: 4px 2px 0; font-size: 12px; color: var(--subtle); }
 
-@media (max-width: 1180px) {
+/* The summary and the day keep sitting beside each other down to the default window. */
+@media (max-width: 1020px) {
   .lim-top { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 1180px) {
   .lim-row { grid-template-columns: minmax(0, 1fr) auto; gap: 12px 18px; }
   .lim-row .lwins { grid-column: 1 / -1; grid-row: 2; }
   .lim-row .lim-side { grid-column: 2; grid-row: 1; }

@@ -85,7 +85,7 @@ extension DashboardPage {
   // The history sits beside the summary, so its chart is drawn to that card's width.
   function historyWidth() {
     const main = Math.min(1480, ($("#main")?.clientWidth || 1200) - 56);
-    const wide = !matchMedia("(max-width: 1180px)").matches;
+    const wide = !matchMedia("(max-width: 1020px)").matches;
     return Math.max(420, Math.floor((wide ? (main - 18) * 1.3 / 2.3 : main) - 54));
   }
 
@@ -99,7 +99,9 @@ extension DashboardPage {
     let labels = "";
     if ((to - from) / 3600_000 <= 48) {
       const every = 4 * 3600_000;
+      // A label centred too close to the right edge would clip mid-word.
       for (let t = Math.ceil(from / every) * every; t <= to; t += every) {
+        if (x(t) > x(to) - 30) continue;
         labels += `<text class="axis" x="${x(t).toFixed(1)}" y="${H - 7}" text-anchor="middle">${esc(fmt.clock(new Date(t)))}</text>`;
       }
     } else {

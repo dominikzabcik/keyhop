@@ -158,6 +158,8 @@ button.tile:hover { background: hsl(var(--on) / .045); }
 .day-figures { display: flex; gap: 16px; }
 .day-figures div { text-align: right; }
 .day-figures b { display: block; font-variant-numeric: tabular-nums; font-weight: 600; }
+/* The lines figure stacks over its label like the other two, instead of riding beside it. */
+.day-figures .diff { display: block; font-variant-numeric: tabular-nums; font-weight: 600; }
 .day-figures small, .task-meta, .day-note { color: var(--fg3); font-size: 12px; }
 .day-person .card-head { padding-bottom: 12px; }
 .task { padding: 12px 16px; border-top: 1px solid var(--line); }

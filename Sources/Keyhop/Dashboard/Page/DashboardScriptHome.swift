@@ -101,6 +101,8 @@ extension DashboardPage {
     const value = active.error ? `signed out`
       : idle || left == null ? ""
       : `${left}%${resets ? ` · <span class="rw">resets in </span>${esc(resets)}` : ""}`;
+    const plan = !active.error && !idle && active.plan ? ` <span class="plan">· ${esc(active.plan)}</span>` : "";
+    const spent = active.today && active.today.tokens > 0 ? `${fmt.tokens(active.today.tokens)} · ${fmt.usd(active.today.cost)}` : "";
     let title = "";
     if (active.error) title = `Signed out. Sign in to ${tool.name} again to read its limits.`;
     else if (idle) title = tool.limitsNote || `${tool.name} publishes no limits; Keyhop measures its usage only.`;
@@ -111,7 +113,8 @@ extension DashboardPage {
     const html = `<li class="row ${state}${idle ? " idle" : ""}${ui.hopped && ui.hopped.tool === tool.id && Date.now() - ui.hopped.at < 2200 ? " hopped" : ""}" style="view-transition-name:row-${esc(tool.id)}"${title ? ` title="${esc(title)}"` : ""}>
       <span class="dot" aria-hidden="true"></span>
       <span class="tool">${esc(tool.name)}</span>
-      <span class="login">${esc(idle ? "measured only" : active.name)}${noSpare}</span>
+      <span class="login">${esc(idle ? "measured only" : active.name)}${plan}${noSpare}</span>
+      <span class="tdy">${spent}</span>
       ${idle || left == null ? `<span class="runway" aria-hidden="true"></span>` : `<span class="runway" role="img" aria-label="${left}% of the window left"><i style="width:${left}%" data-grow="core:${esc(tool.id)}"></i></span>`}
       <span class="left">${value}</span>
     </li>`;
@@ -225,11 +228,12 @@ extension DashboardPage {
     }
     const rows = kept.map(coreRow).filter(Boolean).sort((a, b) => a.order - b.order).map((row) => row.html).join("");
     const waiting = kept.filter((tool) => adding(tool.id) && !tool.accounts.length);
-    const waitRows = waiting.map((tool) => `<li class="row idle"><span class="dot" aria-hidden="true"></span><span class="tool">${esc(tool.name)}</span><span class="login">waiting for a new login ${waited(tool.id)}</span><span class="runway" aria-hidden="true"></span><span class="left"></span></li>`).join("");
+    const waitRows = waiting.map((tool) => `<li class="row idle"><span class="dot" aria-hidden="true"></span><span class="tool">${esc(tool.name)}</span><span class="login">waiting for a new login ${waited(tool.id)}</span><span class="tdy"></span><span class="runway" aria-hidden="true"></span><span class="left"></span></li>`).join("");
     const verdict = verdictFor(kept);
     return { body: `<div class="core">
       <h1 class="sr-only">Keyhop</h1>
       <section class="verdict" aria-live="polite"><p id="verdict-text">${verdict.text}</p>${verdict.button}</section>
+      <div class="colhead" aria-hidden="true"><span></span><span>Tool</span><span>Login</span><span class="r tdy">Today</span><span>Runway</span><span class="r">Window</span></div>
       <ul class="logins" id="logins">${rows}${waitRows}</ul>
       ${addFold(tools)}
       ${todayStrip()}

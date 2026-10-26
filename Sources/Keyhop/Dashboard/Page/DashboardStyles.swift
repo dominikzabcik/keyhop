@@ -123,12 +123,22 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .verdict p .detail { color: var(--fg2); font-weight: 400; }
 
 .logins { list-style: none; margin: 0; padding: 0; }
+/* The rows read as one instrument: a quiet header names the columns once. */
+.colhead {
+  display: grid;
+  grid-template-areas: "dot tool login tdy runway left";
+  grid-template-columns: 8px 112px minmax(0, 1fr) 110px 175px 165px;
+  gap: 14px; padding: 9px 24px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--fg3); font: 600 10.5px var(--sans); letter-spacing: .08em; text-transform: uppercase;
+}
+.colhead .r { text-align: right; }
 .core .row {
   display: grid;
-  grid-template-areas: "dot tool login runway left";
-  grid-template-columns: 8px 112px 220px minmax(0, 1fr) 190px;
+  grid-template-areas: "dot tool login tdy runway left";
+  grid-template-columns: 8px 112px minmax(0, 1fr) 110px 175px 165px;
   gap: 14px; align-items: center;
-  height: 47px; padding: 0 24px;
+  height: 44px; padding: 0 24px;
   border-bottom: 1px solid var(--line);
   transition: background .15s ease-out;
 }
@@ -142,6 +152,11 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .core .row.idle .dot { background: var(--g3); }
 .core .tool { grid-area: tool; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .core .login { grid-area: login; color: var(--fg2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.core .login .plan { color: var(--fg3); }
+.core .tdy {
+  grid-area: tdy; text-align: right; color: var(--fg3);
+  font: 500 12px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
 .core .login .flag {
   font-style: normal; font-size: 11px; color: var(--fg3);
   border: 1px solid var(--line-strong); border-radius: 5px;
@@ -190,7 +205,7 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .core .row.setup-row { display: flex; height: auto; }
 
 /* The way in for a new login: one quiet row that unfolds the tools, the same add flow Limits has. */
-.core-add summary { display: flex; align-items: center; gap: 10px; height: 47px; padding: 0 24px; list-style: none; cursor: pointer; color: var(--fg3); font-size: 13px; font-weight: 500; border-bottom: 1px solid var(--line); transition: color .15s ease-out, background .15s ease-out; }
+.core-add summary { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 24px; list-style: none; cursor: pointer; color: var(--fg3); font-size: 13px; font-weight: 500; border-bottom: 1px solid var(--line); transition: color .15s ease-out, background .15s ease-out; }
 .core-add summary::-webkit-details-marker { display: none; }
 .core-add summary:hover { color: var(--fg); background: var(--g2); }
 .core-add[open] summary { color: var(--fg); }
@@ -514,12 +529,21 @@ svg.heat { display: block; }
 .card-body .btn.claim-kick { width: auto; }
 
 /* MARK: Responsive */
+/* A narrower window gives the today column's room back to the login. */
+@media (max-width: 840px) {
+  .colhead, .core .row {
+    grid-template-areas: "dot tool login runway left";
+    grid-template-columns: 8px 112px minmax(0, 1fr) 175px 165px;
+  }
+  .colhead .tdy, .core .tdy { display: none; }
+}
 @media (max-width: 640px) {
   .core .row {
     grid-template-areas: "dot tool left" "x login runway";
     grid-template-columns: 8px minmax(0, 1fr) 150px;
     height: auto; padding-block: 10px; row-gap: 6px;
   }
+  .colhead { display: none; }
   .core .row .login { font-size: 12px; }
   .core .left .rw { display: none; }
   .core .row .runway { align-self: center; }

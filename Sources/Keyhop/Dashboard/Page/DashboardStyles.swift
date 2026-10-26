@@ -111,7 +111,7 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 
 /* MARK: The core screen
    The comp verbatim: verdict, ranked login rows, today. One sheet on the ground. */
-.main:has(.core) { display: grid; align-content: safe center; justify-items: center; padding: 24px 16px; }
+.main:has(.core) { display: grid; align-content: safe center; align-items: start; justify-items: center; padding: 24px 16px; }
 .core {
   width: min(860px, 100%); background: var(--g1);
   border: 1px solid var(--line-strong); border-radius: 8px;

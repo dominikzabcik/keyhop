@@ -59,28 +59,39 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .skip-link:focus-visible { transform: translateY(0); }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-/* Shell: title bar on chrome, an optional view bar for the demoted views, then the work surface. */
-.shell { display: flex; flex-direction: column; height: 100vh; }
+/* Shell: a sidebar with every view in the open, then the work column under a slim title bar. */
+.shell { display: flex; height: 100vh; }
+.side {
+  flex: none; width: 216px; display: flex; flex-direction: column; min-height: 0;
+  background: var(--chrome); border-right: 1px solid var(--line);
+}
+.side-brand { padding: 15px 18px 10px; }
+.mac-window .side-brand { padding-top: 46px; -webkit-user-select: none; user-select: none; cursor: default; }
+.side-nav { flex: 1; display: flex; flex-direction: column; padding: 6px 10px 12px; overflow-y: auto; min-height: 0; scrollbar-width: none; }
+.side-nav::-webkit-scrollbar { display: none; }
+.nav-set { display: flex; flex-direction: column; gap: 1px; }
+.nav-set + .nav-set { margin-top: 16px; }
+.nav-set.last { margin-top: auto; padding-top: 16px; }
+.nav-h { padding: 0 8px 5px; color: var(--fg3); font: 600 10.5px var(--sans); letter-spacing: .08em; text-transform: uppercase; }
+.side-nav button {
+  display: flex; align-items: center; height: 28px; padding: 0 8px; border: 0; border-radius: 5px;
+  background: none; color: var(--fg2); font: 500 12.5px var(--sans); cursor: pointer; text-align: left;
+  transition: background .15s ease-out, color .15s ease-out;
+}
+.side-nav button:hover { color: var(--fg); background: var(--g2); }
+.side-nav button[aria-current="page"] { color: var(--fg); background: var(--g2); font-weight: 600; }
+.work { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .titlebar {
   position: relative; flex: none; display: flex; align-items: center; gap: 12px;
   height: 44px; padding: 0 12px 0 18px;
   background: var(--chrome);
   border-bottom: 1px solid var(--line);
 }
-.mac-window .titlebar { padding-left: 86px; -webkit-user-select: none; user-select: none; cursor: default; }
+.mac-window .titlebar { -webkit-user-select: none; user-select: none; cursor: default; }
 .app { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 /* The mark, bare on the chrome: paper K, the hopped arm in the one blue. */
 .kmark { width: 17px; height: 17px; color: var(--fg); flex: none; display: block; }
 .titlebar .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-/* The views, always on in the title bar; quiet text, the current one held on a wash. */
-.topnav { display: flex; align-items: center; gap: 2px; margin-left: 8px; }
-.topnav button {
-  height: 28px; padding: 0 10px; border: 0; border-radius: 5px;
-  background: none; color: var(--fg3); font: 500 12.5px var(--sans); cursor: pointer;
-  transition: background .15s ease-out, color .15s ease-out;
-}
-.topnav button:hover { color: var(--fg); background: var(--g2); }
-.topnav button[aria-current="page"] { color: var(--fg); background: var(--g2); }
 .readtime { color: var(--fg3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .readtime.stale { color: var(--low); }
 .iconbtn {
@@ -101,14 +112,12 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .meter.unknown > span { width: 28%; animation: travel 1.3s ease-in-out infinite; }
 @keyframes travel { from { left: -28%; } to { left: 100%; } }
 
-/* The view bar: the way back to the core, the view's name, its sections, then its controls. */
+/* The view bar: the view's name, then its controls; the sections live in the sidebar. */
 .viewbar {
   flex: none; display: flex; align-items: center; gap: 12px;
-  min-height: 44px; padding: 6px 16px;
+  min-height: 44px; padding: 6px 16px 6px 24px;
   border-bottom: 1px solid var(--line);
 }
-.viewbar .back { flex: none; }
-.viewbar .back .icon { transform: rotate(180deg); }
 .viewbar h1 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
 .viewbar .toolbar { margin-left: auto; display: flex; align-items: center; gap: 8px; justify-content: flex-end; min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 2px; }
 .viewbar .toolbar::-webkit-scrollbar { display: none; }
@@ -130,6 +139,11 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 }
 .verdict p { margin: 0 auto 0 0; font-size: 15px; font-weight: 500; letter-spacing: -.01em; min-width: 0; view-transition-name: verdict; }
 .verdict p .detail { color: var(--fg2); font-weight: 400; }
+
+/* The runway: what the pool has left and where it is heading, recorded then projected. */
+.runway-panel { padding: 14px 24px 6px; border-bottom: 1px solid var(--line); }
+.runway-panel .kpis { flex-wrap: wrap; margin-bottom: 8px; }
+.runway-panel .kpi .kpi-v .up { color: var(--ok); }
 
 .logins { list-style: none; margin: 0; padding: 0; }
 /* The rows read as one instrument: a quiet header names the columns once. */
@@ -533,8 +547,8 @@ svg.heat { display: block; }
 .card-body .btn.claim-kick { width: auto; }
 
 /* MARK: Responsive */
-/* A narrower window gives the today column's room back to the login. */
-@media (max-width: 840px) {
+/* A narrower work column gives the today column's room back to the login. */
+@media (max-width: 1060px) {
   .colhead, .core .row {
     grid-template-areas: "dot tool login runway left";
     grid-template-columns: 8px 112px minmax(0, 1fr) 175px 165px;
@@ -542,7 +556,6 @@ svg.heat { display: block; }
   .colhead .tdy, .core .tdy { display: none; }
   /* The login keeps its name and its no-spare flag; the plan yields first. */
   .core .login .plan { display: none; }
-  .readtime { display: none; }
 }
 @media (max-width: 640px) {
   .core .row {
@@ -557,10 +570,17 @@ svg.heat { display: block; }
   .verdict { flex-wrap: wrap; }
   .core .kpis { flex-wrap: wrap; gap: 14px 24px; }
   .readtime { display: none; }
-  /* The word yields to the views; the K mark still names the app. */
-  .app { font-size: 0; gap: 0; }
-  .topnav { margin-left: 2px; }
-  .topnav button { padding: 0 8px; font-size: 12px; }
+  /* The sidebar lies down: one scrollable row of views under the brand. */
+  .shell { flex-direction: column; }
+  .side { width: auto; flex-direction: row; align-items: center; gap: 4px; border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+  .side::-webkit-scrollbar { display: none; }
+  .side-brand { padding: 10px 6px 10px 14px; }
+  .side-brand, .mac-window .side-brand { padding-top: 10px; }
+  .side-nav { flex-direction: row; align-items: center; padding: 0 10px 0 4px; overflow: visible; }
+  .nav-set { flex-direction: row; }
+  .nav-set + .nav-set { margin: 0 0 0 8px; }
+  .nav-set.last { margin-left: 8px; padding-top: 0; }
+  .nav-h { display: none; }
 }
 @media (max-width: 820px) {
   body { overflow: auto; }

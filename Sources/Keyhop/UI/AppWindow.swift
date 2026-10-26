@@ -99,7 +99,7 @@ final class DashboardHost {
 @MainActor
 private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate {
     /// Named for 2.0 so frames saved by older layouts are left behind.
-    private static let frameName = "KeyhopWindow3"
+    private static let frameName = "KeyhopWindow4"
     private static let messageName = "keyhopWindow"
 
     let window: NSWindow
@@ -110,9 +110,8 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
 
     init(host: DashboardHost, section: String) {
         self.host = host
-        // Hugs the core screen: tall enough for nine login rows, the add fold and today's figure
-        // with the quiet links still on screen.
-        let frame = NSRect(x: 0, y: 0, width: 920, height: 700)
+        // Room for the sidebar, the runway and the login rows: the window of an app, not a widget.
+        let frame = NSRect(x: 0, y: 0, width: 1160, height: 780)
         let webView = WKWebView(frame: frame, configuration: WKWebViewConfiguration())
         self.webView = webView
         window = NSWindow(contentRect: frame, styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -141,7 +140,7 @@ private final class AppWindowController: NSObject, NSWindowDelegate, WKNavigatio
         window.isOpaque = false
         window.backgroundColor = Brand.backgroundColor
         window.hasShadow = true
-        window.minSize = NSSize(width: 760, height: 520)
+        window.minSize = NSSize(width: 920, height: 580)
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed
         window.contentView = webView

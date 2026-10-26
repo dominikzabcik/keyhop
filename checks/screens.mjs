@@ -15,7 +15,7 @@ export const WIDTHS = [
 
 /** Keyhop's window can't be made smaller than this, so it is never checked at phone width. */
 export const APP_WIDTHS = [
-  { name: "smallest", width: 760, height: 520 },
+  { name: "smallest", width: 920, height: 580 },
   { name: "laptop", width: 1280, height: 820 },
   { name: "wide", width: 1680, height: 1050 },
 ];

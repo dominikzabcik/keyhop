@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/dashboard.png" width="860" alt="Keyhop's core screen with sample logins: the verdict up top, every login ranked by how much of its tightest window is left and when it resets, and today's tokens with their API value">
+  <img src="docs/dashboard.png" width="920" alt="Keyhop's window with sample logins: the sidebar with every view, the verdict up top, the pool's runway recorded and projected with its resets, and every login ranked by how much of its tightest window is left">
 </p>
 
 <p align="center">

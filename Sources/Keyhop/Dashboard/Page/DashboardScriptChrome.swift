@@ -161,8 +161,8 @@ extension DashboardPage {
     animate();
   }
 
-  // The view bar names the demoted view, offers its sections, and holds its controls. The core
-  // screen needs none of it.
+  // The view bar names the view and holds its controls; the sections themselves live in the
+  // sidebar. The core screen needs none of it.
   function renderViewbar(controls) {
     const bar = $("#viewbar");
     if (!bar) return;
@@ -170,31 +170,32 @@ extension DashboardPage {
     bar.hidden = home;
     $("#gear")?.setAttribute("aria-current", ui.section === "settings" ? "page" : "false");
     if (home) return;
-    const group = groupOf(ui.section);
-    ui.lastIn[group.id] = ui.section;
-    $("#title").textContent = group.title;
-    const shown = group.sections.filter(sectionShown);
-    const tabsHTML = shown.length > 1 ? `<div class="tabs" role="group" aria-label="${esc(group.title)}" data-tabs="view">${shown.map((section) =>
-      `<button type="button" data-action="goto" data-section="${section}" aria-pressed="${section === ui.section}">${esc(TITLES[section])}</button>`).join("")}</div>` : "";
-    const viewtabs = $("#viewtabs");
-    if (viewtabs.dataset.drawn !== tabsHTML) { viewtabs.innerHTML = tabsHTML; viewtabs.dataset.drawn = tabsHTML; }
+    $("#title").textContent = TITLES[ui.section];
     // The bar's controls are only redrawn when they change, so a press is never lost to a redraw.
     const toolbar = $("#toolbar");
     if (toolbar.dataset.drawn !== controls) { toolbar.innerHTML = controls; toolbar.dataset.drawn = controls; }
   }
 
-  // The title bar: the mode, the views, a word when a tool's service is in trouble, the read
-  // time, refresh. The views sit here the way an app's do: always on, quiet until current.
+  // The sidebar: every view in the open, grouped the way the product thinks, the way an app's
+  // sidebar does. Settings sits at the bottom on its own.
+  function renderSidebar() {
+    const nav = $("#sidenav");
+    if (!nav) return;
+    const html = GROUPS.map((group) => {
+      const shown = group.sections.filter(sectionShown);
+      if (!shown.length) return "";
+      const items = shown.map((section) =>
+        `<button type="button" data-action="goto" data-section="${section}" aria-current="${ui.section === section ? "page" : "false"}">${esc(section === "home" ? "Home" : TITLES[section])}</button>`).join("");
+      const head = group.id === "home" || group.id === "settings" ? "" : `<span class="nav-h">${esc(group.title)}</span>`;
+      return `<div class="nav-set${group.id === "settings" ? " last" : ""}">${head}${items}</div>`;
+    }).join("");
+    if (nav.dataset.drawn !== html) { nav.innerHTML = html; nav.dataset.drawn = html; }
+  }
+
+  // The title bar: a word when a tool's service is in trouble, the read time, refresh.
   function renderChrome() {
     const state = data.state;
-    const nav = $("#topnav");
-    if (nav) {
-      const groups = GROUPS.filter((group) => group.id !== "settings" && group.sections.some(sectionShown));
-      const current = groupOf(ui.section).id;
-      const html = groups.map((group) =>
-        `<button type="button" data-action="goto-group" data-group="${group.id}" aria-current="${current === group.id ? "page" : "false"}">${group.id === "home" ? "Home" : esc(group.title)}</button>`).join("");
-      if (nav.dataset.drawn !== html) { nav.innerHTML = html; nav.dataset.drawn = html; }
-    }
+    renderSidebar();
     const mode = $("#mode");
     if (mode) {
       mode.innerHTML = isStatic ? `<span class="badge">Saved</span>` : state?.mode === "sample" ? `<span class="badge sample">Sample</span>` : "";

@@ -58,6 +58,7 @@ extension DashboardPage {
 .qchart .qnow { stroke: hsl(var(--on) / .18); stroke-dasharray: 3 4; }
 .qchart .qnow-label { fill: var(--text); font: 500 11px var(--sans); }
 .qchart .qreset { stroke: var(--good); stroke-width: 2; }
+.qchart .qgain { fill: var(--good); font: 600 10.5px var(--sans); }
 .qchart .grid.day { stroke: hsl(var(--on) / .035); }
 .qchart .qbar { fill: hsl(var(--on) / .55); }
 .qchart .qbar:hover { fill: var(--text); }

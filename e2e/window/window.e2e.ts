@@ -15,7 +15,7 @@ test('home is the verdict, the logins ranked by runway, and today', async ({ app
       idleLast: rows.length > 0 && [...rows].reverse().findIndex((row) => !row.classList.contains('idle')) <= rows.length - 1
         && rows.findIndex((row) => row.classList.contains('idle')) > rows.findIndex((row) => !row.classList.contains('idle')),
       noSpare: document.querySelectorAll('.core .flag').length,
-      sidebar: document.querySelectorAll('#nav, .sidebar').length,
+      sidebar: document.querySelectorAll('.side-nav [data-section]').length,
     };
   });
   expect(core?.verdict.length ?? 0).toBeGreaterThan(10);
@@ -24,8 +24,23 @@ test('home is the verdict, the logins ranked by runway, and today', async ({ app
   expect(core?.firstIsCrit).toBe(true);
   expect(core?.idleLast).toBe(true);
   expect(core?.noSpare ?? 0).toBeGreaterThan(0);
-  expect(core?.sidebar).toBe(0);
+  // The sidebar holds every view in the open.
+  expect(core?.sidebar ?? 0).toBeGreaterThan(8);
   await assertReadable(browser);
+});
+
+test('the runway draws the pool, recorded then projected', async ({ app, browser }) => {
+  await openWindow(app, 'home');
+  await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.runway-panel .qline').length)).toBeGreaterThan(1);
+  const chart = await browser.evaluate(() => ({
+    ahead: document.querySelectorAll('.runway-panel .qline.ahead').length,
+    now: document.querySelectorAll('.runway-panel .qnow').length,
+    gains: document.querySelectorAll('.runway-panel .qgain').length,
+  }));
+  expect(chart?.ahead).toBe(1);
+  expect(chart?.now).toBe(1);
+  // The projection steps back up where a window resets, each step named by its gain.
+  expect(chart?.gains ?? 0).toBeGreaterThan(0);
 });
 
 test('rows carry no controls; the verdict holds the one hop', async ({ app, browser }) => {
@@ -46,19 +61,19 @@ test('today sums the day in figures and the title bar holds the views', async ({
   await expect(screen.getByText('requests', { exact: false }).first()).toBeVisible();
   // The share of the day, one bar and its key, tool by tool.
   await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.core .sharebar i').length)).toBeGreaterThan(2);
-  // The views live in the title bar, the way an app's do, and remember where they were.
-  await expect(browser.locator('#topnav [data-group="home"]')).toHaveAttribute('aria-current', 'page');
-  await browser.locator('#topnav [data-group="history"]').tap();
-  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#topnav [data-group="history"]')).toHaveAttribute('aria-current', 'page');
+  // The views live in the sidebar, the way an app's do.
+  await expect(browser.locator('.side-nav [data-section="home"]')).toHaveAttribute('aria-current', 'page');
+  await browser.locator('.side-nav [data-section="usage"]').tap();
+  await expect(screen.getByRole('heading', 'Usage', { level: 1 })).toBeVisible();
+  await expect(browser.locator('.side-nav [data-section="usage"]')).toHaveAttribute('aria-current', 'page');
 });
 
 test('an old link to overview opens the core, and accounts opens limits', async ({ app, screen, browser }) => {
   await openWindow(app, 'overview');
   await expect(browser.locator('.core .verdict p')).toBeVisible();
   await openWindow(app, 'accounts');
-  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#viewtabs [data-section="limits"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(screen.getByRole('heading', 'Limits', { level: 1 })).toBeVisible();
+  await expect(browser.locator('.side-nav [data-section="limits"]')).toHaveAttribute('aria-current', 'page');
   await expect.poll(() => screen.getByRole('button', 'Add login').count()).toBeGreaterThan(0);
   await expect(screen.getByRole('button', 'Sign in').first()).toBeVisible();
   await assertReadable(browser);
@@ -66,7 +81,7 @@ test('an old link to overview opens the core, and accounts opens limits', async 
 
 test('limits lists each login with what it has used, and no guesses', async ({ app, screen, browser }) => {
   await openWindow(app, 'limits');
-  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Limits', { level: 1 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Claude Code', { level: 2 })).toBeVisible();
   await expect(screen.getByText('In use', { exact: true }).first()).toBeVisible();
   await expect(screen.getByText('resets in', { exact: false }).first()).toBeVisible();
@@ -102,32 +117,29 @@ test('a Claude Code login offers the command that runs it in one terminal', asyn
 
 test('usage names the token columns', async ({ app, screen, browser }) => {
   await openWindow(app, 'usage');
-  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#viewtabs [data-section="usage"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(screen.getByRole('heading', 'Usage', { level: 1 })).toBeVisible();
+  await expect(browser.locator('.side-nav [data-section="usage"]')).toHaveAttribute('aria-current', 'page');
   await expect(screen.getByRole('columnheader', 'Cache read')).toBeVisible();
   await expect(screen.getByRole('columnheader', 'API value')).toBeVisible();
   await assertReadable(browser);
 });
 
-test('insights holds coach, plans and budgets as tabs', async ({ app, screen, browser }) => {
+test('plans and budgets open from the sidebar', async ({ app, screen, browser }) => {
   await openWindow(app, 'plans');
-  await expect(screen.getByRole('heading', 'Insights', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#viewtabs [data-section="plans"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(screen.getByRole('heading', 'Plans', { level: 1 })).toBeVisible();
+  await expect(browser.locator('.side-nav [data-section="plans"]')).toHaveAttribute('aria-current', 'page');
   await expect(screen.getByText('a month in plans', { exact: true })).toBeVisible();
   // One row a login, and no paragraphs: no verdicts and no pace.
   await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.plans-table tbody tr').length)).toBeGreaterThan(1);
   await expect(screen.getByText('on pace for', { exact: false })).toHaveCount(0);
-  await browser.locator('#viewtabs [data-section="budgets"]').tap();
+  await browser.locator('.side-nav [data-section="budgets"]').tap();
   await expect(screen.getByRole('heading', 'Budgets', { level: 2 })).toBeVisible();
-  // The group remembers the tab it was on.
-  await openWindow(app, 'usage');
-  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
   await assertReadable(browser);
 });
 
 test('coach reads optimize, compare and yield', async ({ app, screen, browser }) => {
   await openWindow(app, 'coach');
-  await expect(screen.getByRole('heading', 'Insights', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Coach', { level: 1 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Optimize', { level: 2 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Compare', { level: 2 })).toBeVisible();
   await expect(screen.getByRole('heading', 'Yield', { level: 2 })).toBeVisible();
@@ -137,8 +149,8 @@ test('coach reads optimize, compare and yield', async ({ app, screen, browser })
 
 test('leaderboard is the ranks, by efficiency first', async ({ app, screen, browser }) => {
   await openWindow(app, 'leaderboard');
-  await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#viewtabs [data-section="leaderboard"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(screen.getByRole('heading', 'Leaderboard', { level: 1 })).toBeVisible();
+  await expect(browser.locator('.side-nav [data-section="leaderboard"]')).toHaveAttribute('aria-current', 'page');
   await expect(screen.getByText('Your rank')).toBeVisible();
   await expect(screen.getByRole('button', { name: 'Efficiency', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(screen.getByText('Commits per M tokens')).toBeVisible();
@@ -150,24 +162,24 @@ test('leaderboard is the ranks, by efficiency first', async ({ app, screen, brow
 
 test('season is the standings', async ({ app, screen, browser }) => {
   await openWindow(app, 'season');
-  await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#viewtabs [data-section="season"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(screen.getByRole('heading', 'Season', { level: 1 })).toBeVisible();
+  await expect(browser.locator('.side-nav [data-section="season"]')).toHaveAttribute('aria-current', 'page');
   await expect(screen.getByRole('heading', 'Season standings')).toBeVisible();
   await assertReadable(browser);
 });
 
 test('teams opens on the list', async ({ app, screen, browser }) => {
   await openWindow(app, 'teams');
-  await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#viewtabs [data-section="teams"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(screen.getByRole('heading', 'Teams', { level: 1 })).toBeVisible();
+  await expect(browser.locator('.side-nav [data-section="teams"]')).toHaveAttribute('aria-current', 'page');
   await expect(screen.getByRole('heading', 'Your teams')).toBeVisible();
   await assertReadable(browser);
 });
 
 test('profile holds the pet, keeps, quests and badges', async ({ app, screen, browser }) => {
   await openWindow(app, 'profile');
-  await expect(screen.getByRole('heading', 'Community', { level: 1 })).toBeVisible();
-  await expect(browser.locator('#viewtabs [data-section="profile"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(screen.getByRole('heading', 'Profile', { level: 1 })).toBeVisible();
+  await expect(browser.locator('.side-nav [data-section="profile"]')).toHaveAttribute('aria-current', 'page');
   await expect(screen.getByRole('heading', 'Keeps')).toBeVisible();
   await expect(screen.getByRole('heading', 'Quests')).toBeVisible();
   await expect(screen.getByRole('heading', 'Badges')).toBeVisible();
@@ -188,7 +200,7 @@ test('a team splits into its day, its ranks and its members', async ({ app, scre
 
 test('the core fits the smallest window with nothing cut off sideways', async ({ app, browser }) => {
   await openWindow(app, 'home');
-  await browser.setViewport({ width: 760, height: 520 });
+  await browser.setViewport({ width: 920, height: 580 });
   await expect(browser.locator('.core .verdict p')).toBeVisible();
   const overflow = await browser.evaluate(() => {
     const doc = document.scrollingElement!;
@@ -199,7 +211,7 @@ test('the core fits the smallest window with nothing cut off sideways', async ({
 
 test('escape steps back from a demoted view to the core', async ({ app, screen, browser }) => {
   await openWindow(app, 'usage');
-  await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
+  await expect(screen.getByRole('heading', 'Usage', { level: 1 })).toBeVisible();
   await browser.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
   await expect(browser.locator('.core .verdict p')).toBeVisible();
 });

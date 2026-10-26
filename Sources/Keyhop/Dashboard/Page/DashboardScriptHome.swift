@@ -172,6 +172,71 @@ extension DashboardPage {
     return { text: `Nothing runs out soon. <span class="detail">Next concern: ${concern}</span>`, button: "" };
   }
 
+  // MARK: The runway
+
+  // What the pool has left and where it is heading: the recorded line from the limit samples,
+  // then the projected one with its resets stepping it back up. The one chart on the core screen.
+  function runwayPanel() {
+    if (isStatic) return "";
+    if (!data.quota) return data.quotaError ? "" : `<section class="runway-panel skel-card" style="min-height:240px;border:0" aria-hidden="true"></section>`;
+    const pool = data.quota.pools?.find((p) => p.tool === "all");
+    if (!pool || !pool.accounts) return "";
+    const one = pool.accounts === 1;
+    const drain = pool.drainPerHour || 0;
+    const kpis = `<div class="kpis">
+      <div class="kpi lead"><div class="kpi-v">${Math.round(pool.remaining)}%</div><div class="kpi-l">${one ? "of the window left" : `left of ${Math.round(pool.capacity)}% · ${pool.accounts} logins with limits`}</div></div>
+      ${pool.nextReset ? `<div class="kpi"><div class="kpi-v"><span class="up">+${Math.round(pool.nextReset.gain)}%</span></div><div class="kpi-l">resets at ${esc(when(pool.nextReset.at))} · ${esc(pool.nextReset.account)}</div></div>` : ""}
+      <div class="kpi"><div class="kpi-v">${pool.emptyAt ? esc(when(pool.emptyAt)) : "Not soon"}</div><div class="kpi-l">pool empty at this pace</div></div>
+      <div class="kpi"><div class="kpi-v">${drain >= 0.05 ? `${drain >= 10 ? Math.round(drain) : drain.toFixed(1)}%/h` : "0%/h"}</div><div class="kpi-l">burning right now</div></div>
+    </div>`;
+    return `<section class="runway-panel" aria-label="Runway"><h2 class="sr-only">Runway</h2>${kpis}<div class="qchart chart">${runwayChart(pool)}</div></section>`;
+  }
+
+  // A day of readings, then two days ahead, dashed. Resets mark where a window turns over.
+  function runwayChart(pool) {
+    const W = Math.max(520, Math.min(1480, $("#main")?.clientWidth || 940) - 48), H = 210, L = 44, R = 14, T = 14, B = 26;
+    const now = new Date(data.quota.forecastStart).getTime();
+    const from = now - 24 * 3600_000, to = now + 48 * 3600_000;
+    const top = Math.max(100, pool.capacity);
+    const x = (t) => L + ((t - from) / (to - from)) * (W - L - R);
+    const y = (v) => T + (1 - Math.max(0, Math.min(top, v)) / top) * (H - T - B);
+    const past = seriesPoints(data.quota.pastStart, pool.past).filter(([t, v]) => v != null && t >= from && t <= now);
+    if (past.length < 2) return `<p class="empty">Keyhop draws the runway once it has read the limits for a while.</p>`;
+    const ahead = seriesPoints(data.quota.forecastStart, pool.forecast).filter(([t]) => t >= now && t <= to);
+    let grid = "";
+    for (let i = 0; i <= 4; i++) {
+      const value = (top / 4) * i, yy = y(value).toFixed(1);
+      grid += `<line class="${i ? "grid" : "base"}" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text class="axis" x="${L - 8}" y="${yy}" text-anchor="end" dominant-baseline="central">${Math.round(value)}%</text>`;
+    }
+    grid += timeAxis(from, to, x, H, B);
+    const path = (points) => points.map(([t, v], i) => `${i ? "L" : "M"}${x(t).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    const area = (points) => `${path(points)}L${x(points[points.length - 1][0]).toFixed(1)},${y(0).toFixed(1)}L${x(points[0][0]).toFixed(1)},${y(0).toFixed(1)}Z`;
+    // The resets ahead, each one named by what it gives back.
+    let gains = "", lastGain = -Infinity;
+    for (let i = 1; i < ahead.length; i++) {
+      const gain = ahead[i][1] - ahead[i - 1][1];
+      if (gain >= Math.max(10, top * 0.05) && ahead[i][0] - lastGain >= 3 * 3600_000) {
+        lastGain = ahead[i][0];
+        gains += `<text class="qgain" x="${x(ahead[i][0]).toFixed(1)}" y="${(y(ahead[i][1]) - 7).toFixed(1)}" text-anchor="middle">+${Math.round(gain)}%</text>`;
+      }
+    }
+    const nowX = x(now).toFixed(1);
+    const marker = `<line class="qnow" x1="${nowX}" x2="${nowX}" y1="${T}" y2="${H - B}"/><text class="qnow-label" x="${nowX}" y="${T - 3}" text-anchor="middle">Now</text>`;
+    // Hover strips: readings behind now, the projection ahead of it.
+    const strip = 2 * 3600_000;
+    let hits = "";
+    for (let t = from; t < to; t += strip) {
+      const mid = t + strip / 2, future = mid > now;
+      const points = future ? ahead : past;
+      const point = points.reduce((best, p) => (!best || Math.abs(p[0] - mid) < Math.abs(best[0] - mid) ? p : best), null);
+      if (!point || Math.abs(point[0] - mid) > strip) continue;
+      hits += `<rect class="hit" x="${x(t).toFixed(1)}" y="${T}" width="${(x(Math.min(to, t + strip)) - x(t)).toFixed(1)}" height="${H - T - B}"${tipAttr(fmt.day(point[0], { weekday: "short", hour: "2-digit", minute: "2-digit" }), [[future ? "Projected" : "Left", `${Math.round(point[1])}%${pool.accounts > 1 ? ` of ${Math.round(pool.capacity)}%` : ""}`]])}/>`;
+    }
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="The pool's runway: a day recorded, two days projected">
+      ${grid}<path class="qarea" d="${area(past)}"/><path class="qline" d="${path(past)}"/><path class="qarea ahead" d="${area(ahead)}"/><path class="qline ahead" d="${path(ahead)}"/>${gains}${marker}${hits}
+    </svg>`;
+  }
+
   // Today's figures come from the status (always there); the cache share and the per-tool split
   // fill in once today's usage is read.
   function todayStrip() {
@@ -229,6 +294,7 @@ extension DashboardPage {
     return { body: `<div class="core">
       <h1 class="sr-only">Keyhop</h1>
       <section class="verdict" aria-live="polite"><p id="verdict-text">${verdict.text}</p>${verdict.button}</section>
+      ${runwayPanel()}
       <div class="colhead" aria-hidden="true"><span></span><span>Tool</span><span>Login</span><span class="r tdy">Today</span><span>Runway</span><span class="r">Window</span></div>
       <ul class="logins" id="logins">${rows}${waitRows}</ul>
       ${addFold(tools)}

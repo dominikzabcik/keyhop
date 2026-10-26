@@ -7,8 +7,7 @@ extension DashboardPage {
   const SECTIONS = ["home", "usage", "limits", "coach", "plans", "budgets", "leaderboard", "season", "teams", "profile", "settings"];
   const TITLES = { home: "Keyhop", usage: "Usage", limits: "Limits", coach: "Coach", plans: "Plans", budgets: "Budgets", leaderboard: "Leaderboard", season: "Season", teams: "Teams", profile: "Profile", settings: "Settings" };
   const CLOUD_SECTIONS = ["leaderboard", "season", "teams", "profile"];
-  // The demoted views behind the core screen's quiet links. A view with more than one section
-  // shows them as tabs in the view bar, and opens on the one last seen there.
+  // The sidebar's sets: every view in the open, grouped the way the product thinks.
   const GROUPS = [
     { id: "home", title: "Keyhop", sections: ["home"] },
     { id: "history", title: "History", sections: ["usage", "limits"] },
@@ -16,7 +15,6 @@ extension DashboardPage {
     { id: "community", title: "Community", sections: ["leaderboard", "season", "teams", "profile"] },
     { id: "settings", title: "Settings", sections: ["settings"] },
   ];
-  const groupOf = (section) => GROUPS.find((group) => group.sections.includes(section)) || { id: section, title: TITLES[section], sections: [section] };
   // Links from before the core screen still land where they meant to.
   const SECTION_ALIASES = { overview: "home", accounts: "limits" };
   const asSection = (name) => SECTION_ALIASES[name] || name;
@@ -41,7 +39,7 @@ extension DashboardPage {
     boardPeriod: "week", boardMetric: "efficiency", boardDivision: "", boardTeam: "", boardView: "ranks", boardDate: "", boardSeason: "",
     editing: null, confirming: null, budgetEdit: null, offline: null,
     settingsPane: "activity", checkingUpdate: false,
-    quotaTool: "all", quotaHours: 24, quotaView: "left", lastIn: {},
+    quotaTool: "all", quotaHours: 24, quotaView: "left",
     pending: new Map(), loadingUsage: 0,
     // The hop the verdict just made: the verdict confirms it and offers the way back for 7 seconds.
     hopped: null,
@@ -222,6 +220,8 @@ extension DashboardPage {
   async function loadSection() {
     try {
       if (ui.section === "home" || ui.section === "limits") loadServices();
+      // The core screen draws at once; the runway fills in when the history arrives.
+      if (ui.section === "home") loadQuota().then(() => { if (ui.section === "home" && !editing()) render(); });
       if (ui.section === "home") await loadUsage("today");
       // Limits draws its logins at once; the history fills in when it arrives.
       if (ui.section === "limits") loadQuota().then(() => { if (ui.section === "limits" && !editing()) render(); });

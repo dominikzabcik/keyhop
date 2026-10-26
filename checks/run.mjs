@@ -233,10 +233,10 @@ async function checkApp(browser) {
         await page.keyboard.press("Enter");
         if ((await page.locator(":focus").getAttribute("id")) !== "main") throw new Error("skip control did not focus the main content");
 
-        // The title bar's views are how the demoted views open.
-        await page.locator('#topnav [data-group="history"]').click();
+        // The sidebar's views are how the demoted views open.
+        await page.locator('.side-nav [data-section="usage"]').click();
         await page.waitForURL(/#usage$/);
-        await page.getByRole("heading", { name: "History", exact: true }).waitFor({ state: "visible" });
+        await page.getByRole("heading", { name: "Usage", exact: true }).waitFor({ state: "visible" });
 
         // Returning to Keyhop should refresh at once rather than showing figures up to 20 seconds old.
         const resumed = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/state");

@@ -4,6 +4,7 @@ import { type AppEnv, type Tool, MEASURED_TOOLS, addDays, today } from "./env";
 import { claimState, claimToday } from "./keeps";
 import { currentSeason, seasonBoard, seasonOf, tierFor } from "./seasons";
 import { streaks } from "./stats";
+import { tokens } from "./ui";
 
 /**
  * Quests and badges. Like seasons, both are counted from the daily totals already stored: a quest is
@@ -139,7 +140,7 @@ export function questsFrom(rows: DayRow[], work: WorkRow[] = [], reference = tod
     quest(
       "beat-yesterday",
       "Beat yesterday",
-      yesterday.tokens > 0 ? `Pass yesterday's ${Math.round(yesterday.tokens / 1000).toLocaleString("en-US")}K tokens.` : "Any tokens today beat an empty yesterday.",
+      yesterday.tokens > 0 ? `Pass yesterday's ${tokens(yesterday.tokens)} tokens.` : "Any tokens today beat an empty yesterday.",
       "day",
       Math.min(todayEntry.tokens, Math.max(yesterday.tokens, 1)),
       Math.max(yesterday.tokens, 1),

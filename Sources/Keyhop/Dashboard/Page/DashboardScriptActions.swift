@@ -95,6 +95,9 @@ extension DashboardPage {
     section = ui.section;
     data.boardError = null;
     data.dayError = null;
+    // The chart under the cursor is about to vanish; without a pointer move its tip would linger.
+    const tip = $("#tip");
+    if (tip) tip.hidden = true;
     history.replaceState(null, "", "#" + section);
     transition(() => { render(); $("#main").scrollTop = 0; });
     await loadSection();

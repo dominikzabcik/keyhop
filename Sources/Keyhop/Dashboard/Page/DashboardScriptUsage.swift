@@ -287,9 +287,12 @@ extension DashboardPage {
 
   function chartGroup(usage, group) {
     const which = group || ui.group || "account";
-    if (which === "tool" && usage.toolSeries && usage.toolBuckets) return { series: usage.toolSeries, buckets: usage.toolBuckets };
-    if (which === "model" && usage.modelSeries && usage.modelBuckets) return { series: usage.modelSeries, buckets: usage.modelBuckets };
-    return { series: usage.series, buckets: usage.buckets };
+    const picked = which === "tool" && usage.toolSeries && usage.toolBuckets ? { series: usage.toolSeries, buckets: usage.toolBuckets }
+      : which === "model" && usage.modelSeries && usage.modelBuckets ? { series: usage.modelSeries, buckets: usage.modelBuckets }
+      : { series: usage.series, buckets: usage.buckets };
+    // The server sends identity hues; here rank carries the shade and the hues stay reserved for state.
+    picked.series.forEach((s, i) => { s.color = SHARE_GREYS[Math.min(i, SHARE_GREYS.length - 1)]; });
+    return picked;
   }
 
   function heatCard(usage) {

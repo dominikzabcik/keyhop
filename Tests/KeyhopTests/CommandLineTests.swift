@@ -63,8 +63,8 @@ final class AlertRulesTests: XCTestCase {
         Account(id: UUID(), provider: .claude, identity: email, email: email, label: nil, plan: nil, addedAt: now)
     }
 
-    private func reading(_ used: Double) -> UsageSnapshot {
-        UsageSnapshot(windows: [UsageWindow(label: "5h", usedPercent: used, resetsAt: now.addingTimeInterval(3600), windowSeconds: 18000)], fetchedAt: now)
+    private func reading(_ used: Double, resetsIn: TimeInterval = 3600) -> UsageSnapshot {
+        UsageSnapshot(windows: [UsageWindow(label: "5h", usedPercent: used, resetsAt: now.addingTimeInterval(resetsIn), windowSeconds: 18000)], fetchedAt: now)
     }
 
     func testANearlyUsedUpLimitSuggestsTheAccountWithTheMostRoom() {
@@ -80,15 +80,30 @@ final class AlertRulesTests: XCTestCase {
     }
 
     func testALoginBackFromItsResetIsOfferedEvenWithAnOldReading() {
-        let inUse = account("a@x.dev"), wall = account("b@x.dev"), half = account("c@x.dev")
-        // b read at 100% an hour before its window turned over; c is half full and current.
+        let inUse = account("a@x.dev"), wall = account("b@x.dev")
+        // b read at 100% an hour before its window turned over: full again, old reading or not.
         let reset = UsageSnapshot(windows: [UsageWindow(label: "5h", usedPercent: 100, resetsAt: now.addingTimeInterval(-600), windowSeconds: 18000)],
                                   fetchedAt: now.addingTimeInterval(-3600))
-        let alerts = AlertRules.evaluate(accounts: [inUse, wall, half], active: [.claude: inUse.id],
-                                         usage: [inUse.id: reading(95), wall.id: reset, half.id: reading(50)],
+        let alerts = AlertRules.evaluate(accounts: [inUse, wall], active: [.claude: inUse.id],
+                                         usage: [inUse.id: reading(95), wall.id: reset],
                                          forecasts: [:], budgets: [], budgetSpend: [:], now: now)
         XCTAssertEqual(alerts.first?.switchTo, wall.id)
         XCTAssertEqual(SmartHop.room(reset.windows[0], now), 100)
+    }
+
+    func testAHopSpendsTheLoginThatRefillsSoonest() {
+        // Both spares have room worth a hop; the one whose window turns over first costs the
+        // least to burn, so it goes first even though the other has more left.
+        let inUse = account("a@x.dev"), soon = account("b@x.dev"), roomy = account("c@x.dev")
+        let alerts = AlertRules.evaluate(accounts: [inUse, soon, roomy], active: [.claude: inUse.id],
+                                         usage: [inUse.id: reading(95), soon.id: reading(60, resetsIn: 1800), roomy.id: reading(10, resetsIn: 14400)],
+                                         forecasts: [:], budgets: [], budgetSpend: [:], now: now)
+        XCTAssertEqual(alerts.first?.switchTo, soon.id)
+        // Below useful room the soon reset stops mattering; the hop goes to the real runway.
+        let drained = AlertRules.evaluate(accounts: [inUse, soon, roomy], active: [.claude: inUse.id],
+                                          usage: [inUse.id: reading(95), soon.id: reading(90, resetsIn: 1800), roomy.id: reading(10, resetsIn: 14400)],
+                                          forecasts: [:], budgets: [], budgetSpend: [:], now: now)
+        XCTAssertEqual(drained.first?.switchTo, roomy.id)
     }
 
     func testAFailedReadingKeepsALoginOfferedButSignedOutAndOwnTerminalLoginsAreNot() {

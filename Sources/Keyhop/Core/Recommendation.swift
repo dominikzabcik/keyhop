@@ -42,8 +42,17 @@ enum SmartHop {
                 if $0.score != $1.score { return $0.score > $1.score }
                 return $0.recommendation.account.uuidString < $1.recommendation.account.uuidString
             }
-        // The logins in turn go first; one kept for last only when none of them has room worth a hop.
-        let useful = ranked.filter { $0.recommendation.room >= usefulRoom }
+        // Among logins with room worth hopping for, spend the one whose window turns over
+        // soonest: what it burns comes back first, and the long runways stay whole. Logins
+        // without a reset to read fall back to their score. One kept for last still waits
+        // until none of the others has room worth a hop.
+        let useful = ranked.filter { $0.recommendation.room >= usefulRoom }.sorted { a, b in
+            let aReset = a.recommendation.resetsAt ?? .distantFuture
+            let bReset = b.recommendation.resetsAt ?? .distantFuture
+            if aReset != bReset { return aReset < bReset }
+            if a.score != b.score { return a.score > b.score }
+            return a.recommendation.account.uuidString < b.recommendation.account.uuidString
+        }
         return (useful.first { !$0.keptForLast } ?? useful.first ?? ranked.first { !$0.keptForLast } ?? ranked.first)?.recommendation
     }
 
@@ -91,11 +100,11 @@ enum SmartHop {
         } else if let budgetRemaining, budgetRemaining < 30 {
             reason = "\(percent(remaining))% limit room and \(percent(budgetRemaining))% of its budget left."
         } else if let hoursToReset, hoursToReset < 2 {
-            reason = "\(percent(remaining))% left; its tightest limit resets \(relativeReset(hoursToReset))."
+            reason = "\(percent(remaining))% left, and its tightest limit resets \(relativeReset(hoursToReset)); what it burns comes back first."
         } else if runOut != nil {
             reason = "\(percent(remaining))% left, but recent use projects an early limit."
         } else {
-            reason = "\(percent(remaining))% left on its tightest limit; the best available runway."
+            reason = "\(percent(remaining))% left on its tightest limit."
         }
         return Candidate(
             recommendation: AccountRecommendation(

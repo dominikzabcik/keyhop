@@ -5,7 +5,7 @@ import Foundation
 extension DashboardPage {
     static let stylesPages = ##"""
 /* Chrome extras: the outage chip in the titlebar, and the boot skeleton's spacing. */
-.top-chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 5px; font-size: 12px; text-decoration: none; white-space: nowrap; }
+.top-chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 5px; font-size: 12px; text-decoration: none; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .top-chip .mark { width: 12px; height: 12px; }
 .top-chip.warn { color: var(--low); background: var(--low-wash); }
 .top-chip.warn:hover { background: color-mix(in srgb, var(--low) 14%, transparent); }

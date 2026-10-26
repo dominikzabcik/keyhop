@@ -72,6 +72,15 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 /* The mark, bare on the chrome: paper K, the hopped arm in the one blue. */
 .kmark { width: 17px; height: 17px; color: var(--fg); flex: none; display: block; }
 .titlebar .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+/* The views, always on in the title bar; quiet text, the current one held on a wash. */
+.topnav { display: flex; align-items: center; gap: 2px; margin-left: 8px; }
+.topnav button {
+  height: 28px; padding: 0 10px; border: 0; border-radius: 5px;
+  background: none; color: var(--fg3); font: 500 12.5px var(--sans); cursor: pointer;
+  transition: background .15s ease-out, color .15s ease-out;
+}
+.topnav button:hover { color: var(--fg); background: var(--g2); }
+.topnav button[aria-current="page"] { color: var(--fg); background: var(--g2); }
 .readtime { color: var(--fg3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .readtime.stale { color: var(--low); }
 .iconbtn {
@@ -175,20 +184,18 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .core .row.idle .left, .core .row.idle .login { color: var(--fg3); }
 .core .row .pulse i { background: var(--fg3); }
 
-/* Today: the same grid as the rows, a step below the work surface. */
+/* Today: the day's figures as one instrument strip, a step below the work surface. */
 .core .today {
-  display: grid;
-  grid-template-columns: 8px 112px 220px minmax(0, 1fr) 190px;
-  gap: 6px 14px; align-items: end;
+  display: flex; flex-wrap: wrap; gap: 14px 36px; align-items: flex-end;
   margin-top: auto;
   padding: 16px 24px 14px;
   background: var(--chrome);
 }
-.core .figure { grid-column: 1 / 4; align-self: start; min-width: 0; }
-.core .figure .num { font: 600 20px/1.2 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-.core .figure .num .val { color: var(--fg2); font-weight: 500; }
-.core .figure .sub { margin-top: 4px; color: var(--fg3); font-size: 12px; }
-.core .shares { grid-column: 4 / 6; min-width: 0; }
+.core .kpis { display: flex; gap: 28px; align-items: flex-end; min-width: 0; }
+.kpi .kpi-v { font: 600 16px/1.2 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; white-space: nowrap; }
+.kpi.lead .kpi-v { font-size: 20px; }
+.kpi .kpi-l { margin-top: 4px; color: var(--fg3); font-size: 11.5px; white-space: nowrap; }
+.core .shares { flex: 1; min-width: 260px; }
 .sharebar { display: flex; gap: 2px; height: 2px; border-radius: 99px; overflow: hidden; }
 .sharebar i { height: 100%; }
 .sharebar i:nth-child(1), .sharekey .ki:nth-child(1) i { background: #cfcbc3; }
@@ -212,9 +219,6 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .core-add .list > .row { padding: 14px 24px; }
 .core-add .list { border-bottom: 1px solid var(--line); }
 
-.core .links { grid-column: 1 / 6; display: flex; gap: 16px; justify-content: flex-end; margin-top: 6px; }
-.core .links a { color: var(--fg3); font-size: 12px; text-decoration: none; transition: color .15s ease-out; }
-.core .links a:hover { color: var(--fg); }
 .setup-mark { flex: none; width: 24px; height: 24px; display: grid; place-items: center; color: var(--fg2); }
 .setup-mark .mark { width: 15px; height: 15px; }
 
@@ -536,6 +540,9 @@ svg.heat { display: block; }
     grid-template-columns: 8px 112px minmax(0, 1fr) 175px 165px;
   }
   .colhead .tdy, .core .tdy { display: none; }
+  /* The login keeps its name and its no-spare flag; the plan yields first. */
+  .core .login .plan { display: none; }
+  .readtime { display: none; }
 }
 @media (max-width: 640px) {
   .core .row {
@@ -548,10 +555,12 @@ svg.heat { display: block; }
   .core .left .rw { display: none; }
   .core .row .runway { align-self: center; }
   .verdict { flex-wrap: wrap; }
-  .core .today { grid-template-columns: 1fr; }
-  .core .figure, .core .shares, .core .links { grid-column: 1; }
-  .core .links { justify-content: flex-start; }
+  .core .kpis { flex-wrap: wrap; gap: 14px 24px; }
   .readtime { display: none; }
+  /* The word yields to the views; the K mark still names the app. */
+  .app { font-size: 0; gap: 0; }
+  .topnav { margin-left: 2px; }
+  .topnav button { padding: 0 8px; font-size: 12px; }
 }
 @media (max-width: 820px) {
   body { overflow: auto; }

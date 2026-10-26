@@ -172,17 +172,19 @@ extension DashboardPage {
     return { text: `Nothing runs out soon. <span class="detail">Next concern: ${concern}</span>`, button: "" };
   }
 
-  // Today's figure comes from the status (always there); the cache share and the per-tool split
+  // Today's figures come from the status (always there); the cache share and the per-tool split
   // fill in once today's usage is read.
   function todayStrip() {
     const today = data.state.status.today || { tokens: 0, cost: 0, requests: 0 };
     const usage = data.usage["today:all"];
     const t = usage?.total;
     const inputSide = t ? t.input + t.cacheRead + t.cacheWrite + (t.cacheWrite1h || 0) : 0;
-    const cached = inputSide ? ` · ${Math.round((t.cacheRead / inputSide) * 100)}% cached` : "";
-    const figure = `<div class="figure">
-      <div class="num"><span data-count="${today.tokens}" data-count-key="core:tokens" data-format="tokens" data-count-intro>${fmt.tokens(today.tokens)}</span> <span class="val">· ${fmt.usd(today.cost)}</span></div>
-      <div class="sub">tokens today at API prices · ${fmt.count(today.requests)} requests${cached}</div>
+    const cached = inputSide ? Math.round((t.cacheRead / inputSide) * 100) : null;
+    const figure = `<div class="kpis">
+      <div class="kpi lead"><div class="kpi-v num"><span data-count="${today.tokens}" data-count-key="core:tokens" data-format="tokens" data-count-intro>${fmt.tokens(today.tokens)}</span></div><div class="kpi-l">tokens today at API prices</div></div>
+      <div class="kpi"><div class="kpi-v">${fmt.usd(today.cost)}</div><div class="kpi-l">API value</div></div>
+      <div class="kpi"><div class="kpi-v">${fmt.count(today.requests)}</div><div class="kpi-l">requests</div></div>
+      ${cached == null ? "" : `<div class="kpi"><div class="kpi-v">${cached}%</div><div class="kpi-l">cache hit</div></div>`}
     </div>`;
     const tools = (usage?.tools || []).filter((tool) => tool.figures.tokens > 0).sort((a, b) => b.figures.tokens - a.figures.tokens);
     const sum = tools.reduce((n, tool) => n + tool.figures.tokens, 0);
@@ -197,13 +199,7 @@ extension DashboardPage {
         <div class="sharekey">${key}</div>
       </div>`;
     }
-    const cloudOn = !isStatic && !!data.state?.cloud?.available;
-    const links = [
-      `<a href="#usage" data-action="goto" data-section="usage">History</a>`,
-      `<a href="#coach" data-action="goto" data-section="coach">Insights</a>`,
-      cloudOn ? `<a href="#teams" data-action="goto" data-section="teams">Teams</a>` : "",
-    ].filter(Boolean).join("");
-    return `<section class="today">${figure}${shares}<nav class="links" aria-label="More">${links}</nav></section>`;
+    return `<section class="today">${figure}${shares}</section>`;
   }
 
   // Where a new login comes in: a quiet fold under the rows with the same add flow Limits has.

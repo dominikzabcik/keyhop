@@ -111,6 +111,15 @@ extension DashboardPage {
     const id = el.dataset.id;
     switch (el.dataset.action) {
       case "goto": go(el.dataset.section); break;
+      case "goto-group": {
+        // A view opens on the section last seen there, the way its tabs remember it.
+        const group = GROUPS.find((g) => g.id === el.dataset.group);
+        const last = group && ui.lastIn[group.id];
+        go(!group ? "home"
+          : last && group.sections.includes(last) && sectionShown(last) ? last
+          : group.sections.find(sectionShown) || group.sections[0]);
+        break;
+      }
       case "section-retry": data.coachError = data.plansError = null; render(); await loadSection(); render(); break;
       case "quota-tool": ui.quotaTool = el.dataset.value; transition(render); break;
       case "quota-hours": ui.quotaHours = +el.dataset.value; render(); break;

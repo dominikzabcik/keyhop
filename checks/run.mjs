@@ -233,8 +233,8 @@ async function checkApp(browser) {
         await page.keyboard.press("Enter");
         if ((await page.locator(":focus").getAttribute("id")) !== "main") throw new Error("skip control did not focus the main content");
 
-        // The today strip's quiet links are how the demoted views open.
-        await page.locator('.core .links a[data-section="usage"]').click();
+        // The title bar's views are how the demoted views open.
+        await page.locator('#topnav [data-group="history"]').click();
         await page.waitForURL(/#usage$/);
         await page.getByRole("heading", { name: "History", exact: true }).waitFor({ state: "visible" });
 

@@ -15,6 +15,7 @@ extension DashboardPage {
   <header class="titlebar">
     <span class="app"><svg class="kmark" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="19.5" rx="2" fill="currentColor"/><rect x="9.6" y="9.2" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="16" y="1" width="6" height="6" rx="1.5" fill="#2f5fd9"/><rect x="16" y="17" width="6" height="6" rx="1.5" fill="currentColor"/></svg>Keyhop</span>
     <span id="mode" hidden></span>
+    <nav class="topnav" id="topnav" aria-label="Views"></nav>
     <a class="top-chip warn" id="status-outage" href="#" target="_blank" rel="noopener" hidden></a>
     <span class="right">
       <span class="readtime" id="readtime"></span>

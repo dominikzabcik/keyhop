@@ -39,15 +39,18 @@ test('rows carry no controls; the verdict holds the one hop', async ({ app, brow
   expect(controls?.hops ?? 9).toBeLessThan(2);
 });
 
-test('today sums the day in figures and links the demoted views', async ({ app, screen, browser }) => {
+test('today sums the day in figures and the title bar holds the views', async ({ app, screen, browser }) => {
   await openWindow(app, 'home');
   await expect(browser.locator('.core .today .num')).toBeVisible();
   await expect(screen.getByText('tokens today at API prices', { exact: false })).toBeVisible();
   await expect(screen.getByText('requests', { exact: false }).first()).toBeVisible();
   // The share of the day, one bar and its key, tool by tool.
   await expect.poll(() => browser.evaluate(() => document.querySelectorAll('.core .sharebar i').length)).toBeGreaterThan(2);
-  await browser.locator('.core .links a[data-section="usage"]').tap();
+  // The views live in the title bar, the way an app's do, and remember where they were.
+  await expect(browser.locator('#topnav [data-group="home"]')).toHaveAttribute('aria-current', 'page');
+  await browser.locator('#topnav [data-group="history"]').tap();
   await expect(screen.getByRole('heading', 'History', { level: 1 })).toBeVisible();
+  await expect(browser.locator('#topnav [data-group="history"]')).toHaveAttribute('aria-current', 'page');
 });
 
 test('an old link to overview opens the core, and accounts opens limits', async ({ app, screen, browser }) => {

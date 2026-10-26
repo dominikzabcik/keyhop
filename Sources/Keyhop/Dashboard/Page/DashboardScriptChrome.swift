@@ -183,9 +183,18 @@ extension DashboardPage {
     if (toolbar.dataset.drawn !== controls) { toolbar.innerHTML = controls; toolbar.dataset.drawn = controls; }
   }
 
-  // The title bar: the mode, a word when a tool's service is in trouble, the read time, refresh.
+  // The title bar: the mode, the views, a word when a tool's service is in trouble, the read
+  // time, refresh. The views sit here the way an app's do: always on, quiet until current.
   function renderChrome() {
     const state = data.state;
+    const nav = $("#topnav");
+    if (nav) {
+      const groups = GROUPS.filter((group) => group.id !== "settings" && group.sections.some(sectionShown));
+      const current = groupOf(ui.section).id;
+      const html = groups.map((group) =>
+        `<button type="button" data-action="goto-group" data-group="${group.id}" aria-current="${current === group.id ? "page" : "false"}">${group.id === "home" ? "Home" : esc(group.title)}</button>`).join("");
+      if (nav.dataset.drawn !== html) { nav.innerHTML = html; nav.dataset.drawn = html; }
+    }
     const mode = $("#mode");
     if (mode) {
       mode.innerHTML = isStatic ? `<span class="badge">Saved</span>` : state?.mode === "sample" ? `<span class="badge sample">Sample</span>` : "";

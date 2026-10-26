@@ -74,12 +74,17 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
 .nav-set.last { margin-top: auto; padding-top: 16px; }
 .nav-h { padding: 0 8px 5px; color: var(--fg3); font: 600 10.5px var(--sans); letter-spacing: .08em; text-transform: uppercase; }
 .side-nav button {
-  display: flex; align-items: center; height: 28px; padding: 0 8px; border: 0; border-radius: 5px;
+  display: flex; align-items: center; gap: 9px; height: 30px; padding: 0 9px; border: 0; border-radius: 6px;
   background: none; color: var(--fg2); font: 500 12.5px var(--sans); cursor: pointer; text-align: left;
   transition: background .15s ease-out, color .15s ease-out;
 }
+.side-nav button .icon { width: 15px; height: 15px; flex: none; color: var(--fg3); transition: color .15s ease-out; }
 .side-nav button:hover { color: var(--fg); background: var(--g2); }
+.side-nav button:hover .icon { color: var(--fg2); }
 .side-nav button[aria-current="page"] { color: var(--fg); background: var(--g2); font-weight: 600; }
+.side-nav button[aria-current="page"] .icon { color: var(--fg); }
+.side-nav button .n { margin-left: auto; color: var(--fg3); font-size: 11px; font-variant-numeric: tabular-nums; }
+.side-version { padding: 10px 9px 0; color: var(--fg3); font-size: 11px; }
 .work { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .titlebar {
   position: relative; flex: none; display: flex; align-items: center; gap: 12px;
@@ -137,12 +142,15 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
   display: flex; align-items: center; gap: 16px;
   padding: 20px 24px; border-bottom: 1px solid var(--line);
 }
-.verdict p { margin: 0 auto 0 0; font-size: 15px; font-weight: 500; letter-spacing: -.01em; min-width: 0; view-transition-name: verdict; }
+.verdict p { margin: 0 auto 0 0; font-size: 16px; font-weight: 500; letter-spacing: -.012em; min-width: 0; view-transition-name: verdict; }
 .verdict p .detail { color: var(--fg2); font-weight: 400; }
 
 /* The runway: what the pool has left and where it is heading, recorded then projected. */
 .runway-panel { padding: 14px 24px 6px; border-bottom: 1px solid var(--line); }
-.runway-panel .kpis { flex-wrap: wrap; margin-bottom: 8px; }
+/* One line always: a long reset label gives way with an ellipsis before the strip wraps. */
+.runway-panel .kpis { margin-bottom: 8px; }
+.runway-panel .kpi { min-width: 0; }
+.runway-panel .kpi .kpi-l { overflow: hidden; text-overflow: ellipsis; }
 .runway-panel .kpi .kpi-v .up { color: var(--ok); }
 
 .logins { list-style: none; margin: 0; padding: 0; }
@@ -206,8 +214,11 @@ button, a, input, select, summary { touch-action: manipulation; -webkit-tap-high
   background: var(--chrome);
 }
 .core .kpis { display: flex; gap: 28px; align-items: flex-end; min-width: 0; }
+.core .kpis .kpi + .kpi { border-left: 1px solid var(--line); padding-left: 28px; }
 .kpi .kpi-v { font: 600 16px/1.2 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; white-space: nowrap; }
 .kpi.lead .kpi-v { font-size: 20px; }
+.kpi .kpi-v.c-low { color: var(--low); }
+.kpi .kpi-v.c-out { color: var(--out); }
 .kpi .kpi-l { margin-top: 4px; color: var(--fg3); font-size: 11.5px; white-space: nowrap; }
 .core .shares { flex: 1; min-width: 260px; }
 .sharebar { display: flex; gap: 2px; height: 2px; border-radius: 99px; overflow: hidden; }
@@ -554,8 +565,8 @@ svg.heat { display: block; }
     grid-template-columns: 8px 112px minmax(0, 1fr) 175px 165px;
   }
   .colhead .tdy, .core .tdy { display: none; }
-  /* The login keeps its name and its no-spare flag; the plan yields first. */
-  .core .login .plan { display: none; }
+  /* The login keeps its name; the plan and the no-spare flag yield rather than clip. */
+  .core .login .plan, .core .login .flag { display: none; }
 }
 @media (max-width: 640px) {
   .core .row {
@@ -569,6 +580,7 @@ svg.heat { display: block; }
   .core .row .runway { align-self: center; }
   .verdict { flex-wrap: wrap; }
   .core .kpis { flex-wrap: wrap; gap: 14px 24px; }
+  .core .kpis .kpi + .kpi { border-left: 0; padding-left: 0; }
   .readtime { display: none; }
   /* The sidebar lies down: one scrollable row of views under the brand. */
   .shell { flex-direction: column; }

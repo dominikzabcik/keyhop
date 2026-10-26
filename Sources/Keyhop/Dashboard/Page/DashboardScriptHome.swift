@@ -183,8 +183,10 @@ extension DashboardPage {
     if (!pool || !pool.accounts) return "";
     const one = pool.accounts === 1;
     const drain = pool.drainPerHour || 0;
+    const share = pool.capacity ? pool.remaining / pool.capacity : 0;
+    const toneCls = share <= 0.15 ? "c-out" : share <= 0.35 ? "c-low" : "";
     const kpis = `<div class="kpis">
-      <div class="kpi lead"><div class="kpi-v">${Math.round(pool.remaining)}%</div><div class="kpi-l">${one ? "of the window left" : `left of ${Math.round(pool.capacity)}% · ${pool.accounts} logins with limits`}</div></div>
+      <div class="kpi lead"><div class="kpi-v ${toneCls}">${Math.round(pool.remaining)}%</div><div class="kpi-l">${one ? "of the window left" : `left of ${Math.round(pool.capacity)}% · ${pool.accounts} logins with limits`}</div></div>
       ${pool.nextReset ? `<div class="kpi"><div class="kpi-v"><span class="up">+${Math.round(pool.nextReset.gain)}%</span></div><div class="kpi-l">resets at ${esc(when(pool.nextReset.at))} · ${esc(pool.nextReset.account)}</div></div>` : ""}
       <div class="kpi"><div class="kpi-v">${pool.emptyAt ? esc(when(pool.emptyAt)) : "Not soon"}</div><div class="kpi-l">pool empty at this pace</div></div>
       <div class="kpi"><div class="kpi-v">${drain >= 0.05 ? `${drain >= 10 ? Math.round(drain) : drain.toFixed(1)}%/h` : "0%/h"}</div><div class="kpi-l">burning right now</div></div>
@@ -232,8 +234,12 @@ extension DashboardPage {
       if (!point || Math.abs(point[0] - mid) > strip) continue;
       hits += `<rect class="hit" x="${x(t).toFixed(1)}" y="${T}" width="${(x(Math.min(to, t + strip)) - x(t)).toFixed(1)}" height="${H - T - B}"${tipAttr(fmt.day(point[0], { weekday: "short", hour: "2-digit", minute: "2-digit" }), [[future ? "Projected" : "Left", `${Math.round(point[1])}%${pool.accounts > 1 ? ` of ${Math.round(pool.capacity)}%` : ""}`]])}/>`;
     }
+    // The recorded line carries the pool's state: the one place a hue means something here.
+    const share = pool.capacity ? pool.remaining / pool.capacity : 0;
+    const tone = share <= 0.15 ? "var(--out)" : share <= 0.35 ? "var(--low)" : "var(--ok)";
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="The pool's runway: a day recorded, two days projected">
-      ${grid}<path class="qarea" d="${area(past)}"/><path class="qline" d="${path(past)}"/><path class="qarea ahead" d="${area(ahead)}"/><path class="qline ahead" d="${path(ahead)}"/>${gains}${marker}${hits}
+      <defs><linearGradient id="rwfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${tone}" stop-opacity=".16"/><stop offset="1" stop-color="${tone}" stop-opacity="0"/></linearGradient></defs>
+      ${grid}<path d="${area(past)}" fill="url(#rwfade)"/><path class="qline" style="stroke:${tone}" d="${path(past)}"/><path class="qarea ahead" d="${area(ahead)}"/><path class="qline ahead" d="${path(ahead)}"/>${gains}${marker}${hits}
     </svg>`;
   }
 

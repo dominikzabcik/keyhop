@@ -177,18 +177,23 @@ extension DashboardPage {
   }
 
   // The sidebar: every view in the open, grouped the way the product thinks, the way an app's
-  // sidebar does. Settings sits at the bottom on its own.
+  // sidebar does. Settings sits at the bottom on its own, over the version.
+  const SECTION_ICONS = {
+    home: "home", usage: "usage", limits: "gauge", coach: "coach", plans: "plans", budgets: "budgets",
+    leaderboard: "leaderboard", season: "season", teams: "people", profile: "profile", settings: "settings",
+  };
   function renderSidebar() {
     const nav = $("#sidenav");
     if (!nav) return;
+    const logins = (data.state?.status.tools || []).reduce((n, tool) => n + tool.accounts.length, 0);
     const html = GROUPS.map((group) => {
       const shown = group.sections.filter(sectionShown);
       if (!shown.length) return "";
       const items = shown.map((section) =>
-        `<button type="button" data-action="goto" data-section="${section}" aria-current="${ui.section === section ? "page" : "false"}">${esc(section === "home" ? "Home" : TITLES[section])}</button>`).join("");
+        `<button type="button" data-action="goto" data-section="${section}" aria-current="${ui.section === section ? "page" : "false"}">${icon(SECTION_ICONS[section])}<span>${esc(section === "home" ? "Home" : TITLES[section])}</span>${section === "limits" && logins ? `<span class="n">${logins}</span>` : ""}</button>`).join("");
       const head = group.id === "home" || group.id === "settings" ? "" : `<span class="nav-h">${esc(group.title)}</span>`;
       return `<div class="nav-set${group.id === "settings" ? " last" : ""}">${head}${items}</div>`;
-    }).join("");
+    }).join("") + (data.state?.version ? `<span class="side-version">Keyhop ${esc(data.state.version)}</span>` : "");
     if (nav.dataset.drawn !== html) { nav.innerHTML = html; nav.dataset.drawn = html; }
   }
 

@@ -75,7 +75,6 @@ extension DashboardPage {
   async function showDay() {
     ui.boardView = "day";
     ui.boardDate = "";
-    data.day = null;
     if (ui.section !== "teams") { await go("teams"); return; }
     render();
     await loadSection();
@@ -196,7 +195,7 @@ extension DashboardPage {
       case "cloud-link": act(el, () => api("/api/cloud/link", {}), "Opening GitHub"); break;
       case "cloud-sync": act(el, () => api("/api/cloud/sync", {}), "Syncing"); break;
       case "streak-claim": act(el, () => api("/api/cloud/streak", {}), "Claiming"); break;
-      case "cloud-unlink": data.board = null; act(el, () => api("/api/cloud/unlink", {}), "Unlinking"); break;
+      case "cloud-unlink": dropBoards(); act(el, () => api("/api/cloud/unlink", {}), "Unlinking"); break;
       case "cloud-limits-on": act(el, () => api("/api/cloud/limits", { on: true }), "Turning on"); break;
       case "cloud-limits-off": act(el, () => api("/api/cloud/limits", { on: false }), "Stopping"); break;
       case "update-channel":
@@ -209,7 +208,7 @@ extension DashboardPage {
         render();
         break;
       case "team-digest-off":
-        act(el, async () => { const result = await api("/api/cloud/team", { digestOff: ui.boardTeam }); data.board = null; data.day = null; return result; }, "Turning off");
+        act(el, async () => { const result = await api("/api/cloud/team", { digestOff: ui.boardTeam }); dropBoards(); return result; }, "Turning off");
         break;
       case "cloud-live-on": act(el, () => api("/api/cloud/live", { on: true }), "Turning on"); break;
       case "cloud-live-off": act(el, () => api("/api/cloud/live", { on: false }), "Stopping"); break;
@@ -219,9 +218,10 @@ extension DashboardPage {
         try { data.outbound = await api("/api/cloud/show-data"); } catch (error) { data.outboundError = error.message; }
         render();
         break;
+      // A filter pick never clears what was read: a combination seen before comes back from the
+      // kept boards at once, and only a new one waits.
       case "board-division":
         ui.boardDivision = el.dataset.value;
-        data.board = null;
         render();
         await loadSection();
         render();
@@ -229,14 +229,12 @@ extension DashboardPage {
       case "board-season":
         if (el.dataset.value === ui.boardSeason) break;
         ui.boardSeason = el.dataset.value;
-        data.board = null;
         render();
         await loadSection();
         render();
         break;
       case "board-period": case "board-metric":
         ui[el.dataset.action === "board-period" ? "boardPeriod" : "boardMetric"] = el.dataset.value;
-        data.board = null;
         render();
         await loadSection();
         render();
@@ -245,14 +243,12 @@ extension DashboardPage {
         if (el.dataset.value === ui.boardView) break;
         ui.boardView = el.dataset.value;
         if (ui.boardView === "day") ui.boardDate = "";
-        data.day = null;
         render();
         await loadSection();
         render();
         break;
       case "day-step":
         ui.boardDate = el.dataset.value;
-        data.day = null;
         render();
         await loadSection();
         render();
@@ -262,7 +258,6 @@ extension DashboardPage {
         ui.boardView = "day";
         ui.boardDate = "";
         data.invite = null;
-        data.day = null;
         if (ui.section !== "teams") { await go("teams"); break; }
         render();
         await loadSection();
@@ -283,8 +278,7 @@ extension DashboardPage {
         const slug = ui.boardTeam;
         ui.boardTeam = "";
         data.invite = null;
-        data.board = null;
-        data.day = null;
+        dropBoards();
         act(el, () => api("/api/cloud/team", { leave: slug }), "Leaving");
         break;
       }
@@ -295,7 +289,7 @@ extension DashboardPage {
         act(el, async () => {
           const result = await api("/api/cloud/apps", { id: el.dataset.id });
           data.apps = null;
-          if (result.unlinked) { data.board = null; data.profile = null; }
+          if (result.unlinked) { dropBoards(); data.profile = null; }
           return result;
         }, "Unlinking");
         break;
@@ -313,8 +307,6 @@ extension DashboardPage {
       ui.boardTeam = team.value;
       if (!team.value) ui.boardView = "ranks";
       team.blur();
-      data.board = null;
-      data.day = null;
       render();
       await loadSection();
       render();
@@ -370,7 +362,7 @@ extension DashboardPage {
       if (name.length < 2) { toast("Give the team a name of at least 2 characters.", true); return; }
       act(button, async () => {
         const result = await api("/api/cloud/team", { name });
-        if (result.slug) { ui.boardTeam = result.slug; ui.boardView = "day"; ui.boardDate = ""; data.day = null; data.board = null; }
+        if (result.slug) { ui.boardTeam = result.slug; ui.boardView = "day"; ui.boardDate = ""; dropBoards(); }
         return result;
       }, "Creating");
     }
@@ -379,7 +371,7 @@ extension DashboardPage {
       if (!code) { toast("Paste an invite link or its code.", true); return; }
       act(button, async () => {
         const result = await api("/api/cloud/team", { code });
-        if (result.slug) { ui.boardTeam = result.slug; ui.boardView = "day"; ui.boardDate = ""; data.day = null; data.board = null; }
+        if (result.slug) { ui.boardTeam = result.slug; ui.boardView = "day"; ui.boardDate = ""; dropBoards(); }
         return result;
       }, "Joining");
     }
@@ -389,8 +381,7 @@ extension DashboardPage {
       if (!Number.isInteger(hour) || hour < 0 || hour > 23) { toast("The hour is 0 to 23, in UTC.", true); return; }
       act(button, async () => {
         const result = await api("/api/cloud/team", { slug: ui.boardTeam, digestUrl: url, digestHour: hour });
-        data.board = null;
-        data.day = null;
+        dropBoards();
         return result;
       }, "Saving");
     }
@@ -400,8 +391,7 @@ extension DashboardPage {
       if (confirm.toLowerCase() !== slug.toLowerCase()) { toast(`Type ${slug} to delete this team.`, true); return; }
       ui.boardTeam = "";
       data.invite = null;
-      data.board = null;
-      data.day = null;
+      dropBoards();
       act(button, () => api("/api/cloud/team", { delete: slug, confirm }), "Deleting");
     }
     if (form.dataset.form === "account-delete") {
@@ -410,7 +400,7 @@ extension DashboardPage {
       if (confirm.toLowerCase() !== login.toLowerCase()) { toast(`Type ${login} to delete your account.`, true); return; }
       act(button, async () => {
         const result = await api("/api/cloud/account", { confirm });
-        data.board = null;
+        dropBoards();
         data.profile = null;
         data.apps = null;
         return result;

@@ -357,7 +357,6 @@ select.field option { background: var(--g2); }
 .list > .row + .row { border-top: 1px solid var(--line); }
 .empty { padding: 18px 20px; color: var(--fg2); }
 .empty-inline { color: var(--fg2); margin: 0; }
-.lede { margin: 0 0 4px; color: var(--fg2); }
 
 .notice { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid rgba(217, 160, 58, .28); background: rgba(217, 160, 58, .06); border-radius: 8px; }
 .notice .icon { color: var(--low); }
@@ -400,6 +399,8 @@ select.field option { background: var(--g2); }
 @media (prefers-reduced-motion: no-preference) { .skel { animation: skel 1.4s ease-in-out infinite; } }
 @keyframes skel { 50% { background: hsl(var(--on) / .12); } }
 .skel-card { display: grid; gap: 14px; padding: 20px; }
+.skel-row { display: flex; align-items: center; gap: 14px; padding: 15px 20px; }
+.skel-row + .skel-row { border-top: 1px solid var(--line); }
 
 .who { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .who .mark { width: 18px; height: 18px; fill: var(--fg); flex: none; }

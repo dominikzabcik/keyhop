@@ -10,7 +10,7 @@ extension DashboardPage {
       + tabs("metric", [["tokens", "Tokens"], ["cost", "API value"]], ui.metric)
       + `<select class="field" data-action="tool" aria-label="Tool" ${isStatic ? "disabled" : ""}>${[["all", "All tools"], ...tools.map((t) => [t.id, t.name])].map(([v, l]) => `<option value="${v}" ${v === ui.tool ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
     const usage = data.usage[`${ui.range}:${ui.tool}`] || (isStatic ? data.usage[`${ui.range}:all`] : null);
-    if (!usage) return { toolbar, body: `<div class="card">${loading("Reading usage", "empty")}</div>` };
+    if (!usage) return { toolbar, body: usageWait() };
     const stale = data.usageErrors[`${ui.range}:${ui.tool}`]
       ? `<div class="notice">${icon("alert")}<div><b>Showing the last complete reading</b><p>${esc(data.usageErrors[`${ui.range}:${ui.tool}`])}</p></div></div>` : "";
 
@@ -32,6 +32,18 @@ extension DashboardPage {
       <div class="card-body">${mixBlock(t)}</div>
     </section>`;
     return { toolbar, body: `${stale}${board(`${totalCard(usage)}${chart}${mix}`, `${summaryCard(usage)}${heatCard(usage)}`)}${breakdownCard(usage)}` };
+  }
+
+  // The page's own shape while a range is read the first time: the words and the meter in the
+  // first card, the chart and the side tiles breathing under them.
+  function usageWait() {
+    return `<div class="usage-board" role="status"><div class="usage-side">
+      <section class="card"><div class="skel-card">${loading("Reading usage")}</div></section>
+      <section class="card skel-card" style="grid-template-columns:1fr 1fr" aria-hidden="true">${skelList(4, 64)}</section>
+    </div><div class="usage-main">
+      <section class="card skel-card" aria-hidden="true">${skel("30%", 14)}${skel("100%", 240)}</section>
+      <section class="card skel-card" style="min-height:120px" aria-hidden="true"></section>
+    </div></div>`;
   }
 
   // The range's total, exact, set large; what it was worth; and how it splits across tools, or

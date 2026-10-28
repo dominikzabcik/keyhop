@@ -47,7 +47,7 @@ extension DashboardPage {
   };
   if (!SECTIONS.includes(ui.section)) ui.section = "home";
   history.replaceState(null, "", "#" + ui.section);
-  const data = { state: boot?.state || null, usage: {}, usageErrors: {}, doctor: null, update: null, updateError: null, pet: null, petError: null };
+  const data = { state: boot?.state || null, usage: {}, usageErrors: {}, boards: {}, days: {}, doctor: null, update: null, updateError: null, pet: null, petError: null };
   if (isStatic) for (const [range, doc] of Object.entries(boot.usage || {})) data.usage[range + ":all"] = doc;
 
   // Share bars step through greys, lightest for the largest part; a hue would read as a state.
@@ -115,6 +115,10 @@ extension DashboardPage {
     return `<p class="busy" role="status"><span class="pulse" aria-hidden="true"><i></i><i></i><i></i></span><b>${esc(title)}</b>${count}</p>
       <div class="meter${step?.fraction != null ? "" : " unknown"}" role="progressbar" aria-label="${esc(title)}" ${step?.fraction != null ? `aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(step.fraction * 100)}"` : ""}><span ${width}></span></div>${hint}`;
   }
+  // A first read draws the page's own shapes breathing where the figures will land, so nothing
+  // jumps when they arrive; the usual words sit with them. A later read keeps the last figures up.
+  const skel = (w, h = 13, r = "") => `<span class="skel" style="width:${w};height:${h}px${r ? `;border-radius:${r}` : ""}"></span>`;
+  const skelList = (n, h = 15) => Array.from({ length: n }, () => skel("100%", h)).join("");
   // A report that couldn't be read says why, and offers to read it again.
   const failed = (message) => `<div class="notice">${icon("alert")}<div><p>${esc(message)}</p></div>${isStatic ? "" : `<button class="btn sm secondary" type="button" data-action="section-retry">Try again</button>`}</div>`;
   const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
@@ -236,23 +240,29 @@ extension DashboardPage {
       }
       if (!isStatic && data.state?.cloud?.linked && CLOUD_SECTIONS.includes(ui.section)) {
         const petReady = ui.section === "profile" ? loadPet() : null;
-        const boardURL = (team) => `/api/cloud/leaderboard?period=${ui.boardPeriod}&metric=${ui.boardMetric}&division=${ui.boardDivision}&team=${encodeURIComponent(team)}&season=${encodeURIComponent(ui.boardSeason)}`;
+        // Every answer lands in a keyed cache the pages read: a board or day seen once stays up
+        // while a fresh one comes in, and only a first look waits.
         try {
           if (ui.section === "teams" && ui.boardView === "day") {
-            data.day = await api(`/api/cloud/day?team=${encodeURIComponent(ui.boardTeam)}&date=${encodeURIComponent(ui.boardDate)}`);
+            const asked = dayKey();
+            const doc = await api(`/api/cloud/day?team=${encodeURIComponent(ui.boardTeam)}&date=${encodeURIComponent(ui.boardDate)}`);
             data.dayError = null;
-            if (data.day.team) ui.boardTeam = data.day.team.slug;
-            if (data.day.day) ui.boardDate = data.day.day;
-          } else if (ui.section === "teams" && ui.boardTeam) {
-            data.board = await api(boardURL(ui.boardTeam));
-            data.boardError = null;
+            if (doc.team) ui.boardTeam = doc.team.slug;
+            if (doc.day) ui.boardDate = doc.day;
+            // An empty ask resolves to a team and a day; both spellings find the answer.
+            data.days[asked] = doc;
+            data.days[dayKey()] = doc;
+            data.day = doc;
           } else {
-            data.board = await api(boardURL(""));
+            const team = ui.section === "teams" ? ui.boardTeam : "";
+            const doc = await api(`/api/cloud/leaderboard?${boardQuery(team)}`);
             data.boardError = null;
+            // A website older than the efficiency board answers with the measure it knows; the tabs follow it.
+            const answered = doc?.board?.metric;
+            if (answered && answered !== ui.boardMetric) ui.boardMetric = answered;
+            data.boards[boardQuery(team)] = doc;
+            data.board = doc;
           }
-          // A website older than the efficiency board answers with the measure it knows; the tabs follow it.
-          const answered = data.board?.board?.metric;
-          if (answered && answered !== ui.boardMetric) ui.boardMetric = answered;
         } catch (error) {
           if (ui.section === "teams" && ui.boardView === "day") data.dayError = error.message;
           else data.boardError = error.message;

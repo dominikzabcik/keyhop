@@ -5,6 +5,22 @@ extension DashboardPage {
     static let scriptCloud = ##"""
   // MARK: Leaderboard
 
+  // One spelling of a board's ask, shared by the loader and the pages, so a board seen under
+  // these filters is found again the moment they are picked.
+  const boardQuery = (team) => `period=${ui.boardPeriod}&metric=${ui.boardMetric}&division=${ui.boardDivision}&team=${encodeURIComponent(team)}&season=${encodeURIComponent(ui.boardSeason)}`;
+  const dayKey = () => `${ui.boardTeam}|${ui.boardDate}`;
+  const cachedBoard = (team) => data.boards[boardQuery(team)] || null;
+  // A cloud mutation (leaving a team, unlinking) makes every kept board stale at once.
+  function dropBoards() { data.boards = {}; data.days = {}; data.board = null; data.day = null; }
+
+  // The board's shape while it answers: rows breathing where the ranks will land.
+  function boardWait(label, banner = false) {
+    const widths = [34, 23, 29, 19, 31, 26, 21, 27];
+    const rows = widths.map((w) => `<div class="skel-row">${skel("18px")}${skel("26px", 26, "50%")}${skel(w + "%")}<span class="skel" style="width:56px;height:13px;margin-left:auto"></span></div>`).join("");
+    const head = banner ? `<section class="card skel-card" style="min-height:120px" aria-hidden="true"></section>` : "";
+    return `<div role="status" aria-label="${esc(label)}">${head}<section class="card" aria-hidden="true">${rows}</section></div>`;
+  }
+
   function ago(iso) {
     const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
     if (seconds < 60) return "just now";
@@ -301,11 +317,11 @@ extension DashboardPage {
 
   // The same day the website shows at /t/<team>/day.
   function dayView(toolbar) {
-    if (data.dayError) return { toolbar, body: `<div class="notice">${icon("alert")}<div><p>${esc(data.dayError)}</p></div></div>` };
-    if (!data.day) return { toolbar, body: busy("Reading the day", "lede") };
-    const day = data.day;
+    const day = data.days[dayKey()] || null;
+    if (data.dayError && !day) return { toolbar, body: `<div class="notice">${icon("alert")}<div><p>${esc(data.dayError)}</p></div></div>` };
+    if (!day) return { toolbar, body: boardWait("Reading the day", true) };
     if (!day.team) return { body: teamList(day.website) };
-    if (ui.boardTeam && day.team.slug !== ui.boardTeam) return { toolbar, body: busy("Reading the day", "lede") };
+    if (ui.boardTeam && day.team.slug !== ui.boardTeam) return { toolbar, body: boardWait("Reading the day", true) };
     const label = day.day === day.today ? "Today" : day.day;
     const previous = `<button class="btn sm ghost" type="button" data-action="day-step" data-value="${esc(day.previous)}" aria-label="Previous day">Previous</button>`;
     const following = day.next
@@ -393,34 +409,37 @@ extension DashboardPage {
     const cloud = data.state.cloud;
     if (!cloud.linked || cloud.linking) return { body: cloudCard(cloud) };
     const toolbar = periodChoices();
-    if (data.boardError) return { toolbar, body: boardFilters() + boardProblem() };
-    if (!data.board || data.board.team) return { toolbar, body: boardFilters() + busy("Reading the leaderboard", "lede") };
+    const board = cachedBoard("");
+    if (data.boardError && !board) return { toolbar, body: boardFilters() + boardProblem() };
+    if (!board) return { toolbar, body: boardFilters() + boardWait("Reading the leaderboard") };
     const note = cloud.isPublic ? "" : `<p class="empty-inline subtle">Your profile is private. Make it public in Settings, Cloud, to join the global board.</p>`;
-    return { toolbar, body: boardFilters() + ranksBody(data.board.board.entries, "the global board") + note };
+    return { toolbar, body: boardFilters() + ranksBody(board.board.entries, "the global board") + note };
   }
 
   function seasonPage() {
-    if (data.boardError) return { body: boardProblem() };
-    if (!data.board) return { body: busy("Reading the season", "lede") };
-    if (!data.board.season) return { body: `<section class="card"><p class="empty">No season to show yet.</p></section>` };
-    return { body: seasonRow(data.board.season) + seasonStandings(data.board.season) };
+    const board = cachedBoard("");
+    if (data.boardError && !board) return { body: boardProblem() };
+    if (!board) return { body: boardWait("Reading the season", true) };
+    if (!board.season) return { body: `<section class="card"><p class="empty">No season to show yet.</p></section>` };
+    return { body: seasonRow(board.season) + seasonStandings(board.season) };
   }
 
   function profilePage() {
     const cloud = data.state.cloud;
-    if (data.boardError) return { body: boardProblem() };
-    if (!data.board) return { body: busy("Reading your profile", "lede") };
+    const board = cachedBoard("");
+    if (data.boardError && !board) return { body: boardProblem() };
+    if (!board) return { body: boardWait("Reading your profile", true) };
     const link = cloud.profile
       ? `<p class="empty-inline subtle"><a href="${esc(cloud.profile)}" target="_blank" rel="noopener">Open the full profile</a> · <a href="${esc(cloud.profile)}/wrapped" target="_blank" rel="noopener">Your year, wrapped</a></p>`
       : "";
-    return { body: petCard() + claimCard(data.board.quests) + questsCard(data.board.quests) + badgesCard(data.board.quests) + link };
+    return { body: petCard() + claimCard(board.quests) + questsCard(board.quests) + badgesCard(board.quests) + link };
   }
 
   function teamsPage() {
     const website = data.day?.website || data.board?.website || "https://keyhop.app";
     if (ui.boardView !== "day" && !ui.boardTeam) {
       if (data.boardError && !knownTeams().length) return { body: boardProblem() };
-      if (!data.board && !data.day) return { body: busy("Reading your teams", "lede") };
+      if (!data.board && !data.day) return { body: boardWait("Reading your teams") };
       return { body: teamList(website) };
     }
     const mode = ui.boardView === "ranks" ? "ranks" : ui.boardView === "members" ? "members" : "day";
@@ -429,15 +448,16 @@ extension DashboardPage {
       const toolbar = `${teamMenu()}${view}`;
       const ready = data.board?.team === ui.boardTeam || data.day?.team?.slug === ui.boardTeam;
       if (data.boardError && !ready) return { toolbar, body: boardProblem() };
-      if (!ready) return { toolbar, body: busy("Reading the team", "lede") };
+      if (!ready) return { toolbar, body: boardWait("Reading the team") };
       return { toolbar, body: teamManage(data.board?.website || data.day?.website || website) };
     }
     if (mode === "ranks") {
       const toolbar = `${teamMenu()}${view}${periodChoices()}`;
       const name = knownTeams().find((team) => team.slug === ui.boardTeam)?.name || "your team";
-      if (data.boardError) return { toolbar, body: boardFilters() + boardProblem() };
-      if (!data.board || data.board.team !== ui.boardTeam) return { toolbar, body: boardFilters() + busy("Reading the board", "lede") };
-      return { toolbar, body: boardFilters() + ranksBody(data.board.board.entries, name) };
+      const board = cachedBoard(ui.boardTeam);
+      if (data.boardError && !board) return { toolbar, body: boardFilters() + boardProblem() };
+      if (!board) return { toolbar, body: boardFilters() + boardWait("Reading the board") };
+      return { toolbar, body: boardFilters() + ranksBody(board.board.entries, name) };
     }
     return dayView(`${teamMenu()}${view}`);
   }

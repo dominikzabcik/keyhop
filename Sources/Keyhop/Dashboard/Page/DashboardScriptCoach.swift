@@ -14,7 +14,9 @@ extension DashboardPage {
     if (isStatic) return { body: `<section class="card"><p class="empty">Coaching is read live in the window, not in a saved page.</p></section>` };
     if (data.coachError) return { body: failed(data.coachError) };
     const report = data.coach;
-    if (!report) return { body: `<section class="card"><p class="empty" data-loading="Reading the last thirty days">${loadingInner("Reading the last thirty days")}</p></section>` };
+    if (!report) return { body: `<div role="status"><section class="card"><div class="skel-card">${loading("Reading the last thirty days")}</div></section>
+      <section class="card skel-card" aria-hidden="true">${skel("22%", 15)}${skelList(3)}</section>
+      <section class="card skel-card" aria-hidden="true">${skel("22%", 15)}${skelList(4)}</section></div>` };
     const o = report.optimize, c = report.compare, y = report.yield;
     // A finding that costs money reads amber; a quiet one says so in grey.
     const glyph = { cache: "alert", premium: "alert", session: "alert" };

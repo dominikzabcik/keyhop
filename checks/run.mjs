@@ -215,10 +215,10 @@ async function checkApp(browser) {
       widths: APP_WIDTHS,
       open: async (page, screen) => {
         await page.goto(`${url.origin}/${url.hash.replace("s=overview", `s=${screen.section}`)}`, { waitUntil: "networkidle" });
-        await page.waitForFunction(() => !document.querySelector(".lede.busy"), null, { timeout: 20_000 }).catch(() => {});
+        await page.waitForFunction(() => !document.querySelector("#main [role=status] .skel"), null, { timeout: 20_000 }).catch(() => {});
         for (const step of screen.arrive ?? []) {
           await page.locator(step).first().click();
-          await page.waitForFunction(() => !document.querySelector(".lede.busy"), null, { timeout: 20_000 }).catch(() => {});
+          await page.waitForFunction(() => !document.querySelector("#main [role=status] .skel"), null, { timeout: 20_000 }).catch(() => {});
         }
         return null;
       },

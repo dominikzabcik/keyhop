@@ -39,7 +39,8 @@ extension DashboardPage {
     if (isStatic) return { body: `<section class="card"><p class="empty">Plans are priced live in the window, not in a saved page.</p></section>` };
     if (data.plansError) return { body: failed(data.plansError) };
     const report = data.plans;
-    if (!report) return { body: `<section class="card"><p class="empty" data-loading="Pricing this month's plans">${loadingInner("Pricing this month's plans")}</p></section>` };
+    if (!report) return { body: `<div role="status"><section class="card"><div class="skel-card">${loading("Pricing this month's plans")}</div></section>
+      <section class="card skel-card" aria-hidden="true">${skelList(5, 34)}</section></div>` };
     if (!report.rows.length) return { body: `<section class="card"><p class="empty">No logins to price yet. Add one under Limits.</p></section>` };
     const figure = (value, label) => `<div class="plans-fig"><b class="num">${value}</b><span class="subtle">${label}</span></div>`;
     const head = `<section class="card plans-head" title="API value is what the tokens would cost at standard API prices, never the bill. The peak is the highest a window reached in the last seven days.">

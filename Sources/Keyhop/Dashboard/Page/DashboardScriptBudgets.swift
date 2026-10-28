@@ -37,7 +37,7 @@ extension DashboardPage {
     </section>`;
     const month = data.usage["month:all"];
     const overall = status.budgets.find((b) => b.scope === "all" && b.period === "month");
-    const byAccount = !month ? loading("Reading this month's usage", "empty") : month.total.requests ? accountTable(month.accounts, "cost") : `<p class="empty">No usage this month yet.</p>`;
+    const byAccount = !month ? `<div class="skel-card" role="status" aria-label="Reading this month's usage">${skelList(4, 30)}</div>` : month.total.requests ? accountTable(month.accounts, "cost") : `<p class="empty">No usage this month yet.</p>`;
     return { body: `
       <div class="split wide-left">
         <section class="card"><div class="card-head"><h2>Budgets</h2><span class="hint mono">${status.budgets.length}</span></div>${list}</section>
@@ -50,7 +50,7 @@ extension DashboardPage {
   }
 
   function spendCard(usage, budget) {
-    if (!usage) return `<section class="card"><div class="card-head"><h2>This month</h2></div>${loading("Reading this month's usage", "empty")}</section>`;
+    if (!usage) return `<section class="card"><div class="card-head"><h2>This month</h2></div><div class="skel-card">${loading("Reading this month's usage")}${skel("100%", 160)}</div></section>`;
     const now = Date.now();
     let running = 0;
     const points = [];

@@ -75,7 +75,7 @@ final class AlertRulesTests: XCTestCase {
         XCTAssertEqual(alerts.count, 1)
         XCTAssertEqual(alerts.first?.switchTo, roomy.id)
         XCTAssertEqual(alerts.first?.title, "Claude Code is nearly out")
-        XCTAssertEqual(alerts.first?.subtitle, "a@x.dev · 5-hour at 95%")
+        XCTAssertEqual(alerts.first?.subtitle, "a@x.dev · 5h window, 5% left")
         XCTAssertEqual(alerts.first?.switchName, "c@x.dev")
     }
 

@@ -26,7 +26,7 @@ final class MenuScreenTests: XCTestCase {
     }
 
     /// Renders a screen at the menu's real width and reads every word on it.
-    private func words<V: View>(of view: V, width: CGFloat = 360) throws -> [String] {
+    private func words<V: View>(of view: V, width: CGFloat = MenuView.width) throws -> [String] {
         let renderer = ImageRenderer(content: view.frame(width: width).environment(\.colorScheme, .dark))
         renderer.scale = 2
         guard let image = renderer.cgImage else { throw XCTSkip("This machine can't render SwiftUI offscreen.") }
@@ -73,8 +73,8 @@ final class MenuScreenTests: XCTestCase {
         XCTAssertTrue(said.contains("More"), "there is no way to settings, adding a login or Quit: \(said)")
     }
 
-    /// Every tool with a limit to read gets a ring, and the ring names it.
-    func testEveryToolWithALimitHasARing() throws {
+    /// Every tool with a limit to read gets a group of rows, and the group names it.
+    func testEveryToolWithALimitHasAGroup() throws {
         let store = AccountStore(preview: (), focus: .claude)
         let view = MenuView()
             .environmentObject(store)
@@ -86,7 +86,7 @@ final class MenuScreenTests: XCTestCase {
         }
         XCTAssertFalse(tools.isEmpty, "the sample has no limits to draw")
         for tool in tools {
-            XCTAssertTrue(said.contains(tool.shortName) || said.contains(tool.name), "\(tool.name) has no ring: \(said)")
+            XCTAssertTrue(said.contains(tool.shortName) || said.contains(tool.name), "\(tool.name) has no group: \(said)")
         }
     }
 

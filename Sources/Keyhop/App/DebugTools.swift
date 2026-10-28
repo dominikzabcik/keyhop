@@ -145,6 +145,8 @@ enum Snapshot {
         let corners = RoundedRectangle(cornerRadius: 12, style: .continuous)
         write(MenuView().environmentObject(store).environmentObject(tracker).environment(\.staticSnapshot, true).clipShape(corners),
               to: "\(prefix)-menu.png")
+        write(MenuView(opened: tool).environmentObject(store).environmentObject(tracker).environment(\.staticSnapshot, true).clipShape(corners),
+              to: "\(prefix)-menu-logins.png")
         write(WelcomeView(canMove: false, dismiss: {}).environmentObject(store).clipShape(corners), to: "\(prefix)-welcome.png")
         write(WelcomeView(canMove: false, dismiss: {}, startAtMore: true).environmentObject(store).clipShape(corners),
               to: "\(prefix)-welcome-more.png")
@@ -158,7 +160,7 @@ enum Snapshot {
         open.notchWidth = 196
         open.open = true
         write(NotchCompanionView(state: open).environmentObject(store).environmentObject(tracker)
-            .frame(width: 420, height: NotchFacts.make(store: store, tracker: tracker).openHeight),
+            .frame(width: 440, height: NotchFacts.make(store: store, tracker: tracker).openHeight),
               to: "\(prefix)-notch-open.png")
     }
 

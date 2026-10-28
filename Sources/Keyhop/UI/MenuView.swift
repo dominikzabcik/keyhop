@@ -2,40 +2,44 @@
 import ServiceManagement
 import SwiftUI
 
-/// The menu bar panel in the 2.0 world: a chrome header with what needs you, a ring per tool with
-/// what its login in use has left, the one hop that helps or the one thing that needs you, and
-/// Open, Refresh and More along the bottom. A ring opens that tool's logins, to switch or rename.
-/// It opens on the last reading at once; a read runs quietly behind.
+/// The menu bar panel, built from the notch's pieces: what needs you in a sentence with the one
+/// action that helps, a group of limit rows per tool, today's line, and Open, Refresh and More. A
+/// group opens that tool's logins, to switch, rename or add one. It opens on the last reading at
+/// once; a read runs quietly behind.
 struct MenuView: View {
+    static let width: CGFloat = 420
+
     @EnvironmentObject private var store: AccountStore
     @EnvironmentObject private var tracker: UsageTracker
     @State private var opened: Provider?
     @State private var renaming: UUID?
 
+    init(opened: Provider? = nil) {
+        _opened = State(initialValue: opened)
+    }
+
     var body: some View {
-        let facts = MenuFacts.make(store: store, tracker: tracker)
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            content(facts: MenuFacts.make(store: store, tracker: tracker, now: context.date), now: context.date)
+        }
+        .frame(width: Self.width)
+        .background(Brand.panel)
+        .environment(\.colorScheme, .dark)
+    }
+
+    private func content(facts: MenuFacts, now: Date) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            MenuField(facts: facts)
+            MenuHead(facts: facts, now: now)
 
             if let adding = store.addingFor {
                 AddingPanel(provider: adding)
                     .padding([.horizontal, .top], 12)
             }
 
-            if facts.rings.isEmpty {
+            if facts.groups.isEmpty {
                 EmptyLine()
             } else {
-                MenuRings(rings: facts.rings, opened: $opened)
-                if let opened, facts.rings.contains(where: { $0.provider == opened }) {
-                    MenuLogins(provider: opened, facts: facts, renaming: $renaming)
-                }
-            }
-
-            // One thing at most: the hop that helps, or else what needs you.
-            if let hop = facts.hop {
-                HopCard(hop: hop)
-            } else if let warning = facts.warning {
-                WarningLine(warning: warning)
+                MenuGroups(facts: facts, opened: $opened, renaming: $renaming)
             }
 
             if let notice = store.notice {
@@ -44,62 +48,63 @@ struct MenuView: View {
 
             UpdateLine()
 
+            VStack(spacing: 0) {
+                RowDivider()
+                TodayLine(today: facts.today)
+                    .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                    .padding(.horizontal, 20)
+            }
+
             MenuFooter()
         }
-        .frame(width: 360)
-        .background(Brand.panel)
-        .environment(\.colorScheme, .dark)
     }
 }
 
-// MARK: Header
+// MARK: Head
 
-/// A chrome header, like the window's title bar: how many logins, then in a sentence what needs
-/// you, if anything, and today's tokens. Only what the tools report; no pooled figure and no
-/// guess at a reset. The pet lives on the Profile page, not here.
-private struct MenuField: View {
+/// How many logins and when they were read, then in a sentence what needs you, and the one action
+/// that helps: the hop, or else the remedy. Only what the tools report.
+private struct MenuHead: View {
     @EnvironmentObject private var store: AccountStore
     let facts: MenuFacts
+    let now: Date
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
                 Text(label)
                     .font(Brand.sans(11.5, weight: .medium))
                     .foregroundStyle(Brand.subtle)
                     .lineLimit(1)
-                Button {
-                    AppWindow.show(section: "home")
-                } label: {
-                    Text(facts.title)
-                        .font(Brand.sans(16, weight: .semibold))
-                        .tracking(-0.2)
-                        .foregroundStyle(Brand.text)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                }
-                .buttonStyle(.plain)
-                .help("Open Keyhop")
-                Text(facts.sub)
-                    .font(Brand.sans(12))
-                    .foregroundStyle(Brand.muted)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(tokensLine)
-                    .font(Brand.sans(11.5))
-                    .foregroundStyle(Brand.subtle)
-                    .lineLimit(1)
+                Spacer(minLength: 8)
+                ReadTime(readAt: store.lastRefresh, now: now)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            PixelMark()
-                .frame(width: 22, height: 22)
-                .padding(.top, 2)
-                .accessibilityHidden(true)
+            Button {
+                AppWindow.show(section: "home")
+            } label: {
+                Text(facts.title)
+                    .font(Brand.sans(16, weight: .semibold))
+                    .tracking(-0.2)
+                    .foregroundStyle(Brand.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .buttonStyle(.plain)
+            .help("Open Keyhop")
+            Text(facts.sub)
+                .font(Brand.sans(12))
+                .foregroundStyle(Brand.muted)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            if let hop = facts.hop {
+                HopButton(hop: hop).padding(.top, 9)
+            } else if let warning = facts.warning {
+                WarningButton(warning: warning).padding(.top, 9)
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 12)
-        .background(Brand.sidebar)
+        .padding(.horizontal, 20)
+        .padding(.top, 13)
+        .padding(.bottom, 14)
         .overlay(alignment: .bottom) { RowDivider() }
         .accessibilityElement(children: .contain)
     }
@@ -108,84 +113,88 @@ private struct MenuField: View {
         let logins = store.accounts.count
         return logins == 1 ? "1 login" : "\(logins) logins"
     }
-
-    private var tokensLine: String {
-        let tokens = "\(Numbers.tokens(facts.tokens)) tokens today"
-        return facts.cost > 0 ? "\(tokens) · \(Numbers.usd(facts.cost))" : tokens
-    }
 }
 
-// MARK: Rings
-
-/// One ring per tool with a limit: what its login in use has left, red when it is nearly out and
-/// amber when it is getting there.
-private struct MenuRings: View {
-    let rings: [MenuRing]
-    @Binding var opened: Provider?
+/// The one hop that helps most, named for where it goes.
+private struct HopButton: View {
+    @EnvironmentObject private var store: AccountStore
+    let hop: MenuHop
 
     var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-            ForEach(rings) { ring in
-                Button {
-                    withAnimation(.easeOut(duration: 0.15)) { opened = opened == ring.provider ? nil : ring.provider }
-                } label: {
-                    RingTile(ring: ring, open: opened == ring.provider)
+        Button {
+            store.switchTo(hop.to)
+        } label: {
+            HStack(spacing: 7) {
+                if store.switching == hop.to.id {
+                    ProgressView().controlSize(.mini)
                 }
-                .buttonStyle(.plain)
-                .help("\(ring.provider.name): \(ring.login), \(ring.caption.lowercased()). Show its logins")
-                .accessibilityLabel("\(ring.provider.name), \(ring.login), \(ring.caption.lowercased())")
-                .accessibilityHint("Shows its logins")
+                Text("Hop to \(hop.to.displayName)")
+                    .truncationMode(.middle)
             }
         }
-        .padding(12)
+        .buttonStyle(AppButtonStyle(kind: .primary, size: .small))
+        .disabled(store.switching != nil)
+        .help("Hop \(hop.tool.name) to \(hop.to.email)")
     }
 }
 
-private struct RingTile: View {
-    let ring: MenuRing
-    let open: Bool
-    @State private var hovering = false
+/// The remedy for what the sentence says, when no hop helps.
+private struct WarningButton: View {
+    @EnvironmentObject private var store: AccountStore
+    let warning: MenuWarning
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
-        VStack(spacing: 7) {
-            ZStack {
-                Circle().stroke(Brand.borderStrong, lineWidth: 4)
-                Circle()
-                    .trim(from: 0, to: CGFloat(ring.left) / 100)
-                    .stroke(ring.tone.ring, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                Image(nsImage: Marks.image(for: ring.provider))
-                    .renderingMode(.template)
-                    .resizable()
-                    .frame(width: 18, height: 18)
-                    .foregroundStyle(Brand.text)
+        Button {
+            switch warning.action {
+            case .add: store.beginAdd(warning.account.provider)
+            case .open: AppWindow.show(section: "limits")
             }
-            .frame(width: 44, height: 44)
-            VStack(spacing: 0) {
-                Text(ring.caption)
-                    .font(Brand.figure(14))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .foregroundStyle(ring.tone.ink)
-                Text(ring.provider.shortName)
-                    .font(Brand.sans(11.5))
-                    .foregroundStyle(Brand.muted)
-                    .lineLimit(1)
-            }
+        } label: {
+            Text(warning.action == .add ? "Add a \(warning.account.provider.shortName) login" : "Open Limits")
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 12)
-        .padding(.bottom, 10)
-        .background(shape.fill(ring.tone == .out ? Brand.red.opacity(0.07) : hovering || open ? Brand.raisedHover : Brand.raised))
-        .overlay(shape.strokeBorder(ring.tone == .out ? Brand.red.opacity(0.28) : open ? Brand.borderStrong : Brand.border))
-        .contentShape(shape)
-        .onHover { hovering = $0 }
+        .buttonStyle(AppButtonStyle(kind: .secondary, size: .small))
+        .disabled(warning.action == .add && store.addingFor != nil)
     }
 }
 
-/// The opened ring's logins: press one to switch to it; rename or remove from its context menu.
-/// Past five logins the list scrolls, so the panel always fits under the menu bar.
+// MARK: Groups
+
+/// The notch's rows, one group per tool split by hairlines. Pressing a group opens its logins.
+private struct MenuGroups: View {
+    let facts: MenuFacts
+    @Binding var opened: Provider?
+    @Binding var renaming: UUID?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(facts.groups.enumerated()), id: \.element.id) { index, group in
+                if index > 0 {
+                    RowDivider().padding(.horizontal, 20).padding(.vertical, 4)
+                }
+                Button {
+                    withAnimation(.easeOut(duration: 0.15)) { opened = opened == group.provider ? nil : group.provider }
+                } label: {
+                    LimitRows(group: group)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(RowButtonStyle(radius: 8))
+                .padding(.horizontal, 12)
+                .help("\(group.provider.name) reads \(group.login.displayName). Show its logins")
+                .accessibilityHint("Shows its logins")
+                if opened == group.provider {
+                    MenuLogins(provider: group.provider, facts: facts, renaming: $renaming)
+                        .transition(.opacity)
+                }
+            }
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+/// The opened group's logins, under its name: press one to switch to it; rename or remove from
+/// its context menu. Past five logins the list scrolls, so the panel always fits under the menu bar.
 private struct MenuLogins: View {
     @EnvironmentObject private var store: AccountStore
     let provider: Provider
@@ -193,10 +202,9 @@ private struct MenuLogins: View {
     @Binding var renaming: UUID?
 
     private static let shownRows = 5
-    private static let rowHeight: CGFloat = 40
+    private static let rowHeight: CGFloat = 36
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         let rows = facts.rows.filter { $0.account.provider == provider }
         VStack(alignment: .leading, spacing: 0) {
             if rows.count > Self.shownRows {
@@ -207,24 +215,23 @@ private struct MenuLogins: View {
                 list(rows)
             }
             Button { store.beginAdd(provider) } label: {
-                HStack(spacing: 8) {
-                    Icon("plus", size: 13)
+                HStack(spacing: 10) {
+                    Icon("plus", size: 12)
+                        .frame(width: 8)
                     Text("Add a \(provider.shortName) login")
                     Spacer()
                 }
                 .font(Brand.sans(12.5, weight: .medium))
                 .padding(.horizontal, 8)
-                .frame(minHeight: 32)
+                .frame(minHeight: 30)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowButtonStyle(quiet: true, radius: 8))
             .disabled(store.addingFor != nil || store.switching != nil || !Provider.switchable.contains(provider))
         }
-        .padding(4)
-        .background(shape.fill(Brand.raised))
-        .overlay(shape.strokeBorder(Brand.border))
-        .padding(.horizontal, 12)
-        .padding(.bottom, 12)
+        .padding(.leading, 32)
+        .padding(.trailing, 12)
+        .padding(.bottom, 4)
     }
 
     private func list(_ rows: [MenuRow]) -> some View {
@@ -272,18 +279,19 @@ private struct MenuLoginRow: View {
 
     private func face(on: Bool) -> some View {
         let account = row.account
-        return HStack(spacing: 8) {
+        return HStack(spacing: 10) {
             Circle()
-                .fill(on ? Brand.primary : .clear)
+                .fill(on ? Brand.text : .clear)
                 .overlay(Circle().strokeBorder(on ? .clear : Brand.subtle, lineWidth: 1.5))
                 .frame(width: 7, height: 7)
+                .frame(width: 8)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 0) {
-                EditableName(account: account, font: Brand.sans(13, weight: .medium), renaming: $renaming)
+                EditableName(account: account, font: Brand.sans(12.5, weight: .medium), renaming: $renaming)
                     .foregroundStyle(Brand.text)
                 Text(meta)
-                    .font(Brand.sans(11.5))
-                    .foregroundStyle(row.signedOut ? Brand.bad : Brand.muted)
+                    .font(Brand.sans(11))
+                    .foregroundStyle(row.signedOut ? Brand.bad : Brand.subtle)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
@@ -292,10 +300,10 @@ private struct MenuLoginRow: View {
                 ProgressView().controlSize(.small)
             } else if hop {
                 Text("Hop")
-                    .font(Brand.sans(12, weight: .semibold))
+                    .font(Brand.sans(11.5, weight: .semibold))
                     .foregroundStyle(Brand.onPrimary)
                     .padding(.horizontal, 8)
-                    .frame(height: 22)
+                    .frame(height: 20)
                     .fixedSize()
                     .background(Capsule().fill(Brand.primary))
             } else if row.signedOut {
@@ -305,14 +313,14 @@ private struct MenuLoginRow: View {
                     .fixedSize()
             } else if let left = row.left {
                 Text("\(left)% left")
-                    .font(Brand.figure(12))
-                    .foregroundStyle(row.lane == .needs ? Brand.bad : Brand.subtle)
+                    .font(Brand.mono(11.5, weight: .medium))
+                    .foregroundStyle(LimitTone(left: left) == .out ? Brand.bad : Brand.muted)
                     .fixedSize()
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .frame(minHeight: 40)
+        .padding(.vertical, 3)
+        .frame(minHeight: 36)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -322,86 +330,10 @@ private struct MenuLoginRow: View {
         if row.signedOut { return "Signed out" }
         var parts: [String] = []
         if let plan = row.account.plan { parts.append(plan) }
-        if let window = row.tightest { parts.append(window.label) }
+        if let window = row.tightest { parts.append(window.label.lowercased()) }
         if row.account.isKeptForLast { parts.append("kept for last") }
         if row.readFailed, let at = row.readAt { parts.append("last read \(MenuFacts.ago(at))") }
         return parts.isEmpty ? row.account.provider.name : parts.joined(separator: " · ")
-    }
-}
-
-// MARK: Hop and warning
-
-/// The one hop that helps most: which login, what it has left, and one button.
-private struct HopCard: View {
-    @EnvironmentObject private var store: AccountStore
-    let hop: MenuHop
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
-        HStack(spacing: 10) {
-            Image(nsImage: Marks.image(for: hop.tool))
-                .renderingMode(.template)
-                .resizable()
-                .frame(width: 16, height: 16)
-                .foregroundStyle(Brand.text)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("\(hop.tool.shortName) has \(hop.fromLeft)% left")
-                    .font(Brand.sans(13, weight: .semibold))
-                    .foregroundStyle(Brand.text)
-                    .lineLimit(1)
-                Text("\(hop.to.displayName) has \(hop.toLeft)%")
-                    .font(Brand.sans(12))
-                    .foregroundStyle(Brand.muted)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-            Button {
-                store.switchTo(hop.to)
-            } label: {
-                if store.switching == hop.to.id {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Text("Hop")
-                }
-            }
-            .buttonStyle(AppButtonStyle(kind: .primary, size: .small))
-            .disabled(store.switching != nil)
-            .help("Hop \(hop.tool.name) to \(hop.to.email)")
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(shape.fill(Brand.raised))
-        .overlay(shape.strokeBorder(Brand.borderStrong))
-        .padding(.horizontal, 12)
-        .padding(.bottom, 12)
-    }
-}
-
-/// The remedy for what the header already says, when no hop helps: one quiet button, so the
-/// sentence lives once.
-private struct WarningLine: View {
-    @EnvironmentObject private var store: AccountStore
-    let warning: MenuWarning
-
-    var body: some View {
-        Button {
-            switch warning.action {
-            case .add: store.beginAdd(warning.account.provider)
-            case .open: AppWindow.show(section: "limits")
-            }
-        } label: {
-            Text(title).frame(maxWidth: .infinity)
-        }
-        .buttonStyle(AppButtonStyle(kind: .secondary, size: .small))
-        .disabled(warning.action == .add && store.addingFor != nil)
-        .padding(.horizontal, 12)
-        .padding(.bottom, 12)
-    }
-
-    private var title: String {
-        warning.action == .add ? "Add a \(warning.account.provider.shortName) login" : "Open Limits"
     }
 }
 
@@ -412,37 +344,11 @@ private struct EmptyLine: View {
             .font(Brand.sans(12.5))
             .foregroundStyle(Brand.muted)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(16)
+            .padding(20)
     }
 }
 
 // MARK: Facts
-
-private struct MenuRing: Identifiable {
-    enum Tone { case out, low, fine
-        var ring: Color {
-            switch self {
-            case .out: Brand.red
-            case .low: Brand.warn
-            case .fine: Brand.text
-            }
-        }
-        var ink: Color {
-            switch self {
-            case .out: Brand.bad
-            case .low, .fine: Brand.text
-            }
-        }
-    }
-
-    let provider: Provider
-    let login: String
-    let left: Int
-    let signedOut: Bool
-    var tone: Tone { signedOut || left <= 15 ? .out : left <= 40 ? .low : .fine }
-    var caption: String { signedOut ? "Signed out" : "\(left)% left" }
-    var id: String { provider.rawValue }
-}
 
 private struct MenuHop {
     let tool: Provider
@@ -464,7 +370,6 @@ private struct MenuWarning {
 private struct MenuRow: Identifiable {
     let account: Account
     let active: Bool
-    let lane: MenuLane
     /// What the tightest window has left, as the tools report it; back to 100 once its reset has
     /// passed. Nil when signed out or nothing was read.
     let left: Int?
@@ -474,18 +379,19 @@ private struct MenuRow: Identifiable {
     let readFailed: Bool
     let readAt: Date?
     var id: UUID { account.id }
+    /// The same reading as the window: a login with 15% or less left, or one signed out, needs you.
+    var needsYou: Bool { signedOut || LimitTone(left: left ?? 100) == .out }
 }
 
 @MainActor
 private struct MenuFacts {
     let rows: [MenuRow]
-    let rings: [MenuRing]
+    let groups: [LimitGroup]
     let hop: MenuHop?
     let warning: MenuWarning?
     let title: String
     let sub: String
-    let tokens: Int
-    let cost: Double
+    let today: TodayLine.Today?
 
     static func make(store: AccountStore, tracker: UsageTracker, now: Date = Date()) -> MenuFacts {
         let rows = store.accounts.map { account -> MenuRow in
@@ -493,11 +399,10 @@ private struct MenuFacts {
             let signedOut = snapshot?.signedOut == true
             let windows = signedOut ? [] : (snapshot?.windows ?? [])
             let tightest = windows.min { SmartHop.room($0, now) < SmartHop.room($1, now) }
-            let left = tightest.map { Int(SmartHop.room($0, now).rounded()) }
-            let lane: MenuLane = signedOut || (left ?? 100) <= 15 ? .needs : left == nil ? .quiet : .room
-            return MenuRow(account: account, active: store.active[account.provider] == account.id, lane: lane,
-                           left: left, tightest: tightest, signedOut: signedOut,
-                           readFailed: snapshot?.error != nil && !signedOut, readAt: snapshot?.fetchedAt)
+            return MenuRow(account: account, active: store.active[account.provider] == account.id,
+                           left: tightest.map { Int(SmartHop.room($0, now).rounded()) }, tightest: tightest,
+                           signedOut: signedOut, readFailed: snapshot?.error != nil && !signedOut,
+                           readAt: snapshot?.fetchedAt)
         }
         // In use first, then the most room; signed-out logins last.
         .sorted { a, b in
@@ -506,14 +411,13 @@ private struct MenuFacts {
             return (a.left ?? -1) > (b.left ?? -1)
         }
 
+        let groups = LimitGroup.make(store: store, now: now)
         let hop = bestHop(rows: rows, store: store, tracker: tracker, now: now)
-        let sentence = headline(rows: rows, hop: hop, empty: store.accounts.isEmpty)
-        // The engine's total, so measured-only tools without accounts count too.
-        let total = tracker.todayTotal
+        let sentence = headline(rows: rows, groups: groups, hop: hop, empty: store.accounts.isEmpty)
         return MenuFacts(
-            rows: rows, rings: rings(rows: rows), hop: hop,
+            rows: rows, groups: groups, hop: hop,
             warning: hop == nil ? warning(rows: rows) : nil,
-            title: sentence.0, sub: sentence.1, tokens: total.tokens.total, cost: total.cost
+            title: sentence.0, sub: sentence.1, today: TodayLine.Today(tracker: tracker)
         )
     }
 
@@ -525,21 +429,10 @@ private struct MenuFacts {
         return hours < 24 ? "\(hours)h ago" : "\(hours / 24)d ago"
     }
 
-    /// Per tool, the login in use, or the roomiest one when none is.
-    private static func rings(rows: [MenuRow]) -> [MenuRing] {
-        Provider.allCases.compactMap { provider in
-            let mine = rows.filter { $0.account.provider == provider }
-            let pick = mine.first { $0.active && ($0.left != nil || $0.signedOut) }
-                ?? mine.filter { $0.left != nil }.max { ($0.left ?? 0) < ($1.left ?? 0) }
-            guard let pick else { return nil }
-            return MenuRing(provider: provider, login: pick.account.displayName, left: pick.left ?? 0, signedOut: pick.signedOut)
-        }
-    }
-
     /// Only the logins in use: one that is signed out, or nearly out with no login to hop to.
-    /// The header's headline says what is wrong; the warning carries only the remedy.
+    /// The headline says what is wrong; the warning carries only the remedy.
     private static func warning(rows: [MenuRow]) -> MenuWarning? {
-        guard let row = rows.first(where: { $0.active && $0.lane == .needs }) else { return nil }
+        guard let row = rows.first(where: { $0.active && $0.needsYou }) else { return nil }
         let account = row.account
         if row.signedOut { return MenuWarning(account: account, action: .open) }
         let others = rows.filter { $0.account.provider == account.provider && $0.account.id != account.id }
@@ -571,21 +464,25 @@ private struct MenuFacts {
         return best?.hop
     }
 
-    private static func headline(rows: [MenuRow], hop: MenuHop?, empty: Bool) -> (String, String) {
+    /// The notification's words: "nearly out" at 15% or less, "running low" at 40% or less.
+    private static func headline(rows: [MenuRow], groups: [LimitGroup], hop: MenuHop?, empty: Bool) -> (String, String) {
         if empty { return ("Add a login.", "No saved logins yet. Sign in once and Keyhop keeps the login.") }
         if let hop {
-            return ("\(hop.tool.shortName) is running low.",
+            let state = LimitTone(left: hop.fromLeft) == .out ? "is nearly out" : "is running low"
+            return ("\(hop.tool.shortName) \(state).",
                     "\(brief(hop.from)) has \(hop.fromLeft)% left. \(brief(hop.to)) has \(hop.toLeft)%.")
         }
-        if let wall = rows.first(where: { $0.active && $0.lane == .needs }) {
+        if let wall = rows.first(where: { $0.active && $0.needsYou }) {
             let tool = wall.account.provider.shortName
             if wall.signedOut { return ("\(tool) is signed out.", "Sign in to \(wall.account.provider.name) again to keep going.") }
             let others = rows.filter { $0.account.provider == wall.account.provider && $0.account.id != wall.account.id }
             let why = others.isEmpty ? "There is no other login to hop to." : "No other \(tool) login has room for a hop."
-            return ("\(tool) has \(wall.left ?? 0)% left.", why)
+            return ("\(tool) is nearly out.", "\(brief(wall.account)) has \(wall.left ?? 0)% left. \(why)")
         }
-        if rows.contains(where: { $0.active && $0.left != nil }) {
-            return ("Every login in use has room.", "Nothing is close to a limit.")
+        if let group = groups.first(where: { !$0.lines.isEmpty }), let line = group.lines.first {
+            let resets = line.reset.isEmpty ? "" : ", back in \(line.reset)"
+            return ("Every login in use has room.",
+                    "The tightest is \(group.provider.shortName)'s \(line.window) window, \(line.left)% left\(resets).")
         }
         return ("Nothing read yet.", "Keyhop reads the limits in the background.")
     }
@@ -597,11 +494,6 @@ private struct MenuFacts {
         let domain = name[name.index(after: at)...]
         return domain.isEmpty ? name : String(domain)
     }
-}
-
-/// The same reading as the window: a login with 15% or less left, or one signed out, needs you.
-private enum MenuLane {
-    case needs, room, quiet
 }
 
 private struct AddingPanel: View {
@@ -727,12 +619,8 @@ private struct MenuFooter: View {
                     } else {
                         Icon("refresh", size: 12)
                     }
-                    TimelineView(.periodic(from: .now, by: 30)) { context in
-                        Text(updatedText(context.date))
-                            .lineLimit(1)
-                            .monospacedDigit()
-                            .accessibilityLabel(updatedAccessibilityText(context.date))
-                    }
+                    Text(store.isRefreshing ? "Reading" : "Refresh")
+                        .accessibilityLabel(store.isRefreshing ? "Reading the limits" : "Refresh the limits")
                 }
             }
             .buttonStyle(RowButtonStyle())
@@ -817,18 +705,6 @@ private struct MenuFooter: View {
         .frame(maxWidth: .infinity, minHeight: 40)
         .help("Settings, adding a login, and Quit")
         .accessibilityLabel("More")
-    }
-
-    private func updatedText(_ now: Date) -> String {
-        if store.isRefreshing { return "Reading" }
-        guard let last = store.lastRefresh else { return "Refresh" }
-        return "Read \(MenuFacts.ago(last, now: now))"
-    }
-
-    private func updatedAccessibilityText(_ now: Date) -> String {
-        if store.isRefreshing { return "Reading the limits" }
-        guard let last = store.lastRefresh else { return "Limits have not been read yet" }
-        return "Limits read \(last.formatted(.relative(presentation: .named)))"
     }
 }
 #endif

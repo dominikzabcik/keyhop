@@ -63,11 +63,13 @@ enum AlertRules {
 
                 // KB-Notify: the title names the tool and its state, the subtitle the account and the
                 // figure, and the body what to do about it.
-                let used = Int(window.usedPercent.rounded())
+                // In the notch's and the menu's words: the window as they label it, and what is left.
+                let left = Int(SmartHop.room(window, now).rounded())
+                let reset = window.resetText(at: now)
                 let title = "\(provider.name) is nearly out"
-                let subtitle = "\(account.displayName) · \(windowWord(window.label)) at \(used)%"
+                let subtitle = "\(account.displayName) · \(window.label.lowercased()) window, \(left)% left"
                 let body = alternative.map { "\($0.name) has \(Int($0.room.rounded()))% left. Hop now and keep going." }
-                    ?? "No other \(provider.name) login has room. Add one to hop next time."
+                    ?? (reset.isEmpty ? "" : "Back in \(reset). ") + "No other \(provider.name) login has room; add one to hop next time."
                 let windowID = window.resetsAt.map { String(Int($0.timeIntervalSince1970 / 3600)) } ?? "open"
                 alerts.append(AlertCandidate(key: "limit:\(id.uuidString):\(window.label):\(windowID):90",
                                              title: title, body: body, switchTo: alternative?.account,
@@ -100,16 +102,5 @@ enum AlertRules {
             ))
         }
         return alerts
-    }
-
-    /// A window's name as the notification says it: "5-hour", "weekly".
-    static func windowWord(_ label: String) -> String {
-        switch label {
-        case "5h": "5-hour"
-        case "Week": "weekly"
-        case "Opus": "Opus weekly"
-        case "Sonnet": "Sonnet weekly"
-        default: label.lowercased()
-        }
     }
 }

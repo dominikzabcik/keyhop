@@ -8,9 +8,10 @@ extension DashboardPage {
   const TITLES = { home: "Keyhop", usage: "Usage", limits: "Limits", coach: "Coach", plans: "Plans", budgets: "Budgets", leaderboard: "Leaderboard", season: "Season", teams: "Teams", profile: "Profile", settings: "Settings" };
   const CLOUD_SECTIONS = ["leaderboard", "season", "teams", "profile"];
   // The sidebar's sets: every view in the open, grouped the way the product thinks.
+  // The core trio sits on top with no heading: hopping between logins and the token
+  // overview are the product, everything under a heading is a side function.
   const GROUPS = [
-    { id: "home", title: "Keyhop", sections: ["home"] },
-    { id: "history", title: "History", sections: ["usage", "limits"] },
+    { id: "core", title: "Keyhop", sections: ["home", "usage", "limits"] },
     { id: "insights", title: "Insights", sections: ["coach", "plans", "budgets"] },
     { id: "community", title: "Community", sections: ["leaderboard", "season", "teams", "profile"] },
     { id: "settings", title: "Settings", sections: ["settings"] },

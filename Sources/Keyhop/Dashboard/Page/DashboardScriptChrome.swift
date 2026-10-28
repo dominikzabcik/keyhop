@@ -191,7 +191,7 @@ extension DashboardPage {
       if (!shown.length) return "";
       const items = shown.map((section) =>
         `<button type="button" data-action="goto" data-section="${section}" aria-current="${ui.section === section ? "page" : "false"}">${icon(SECTION_ICONS[section])}<span>${esc(section === "home" ? "Home" : TITLES[section])}</span>${section === "limits" && logins ? `<span class="n">${logins}</span>` : ""}</button>`).join("");
-      const head = group.id === "home" || group.id === "settings" ? "" : `<span class="nav-h">${esc(group.title)}</span>`;
+      const head = group.id === "core" || group.id === "settings" ? "" : `<span class="nav-h">${esc(group.title)}</span>`;
       return `<div class="nav-set${group.id === "settings" ? " last" : ""}">${head}${items}</div>`;
     }).join("") + (data.state?.version ? `<span class="side-version">Keyhop ${esc(data.state.version)}</span>` : "");
     if (nav.dataset.drawn !== html) { nav.innerHTML = html; nav.dataset.drawn = html; }

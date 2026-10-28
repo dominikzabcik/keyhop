@@ -472,16 +472,18 @@ enum Commands {
     static func coachReport(workspace: Workspace, now: Date) async throws -> CoachReport {
         let sole = await workspace.service.soleAccounts
         let range = InsightsRange.thirtyDays.resolved(firstUse: nil)
-        let digest = try await workspace.tracker.digest(interval: range.interval(now: now), previous: range.previous(now: now),
-                                                        bucket: .day, provider: nil, sole: sole)
-        let sessions = (try? await workspace.tracker.sessions(in: range.interval(now: now), provider: nil, sole: sole, limit: 200)) ?? []
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = .current
         formatter.dateFormat = "yyyy-MM-dd"
-        let work = WorkYield.read(settings: WorkSettings.load(), since: formatter.string(from: range.interval(now: now).start),
-                                  login: CloudLink.load()?.login)
-        return CoachReport.build(digest: digest, sessions: sessions, work: work)
+        let since = formatter.string(from: range.interval(now: now).start)
+        let login = CloudLink.load()?.login
+        // git blocks on its processes, so it reads off the shared pool while the store is read.
+        let reading = Task.detached(priority: .utility) { WorkYield.read(settings: WorkSettings.load(), since: since, login: login) }
+        let digest = try await workspace.tracker.digest(interval: range.interval(now: now), previous: range.previous(now: now),
+                                                        bucket: .day, provider: nil, sole: sole)
+        let sessions = (try? await workspace.tracker.sessions(in: range.interval(now: now), provider: nil, sole: sole, limit: 200)) ?? []
+        return CoachReport.build(digest: digest, sessions: sessions, work: await reading.value)
     }
 
     static func plansReport(workspace: Workspace, now: Date) async throws -> PlansReport {

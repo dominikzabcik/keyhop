@@ -114,6 +114,37 @@ final class GitWorkTests: XCTestCase {
         XCTAssertEqual(GitWork.merges(in: repo, since: "2020-01-01", mine: ["nobody@example.com"]), 0)
     }
 
+    func testCoachingCountsEachRepositoryInTheOrderFound() throws {
+        guard let git = Shell.which("git") else { throw XCTSkip("git isn't installed here") }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("keyhop-yield-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        func make(_ name: String, _ commits: [(file: String, email: String)]) throws {
+            let repo = root.appendingPathComponent(name)
+            try FileManager.default.createDirectory(at: repo, withIntermediateDirectories: true)
+            func run(_ args: [String], email: String = "mira@example.com") throws {
+                let result = try Shell.run(git, ["-C", repo.path, "-c", "user.name=Someone", "-c", "user.email=\(email)",
+                                                 "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main"] + args)
+                XCTAssertEqual(result.status, 0, result.stderr)
+            }
+            try run(["init", "-q"])
+            try run(["config", "user.email", "mira@example.com"])
+            for commit in commits {
+                try "\(commit.file)\n".write(to: repo.appendingPathComponent(commit.file), atomically: true, encoding: .utf8)
+                try run(["add", "."])
+                try run(["commit", "-q", "-m", commit.file], email: commit.email)
+            }
+        }
+        try make("alpha", [("a", "mira@example.com"), ("b", "mira@example.com")])
+        try make("beta", [("c", "jonas@example.com"), ("d", "mira@example.com")])
+        try make("gamma", [("e", "jonas@example.com")])
+
+        let settings = WorkSettings(enabled: true, shareSubjects: false, roots: [root.path], emails: [], lastSync: nil)
+        let read = WorkYield.read(settings: settings, since: "2020-01-01", login: nil)
+
+        XCTAssertEqual(read.repos.map(\.name), ["local/alpha", "local/beta"])
+        XCTAssertEqual(read.repos.map(\.commits), [2, 1])
+    }
+
     func testHomeRollsEveryRepositoryIntoOneRowPerDay() {
         let found = [
             CloudWorkDay(day: "2026-10-12", repo: "a", commits: 3, insertions: 30, deletions: 3, subjects: nil),

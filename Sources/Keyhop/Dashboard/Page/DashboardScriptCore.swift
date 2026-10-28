@@ -159,14 +159,21 @@ extension DashboardPage {
     for (const message of data.state.messages || []) toast(message);
   }
 
-  async function loadUsage(range, tool = "all") {
+  const usageReads = new Map();
+  // `quiet` reads ahead for a view not yet open, so it never makes the window look busy.
+  async function loadUsage(range, tool = "all", quiet = false) {
     const key = `${range}:${tool}`;
     if (isStatic) return data.usage[key] || data.usage[`${range}:all`];
     // Only a first read shows a wait: after that the last figures stay up while new ones come in.
-    const first = !data.usage[key];
+    const first = !data.usage[key] && !quiet;
     if (first) { ui.loadingUsage = (ui.loadingUsage || 0) + 1; watchActivity(); }
     try {
-      data.usage[key] = await api(`/api/usage?range=${encodeURIComponent(range)}&tool=${encodeURIComponent(tool)}`);
+      // A read already on its way for this range is shared, never asked for twice.
+      if (!usageReads.has(key)) {
+        usageReads.set(key, api(`/api/usage?range=${encodeURIComponent(range)}&tool=${encodeURIComponent(tool)}`)
+          .finally(() => usageReads.delete(key)));
+      }
+      data.usage[key] = await usageReads.get(key);
       delete data.usageErrors[key];
     } catch (error) {
       data.usageErrors[key] = error.message;
@@ -227,7 +234,11 @@ extension DashboardPage {
       if (ui.section === "home" || ui.section === "limits") loadServices();
       // The core screen draws at once; the runway fills in when the history arrives.
       if (ui.section === "home") loadQuota().then(() => { if (ui.section === "home" && !editing()) render(); });
-      if (ui.section === "home") await loadUsage("today");
+      if (ui.section === "home") {
+        await loadUsage("today");
+        // Usage is the next view most opened; its default range is read ahead so it opens on figures.
+        if (!data.usage[`${ui.range}:all`]) loadUsage(ui.range, "all", true).catch(() => {});
+      }
       // Limits draws its logins at once; the history fills in when it arrives.
       if (ui.section === "limits") loadQuota().then(() => { if (ui.section === "limits" && !editing()) render(); });
       if (ui.section === "usage") await loadUsage(ui.range, ui.tool);

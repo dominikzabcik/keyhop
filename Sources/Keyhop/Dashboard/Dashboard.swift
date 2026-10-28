@@ -755,6 +755,14 @@ actor DashboardSession {
     /// The last read of commits per day, kept ten minutes: reading every repository's log is the
     /// expensive part, and Home asks each time it opens.
     private var workDaysRead: (at: Date, days: DashboardWorkDays)?
+    /// The last coaching report and the read making the next one. Coaching walks every counted
+    /// repository, so a report under ten minutes old is answered as it is, an older one is answered
+    /// at once while a new one is made behind it, and two asks never start two reads.
+    private var coachRead: (at: Date, report: CoachReport)?
+    private var coachTask: Task<CoachReport, Error>?
+    /// Bumped when the counted folders change, so a read begun before can't be kept after.
+    private var coachGeneration = 0
+    private var coachWarmed = false
     private let progress = ProgressBox()
     private let openWorkspace: @Sendable () throws -> Workspace
     private let changed: @Sendable () -> Void
@@ -937,6 +945,7 @@ actor DashboardSession {
             if allowRefresh, workspace.state.refreshedAt == nil, !refreshing {
                 Task { try? await self.refresh() }
             }
+            warmCoach()
             overview = try await Commands.currentOverview(workspace)
         }
         if !sample { messages += await (try? openWorkspace())?.service.takeNotes() ?? [] }
@@ -989,8 +998,43 @@ actor DashboardSession {
     func coach() async throws -> CoachReport {
         let now = Date()
         if sample { return SampleData.coach(now: now) }
-        let workspace = try openWorkspace()
-        return try await Commands.coachReport(workspace: workspace, now: now)
+        if let read = coachRead {
+            if now.timeIntervalSince(read.at) >= 600 { _ = startCoach() }
+            return read.report
+        }
+        return try await startCoach().value
+    }
+
+    private func startCoach() -> Task<CoachReport, Error> {
+        if let running = coachTask { return running }
+        let open = openWorkspace
+        let generation = coachGeneration
+        let task = Task { try await Commands.coachReport(workspace: try open(), now: Date()) }
+        coachTask = task
+        Task {
+            let report = try? await task.value
+            guard generation == coachGeneration else { return }
+            if let report { coachRead = (Date(), report) }
+            coachTask = nil
+        }
+        return task
+    }
+
+    private func forgetCoach() {
+        coachGeneration += 1
+        coachRead = nil
+        coachTask = nil
+    }
+
+    /// Makes the first coaching report once, a little after the window opens and while it is on
+    /// another view, so Coach opens on figures instead of a wait.
+    private func warmCoach() {
+        guard !sample, !coachWarmed else { return }
+        coachWarmed = true
+        Task {
+            try? await Task.sleep(for: .seconds(8))
+            if coachRead == nil { _ = startCoach() }
+        }
     }
 
     func usage(range asked: InsightsRange, tool: Provider?, readLogs: Bool) async throws -> DashboardUsage {
@@ -1877,6 +1921,9 @@ actor DashboardSession {
             message = "Removed \(path)."
         }
         try settings.save()
+        // Other folders or counting turned off change what the kept reads would say.
+        workDaysRead = nil
+        forgetCoach()
         if body.index == true {
             guard !settings.roots.isEmpty else { throw KeyhopError("Add a folder to scan first.") }
             let started = Date()

@@ -216,17 +216,30 @@ struct WorkYield {
 
     /// Reads every counted repository. Merges are the merge commits the person landed along the first
     /// parent of the current branch: a pull request they merged, or a branch they folded in by hand.
+    ///
+    /// Only counts are needed, so no per-file statistics are read, and the repositories are read side
+    /// by side: each is its own git process with nothing shared.
     static func read(settings: WorkSettings, since day: String, login: String?) -> WorkYield {
         guard settings.enabled, GitWork.isAvailable else { return WorkYield(enabled: false, repos: []) }
-        var repos: [Repo] = []
-        for repo in GitWork.repositories(under: settings.rootURLs) {
+        let found = GitWork.repositories(under: settings.rootURLs)
+        let slots = Slots(count: found.count)
+        DispatchQueue.concurrentPerform(iterations: found.count) { i in
+            let repo = found[i]
             let mine = GitWork.identities(repo: repo, extra: settings.emails, login: login)
-            let commits = GitWork.commits(in: repo, since: day, mine: mine).count
+            let commits = GitWork.commits(in: repo, since: day, mine: mine, stats: false).count
             let merges = GitWork.merges(in: repo, since: day, mine: mine)
-            if commits > 0 || merges > 0 {
-                repos.append(Repo(name: GitWork.name(of: repo), path: repo.path, commits: commits, merges: merges))
-            }
+            guard commits > 0 || merges > 0 else { return }
+            slots.put(i, Repo(name: GitWork.name(of: repo), path: repo.path, commits: commits, merges: merges))
         }
-        return WorkYield(enabled: true, repos: repos)
+        return WorkYield(enabled: true, repos: slots.values)
+    }
+
+    /// One slot per repository, filled from many threads, read back in the order they were found.
+    private final class Slots: @unchecked Sendable {
+        private let lock = NSLock()
+        private var items: [Repo?]
+        init(count: Int) { items = Array(repeating: nil, count: count) }
+        func put(_ i: Int, _ repo: Repo) { lock.lock(); items[i] = repo; lock.unlock() }
+        var values: [Repo] { lock.lock(); defer { lock.unlock() }; return items.compactMap { $0 } }
     }
 }

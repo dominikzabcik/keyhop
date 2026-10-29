@@ -103,7 +103,6 @@ final class NotchWindow {
     private var outsideMonitor: Any?
     private var screenObserver: Any?
     private var hoverTask: Task<Void, Never>?
-    private var shrinkTask: Task<Void, Never>?
     /// A click that closed it keeps it closed until the pointer leaves and comes back.
     private var hoverArmed = true
 
@@ -167,7 +166,6 @@ final class NotchWindow {
     private func hide() {
         hoverTask?.cancel()
         setOpen(false)
-        shrinkTask?.cancel()
         if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         screenObserver = nil
         panel?.orderOut(nil)
@@ -192,12 +190,9 @@ final class NotchWindow {
 
     private func setOpen(_ open: Bool) {
         guard state.open != open else { return }
-        shrinkTask?.cancel()
         let still = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         if open {
-            // The panel takes the open size at once; the shape springs out inside it.
-            layout(open: true)
-            withAnimation(still ? .easeOut(duration: 0.12) : .spring(response: 0.42, dampingFraction: 0.8)) {
+            withAnimation(still ? .easeOut(duration: 0.12) : .spring(response: 0.4, dampingFraction: 0.82)) {
                 state.open = true
             }
             outsideMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
@@ -207,13 +202,8 @@ final class NotchWindow {
                 }
             }
         } else {
-            withAnimation(still ? .easeOut(duration: 0.12) : .spring(response: 0.38, dampingFraction: 1)) {
+            withAnimation(still ? .easeOut(duration: 0.12) : .spring(response: 0.36, dampingFraction: 1)) {
                 state.open = false
-            }
-            shrinkTask = Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .milliseconds(still ? 150 : 450))
-                guard let self, !Task.isCancelled else { return }
-                layout()
             }
             if let outsideMonitor {
                 NSEvent.removeMonitor(outsideMonitor)
@@ -222,9 +212,10 @@ final class NotchWindow {
         }
     }
 
-    /// The panel is exactly the shape when collapsed, so the menu bar beside it stays clickable,
-    /// and the open shape plus room for its shadow when open.
-    private func layout(open: Bool? = nil) {
+    /// The panel always has the open size plus room for the shadow, and only the shape moves inside
+    /// it: resizing a window mid-animation shows a frame before SwiftUI redraws, which blinks. Its
+    /// clear pixels let clicks through to the menu bar beside the notch.
+    private func layout() {
         guard let panel else { return }
         guard let screen = Self.notchScreen else {
             panel.orderOut(nil)
@@ -232,16 +223,12 @@ final class NotchWindow {
         }
         state.notchWidth = Self.notchWidth(on: screen)
         state.barHeight = screen.safeAreaInsets.top
-        let size: CGSize
-        if open ?? state.open {
-            let facts = NotchFacts.make(store: AccountStore.shared, tracker: UsageTracker.shared)
-            size = CGSize(width: state.openWidth + 2 * Self.shadowRoom, height: facts.openHeight + Self.shadowRoom)
-        } else {
-            size = CGSize(width: state.collapsedWidth, height: state.barHeight)
-        }
+        let facts = NotchFacts.make(store: AccountStore.shared, tracker: UsageTracker.shared)
+        let size = CGSize(width: max(state.openWidth, state.collapsedWidth) + 2 * Self.shadowRoom,
+                          height: max(facts.openHeight, state.barHeight) + Self.shadowRoom)
         let frame = NSRect(x: screen.frame.midX - size.width / 2, y: screen.frame.maxY - size.height,
                            width: size.width, height: size.height)
-        panel.setFrame(frame, display: true)
+        if panel.frame != frame { panel.setFrame(frame, display: true) }
         if !panel.isVisible { panel.orderFrontRegardless() }
     }
 
@@ -278,14 +265,17 @@ struct NotchCompanionView: View {
                 NotchPanel(facts: facts, now: now, close: state.onClose)
                     .padding(.horizontal, NotchWindow.fillet)
                     .frame(width: state.openWidth, height: facts.openHeight, alignment: .top)
-                    .transition(.asymmetric(insertion: .opacity.animation(.easeOut(duration: 0.2).delay(0.08)),
-                                            removal: .opacity.animation(.easeOut(duration: 0.08))))
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .top))
+                            .animation(.easeOut(duration: 0.24).delay(0.05)),
+                        removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))
+                            .animation(.easeIn(duration: 0.12))))
             } else {
                 NotchFlanks(facts: facts, notchWidth: state.notchWidth)
                     .padding(.horizontal, NotchWindow.fillet)
                     .frame(width: state.collapsedWidth, height: state.barHeight)
-                    .transition(.asymmetric(insertion: .opacity.animation(.easeOut(duration: 0.16).delay(0.12)),
-                                            removal: .opacity.animation(.easeOut(duration: 0.06))))
+                    .transition(.asymmetric(insertion: .opacity.animation(.easeOut(duration: 0.18).delay(0.14)),
+                                            removal: .opacity.animation(.easeOut(duration: 0.14))))
             }
         }
         .frame(width: open ? state.openWidth : state.collapsedWidth,
@@ -297,9 +287,7 @@ struct NotchCompanionView: View {
         .onTapGesture {
             if state.open { state.onClose() } else { state.onToggle() }
         }
-        .onChange(of: facts.openHeight) { _, _ in
-            if state.open { state.onResize() }
-        }
+        .onChange(of: facts.openHeight) { _, _ in state.onResize() }
         .accessibilityElement(children: open ? .contain : .ignore)
         .accessibilityLabel(summary(facts))
         .accessibilityAddTraits(.isButton)

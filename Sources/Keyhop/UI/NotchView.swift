@@ -70,6 +70,9 @@ struct NotchShape: Shape {
 @MainActor
 final class NotchState: ObservableObject {
     @Published var open = false
+    /// Under the pointer, before it opens: the bezel lifts a little at once, so it answers the
+    /// pointer instead of waiting out the open delay.
+    @Published var lifted = false
     @Published var notchWidth: CGFloat = 200
     @Published var barHeight: CGFloat = 37
     var onToggle: () -> Void = {}
@@ -90,9 +93,10 @@ final class NotchWindow {
 
     static let flankWidth: CGFloat = 74
     static let fillet: CGFloat = 10
-    /// Long enough that crossing the flanks on the way to the menu bar doesn't open it.
-    static let openDelay: Duration = .milliseconds(250)
-    static let closeDelay: Duration = .milliseconds(200)
+    /// Long enough that crossing the flanks on the way to the menu bar doesn't open it; the lift
+    /// answers the pointer meanwhile.
+    static let openDelay: Duration = .milliseconds(140)
+    static let closeDelay: Duration = .milliseconds(160)
     static let shadowRoom: CGFloat = 24
 
     static var notchScreen: NSScreen? { NSScreen.screens.first { $0.safeAreaInsets.top > 0 } }
@@ -175,6 +179,12 @@ final class NotchWindow {
     private func hover(_ inside: Bool) {
         hoverTask?.cancel()
         if !inside { hoverArmed = true }
+        let lift = inside && hoverArmed && !state.open
+        if state.lifted != lift, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            withAnimation(.spring(response: 0.22, dampingFraction: 0.7)) { state.lifted = lift }
+        } else {
+            state.lifted = lift
+        }
         guard inside ? hoverArmed && !state.open : state.open else { return }
         hoverTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: inside ? Self.openDelay : Self.closeDelay)
@@ -192,8 +202,9 @@ final class NotchWindow {
         guard state.open != open else { return }
         let still = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         if open {
-            withAnimation(still ? .easeOut(duration: 0.12) : .spring(response: 0.4, dampingFraction: 0.82)) {
+            withAnimation(still ? .easeOut(duration: 0.12) : .spring(response: 0.3, dampingFraction: 0.84)) {
                 state.open = true
+                state.lifted = false
             }
             outsideMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
                 Task { @MainActor in
@@ -202,7 +213,7 @@ final class NotchWindow {
                 }
             }
         } else {
-            withAnimation(still ? .easeOut(duration: 0.12) : .spring(response: 0.36, dampingFraction: 1)) {
+            withAnimation(still ? .easeOut(duration: 0.12) : .spring(response: 0.28, dampingFraction: 1)) {
                 state.open = false
             }
             if let outsideMonitor {
@@ -267,19 +278,19 @@ struct NotchCompanionView: View {
                     .frame(width: state.openWidth, height: facts.openHeight, alignment: .top)
                     .transition(.asymmetric(
                         insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .top))
-                            .animation(.easeOut(duration: 0.24).delay(0.05)),
+                            .animation(.easeOut(duration: 0.2)),
                         removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))
-                            .animation(.easeIn(duration: 0.12))))
+                            .animation(.easeIn(duration: 0.1))))
             } else {
                 NotchFlanks(facts: facts, notchWidth: state.notchWidth)
                     .padding(.horizontal, NotchWindow.fillet)
                     .frame(width: state.collapsedWidth, height: state.barHeight)
-                    .transition(.asymmetric(insertion: .opacity.animation(.easeOut(duration: 0.18).delay(0.14)),
-                                            removal: .opacity.animation(.easeOut(duration: 0.14))))
+                    .transition(.asymmetric(insertion: .opacity.animation(.easeOut(duration: 0.16).delay(0.1)),
+                                            removal: .opacity.animation(.easeOut(duration: 0.1))))
             }
         }
-        .frame(width: open ? state.openWidth : state.collapsedWidth,
-               height: open ? facts.openHeight : state.barHeight, alignment: .top)
+        .frame(width: open ? state.openWidth : state.collapsedWidth + (state.lifted ? 12 : 0),
+               height: open ? facts.openHeight : state.barHeight + (state.lifted ? 5 : 0), alignment: .top)
         .clipShape(shape)
         .background(shape.fill(Color.black).shadow(color: .black.opacity(open ? 0.45 : 0), radius: 14, y: 6))
         .contentShape(shape)

@@ -332,7 +332,8 @@ private struct MenuLoginRow: View {
         if let plan = row.account.plan { parts.append(plan) }
         if let window = row.tightest { parts.append(window.label.lowercased()) }
         if row.account.isKeptForLast { parts.append("kept for last") }
-        if row.readFailed, let at = row.readAt { parts.append("last read \(MenuFacts.ago(at))") }
+        if row.readFailed || row.waiting, let at = row.readAt { parts.append("last read \(MenuFacts.ago(at))") }
+        if row.waiting, row.left == nil { parts.append("waits for open sessions") }
         return parts.isEmpty ? row.account.provider.name : parts.joined(separator: " · ")
     }
 }
@@ -377,6 +378,8 @@ private struct MenuRow: Identifiable {
     let signedOut: Bool
     /// The last reading failed (the network, a busy server), so what shows is the one before.
     let readFailed: Bool
+    /// Keyhop held off reading it, so what shows is the last reading.
+    let waiting: Bool
     let readAt: Date?
     var id: UUID { account.id }
     /// The same reading as the window: a login with 15% or less left, or one signed out, needs you.
@@ -402,7 +405,7 @@ private struct MenuFacts {
             return MenuRow(account: account, active: store.active[account.provider] == account.id,
                            left: tightest.map { Int(SmartHop.room($0, now).rounded()) }, tightest: tightest,
                            signedOut: signedOut, readFailed: snapshot?.error != nil && !signedOut,
-                           readAt: snapshot?.fetchedAt)
+                           waiting: snapshot?.waiting != nil, readAt: snapshot?.fetchedAt)
         }
         // In use first, then the most room; signed-out logins last.
         .sorted { a, b in

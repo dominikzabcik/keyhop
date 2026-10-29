@@ -87,11 +87,14 @@ struct ClaudeAdapter: ProviderAdapter {
             token = access
         }
 
-        let (data, status) = try await HTTP.get("https://api.anthropic.com/api/oauth/usage", headers: Self.headers(token))
+        let (data, status, headers) = try await HTTP.getWithHeaders("https://api.anthropic.com/api/oauth/usage", headers: Self.headers(token))
         switch status {
         case 200: break
         case 401: throw KeyhopError("Claude rejected this login. Sign in again.", signedOut: true)
-        case 429: throw KeyhopError("Claude is rate limiting usage checks. Try again in a few minutes.")
+        case 429:
+            // Asking again before it says resets the wait, so a login could stay unread for good.
+            let seconds = headers["retry-after"].flatMap(TimeInterval.init) ?? 20 * 60
+            throw LimitsRateLimited(tool: "Claude", retryAfter: min(max(seconds, 60), 6 * 3600))
         default: throw KeyhopError("Claude usage returned \(status)")
         }
         guard let body = JSON.object(data) else { throw KeyhopError("Unreadable Claude usage response") }

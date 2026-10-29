@@ -73,6 +73,7 @@ struct FakeAdapter: ProviderAdapter {
     func anthropicAccount(of secret: Secret) async -> String? { secret["anthropic"] }
 
     func fetchUsage(_ secret: Secret, allowRefresh: Bool, persist: @escaping @Sendable (Secret) async -> Void) async throws -> LimitReport {
+        if secret["limited"] == "yes" { throw LimitsRateLimited(tool: "Codex", retryAfter: 600) }
         guard let used = secret["used"].flatMap(Double.init) else { throw KeyhopError("No usage for this login") }
         return LimitReport(windows: [UsageWindow(label: "5h", usedPercent: used, resetsAt: nil, windowSeconds: 18000)], plan: "Max")
     }
@@ -338,6 +339,33 @@ final class AccountServiceTests: XCTestCase {
         XCTAssertNotNil(second[bob]?.error)
     }
 
+    func testARateLimitedLoginIsNotAskedAgainBeforeItsRetryTime() async throws {
+        let tool = FakeTool(["user": "ada", "used": "30"])
+        let service = service(tool)
+        let ada = try savedID(await service.syncLive(.codex))
+        let first = await service.fetchUsage(previous: [:])
+        XCTAssertEqual(first[ada]?.windows.first?.usedPercent, 30)
+
+        tool.login = ["user": "ada", "limited": "yes"]
+        _ = await service.syncLive(.codex)
+        let limited = await service.fetchUsage(previous: first)
+        XCTAssertEqual(limited[ada]?.windows.first?.usedPercent, 30, "the last reading stays")
+        let retryAt = try XCTUnwrap(limited[ada]?.retryAt)
+        XCTAssertEqual(retryAt.timeIntervalSinceNow, 600, accuracy: 5)
+
+        // The tool would answer now, but it asked to wait: Keyhop doesn't ask.
+        tool.login = ["user": "ada", "used": "55"]
+        _ = await service.syncLive(.codex)
+        let waited = await service.fetchUsage(previous: limited)
+        XCTAssertEqual(waited[ada]?.windows.first?.usedPercent, 30)
+
+        var due = waited
+        due[ada]?.retryAt = Date().addingTimeInterval(-1)
+        let read = await service.fetchUsage(previous: due)
+        XCTAssertEqual(read[ada]?.windows.first?.usedPercent, 55)
+        XCTAssertNil(read[ada]?.retryAt)
+    }
+
     func testRenamingTrimsAndClears() async throws {
         let service = service(FakeTool(["user": "ada"]))
         let ada = try savedID(await service.syncLive(.codex))
@@ -407,6 +435,21 @@ final class RefreshRuleTests: XCTestCase {
         XCTAssertEqual(usage[bob]?.windows, earlier.windows)
         XCTAssertEqual(usage[bob]?.fetchedAt, earlier.fetchedAt)
         XCTAssertNil(usage[bob]?.error, "a token past its hour is not a signed-out login")
+        XCTAssertEqual(usage[bob]?.waiting, "1 Codex session was open while this login was in use and may still hold it; refreshing it now would sign it out. Keyhop reads it once it ends, or when you hop to it.")
+    }
+
+    func testTheNoteCountsTheSessions() {
+        XCTAssertEqual(AccountService.heldNote(.claude, sessions: 20),
+                       "20 Claude Code sessions were open while this login was in use and may still hold it; refreshing it now would sign them out. Keyhop reads it once they end, or when you hop to it.")
+    }
+
+    func testAReadingAfterAWaitClearsTheReason() async throws {
+        let (service, _, _, bob) = try await twoLogins(sessionRunning: false)
+        var earlier = UsageSnapshot(windows: [], error: nil, fetchedAt: nil)
+        earlier.waiting = "held"
+        let usage = await service.fetchUsage(previous: [bob: earlier])
+        XCTAssertNil(usage[bob]?.waiting)
+        XCTAssertEqual(usage[bob]?.windows.map(\.usedPercent), [10])
     }
 
     func testASessionStartedAfterTheLoginWasLeftDoesNotHoldIt() async throws {

@@ -35,6 +35,11 @@ final class AccountStore: ObservableObject {
             Task { @MainActor in UsageTracker.shared.noteActive(provider, id) }
         })
         accounts = AccountService.loadAccounts(from: Platform.dataDirectory)
+        // The last readings, so a login that can't be read right now keeps what it had; starting
+        // empty also wrote that empty state back over them for the command line.
+        let saved = CLIState.load()
+        usage = saved.usageByID
+        lastRefresh = saved.refreshedAt
         focusProvider = UserDefaults.standard.string(forKey: "focusProvider").flatMap(Provider.init)
 
         timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in

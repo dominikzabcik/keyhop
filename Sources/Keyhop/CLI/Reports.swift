@@ -75,6 +75,10 @@ struct StatusDocument: Encodable {
         /// The last reading failed for another reason (the network, a busy server); the limits
         /// shown are the last good ones.
         let readError: String?
+        /// Keyhop held off reading it, and why; the limits shown are the last reading.
+        let limitsWait: String?
+        /// The tool is rate limiting checks: Keyhop reads this login again after this.
+        let limitsRetryAt: Date?
         /// Room left on the tightest limit, in percent.
         let room: Double?
         let today: SpendDocument?
@@ -137,6 +141,8 @@ struct StatusDocument: Encodable {
                         limitsReadAt: snapshot?.fetchedAt,
                         error: snapshot?.signedOut == true ? snapshot?.error : nil,
                         readError: snapshot?.signedOut == true ? nil : snapshot?.error,
+                        limitsWait: snapshot?.waiting,
+                        limitsRetryAt: snapshot?.retryAt.flatMap { $0 > now ? $0 : nil },
                         room: windows.map { 100 - $0.usedPercent }.min(),
                         today: overview.today[account.id].map(SpendDocument.init),
                         budget: overview.budgets.first { $0.scope == scope }.map {

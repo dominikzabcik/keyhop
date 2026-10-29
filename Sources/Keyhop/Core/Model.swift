@@ -202,6 +202,20 @@ struct UsageSnapshot: Codable, Equatable {
     var fetchedAt: Date?
     /// The error is the tool turning the login down, not a reading that failed this time.
     var signedOut: Bool? = nil
+    /// Why Keyhop held off reading this time, when its token is past its hour and refreshing it
+    /// now could sign out whoever else holds it. The windows are the last reading.
+    var waiting: String? = nil
+    /// The tool asked Keyhop not to read again before this; the windows are the last reading.
+    var retryAt: Date? = nil
+}
+
+/// The tool is rate limiting limit checks, and says when to ask again.
+struct LimitsRateLimited: LocalizedError {
+    let tool: String
+    let retryAfter: TimeInterval
+    var errorDescription: String? {
+        "\(tool) is rate limiting usage checks. Keyhop asks again in \(Int((retryAfter / 60).rounded(.up))) min."
+    }
 }
 
 struct KeyhopError: LocalizedError {

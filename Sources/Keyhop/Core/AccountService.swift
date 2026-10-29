@@ -349,6 +349,13 @@ actor AccountService {
 
     // MARK: Limits
 
+    /// Why a login's limits wait: the open sessions that may hold its token.
+    static func heldNote(_ provider: Provider, sessions count: Int) -> String {
+        let open = count == 1 ? "1 \(provider.name) session was" : "\(count) \(provider.name) sessions were"
+        let them = count == 1 ? "it" : "them"
+        return "\(open) open while this login was in use and may still hold it; refreshing it now would sign \(them) out. Keyhop reads it once \(count == 1 ? "it ends" : "they end"), or when you hop to it."
+    }
+
     /// Fetches every saved account's limits with its own token. Tokens are refreshed only for
     /// accounts that aren't in use, and for Claude Code and Codex only while none of their
     /// sessions runs (`ToolSessions`). Failures keep the last good reading alongside the error.
@@ -377,6 +384,7 @@ actor AccountService {
         }
         let directory = directory
         let sessions = sessions
+        let inUse = Set(active.values)
         progress?(WorkProgress(step: .limits, done: 0, total: targets.count))
         let vault = vault
         let adapters = adapters
@@ -387,6 +395,11 @@ actor AccountService {
                 group.addTask {
                     var snapshot = earlier
                     var plan: String?
+                    if let retryAt = earlier.retryAt, retryAt > Date() {
+                        // The tool asked to wait; asking sooner only pushes the wait out.
+                        return (account.id, snapshot, nil)
+                    }
+                    snapshot.retryAt = nil
                     if await vault.read(account.id) != nil {
                         do {
                             let read = { () async throws -> LimitReport in
@@ -409,14 +422,23 @@ actor AccountService {
                             let report = isActive ? try await read() : try await RefreshLock.holding(account.id, in: directory, read)
                             snapshot = UsageSnapshot(windows: report.windows, error: nil, fetchedAt: Date())
                             plan = report.plan
-                        } catch is LimitsWaitForTool {
-                            // Not signed out: the tool refreshes it on its next use. The last reading stays.
+                        } catch let wait as LimitsWaitForTool {
+                            // Not signed out: the last reading stays, and the reason is said.
                             snapshot.error = nil
                             snapshot.signedOut = nil
+                            let holding = (sessions(account.provider) ?? []).filter {
+                                ToolSessions.holds($0, account, hasOwnFolder: ownFolder)
+                            }.count
+                            snapshot.waiting = wait.tool == nil || inUse.contains(account.id) || holding == 0
+                                ? wait.localizedDescription : Self.heldNote(account.provider, sessions: holding)
                         } catch {
                             // A failed reading keeps the last good one; only a turned-down login is signed out.
                             snapshot.error = error.localizedDescription
                             snapshot.signedOut = (error as? KeyhopError)?.signedOut == true ? true : nil
+                            snapshot.waiting = nil
+                            if let limited = error as? LimitsRateLimited {
+                                snapshot.retryAt = Date().addingTimeInterval(limited.retryAfter)
+                            }
                         }
                     } else {
                         snapshot.error = "The saved login is missing."

@@ -177,7 +177,7 @@ enum Snapshot {
 enum Probe {
     static func run() async {
         for provider in Provider.allCases {
-            let adapter = Adapters.all[provider]!
+            guard let adapter = Adapters.all[provider] else { continue }
             do {
                 guard let live = try await adapter.readLive() else {
                     print("\(provider.name): signed out")

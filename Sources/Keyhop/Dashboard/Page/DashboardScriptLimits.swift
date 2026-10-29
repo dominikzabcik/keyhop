@@ -212,6 +212,8 @@ extension DashboardPage {
   function windowBars(account, tool) {
     if (account.error) return `<p class="lnote">Signed out. Sign in to ${esc(tool.name)} again to read its limits.</p>`;
     const limits = (account.limits || []).slice(0, 3);
+    if (!limits.length && account.limitsWait) return `<p class="lnote">${esc(account.limitsWait)}</p>`;
+    if (!limits.length && account.limitsRetryAt) return `<p class="lnote">${esc(tool.name)} is rate limiting usage checks. Keyhop reads this login again in ${esc(fmt.until(account.limitsRetryAt))}.</p>`;
     if (!limits.length && account.readError) return `<p class="lnote">Couldn't read the limits just now. Keyhop tries again on the next refresh.</p>`;
     if (!limits.length) return `<p class="lnote">${esc(tool.limitsNote || "No limit to read.")}</p>`;
     return limits.map((limit) => {
@@ -230,7 +232,7 @@ extension DashboardPage {
     const lane = laneOf(account);
     const editing = ui.editing === account.id;
     // A failed reading keeps the last good one, and says how old it is.
-    const read = account.error || !account.limitsReadAt ? "" : `${account.readError ? "last read" : "read"} ${fmt.relative(account.limitsReadAt)}`;
+    const read = account.error || !account.limitsReadAt ? "" : `${account.readError || account.limitsWait ? "last read" : "read"} ${fmt.relative(account.limitsReadAt)}`;
     const meta = [account.plan, account.label ? account.email : "", account.keepForLast ? "kept for last" : "", read].filter(Boolean).join(" · ");
     const pill = account.error ? `<span class="lim-pill bad">Signed out</span>`
       : account.active ? `<span class="lim-pill in-use" style="view-transition-name:in-use-${esc(tool.id)}">In use</span>`

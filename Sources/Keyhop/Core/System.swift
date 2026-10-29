@@ -240,9 +240,15 @@ enum Files {
 
 enum HTTP {
     static func get(_ url: String, headers: [String: String]) async throws -> (Data, Int) {
+        let (data, status, _) = try await getWithHeaders(url, headers: headers)
+        return (data, status)
+    }
+
+    /// Also the response's headers, lowercased; empty where the request went through curl.
+    static func getWithHeaders(_ url: String, headers: [String: String]) async throws -> (Data, Int, [String: String]) {
         var request = URLRequest(url: URL(string: url)!, timeoutInterval: 20)
         headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
-        return try await send(request)
+        return try await exchange(request)
     }
 
     static func postJSON(_ url: String, body: [String: Any]) async throws -> (Data, Int) {
@@ -256,9 +262,15 @@ enum HTTP {
 
     /// Built on the completion-handler API, which every Foundation (Apple's, Linux's, Windows') has.
     static func send(_ request: URLRequest) async throws -> (Data, Int) {
+        let (data, status, _) = try await exchange(request)
+        return (data, status)
+    }
+
+    private static func exchange(_ request: URLRequest) async throws -> (Data, Int, [String: String]) {
         #if os(Linux)
         if let curl = SystemCurl.fallback {
-            return try await SystemCurl.send(request, curl: curl)
+            let (data, status) = try await SystemCurl.send(request, curl: curl)
+            return (data, status, [:])
         }
         #endif
         return try await withCheckedThrowingContinuation { continuation in
@@ -266,7 +278,12 @@ enum HTTP {
                 if let error {
                     continuation.resume(throwing: error)
                 } else {
-                    continuation.resume(returning: (data ?? Data(), (response as? HTTPURLResponse)?.statusCode ?? 0))
+                    let http = response as? HTTPURLResponse
+                    var headers: [String: String] = [:]
+                    for (key, value) in http?.allHeaderFields ?? [:] {
+                        if let key = key as? String, let value = value as? String { headers[key.lowercased()] = value }
+                    }
+                    continuation.resume(returning: (data ?? Data(), http?.statusCode ?? 0, headers))
                 }
             }.resume()
         }

@@ -63,14 +63,15 @@ final class MenuScreenTests: XCTestCase {
             .environment(\.staticSnapshot, true)
     }
 
-    /// The field says what is left across your logins, and the footer is the way in and out.
+    /// The field says what is left across your logins, and the foot is the notch's: today and the
+    /// way into the window. Refresh and More are icons by the read time, which text reading can't see.
     func testTheMenuShowsWhatIsLeftAndTheWayIn() throws {
         let said = try words(of: menu()).joined(separator: " | ")
         XCTAssertTrue(said.contains("left"), "nothing says what is left: \(said)")
         XCTAssertTrue(said.contains("%"), "no limit reading is shown: \(said)")
         XCTAssertTrue(said.contains("tokens today"), "today's tokens are missing: \(said)")
-        XCTAssertTrue(said.contains("Open"), "there is no way into the window: \(said)")
-        XCTAssertTrue(said.contains("More"), "there is no way to settings, adding a login or Quit: \(said)")
+        XCTAssertTrue(said.contains("Open Keyhop"), "there is no way into the window: \(said)")
+        XCTAssertTrue(said.contains("read"), "the read time, where Refresh and More sit, is missing: \(said)")
     }
 
     /// Every tool with a limit to read gets a group of rows, and the group names it.

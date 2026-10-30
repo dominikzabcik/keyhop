@@ -133,11 +133,15 @@ final class NotchWindow {
         panel.hasShadow = false
         panel.isMovable = false
         panel.hidesOnDeactivate = false
+        // A click opens the full menu under the notch: the readout is the hover's.
         state.onToggle = { [weak self] in
-            guard let self else { return }
+            guard let self, let screen = Self.notchScreen else { return }
             hoverTask?.cancel()
-            if state.open { hoverArmed = false }
-            setOpen(!state.open)
+            hoverArmed = false
+            setOpen(false)
+            let notch = NSRect(x: screen.frame.midX - state.collapsedWidth / 2, y: screen.frame.maxY - state.barHeight,
+                               width: state.collapsedWidth, height: state.barHeight)
+            MenuPanel.shared.toggle(under: notch, top: screen.frame.maxY, inset: state.barHeight, on: screen)
         }
         state.onClose = { [weak self] in
             self?.hoverArmed = false
@@ -179,6 +183,8 @@ final class NotchWindow {
     private func hover(_ inside: Bool) {
         hoverTask?.cancel()
         if !inside { hoverArmed = true }
+        // The menu dropped from the notch covers the readout's place.
+        guard !MenuPanel.shared.isOpen || !inside else { return }
         let lift = inside && hoverArmed && !state.open
         if state.lifted != lift, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             withAnimation(.spring(response: 0.22, dampingFraction: 0.7)) { state.lifted = lift }
@@ -296,7 +302,7 @@ struct NotchCompanionView: View {
         .contentShape(shape)
         .onHover { state.onHover($0) }
         .onTapGesture {
-            if state.open { state.onClose() } else { state.onToggle() }
+            state.onToggle()
         }
         .onChange(of: facts.openHeight) { _, _ in state.onResize() }
         .accessibilityElement(children: open ? .contain : .ignore)
@@ -362,27 +368,8 @@ private struct NotchPanel: View {
             }
             Spacer(minLength: 0)
             RowDivider()
-            HStack(spacing: 12) {
-                TodayLine(today: facts.today)
-                Spacer(minLength: 8)
-                Button(action: {
-                    close()
-                    AppWindow.show(section: "home")
-                }) {
-                    HStack(spacing: 7) {
-                        PixelMark()
-                            .frame(width: 13, height: 13)
-                        Text("Open Keyhop")
-                            .font(Brand.sans(12))
-                            .fixedSize()
-                    }
-                    .foregroundStyle(Brand.muted)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help("Open Keyhop's window")
-            }
-            .padding(.top, 12)
+            ReadoutFoot(today: facts.today, close: close)
+                .padding(.top, 12)
         }
         .padding(.top, 51)
         .padding(.horizontal, 20)

@@ -143,9 +143,9 @@ enum Snapshot {
         }
         let tracker = UsageTracker(preview: store)
         let corners = RoundedRectangle(cornerRadius: 12, style: .continuous)
-        write(MenuView().environmentObject(store).environmentObject(tracker).environment(\.staticSnapshot, true).clipShape(corners),
+        write(MenuBezel { MenuView() }.environmentObject(store).environmentObject(tracker).environment(\.staticSnapshot, true),
               to: "\(prefix)-menu.png")
-        write(MenuView(opened: tool).environmentObject(store).environmentObject(tracker).environment(\.staticSnapshot, true).clipShape(corners),
+        write(MenuBezel { MenuView(opened: tool) }.environmentObject(store).environmentObject(tracker).environment(\.staticSnapshot, true),
               to: "\(prefix)-menu-logins.png")
         write(WelcomeView(canMove: false, dismiss: {}).environmentObject(store).clipShape(corners), to: "\(prefix)-welcome.png")
         write(WelcomeView(canMove: false, dismiss: {}, startAtMore: true).environmentObject(store).clipShape(corners),

@@ -206,6 +206,36 @@ struct TodayLine: View {
     }
 }
 
+/// The foot under the limits: today on the left, the way into the window on the right.
+struct ReadoutFoot: View {
+    let today: TodayLine.Today?
+    var close: () -> Void = {}
+
+    var body: some View {
+        HStack(spacing: 12) {
+            TodayLine(today: today)
+            Spacer(minLength: 8)
+            Button(action: {
+                close()
+                AppWindow.show(section: "home")
+            }) {
+                HStack(spacing: 7) {
+                    PixelMark()
+                        .frame(width: 13, height: 13)
+                    Text("Open Keyhop")
+                        .font(Brand.sans(12))
+                        .fixedSize()
+                }
+                .foregroundStyle(Brand.muted)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("o")
+            .help("Open Keyhop's window (⌘O)")
+        }
+    }
+}
+
 /// Today's tokens by tool as thin grey segments, largest first: the window's share greys.
 struct ShareBar: View {
     let shares: [(provider: Provider, fraction: Double)]

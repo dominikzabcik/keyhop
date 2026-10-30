@@ -32,21 +32,14 @@ enum Entry {
 #if os(macOS)
 struct KeyhopApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @StateObject private var store = AccountStore.shared
-
     init() {
         NSApplication.shared.setActivationPolicy(.accessory)
     }
 
     var body: some Scene {
-        MenuBarExtra {
-            MenuView()
-                .environmentObject(store)
-                .environmentObject(UsageTracker.shared)
-        } label: {
-            Image(nsImage: MenuBarGlyph.image(windows: store.menuBarWindows, sweep: store.glyphSweep))
-        }
-        .menuBarExtraStyle(.window)
+        // An App needs a scene. The status item and its panel are MenuPanel's, so this one stays
+        // out of the menu bar.
+        MenuBarExtra("Keyhop", isInserted: .constant(false)) { EmptyView() }
     }
 }
 
@@ -57,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let quiet = Self.launchedAtLogin || CommandLine.arguments.contains(Updater.relaunchFlag)
         Task { @MainActor in
             Alerts.shared.configure()
+            MenuPanel.shared.install(store: AccountStore.shared)
             let welcomed = WelcomeWindow.showIfNeeded(AccountStore.shared)
             if !welcomed, !quiet { AppWindow.show() }
             NotchWindow.applyFromDefaults()

@@ -2,10 +2,10 @@
 import ServiceManagement
 import SwiftUI
 
-/// The menu bar panel, built from the notch's pieces: what needs you in a sentence with the one
-/// action that helps, a group of limit rows per tool, today's line, and Open, Refresh and More. A
-/// group opens that tool's logins, to switch, rename or add one. It opens on the last reading at
-/// once; a read runs quietly behind.
+/// The menu bar panel, built from the notch's pieces in the notch's black: what needs you in a
+/// sentence with the one action that helps, a group of limit rows per tool, and the notch's foot.
+/// Refresh and More sit by the read time. A group opens that tool's logins, to switch, rename or
+/// add one. It opens on the last reading at once; a read runs quietly behind.
 struct MenuView: View {
     static let width: CGFloat = 420
 
@@ -23,7 +23,7 @@ struct MenuView: View {
             content(facts: MenuFacts.make(store: store, tracker: tracker, now: context.date), now: context.date)
         }
         .frame(width: Self.width)
-        .background(Brand.panel)
+        .background(Color.black)
         .environment(\.colorScheme, .dark)
     }
 
@@ -48,14 +48,10 @@ struct MenuView: View {
 
             UpdateLine()
 
-            VStack(spacing: 0) {
-                RowDivider()
-                TodayLine(today: facts.today)
-                    .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
-                    .padding(.horizontal, 20)
-            }
-
-            MenuFooter()
+            RowDivider()
+            ReadoutFoot(today: facts.today, close: { MenuPanel.shared.close() })
+                .frame(minHeight: 44)
+                .padding(.horizontal, 20)
         }
     }
 }
@@ -78,6 +74,7 @@ private struct MenuHead: View {
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 ReadTime(readAt: store.lastRefresh, now: now)
+                MenuControls()
             }
             Button {
                 AppWindow.show(section: "home")
@@ -169,7 +166,7 @@ private struct MenuGroups: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(facts.groups.enumerated()), id: \.element.id) { index, group in
                 if index > 0 {
-                    RowDivider().padding(.horizontal, 20).padding(.vertical, 4)
+                    RowDivider().padding(.horizontal, 20).padding(.vertical, 8)
                 }
                 Button {
                     withAnimation(.easeOut(duration: 0.15)) { opened = opened == group.provider ? nil : group.provider }
@@ -589,9 +586,9 @@ private struct NoticeLine: View {
     }
 }
 
-/// Open, Refresh and More, three equal cells split by hairlines. More holds the settings, adding a
-/// login and Quit.
-private struct MenuFooter: View {
+/// Refresh, as a quiet icon that turns while the limits are read, and More, which holds the
+/// settings, adding a login and Quit.
+private struct MenuControls: View {
     @EnvironmentObject private var store: AccountStore
     @ObservedObject private var updater = Updater.shared
     @AppStorage("autoRefresh") private var autoRefresh = true
@@ -603,43 +600,32 @@ private struct MenuFooter: View {
     @Environment(\.staticSnapshot) private var staticSnapshot
 
     var body: some View {
-        HStack(spacing: 0) {
-            Button { AppWindow.show() } label: {
-                cell { Text("Open"); key("⌘O") }
-            }
-            .buttonStyle(RowButtonStyle())
-            .keyboardShortcut("o")
-            .help("Open Keyhop's window")
-
-            Divider().frame(height: 40).overlay(Brand.border)
-
+        HStack(spacing: 2) {
             Button { store.refresh() } label: {
-                cell {
-                    // Only a read of the limits shows here, and only while one runs. Reading the
-                    // local logs happens quietly; it never changes what the menu shows meanwhile.
+                Group {
+                    // Only a read of the limits shows here, and only while one runs.
                     if store.isRefreshing {
                         ProgressView().controlSize(.mini)
                     } else {
                         Icon("refresh", size: 12)
                     }
-                    Text(store.isRefreshing ? "Reading" : "Refresh")
-                        .accessibilityLabel(store.isRefreshing ? "Reading the limits" : "Refresh the limits")
                 }
+                .frame(width: 24, height: 22)
+                .contentShape(Rectangle())
             }
-            .buttonStyle(RowButtonStyle())
+            .buttonStyle(RowButtonStyle(quiet: true, radius: 6))
             .keyboardShortcut("r")
-            .help("Refresh usage")
-
-            Divider().frame(height: 40).overlay(Brand.border)
+            .help(store.isRefreshing ? "Reading the limits" : "Refresh the limits (⌘R)")
+            .accessibilityLabel(store.isRefreshing ? "Reading the limits" : "Refresh the limits")
 
             if staticSnapshot {
-                cell { Text("More"); key("⌘Q") }
+                Icon("more", size: 12).frame(width: 24, height: 22)
             } else {
                 moreMenu
             }
         }
-        .frame(height: 40)
-        .overlay(alignment: .top) { RowDivider() }
+        .foregroundStyle(Brand.muted)
+        .padding(.leading, 4)
         .onChange(of: notchCompanion) { _, enabled in
             NotchWindow.shared.apply(enabled)
         }
@@ -651,20 +637,6 @@ private struct MenuFooter: View {
                 launchAtLogin = SMAppService.mainApp.status == .enabled
             }
         }
-    }
-
-    private func cell<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        HStack(spacing: 7) { content() }
-            .font(Brand.sans(12))
-            .foregroundStyle(Brand.text)
-            .frame(maxWidth: .infinity, minHeight: 40)
-            .contentShape(Rectangle())
-    }
-
-    private func key(_ text: String) -> some View {
-        Text(text)
-            .font(Brand.mono(10.5))
-            .foregroundStyle(Brand.subtle)
     }
 
     private var moreMenu: some View {
@@ -698,14 +670,12 @@ private struct MenuFooter: View {
             Button("Quit Keyhop") { NSApp.terminate(nil) }
                 .keyboardShortcut("q")
         } label: {
-            Text("More")
-                .font(Brand.sans(12))
-                .foregroundStyle(Brand.text)
+            Icon("more", size: 12)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .frame(maxWidth: .infinity, minHeight: 40)
+        .frame(width: 24, height: 22)
         .help("Settings, adding a login, and Quit")
         .accessibilityLabel("More")
     }

@@ -102,7 +102,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libx11-xcb-dev libfontconfig-dev libfreetype-dev
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         if: hashFiles('native/Cargo.toml') != ''
         with:
           path: |
